@@ -3,6 +3,8 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using WPFGrowerApp.DataAccess;
 using WPFGrowerApp.ViewModels;
+using WPFGrowerApp.Models;
+
 
 namespace WPFGrowerApp.Views
 {

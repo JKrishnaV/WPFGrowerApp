@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using WPFGrowerApp.Models;
 
@@ -31,8 +32,9 @@ namespace WPFGrowerApp.DataAccess
                     return true;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Debug.WriteLine($"Connection test failed: {ex.Message}");
                 return false;
             }
         }
@@ -71,10 +73,10 @@ namespace WPFGrowerApp.DataAccess
                                 results.Add(new GrowerSearchResult
                                 {
                                     GrowerNumber = reader.GetDecimal(0),
-                                    GrowerName = reader.GetString(1),
-                                    ChequeName = reader.GetString(2),
-                                    City = reader.GetString(3),
-                                    Phone = reader.GetString(4)
+                                    GrowerName = !reader.IsDBNull(1) ? reader.GetString(1) : "",
+                                    ChequeName = !reader.IsDBNull(2) ? reader.GetString(2) : "",
+                                    City = !reader.IsDBNull(3) ? reader.GetString(3) : "",
+                                    Phone = !reader.IsDBNull(4) ? reader.GetString(4) : ""
                                 });
                             }
                         }
@@ -83,8 +85,7 @@ namespace WPFGrowerApp.DataAccess
             }
             catch (Exception ex)
             {
-                // In a production app, you would log this exception
-                Console.WriteLine($"Error searching growers: {ex.Message}");
+                Debug.WriteLine($"Error searching growers: {ex.Message}");
             }
 
             return results;
@@ -103,26 +104,65 @@ namespace WPFGrowerApp.DataAccess
                 {
                     await connection.OpenAsync();
 
+                    // First, let's check if the connection is successful and the Grower table exists
+                    string checkTableSql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Grower'";
+                    using (SqlCommand checkCommand = new SqlCommand(checkTableSql, connection))
+                    {
+                        int tableCount = (int)await checkCommand.ExecuteScalarAsync();
+                        if (tableCount == 0)
+                        {
+                            Debug.WriteLine("Grower table does not exist in the database");
+                            return null;
+                        }
+                    }
+
                     string sql = "SELECT * FROM Grower WHERE NUMBER = @GrowerNumber";
 
                     using (SqlCommand command = new SqlCommand(sql, connection))
                     {
                         command.Parameters.AddWithValue("@GrowerNumber", growerNumber);
 
-                        using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                        try
                         {
-                            if (await reader.ReadAsync())
+                            using (SqlDataReader reader = await command.ExecuteReaderAsync())
                             {
-                                return MapGrowerFromReader(reader);
+                                // Debug column names
+                                var schemaTable = reader.GetSchemaTable();
+                                if (schemaTable != null)
+                                {
+                                    foreach (DataRow row in schemaTable.Rows)
+                                    {
+                                        string columnName = row["ColumnName"].ToString();
+                                        Debug.WriteLine($"Column found: {columnName}");
+                                    }
+                                }
+
+                                if (await reader.ReadAsync())
+                                {
+                                    return MapGrowerFromReader(reader);
+                                }
                             }
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"Error executing reader: {ex.Message}");
+                            throw;
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                // In a production app, you would log this exception
-                Console.WriteLine($"Error getting grower: {ex.Message}");
+                Debug.WriteLine($"Error getting grower: {ex.Message}");
+                Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+
+                // Create a default grower with the error message for debugging
+                return new Grower
+                {
+                    GrowerNumber = growerNumber,
+                    GrowerName = $"Error: {ex.Message}",
+                    Notes = ex.StackTrace
+                };
             }
 
             return null;
@@ -233,22 +273,19 @@ namespace WPFGrowerApp.DataAccess
                         command.Parameters.AddWithValue("@Certified", grower.Certified ?? "");
                         command.Parameters.AddWithValue("@ChargeGST", grower.ChargeGST);
 
-                        // Audit fields
+                        // Date/time parameters
                         DateTime now = DateTime.Now;
-                        string currentTime = now.ToString("HH:mm:ss");
-                        string currentUser = Environment.UserName;
-
                         if (growerExists)
                         {
-                            command.Parameters.AddWithValue("@EditDate", now);
-                            command.Parameters.AddWithValue("@EditTime", currentTime);
-                            command.Parameters.AddWithValue("@EditOperator", currentUser);
+                            command.Parameters.AddWithValue("@EditDate", now.ToString("yyyyMMdd"));
+                            command.Parameters.AddWithValue("@EditTime", now.ToString("HHmmss"));
+                            command.Parameters.AddWithValue("@EditOperator", Environment.UserName);
                         }
                         else
                         {
-                            command.Parameters.AddWithValue("@AddDate", now);
-                            command.Parameters.AddWithValue("@AddTime", currentTime);
-                            command.Parameters.AddWithValue("@AddOperator", currentUser);
+                            command.Parameters.AddWithValue("@AddDate", now.ToString("yyyyMMdd"));
+                            command.Parameters.AddWithValue("@AddTime", now.ToString("HHmmss"));
+                            command.Parameters.AddWithValue("@AddOperator", Environment.UserName);
                         }
 
                         int rowsAffected = await command.ExecuteNonQueryAsync();
@@ -258,81 +295,102 @@ namespace WPFGrowerApp.DataAccess
             }
             catch (Exception ex)
             {
-                // In a production app, you would log this exception
-                Console.WriteLine($"Error saving grower: {ex.Message}");
+                Debug.WriteLine($"Error saving grower: {ex.Message}");
                 return false;
             }
         }
 
-        /// <summary>
-        /// Maps a SqlDataReader to a Grower object
-        /// </summary>
         private Grower MapGrowerFromReader(SqlDataReader reader)
         {
             var grower = new Grower();
 
-            grower.GrowerNumber = reader.GetDecimal(reader.GetOrdinal("NUMBER"));
-            
-            // Handle nullable fields
-            if (!reader.IsDBNull(reader.GetOrdinal("CHEQNAME")))
-                grower.ChequeName = reader.GetString(reader.GetOrdinal("CHEQNAME"));
-            
-            if (!reader.IsDBNull(reader.GetOrdinal("NAME")))
-                grower.GrowerName = reader.GetString(reader.GetOrdinal("NAME"));
-            
-            if (!reader.IsDBNull(reader.GetOrdinal("STREET")))
-                grower.Address = reader.GetString(reader.GetOrdinal("STREET"));
-            
-            if (!reader.IsDBNull(reader.GetOrdinal("CITY")))
-                grower.City = reader.GetString(reader.GetOrdinal("CITY"));
-            
-            if (!reader.IsDBNull(reader.GetOrdinal("PCODE")))
-                grower.Postal = reader.GetString(reader.GetOrdinal("PCODE"));
-            
-            if (!reader.IsDBNull(reader.GetOrdinal("PHONE")))
-                grower.Phone = reader.GetString(reader.GetOrdinal("PHONE"));
-            
-            if (!reader.IsDBNull(reader.GetOrdinal("ACRES")))
-                grower.Acres = reader.GetDecimal(reader.GetOrdinal("ACRES"));
-            
-            if (!reader.IsDBNull(reader.GetOrdinal("NOTES")))
-                grower.Notes = reader.GetString(reader.GetOrdinal("NOTES"));
-            
-            if (!reader.IsDBNull(reader.GetOrdinal("CONTRACT")))
-                grower.Contract = reader.GetString(reader.GetOrdinal("CONTRACT"));
-            
-            if (!reader.IsDBNull(reader.GetOrdinal("CURRENCY")))
-                grower.Currency = reader.GetString(reader.GetOrdinal("CURRENCY"))[0];
-            
-            if (!reader.IsDBNull(reader.GetOrdinal("CONTLIM")))
-                grower.ContractLimit = reader.GetInt32(reader.GetOrdinal("CONTLIM"));
-            
-            if (!reader.IsDBNull(reader.GetOrdinal("PAYGRP")))
-                grower.PayGroup = int.Parse(reader.GetString(reader.GetOrdinal("PAYGRP")));
-            
-            if (!reader.IsDBNull(reader.GetOrdinal("ONHOLD")))
-                grower.OnHold = reader.GetBoolean(reader.GetOrdinal("ONHOLD"));
-            
-            if (!reader.IsDBNull(reader.GetOrdinal("PHONE2")))
-                grower.PhoneAdditional1 = reader.GetString(reader.GetOrdinal("PHONE2"));
-            
-            if (!reader.IsDBNull(reader.GetOrdinal("ALT_NAME1")))
-                grower.OtherNames = reader.GetString(reader.GetOrdinal("ALT_NAME1"));
-            
-            if (!reader.IsDBNull(reader.GetOrdinal("ALT_PHONE2")))
-                grower.PhoneAdditional2 = reader.GetString(reader.GetOrdinal("ALT_PHONE2"));
-            
-            if (!reader.IsDBNull(reader.GetOrdinal("LY_FRESH")))
-                grower.LYFresh = reader.GetInt32(reader.GetOrdinal("LY_FRESH"));
-            
-            if (!reader.IsDBNull(reader.GetOrdinal("LY_OTHER")))
-                grower.LYOther = reader.GetInt32(reader.GetOrdinal("LY_OTHER"));
-            
-            if (!reader.IsDBNull(reader.GetOrdinal("CERTIFIED")))
-                grower.Certified = reader.GetString(reader.GetOrdinal("CERTIFIED"));
-            
-            if (!reader.IsDBNull(reader.GetOrdinal("CHG_GST")))
-                grower.ChargeGST = reader.GetBoolean(reader.GetOrdinal("CHG_GST"));
+            try
+            {
+                // Get all column names from the reader
+                var columnNames = new List<string>();
+                for (int i = 0; i < reader.FieldCount; i++)
+                {
+                    columnNames.Add(reader.GetName(i));
+                }
+
+                // Map fields safely, checking if columns exist
+                if (columnNames.Contains("NUMBER"))
+                    grower.GrowerNumber = reader.GetDecimal(reader.GetOrdinal("NUMBER"));
+
+                if (columnNames.Contains("CHEQNAME") && !reader.IsDBNull(reader.GetOrdinal("CHEQNAME")))
+                    grower.ChequeName = reader.GetString(reader.GetOrdinal("CHEQNAME"));
+
+                if (columnNames.Contains("NAME") && !reader.IsDBNull(reader.GetOrdinal("NAME")))
+                    grower.GrowerName = reader.GetString(reader.GetOrdinal("NAME"));
+
+                if (columnNames.Contains("STREET") && !reader.IsDBNull(reader.GetOrdinal("STREET")))
+                    grower.Address = reader.GetString(reader.GetOrdinal("STREET"));
+
+                if (columnNames.Contains("CITY") && !reader.IsDBNull(reader.GetOrdinal("CITY")))
+                    grower.City = reader.GetString(reader.GetOrdinal("CITY"));
+
+                if (columnNames.Contains("PCODE") && !reader.IsDBNull(reader.GetOrdinal("PCODE")))
+                    grower.Postal = reader.GetString(reader.GetOrdinal("PCODE"));
+
+                if (columnNames.Contains("PHONE") && !reader.IsDBNull(reader.GetOrdinal("PHONE")))
+                    grower.Phone = reader.GetString(reader.GetOrdinal("PHONE"));
+
+                if (columnNames.Contains("ACRES") && !reader.IsDBNull(reader.GetOrdinal("ACRES")))
+                    grower.Acres = reader.GetDecimal(reader.GetOrdinal("ACRES"));
+
+                if (columnNames.Contains("NOTES") && !reader.IsDBNull(reader.GetOrdinal("NOTES")))
+                    grower.Notes = reader.GetString(reader.GetOrdinal("NOTES"));
+
+                if (columnNames.Contains("CONTRACT") && !reader.IsDBNull(reader.GetOrdinal("CONTRACT")))
+                    grower.Contract = reader.GetString(reader.GetOrdinal("CONTRACT"));
+
+                if (columnNames.Contains("CURRENCY") && !reader.IsDBNull(reader.GetOrdinal("CURRENCY")))
+                {
+                    string currencyStr = reader.GetString(reader.GetOrdinal("CURRENCY"));
+                    if (!string.IsNullOrEmpty(currencyStr))
+                        grower.Currency = currencyStr[0];
+                }
+
+                if (columnNames.Contains("CONTLIM") && !reader.IsDBNull(reader.GetOrdinal("CONTLIM")))
+                    grower.ContractLimit = reader.GetInt32(reader.GetOrdinal("CONTLIM"));
+
+                if (columnNames.Contains("PAYGRP") && !reader.IsDBNull(reader.GetOrdinal("PAYGRP")))
+                {
+                    string payGroupStr = reader.GetString(reader.GetOrdinal("PAYGRP"));
+                    if (int.TryParse(payGroupStr, out int payGroup))
+                        grower.PayGroup = payGroup;
+                }
+
+                if (columnNames.Contains("ONHOLD") && !reader.IsDBNull(reader.GetOrdinal("ONHOLD")))
+                    grower.OnHold = reader.GetBoolean(reader.GetOrdinal("ONHOLD"));
+
+                if (columnNames.Contains("PHONE2") && !reader.IsDBNull(reader.GetOrdinal("PHONE2")))
+                    grower.PhoneAdditional1 = reader.GetString(reader.GetOrdinal("PHONE2"));
+
+                if (columnNames.Contains("ALT_NAME1") && !reader.IsDBNull(reader.GetOrdinal("ALT_NAME1")))
+                    grower.OtherNames = reader.GetString(reader.GetOrdinal("ALT_NAME1"));
+
+                if (columnNames.Contains("ALT_PHONE2") && !reader.IsDBNull(reader.GetOrdinal("ALT_PHONE2")))
+                    grower.PhoneAdditional2 = reader.GetString(reader.GetOrdinal("ALT_PHONE2"));
+
+                if (columnNames.Contains("LY_FRESH") && !reader.IsDBNull(reader.GetOrdinal("LY_FRESH")))
+                    grower.LYFresh = reader.GetInt32(reader.GetOrdinal("LY_FRESH"));
+
+                if (columnNames.Contains("LY_OTHER") && !reader.IsDBNull(reader.GetOrdinal("LY_OTHER")))
+                    grower.LYOther = reader.GetInt32(reader.GetOrdinal("LY_OTHER"));
+
+                if (columnNames.Contains("CERTIFIED") && !reader.IsDBNull(reader.GetOrdinal("CERTIFIED")))
+                    grower.Certified = reader.GetString(reader.GetOrdinal("CERTIFIED"));
+
+                if (columnNames.Contains("CHG_GST") && !reader.IsDBNull(reader.GetOrdinal("CHG_GST")))
+                    grower.ChargeGST = reader.GetBoolean(reader.GetOrdinal("CHG_GST"));
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error mapping grower from reader: {ex.Message}");
+                // Set error information in the grower object for debugging
+                grower.Notes = $"Error mapping data: {ex.Message}";
+            }
 
             return grower;
         }
@@ -377,24 +435,10 @@ namespace WPFGrowerApp.DataAccess
             }
             catch (Exception ex)
             {
-                // In a production app, you would log this exception
-                Console.WriteLine($"Error getting all growers: {ex.Message}");
+                Debug.WriteLine($"Error getting all growers: {ex.Message}");
             }
 
             return results;
         }
-
-    }
-
-    /// <summary>
-    /// Simple class for grower search results
-    /// </summary>
-    public class GrowerSearchResult
-    {
-        public decimal GrowerNumber { get; set; }
-        public string GrowerName { get; set; }
-        public string ChequeName { get; set; }
-        public string City { get; set; }
-        public string Phone { get; set; }
     }
 }
