@@ -1,0 +1,126 @@
+<Window x:Class="WPFGrowerApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:WPFGrowerApp"
+        xmlns:controls="clr-namespace:WPFGrowerApp.Controls"
+        mc:Ignorable="d"
+        Title="Berry Farm Management" Height="600" Width="900"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None" 
+        ResizeMode="CanResizeWithGrip"
+        AllowsTransparency="True"
+        BorderThickness="1"
+        BorderBrush="#CCCCCC">
+    
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Styles/Animations.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            
+            <!-- Window Control Button Style -->
+            <Style x:Key="WindowControlButtonStyle" TargetType="Button">
+                <Setter Property="Width" Value="46"/>
+                <Setter Property="Height" Value="30"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="Foreground" Value="#333333"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="border" Background="{TemplateBinding Background}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#E5E5E5" TargetName="border"/>
+                                    <Setter Property="Foreground" Value="#000000"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter Property="Background" Value="#CCCCCC" TargetName="border"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            
+            <!-- Close Button Style -->
+            <Style x:Key="CloseButtonStyle" TargetType="Button" BasedOn="{StaticResource WindowControlButtonStyle}">
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="#E81123"/>
+                        <Setter Property="Foreground" Value="White"/>
+                    </Trigger>
+                    <Trigger Property="IsPressed" Value="True">
+                        <Setter Property="Background" Value="#F1707A"/>
+                        <Setter Property="Foreground" Value="White"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="MenuColumn" Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Hamburger Menu -->
+            <controls:HamburgerMenu x:Name="MainMenu" Grid.Column="0" Width="250"/>
+            
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="50"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Header with Toggle Button -->
+                <!-- Header with Toggle Button -->
+                <Grid Grid.Row="0" Background="#F8F8F8" MouseLeftButtonDown="HeaderArea_MouseLeftButtonDown">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="191*"/>
+                        <ColumnDefinition Width="133*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="10,0,0,0">
+                        <Button x:Name="MenuToggleButton" 
+                                HorizontalAlignment="Left" 
+                                VerticalAlignment="Center"
+                                Margin="15,0,0,0"
+                                Width="30" 
+                                Height="30"
+                                Content="☰"
+                                FontSize="16"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Click="MenuToggleButton_Click"/>
+                    </StackPanel>
+                    
+                    <!-- Window Controls -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button x:Name="MinimizeButton" Content="&#xE921;" Style="{StaticResource WindowControlButtonStyle}" Click="MinimizeButton_Click"/>
+                        <Button x:Name="MaximizeButton" Content="&#xE922;" Style="{StaticResource WindowControlButtonStyle}" Click="MaximizeButton_Click"/>
+                        <Button x:Name="CloseButton" Content="&#xE8BB;" Style="{StaticResource CloseButtonStyle}" Click="CloseButton_Click"/>
+                    </StackPanel>
+                </Grid>
+                
+                <!-- Content Area -->
+                <ContentControl Grid.Row="1" 
+                                Margin="15"
+                                Content="{Binding CurrentViewModel}"/>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

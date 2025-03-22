@@ -1,0 +1,15 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:viewmodels="clr-namespace:WPFGrowerApp.ViewModels"
+                    xmlns:views="clr-namespace:WPFGrowerApp.Views">
+
+    <!-- View Model to View Mappings -->
+    <DataTemplate DataType="{x:Type viewmodels:DashboardViewModel}">
+        <views:DashboardView />
+    </DataTemplate>
+    
+    <DataTemplate DataType="{x:Type viewmodels:GrowerViewModel}">
+        <views:GrowerView />
+    </DataTemplate>
+    
+</ResourceDictionary>
