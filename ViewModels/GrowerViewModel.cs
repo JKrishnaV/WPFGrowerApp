@@ -1,54 +1,95 @@
 using System;
-using System.Windows;
-using System.Windows.Controls;
-using WPFGrowerApp.DataAccess;
-using WPFGrowerApp.Views;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
+using WPFGrowerApp.DataAccess.Services;
+using WPFGrowerApp.Models;
 
 namespace WPFGrowerApp.ViewModels
 {
-    public class GrowerViewModel : ViewModelBase
+    public class GrowerViewModel : INotifyPropertyChanged
     {
-        private readonly DatabaseService _databaseService;
-        private Models.Grower _currentGrower;
+        private readonly IGrowerService _growerService;
+        private Grower _grower;
         private bool _isLoading;
         private bool _isSaving;
         private string _statusMessage;
 
-        public GrowerViewModel()
+        public GrowerViewModel(IGrowerService growerService)
         {
-            _databaseService = new DatabaseService();
-            CurrentGrower = new Models.Grower();
-            SaveCommand = new RelayCommand(SaveCommandExecute, CanExecuteSaveCommand);
-            NewCommand = new RelayCommand(NewCommandExecute);
-            SearchCommand = new RelayCommand(SearchCommandExecute);
-        }
-        private bool CanExecuteSaveCommand(object parameter)
-        {
-            return !IsSaving;
+            _growerService = growerService ?? throw new ArgumentNullException(nameof(growerService));
+            Grower = new Grower();
         }
 
-        private void SaveCommandExecute(object parameter)
+        public async Task LoadGrowerAsync(decimal growerNumber)
         {
-            SaveGrowerAsync().ConfigureAwait(false);
+            try
+            {
+                IsLoading = true;
+                StatusMessage = "Loading grower data...";
+
+                var grower = await _growerService.GetGrowerByNumberAsync(growerNumber);
+                if (grower != null)
+                {
+                    Grower = grower;
+                    StatusMessage = "Grower data loaded successfully.";
+                }
+                else
+                {
+                    StatusMessage = "Grower not found.";
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error loading grower: {ex.Message}";
+                System.Diagnostics.Debug.WriteLine($"Error loading grower: {ex.Message}");
+            }
+            finally
+            {
+                IsLoading = false;
+            }
         }
 
-        private void NewCommandExecute(object parameter)
+        public async Task<bool> SaveGrowerAsync()
         {
-            CreateNewGrower();
+            try
+            {
+                IsSaving = true;
+                StatusMessage = "Saving grower data...";
+
+                bool result = await _growerService.SaveGrowerAsync(Grower);
+                
+                if (result)
+                {
+                    StatusMessage = "Grower saved successfully.";
+                }
+                else
+                {
+                    StatusMessage = "Failed to save grower.";
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error saving grower: {ex.Message}";
+                System.Diagnostics.Debug.WriteLine($"Error saving grower: {ex.Message}");
+                return false;
+            }
+            finally
+            {
+                IsSaving = false;
+            }
         }
 
-        private void SearchCommandExecute(object parameter)
+        public Grower Grower
         {
-            SearchGrower();
-        }
-        public Models.Grower CurrentGrower
-        {
-            get => _currentGrower;
+            get => _grower;
             set
             {
-                if (_currentGrower != value)
+                if (_grower != value)
                 {
-                    _currentGrower = value;
+                    _grower = value;
                     OnPropertyChanged();
                 }
             }
@@ -93,88 +134,11 @@ namespace WPFGrowerApp.ViewModels
             }
         }
 
-        public RelayCommand SaveCommand { get; }
-        public RelayCommand NewCommand { get; }
-        public RelayCommand SearchCommand { get; }
+        public event PropertyChangedEventHandler PropertyChanged;
 
-        public async void LoadGrowerAsync(decimal growerNumber)
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
-            try
-            {
-                IsLoading = true;
-                StatusMessage = "Loading grower...";
-
-                var grower = await _databaseService.GetGrowerByNumberAsync(growerNumber);
-                
-                if (grower != null)
-                {
-                    CurrentGrower = grower;
-                    StatusMessage = $"Grower {growerNumber} loaded successfully.";
-                }
-                else
-                {
-                    StatusMessage = $"Grower {growerNumber} not found.";
-                    CurrentGrower = new Models.Grower { GrowerNumber = growerNumber };
-                }
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = $"Error loading grower: {ex.Message}";
-                MessageBox.Show($"Error loading grower: {ex.Message}", "Error", 
-                    MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-            finally
-            {
-                IsLoading = false;
-            }
-        }
-
-        private async System.Threading.Tasks.Task SaveGrowerAsync()
-        {
-            try
-            {
-                IsSaving = true;
-                StatusMessage = "Saving grower...";
-
-                bool success = await _databaseService.SaveGrowerAsync(CurrentGrower);
-                
-                if (success)
-                {
-                    StatusMessage = "Grower saved successfully.";
-                }
-                else
-                {
-                    StatusMessage = "Failed to save grower.";
-                    MessageBox.Show("Failed to save grower.", "Error", 
-                        MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = $"Error saving grower: {ex.Message}";
-                MessageBox.Show($"Error saving grower: {ex.Message}", "Error", 
-                    MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-            finally
-            {
-                IsSaving = false;
-            }
-        }
-
-        private void CreateNewGrower()
-        {
-            CurrentGrower = new Models.Grower();
-            StatusMessage = "Created new grower.";
-        }
-
-        private void SearchGrower()
-        {
-            var searchView = new GrowerSearchView();
-            
-            if (searchView.ShowDialog() == true && searchView.SelectedGrowerNumber.HasValue)
-            {
-                LoadGrowerAsync(searchView.SelectedGrowerNumber.Value);
-            }
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }

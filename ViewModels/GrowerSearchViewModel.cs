@@ -4,24 +4,21 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using WPFGrowerApp.DataAccess;
-using WPFGrowerApp.Models;
-
+using WPFGrowerApp.DataAccess.Services;
 
 namespace WPFGrowerApp.ViewModels
 {
     public class GrowerSearchViewModel : INotifyPropertyChanged
     {
-        private readonly DatabaseService _databaseService;
+        private readonly IGrowerService _growerService;
         private string _searchTerm;
-        private ObservableCollection<GrowerSearchResult> _searchResults;
+        private ObservableCollection<Models.GrowerSearchResult> _searchResults;
         private bool _isSearching;
 
-
-        public GrowerSearchViewModel(DatabaseService databaseService)
+        public GrowerSearchViewModel(IGrowerService growerService)
         {
-            _databaseService = databaseService ?? throw new ArgumentNullException(nameof(databaseService));
-            SearchResults = new ObservableCollection<GrowerSearchResult>();
+            _growerService = growerService ?? throw new ArgumentNullException(nameof(growerService));
+            SearchResults = new ObservableCollection<Models.GrowerSearchResult>();
             SearchCommand = new AsyncRelayCommand(SearchCommandExecute, CanExecuteSearchCommand);
 
             // Load all growers when the view is initialized
@@ -36,8 +33,8 @@ namespace WPFGrowerApp.ViewModels
                 IsSearching = true;
                 SearchResults.Clear();
 
-                // Call a new method in DatabaseService to get all growers
-                var results = await _databaseService.GetAllGrowersAsync();
+                // Call the service to get all growers
+                var results = await _growerService.GetAllGrowersAsync();
 
                 foreach (var result in results)
                 {
@@ -55,7 +52,7 @@ namespace WPFGrowerApp.ViewModels
             }
         }
 
-        // Modify the SearchAsync method to filter the existing results if search term is provided
+        // Modify the SearchAsync method to use the service
         private async Task SearchAsync()
         {
             try
@@ -70,7 +67,7 @@ namespace WPFGrowerApp.ViewModels
                 }
 
                 SearchResults.Clear();
-                var results = await _databaseService.SearchGrowersAsync(SearchTerm);
+                var results = await _growerService.SearchGrowersAsync(SearchTerm);
 
                 foreach (var result in results)
                 {
@@ -79,7 +76,8 @@ namespace WPFGrowerApp.ViewModels
             }
             catch (Exception ex)
             {
-                // Error handling...
+                System.Windows.MessageBox.Show($"Error searching for growers: {ex.Message}", "Search Error", 
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
             finally
             {
@@ -96,6 +94,7 @@ namespace WPFGrowerApp.ViewModels
         {
             await SearchAsync();
         }
+        
         public string SearchTerm
         {
             get => _searchTerm;
@@ -109,7 +108,7 @@ namespace WPFGrowerApp.ViewModels
             }
         }
 
-        public ObservableCollection<GrowerSearchResult> SearchResults
+        public ObservableCollection<Models.GrowerSearchResult> SearchResults
         {
             get => _searchResults;
             set
@@ -137,35 +136,6 @@ namespace WPFGrowerApp.ViewModels
         }
 
         public ICommand SearchCommand { get; }
-
-        //private async Task SearchAsync()
-        //{
-        //    if (string.IsNullOrWhiteSpace(SearchTerm))
-        //        return;
-
-        //    try
-        //    {
-        //        IsSearching = true;
-        //        SearchResults.Clear();
-
-        //        var results = await _databaseService.SearchGrowersAsync(SearchTerm);
-                
-        //        foreach (var result in results)
-        //        {
-        //            SearchResults.Add(result);
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        // In a production app, you would log this exception and show a user-friendly message
-        //        System.Windows.MessageBox.Show($"Error searching for growers: {ex.Message}", "Search Error", 
-        //            System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-        //    }
-        //    finally
-        //    {
-        //        IsSearching = false;
-        //    }
-        //}
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -245,5 +215,4 @@ namespace WPFGrowerApp.ViewModels
             remove { CommandManager.RequerySuggested -= value; }
         }
     }
-
 }
