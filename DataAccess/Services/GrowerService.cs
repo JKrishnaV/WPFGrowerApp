@@ -81,8 +81,8 @@ namespace WPFGrowerApp.DataAccess.Services
                 PhoneAdditional1 = entity.PhoneAdditional1,
                 OtherNames = entity.OtherNames,
                 PhoneAdditional2 = entity.PhoneAdditional2,
-                LYFresh = entity.LYFresh ?? 0,
-                LYOther = entity.LYOther ?? 0,
+                LYFresh = (int)(entity.LYFresh ?? 0),
+                LYOther = (int)(entity.LYOther ?? 0),
                 Certified = entity.Certified,
                 ChargeGST = entity.ChargeGST ?? false
             };

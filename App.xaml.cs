@@ -40,7 +40,7 @@ namespace WPFGrowerApp
             services.AddTransient<GrowerSearchViewModel>();
 
             // Register main window
-            services.AddTransient<MainWindow>();
+            services.AddSingleton<MainWindow>();
         }
 
         protected override void OnStartup(StartupEventArgs e)

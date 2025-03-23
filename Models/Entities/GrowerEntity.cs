@@ -100,10 +100,10 @@ namespace WPFGrowerApp.Models.Entities
         public string Note2 { get; set; }
 
         [Column("LY_FRESH")]
-        public int? LYFresh { get; set; }
+        public decimal? LYFresh { get; set; }
 
         [Column("LY_OTHER")]
-        public int? LYOther { get; set; }
+        public decimal? LYOther { get; set; }
 
         [Column("QADD_DATE")]
         public DateTime? AddDate { get; set; }
