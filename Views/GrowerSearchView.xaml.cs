@@ -1,7 +1,10 @@
 using System.Windows;
-using Microsoft.Extensions.DependencyInjection;
+using System.Windows.Controls;
+using System.Windows.Input;
+using WPFGrowerApp.DataAccess;
 using WPFGrowerApp.ViewModels;
-using WPFGrowerApp.DataAccess.Services;
+using WPFGrowerApp.Models;
+
 
 namespace WPFGrowerApp.Views
 {
@@ -14,33 +17,33 @@ namespace WPFGrowerApp.Views
 
         public decimal? SelectedGrowerNumber { get; private set; }
 
-        public GrowerSearchView(IGrowerService growerService)
+        public GrowerSearchView()
         {
             InitializeComponent();
-            _viewModel = new GrowerSearchViewModel(growerService);
+            _viewModel = new GrowerSearchViewModel(new DatabaseService());
             DataContext = _viewModel;
             
             // Set focus to the search box
             Loaded += (s, e) => SearchTextBox.Focus();
         }
 
-        private void SearchTextBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        private void SearchTextBox_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key == System.Windows.Input.Key.Enter)
+            if (e.Key == Key.Enter)
             {
                 _viewModel.SearchCommand.Execute(null);
                 e.Handled = true;
             }
         }
 
-        private void ResultsDataGrid_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        private void ResultsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             // This is handled by the binding to the IsEnabled property of the Select button
         }
 
         private void SelectButton_Click(object sender, RoutedEventArgs e)
         {
-            if (ResultsDataGrid.SelectedItem is Models.GrowerSearchResult selectedGrower)
+            if (ResultsDataGrid.SelectedItem is GrowerSearchResult selectedGrower)
             {
                 SelectedGrowerNumber = selectedGrower.GrowerNumber;
                 DialogResult = true;
