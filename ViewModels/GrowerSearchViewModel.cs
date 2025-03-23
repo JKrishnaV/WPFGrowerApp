@@ -4,28 +4,57 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using WPFGrowerApp.DataAccess;
+using WPFGrowerApp.DataAccess.Services;
 using WPFGrowerApp.Models;
-
 
 namespace WPFGrowerApp.ViewModels
 {
     public class GrowerSearchViewModel : INotifyPropertyChanged
     {
-        private readonly DatabaseService _databaseService;
+        private readonly GrowerService _growerService;
         private string _searchTerm;
         private ObservableCollection<GrowerSearchResult> _searchResults;
         private bool _isSearching;
 
-
-        public GrowerSearchViewModel(DatabaseService databaseService)
+        public GrowerSearchViewModel(GrowerService growerService)
         {
-            _databaseService = databaseService ?? throw new ArgumentNullException(nameof(databaseService));
+            _growerService = growerService ?? throw new ArgumentNullException(nameof(growerService));
             SearchResults = new ObservableCollection<GrowerSearchResult>();
             SearchCommand = new AsyncRelayCommand(SearchCommandExecute, CanExecuteSearchCommand);
+            NewGrowerCommand = new RelayCommand(NewGrowerCommandExecute);
 
             // Load all growers when the view is initialized
             LoadAllGrowersAsync();
+        }
+
+        // Add this new method to handle the New Grower button click
+        private void NewGrowerCommandExecute(object parameter)
+        {
+            // Create a new GrowerViewModel with a blank grower
+            var growerViewModel = new GrowerViewModel(_growerService);
+            growerViewModel.CreateNewGrower();
+            
+            // Create and show the GrowerView
+            var growerView = new Views.GrowerView();
+            growerView.DataContext = growerViewModel;
+            
+            // Get the parent window and close it
+            if (parameter is System.Windows.Window parentWindow)
+            {
+                // Create a new window to host the GrowerView
+                var window = new System.Windows.Window
+                {
+                    Title = "New Grower",
+                    Content = growerView,
+                    SizeToContent = System.Windows.SizeToContent.WidthAndHeight,
+                    MinWidth = 700,
+                    MinHeight = 600,
+                    WindowStartupLocation = System.Windows.WindowStartupLocation.CenterScreen
+                };
+                
+                parentWindow.Close();
+                window.Show();
+            }
         }
 
         // Add this new method to load all growers
@@ -36,8 +65,8 @@ namespace WPFGrowerApp.ViewModels
                 IsSearching = true;
                 SearchResults.Clear();
 
-                // Call a new method in DatabaseService to get all growers
-                var results = await _databaseService.GetAllGrowersAsync();
+                // Call the search method with empty string to get all growers
+                var results = await _growerService.SearchGrowersAsync("");
 
                 foreach (var result in results)
                 {
@@ -70,7 +99,7 @@ namespace WPFGrowerApp.ViewModels
                 }
 
                 SearchResults.Clear();
-                var results = await _databaseService.SearchGrowersAsync(SearchTerm);
+                var results = await _growerService.SearchGrowersAsync(SearchTerm);
 
                 foreach (var result in results)
                 {
@@ -79,7 +108,8 @@ namespace WPFGrowerApp.ViewModels
             }
             catch (Exception ex)
             {
-                // Error handling...
+                System.Windows.MessageBox.Show($"Error searching for growers: {ex.Message}", "Search Error", 
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
             finally
             {
@@ -137,35 +167,7 @@ namespace WPFGrowerApp.ViewModels
         }
 
         public ICommand SearchCommand { get; }
-
-        //private async Task SearchAsync()
-        //{
-        //    if (string.IsNullOrWhiteSpace(SearchTerm))
-        //        return;
-
-        //    try
-        //    {
-        //        IsSearching = true;
-        //        SearchResults.Clear();
-
-        //        var results = await _databaseService.SearchGrowersAsync(SearchTerm);
-                
-        //        foreach (var result in results)
-        //        {
-        //            SearchResults.Add(result);
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        // In a production app, you would log this exception and show a user-friendly message
-        //        System.Windows.MessageBox.Show($"Error searching for growers: {ex.Message}", "Search Error", 
-        //            System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-        //    }
-        //    finally
-        //    {
-        //        IsSearching = false;
-        //    }
-        //}
+        public ICommand NewGrowerCommand { get; }
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -245,5 +247,4 @@ namespace WPFGrowerApp.ViewModels
             remove { CommandManager.RequerySuggested -= value; }
         }
     }
-
 }

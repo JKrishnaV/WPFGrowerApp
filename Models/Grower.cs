@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 
 namespace WPFGrowerApp.Models
 {
-    public class Grower : INotifyPropertyChanged
+    public class Grower : INotifyPropertyChanged, IDataErrorInfo
     {
         private decimal _growerNumber;
         private string _chequeName;
@@ -27,6 +30,9 @@ namespace WPFGrowerApp.Models
         private int _lyOther;
         private string _certified;
         private bool _chargeGST;
+        
+        // Dictionary to store validation errors
+        private Dictionary<string, string> _validationErrors = new Dictionary<string, string>();
 
         public decimal GrowerNumber
         {
@@ -50,6 +56,7 @@ namespace WPFGrowerApp.Models
                 {
                     _chequeName = value;
                     OnPropertyChanged();
+                    ValidateChequeName();
                 }
             }
         }
@@ -63,6 +70,7 @@ namespace WPFGrowerApp.Models
                 {
                     _growerName = value;
                     OnPropertyChanged();
+                    ValidateGrowerName();
                 }
             }
         }
@@ -102,6 +110,7 @@ namespace WPFGrowerApp.Models
                 {
                     _postal = value;
                     OnPropertyChanged();
+                    ValidatePostalCode();
                 }
             }
         }
@@ -115,6 +124,7 @@ namespace WPFGrowerApp.Models
                 {
                     _phone = value;
                     OnPropertyChanged();
+                    ValidatePhoneNumber();
                 }
             }
         }
@@ -298,6 +308,106 @@ namespace WPFGrowerApp.Models
                     _chargeGST = value;
                     OnPropertyChanged();
                 }
+            }
+        }
+
+        // Validation methods
+        private void ValidateGrowerName()
+        {
+            if (string.IsNullOrWhiteSpace(GrowerName))
+            {
+                _validationErrors["GrowerName"] = "Grower Name is required.";
+            }
+            else if (GrowerName.Length < 3)
+            {
+                _validationErrors["GrowerName"] = "Grower Name must be at least 3 characters.";
+            }
+            else
+            {
+                _validationErrors.Remove("GrowerName");
+            }
+            
+            OnPropertyChanged(nameof(Error));
+        }
+
+        private void ValidateChequeName()
+        {
+            if (string.IsNullOrWhiteSpace(ChequeName))
+            {
+                _validationErrors["ChequeName"] = "Cheque Name is required.";
+            }
+            else if (ChequeName.Length < 3)
+            {
+                _validationErrors["ChequeName"] = "Cheque Name must be at least 3 characters.";
+            }
+            else
+            {
+                _validationErrors.Remove("ChequeName");
+            }
+            
+            OnPropertyChanged(nameof(Error));
+        }
+
+        private void ValidatePostalCode()
+        {
+            if (!string.IsNullOrWhiteSpace(Postal))
+            {
+                // Canadian postal code format: A1A 1A1
+                var canadianPattern = @"^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$";
+                
+                // US ZIP code format: 12345 or 12345-6789
+                var usPattern = @"^\d{5}(-\d{4})?$";
+                
+                if (!Regex.IsMatch(Postal, canadianPattern) && !Regex.IsMatch(Postal, usPattern))
+                {
+                    _validationErrors["Postal"] = "Invalid postal code format. Use Canadian (A1A 1A1) or US (12345 or 12345-6789) format.";
+                }
+                else
+                {
+                    _validationErrors.Remove("Postal");
+                }
+            }
+            else
+            {
+                _validationErrors.Remove("Postal");
+            }
+            
+            OnPropertyChanged(nameof(Error));
+        }
+
+        private void ValidatePhoneNumber()
+        {
+            if (!string.IsNullOrWhiteSpace(Phone))
+            {
+                // Remove any non-digit characters for validation
+                var digitsOnly = new string(Phone.Where(char.IsDigit).ToArray());
+                
+                if (digitsOnly.Length < 10 || digitsOnly.Length > 15)
+                {
+                    _validationErrors["Phone"] = "Phone number must have between 10 and 15 digits.";
+                }
+                else
+                {
+                    _validationErrors.Remove("Phone");
+                }
+            }
+            else
+            {
+                _validationErrors.Remove("Phone");
+            }
+            
+            OnPropertyChanged(nameof(Error));
+        }
+
+        // IDataErrorInfo implementation
+        public string Error => string.Join(Environment.NewLine, _validationErrors.Values);
+
+        public string this[string columnName]
+        {
+            get
+            {
+                _validationErrors.TryGetValue(columnName, out string error);
+                return error;
             }
         }
 

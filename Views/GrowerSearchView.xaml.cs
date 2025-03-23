@@ -1,10 +1,9 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using WPFGrowerApp.DataAccess;
 using WPFGrowerApp.ViewModels;
 using WPFGrowerApp.Models;
-
+using WPFGrowerApp.DataAccess.Services;
 
 namespace WPFGrowerApp.Views
 {
@@ -17,14 +16,44 @@ namespace WPFGrowerApp.Views
 
         public decimal? SelectedGrowerNumber { get; private set; }
 
-        public GrowerSearchView()
+        public GrowerSearchView(GrowerSearchViewModel viewModel)
         {
             InitializeComponent();
-            _viewModel = new GrowerSearchViewModel(new DatabaseService());
+            _viewModel = viewModel;
             DataContext = _viewModel;
             
             // Set focus to the search box
             Loaded += (s, e) => SearchTextBox.Focus();
+            
+            // Pass the window instance to the NewGrowerCommand
+            _viewModel.NewGrowerCommand = new RelayCommand(param => NewGrowerCommand_Execute(this));
+        }
+        
+        private void NewGrowerCommand_Execute(Window window)
+        {
+            // Create a new GrowerViewModel with a blank grower
+            var growerService = new GrowerService(new DataAccess.Repositories.GrowerRepository(
+                new DataAccess.DapperConnectionManager()));
+            var growerViewModel = new GrowerViewModel(growerService);
+            growerViewModel.CreateNewGrower();
+            
+            // Create and show the GrowerView
+            var growerView = new GrowerView();
+            growerView.DataContext = growerViewModel;
+            
+            // Create a new window to host the GrowerView
+            var newWindow = new Window
+            {
+                Title = "New Grower",
+                Content = growerView,
+                SizeToContent = SizeToContent.WidthAndHeight,
+                MinWidth = 700,
+                MinHeight = 600,
+                WindowStartupLocation = WindowStartupLocation.CenterScreen
+            };
+            
+            window.Close();
+            newWindow.Show();
         }
 
         private void SearchTextBox_KeyDown(object sender, KeyEventArgs e)
