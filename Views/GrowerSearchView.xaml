@@ -4,9 +4,15 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WPFGrowerApp.Views"
+        xmlns:converters="clr-namespace:WPFGrowerApp.Converters"
         mc:Ignorable="d"
         Title="Grower Search" Height="450" Width="600"
         WindowStartupLocation="CenterScreen">
+    
+    <Window.Resources>
+        <converters:NullToBooleanConverter x:Key="NullToBooleanConverter"/>
+    </Window.Resources>
+    
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>

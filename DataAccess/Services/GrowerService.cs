@@ -10,10 +10,14 @@ namespace WPFGrowerApp.DataAccess.Services
     public class GrowerService
     {
         private readonly GrowerRepository _growerRepository;
+        private readonly AccountRepository _accountRepository;
+        private readonly ChequeRepository _chequeRepository;
 
-        public GrowerService(GrowerRepository growerRepository)
+        public GrowerService(GrowerRepository growerRepository, AccountRepository accountRepository, ChequeRepository chequeRepository)
         {
             _growerRepository = growerRepository ?? throw new ArgumentNullException(nameof(growerRepository));
+            _accountRepository = accountRepository ?? throw new ArgumentNullException(nameof(accountRepository));
+            _chequeRepository = chequeRepository ?? throw new ArgumentNullException(nameof(chequeRepository));
         }
 
         public async Task<List<GrowerSearchResult>> SearchGrowersAsync(string searchTerm)

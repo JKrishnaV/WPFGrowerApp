@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using Dapper;
 using WPFGrowerApp.Models;
@@ -15,120 +14,130 @@ namespace WPFGrowerApp.DataAccess.Repositories
 
         public ChequeRepository(DapperConnectionManager connectionManager)
         {
-            _connectionManager = connectionManager;
+            _connectionManager = connectionManager ?? throw new ArgumentNullException(nameof(connectionManager));
         }
 
-        /// <summary>
-        /// Gets cheques for a specific grower
-        /// </summary>
-        /// <param name="growerNumber">The grower number</param>
-        /// <returns>List of cheques for the grower</returns>
         public async Task<List<Cheque>> GetChequesForGrowerAsync(decimal growerNumber)
         {
-            var results = new List<Cheque>();
-
             try
             {
-                using (var connection = _connectionManager.CreateConnection())
+                using (IDbConnection connection = _connectionManager.CreateConnection())
                 {
-                    await connection.OpenAsync();
+                    string query = @"
+                        SELECT ChequeID, GrowerNumber, ChequeNumber, ChequeDate, Amount, Status, Notes
+                        FROM Cheques
+                        WHERE GrowerNumber = @GrowerNumber
+                        ORDER BY ChequeDate DESC";
 
-                    string sql = @"
-                        SELECT * FROM Cheque 
-                        WHERE GROWER = @GrowerNumber
-                        ORDER BY CHEQDATE DESC";
-
-                    var parameters = new { GrowerNumber = growerNumber };
-                    
-                    results = (await connection.QueryAsync<Cheque>(sql, parameters)).AsList();
+                    var cheques = await connection.QueryAsync<Cheque>(query, new { GrowerNumber = growerNumber });
+                    return cheques.AsList();
                 }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception($"Database error retrieving cheques: {ex.Message}", ex);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error getting cheques: {ex.Message}");
-            }
-
-            return results;
-        }
-
-        /// <summary>
-        /// Gets a cheque by cheque number
-        /// </summary>
-        /// <param name="chequeNumber">The cheque number</param>
-        /// <returns>The cheque if found, null otherwise</returns>
-        public async Task<Cheque> GetChequeByNumberAsync(string chequeNumber)
-        {
-            try
-            {
-                using (var connection = _connectionManager.CreateConnection())
-                {
-                    await connection.OpenAsync();
-
-                    string sql = "SELECT * FROM Cheque WHERE CHEQNUM = @ChequeNumber";
-                    var parameters = new { ChequeNumber = chequeNumber };
-
-                    return await connection.QueryFirstOrDefaultAsync<Cheque>(sql, parameters);
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error getting cheque: {ex.Message}");
-                return null;
+                throw new Exception($"Error retrieving cheques: {ex.Message}", ex);
             }
         }
 
-        /// <summary>
-        /// Saves a cheque to the database
-        /// </summary>
-        /// <param name="cheque">The cheque to save</param>
-        /// <returns>True if successful, false otherwise</returns>
-        public async Task<bool> SaveChequeAsync(Cheque cheque)
+        public async Task<Cheque> GetChequeByIdAsync(int chequeId)
         {
             try
             {
-                using (var connection = _connectionManager.CreateConnection())
+                using (IDbConnection connection = _connectionManager.CreateConnection())
                 {
-                    await connection.OpenAsync();
+                    string query = @"
+                        SELECT ChequeID, GrowerNumber, ChequeNumber, ChequeDate, Amount, Status, Notes
+                        FROM Cheques
+                        WHERE ChequeID = @ChequeID";
 
-                    // Check if the cheque exists
-                    string checkSql = "SELECT COUNT(*) FROM Cheque WHERE CHEQNUM = @ChequeNumber";
-                    var checkParams = new { ChequeNumber = cheque.ChequeNumber };
-                    bool chequeExists = await connection.ExecuteScalarAsync<int>(checkSql, checkParams) > 0;
-
-                    if (chequeExists)
-                    {
-                        // Update existing cheque
-                        string sql = @"
-                            UPDATE Cheque SET 
-                                GROWER = @GrowerNumber,
-                                CHEQDATE = @ChequeDate,
-                                AMOUNT = @Amount,
-                                MEMO = @Memo,
-                                STATUS = @Status
-                            WHERE CHEQNUM = @ChequeNumber";
-
-                        await connection.ExecuteAsync(sql, cheque);
-                    }
-                    else
-                    {
-                        // Insert new cheque
-                        string sql = @"
-                            INSERT INTO Cheque (
-                                CHEQNUM, GROWER, CHEQDATE, AMOUNT, MEMO, STATUS
-                            ) VALUES (
-                                @ChequeNumber, @GrowerNumber, @ChequeDate, @Amount, @Memo, @Status
-                            )";
-
-                        await connection.ExecuteAsync(sql, cheque);
-                    }
-
-                    return true;
+                    return await connection.QueryFirstOrDefaultAsync<Cheque>(query, new { ChequeID = chequeId });
                 }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception($"Database error retrieving cheque: {ex.Message}", ex);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error saving cheque: {ex.Message}");
-                return false;
+                throw new Exception($"Error retrieving cheque: {ex.Message}", ex);
+            }
+        }
+
+        public async Task AddChequeAsync(Cheque cheque)
+        {
+            try
+            {
+                using (IDbConnection connection = _connectionManager.CreateConnection())
+                {
+                    string query = @"
+                        INSERT INTO Cheques (GrowerNumber, ChequeNumber, ChequeDate, Amount, Status, Notes)
+                        VALUES (@GrowerNumber, @ChequeNumber, @ChequeDate, @Amount, @Status, @Notes);
+                        SELECT CAST(SCOPE_IDENTITY() as int)";
+
+                    int chequeId = await connection.QuerySingleAsync<int>(query, cheque);
+                    cheque.ChequeID = chequeId;
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception($"Database error adding cheque: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error adding cheque: {ex.Message}", ex);
+            }
+        }
+
+        public async Task UpdateChequeAsync(Cheque cheque)
+        {
+            try
+            {
+                using (IDbConnection connection = _connectionManager.CreateConnection())
+                {
+                    string query = @"
+                        UPDATE Cheques
+                        SET GrowerNumber = @GrowerNumber,
+                            ChequeNumber = @ChequeNumber,
+                            ChequeDate = @ChequeDate,
+                            Amount = @Amount,
+                            Status = @Status,
+                            Notes = @Notes
+                        WHERE ChequeID = @ChequeID";
+
+                    await connection.ExecuteAsync(query, cheque);
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception($"Database error updating cheque: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error updating cheque: {ex.Message}", ex);
+            }
+        }
+
+        public async Task DeleteChequeAsync(int chequeId)
+        {
+            try
+            {
+                using (IDbConnection connection = _connectionManager.CreateConnection())
+                {
+                    string query = "DELETE FROM Cheques WHERE ChequeID = @ChequeID";
+                    await connection.ExecuteAsync(query, new { ChequeID = chequeId });
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception($"Database error deleting cheque: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error deleting cheque: {ex.Message}", ex);
             }
         }
     }

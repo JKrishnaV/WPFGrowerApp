@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using Dapper;
 using WPFGrowerApp.Models;
@@ -15,120 +14,128 @@ namespace WPFGrowerApp.DataAccess.Repositories
 
         public AccountRepository(DapperConnectionManager connectionManager)
         {
-            _connectionManager = connectionManager;
+            _connectionManager = connectionManager ?? throw new ArgumentNullException(nameof(connectionManager));
         }
 
-        /// <summary>
-        /// Gets accounts for a specific grower
-        /// </summary>
-        /// <param name="growerNumber">The grower number</param>
-        /// <returns>List of accounts for the grower</returns>
         public async Task<List<Account>> GetAccountsForGrowerAsync(decimal growerNumber)
         {
-            var results = new List<Account>();
-
             try
             {
-                using (var connection = _connectionManager.CreateConnection())
+                using (IDbConnection connection = _connectionManager.CreateConnection())
                 {
-                    await connection.OpenAsync();
+                    string query = @"
+                        SELECT AccountID, GrowerNumber, AccountNumber, AccountName, Balance, LastActivity
+                        FROM Accounts
+                        WHERE GrowerNumber = @GrowerNumber";
 
-                    string sql = @"
-                        SELECT * FROM Account 
-                        WHERE GROWER = @GrowerNumber
-                        ORDER BY ACCTNUM";
-
-                    var parameters = new { GrowerNumber = growerNumber };
-                    
-                    results = (await connection.QueryAsync<Account>(sql, parameters)).AsList();
+                    var accounts = await connection.QueryAsync<Account>(query, new { GrowerNumber = growerNumber });
+                    return accounts.AsList();
                 }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception($"Database error retrieving accounts: {ex.Message}", ex);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error getting accounts: {ex.Message}");
-            }
-
-            return results;
-        }
-
-        /// <summary>
-        /// Gets an account by account number
-        /// </summary>
-        /// <param name="accountNumber">The account number</param>
-        /// <returns>The account if found, null otherwise</returns>
-        public async Task<Account> GetAccountByNumberAsync(string accountNumber)
-        {
-            try
-            {
-                using (var connection = _connectionManager.CreateConnection())
-                {
-                    await connection.OpenAsync();
-
-                    string sql = "SELECT * FROM Account WHERE ACCTNUM = @AccountNumber";
-                    var parameters = new { AccountNumber = accountNumber };
-
-                    return await connection.QueryFirstOrDefaultAsync<Account>(sql, parameters);
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error getting account: {ex.Message}");
-                return null;
+                throw new Exception($"Error retrieving accounts: {ex.Message}", ex);
             }
         }
 
-        /// <summary>
-        /// Saves an account to the database
-        /// </summary>
-        /// <param name="account">The account to save</param>
-        /// <returns>True if successful, false otherwise</returns>
-        public async Task<bool> SaveAccountAsync(Account account)
+        public async Task<Account> GetAccountByIdAsync(int accountId)
         {
             try
             {
-                using (var connection = _connectionManager.CreateConnection())
+                using (IDbConnection connection = _connectionManager.CreateConnection())
                 {
-                    await connection.OpenAsync();
+                    string query = @"
+                        SELECT AccountID, GrowerNumber, AccountNumber, AccountName, Balance, LastActivity
+                        FROM Accounts
+                        WHERE AccountID = @AccountID";
 
-                    // Check if the account exists
-                    string checkSql = "SELECT COUNT(*) FROM Account WHERE ACCTNUM = @AccountNumber";
-                    var checkParams = new { AccountNumber = account.AccountNumber };
-                    bool accountExists = await connection.ExecuteScalarAsync<int>(checkSql, checkParams) > 0;
-
-                    if (accountExists)
-                    {
-                        // Update existing account
-                        string sql = @"
-                            UPDATE Account SET 
-                                GROWER = @GrowerNumber,
-                                ACCTTYPE = @AccountType,
-                                ACCTDESC = @Description,
-                                BALANCE = @Balance,
-                                LASTDATE = @LastDate
-                            WHERE ACCTNUM = @AccountNumber";
-
-                        await connection.ExecuteAsync(sql, account);
-                    }
-                    else
-                    {
-                        // Insert new account
-                        string sql = @"
-                            INSERT INTO Account (
-                                ACCTNUM, GROWER, ACCTTYPE, ACCTDESC, BALANCE, LASTDATE
-                            ) VALUES (
-                                @AccountNumber, @GrowerNumber, @AccountType, @Description, @Balance, @LastDate
-                            )";
-
-                        await connection.ExecuteAsync(sql, account);
-                    }
-
-                    return true;
+                    return await connection.QueryFirstOrDefaultAsync<Account>(query, new { AccountID = accountId });
                 }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception($"Database error retrieving account: {ex.Message}", ex);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error saving account: {ex.Message}");
-                return false;
+                throw new Exception($"Error retrieving account: {ex.Message}", ex);
+            }
+        }
+
+        public async Task AddAccountAsync(Account account)
+        {
+            try
+            {
+                using (IDbConnection connection = _connectionManager.CreateConnection())
+                {
+                    string query = @"
+                        INSERT INTO Accounts (GrowerNumber, AccountNumber, AccountName, Balance, LastActivity)
+                        VALUES (@GrowerNumber, @AccountNumber, @AccountName, @Balance, @LastActivity);
+                        SELECT CAST(SCOPE_IDENTITY() as int)";
+
+                    int accountId = await connection.QuerySingleAsync<int>(query, account);
+                    account.AccountID = accountId;
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception($"Database error adding account: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error adding account: {ex.Message}", ex);
+            }
+        }
+
+        public async Task UpdateAccountAsync(Account account)
+        {
+            try
+            {
+                using (IDbConnection connection = _connectionManager.CreateConnection())
+                {
+                    string query = @"
+                        UPDATE Accounts
+                        SET GrowerNumber = @GrowerNumber,
+                            AccountNumber = @AccountNumber,
+                            AccountName = @AccountName,
+                            Balance = @Balance,
+                            LastActivity = @LastActivity
+                        WHERE AccountID = @AccountID";
+
+                    await connection.ExecuteAsync(query, account);
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception($"Database error updating account: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error updating account: {ex.Message}", ex);
+            }
+        }
+
+        public async Task DeleteAccountAsync(int accountId)
+        {
+            try
+            {
+                using (IDbConnection connection = _connectionManager.CreateConnection())
+                {
+                    string query = "DELETE FROM Accounts WHERE AccountID = @AccountID";
+                    await connection.ExecuteAsync(query, new { AccountID = accountId });
+                }
+            }
+            catch (SqlException ex)
+            {
+                throw new Exception($"Database error deleting account: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error deleting account: {ex.Message}", ex);
             }
         }
     }
