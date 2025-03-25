@@ -51,6 +51,10 @@ namespace WPFGrowerApp
                         _viewModel.CurrentViewModel = growerViewModel;
                     }
                     break;
+                case "Reports":
+                    // Show reports view
+                    _viewModel.CurrentViewModel = new ReportsViewModel();
+                    break;
                 // Add other menu items as needed
             }
         }
