@@ -335,37 +335,62 @@ namespace WPFGrowerApp.DataAccess
                 if (columnNames.Contains("PHONE") && !reader.IsDBNull(reader.GetOrdinal("PHONE")))
                     grower.Phone = reader.GetString(reader.GetOrdinal("PHONE"));
 
+                if (columnNames.Contains("PHONE2") && !reader.IsDBNull(reader.GetOrdinal("PHONE2")))
+                {
+                    grower.PhoneAdditional1 = reader.GetString(reader.GetOrdinal("PHONE2")).Trim();
+                    Debug.WriteLine($"Phone2 value from database: {grower.PhoneAdditional1}"); // Debug line
+                }
+
                 if (columnNames.Contains("ACRES") && !reader.IsDBNull(reader.GetOrdinal("ACRES")))
                     grower.Acres = reader.GetDecimal(reader.GetOrdinal("ACRES"));
 
-                if (columnNames.Contains("NOTES") && !reader.IsDBNull(reader.GetOrdinal("NOTES")))
-                    grower.Notes = reader.GetString(reader.GetOrdinal("NOTES"));
+                if (columnNames.Contains("NOTES"))
+                {
+                    int notesOrdinal = reader.GetOrdinal("NOTES");
+                    grower.Notes = !reader.IsDBNull(notesOrdinal) ? 
+                        reader.GetString(notesOrdinal).TrimEnd() : string.Empty;
+                }
 
                 if (columnNames.Contains("CONTRACT") && !reader.IsDBNull(reader.GetOrdinal("CONTRACT")))
                     grower.Contract = reader.GetString(reader.GetOrdinal("CONTRACT"));
 
-                if (columnNames.Contains("CURRENCY") && !reader.IsDBNull(reader.GetOrdinal("CURRENCY")))
+                if (columnNames.Contains("CURRENCY"))
                 {
-                    string currencyStr = reader.GetString(reader.GetOrdinal("CURRENCY"));
-                    if (!string.IsNullOrEmpty(currencyStr))
-                        grower.Currency = currencyStr[0];
+                    int currencyOrdinal = reader.GetOrdinal("CURRENCY");
+                    if (!reader.IsDBNull(currencyOrdinal))
+                    {
+                        string currencyStr = reader.GetString(currencyOrdinal).Trim();
+                        grower.Currency = !string.IsNullOrEmpty(currencyStr) ? currencyStr[0] : 'C';
+                    }
+                    else
+                    {
+                        grower.Currency = 'C';
+                    }
                 }
 
                 if (columnNames.Contains("CONTLIM") && !reader.IsDBNull(reader.GetOrdinal("CONTLIM")))
                     grower.ContractLimit = reader.GetInt32(reader.GetOrdinal("CONTLIM"));
 
-                if (columnNames.Contains("PAYGRP") && !reader.IsDBNull(reader.GetOrdinal("PAYGRP")))
+                if (columnNames.Contains("PAYGRP"))
                 {
-                    string payGroupStr = reader.GetString(reader.GetOrdinal("PAYGRP"));
-                    if (int.TryParse(payGroupStr, out int payGroup))
-                        grower.PayGroup = payGroup;
+                    int payGrpOrdinal = reader.GetOrdinal("PAYGRP");
+                    if (!reader.IsDBNull(payGrpOrdinal))
+                    {
+                        string payGrpStr = reader.GetString(payGrpOrdinal).Trim();
+                        grower.PayGroup = !string.IsNullOrEmpty(payGrpStr) ? payGrpStr : "1";
+                    }
+                    else
+                    {
+                        grower.PayGroup = "1";
+                    }
                 }
 
-                if (columnNames.Contains("ONHOLD") && !reader.IsDBNull(reader.GetOrdinal("ONHOLD")))
-                    grower.OnHold = reader.GetBoolean(reader.GetOrdinal("ONHOLD"));
+                if (columnNames.Contains("ONHOLD"))
+                {
+                    int onHoldOrdinal = reader.GetOrdinal("ONHOLD");
+                    grower.OnHold = !reader.IsDBNull(onHoldOrdinal) && reader.GetBoolean(onHoldOrdinal);
+                }
 
-                if (columnNames.Contains("PHONE2") && !reader.IsDBNull(reader.GetOrdinal("PHONE2")))
-                    grower.PhoneAdditional1 = reader.GetString(reader.GetOrdinal("PHONE2"));
 
                 if (columnNames.Contains("ALT_NAME1") && !reader.IsDBNull(reader.GetOrdinal("ALT_NAME1")))
                     grower.OtherNames = reader.GetString(reader.GetOrdinal("ALT_NAME1"));
@@ -388,8 +413,7 @@ namespace WPFGrowerApp.DataAccess
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error mapping grower from reader: {ex.Message}");
-                // Set error information in the grower object for debugging
-                grower.Notes = $"Error mapping data: {ex.Message}";
+                Debug.WriteLine($"Stack trace: {ex.StackTrace}");
             }
 
             return grower;
@@ -439,6 +463,50 @@ namespace WPFGrowerApp.DataAccess
             }
 
             return results;
+        }
+
+        public class PayGroup
+        {
+            public string PayGroupId { get; set; }
+            public string Description { get; set; }
+            public decimal DefaultPriceLevel { get; set; }
+        }
+
+        public async Task<List<PayGroup>> GetPayGroupsAsync()
+        {
+            var payGroups = new List<PayGroup>();
+
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+
+                    string sql = @"SELECT PAYGRP, Description, DEF_PRLVL FROM PayGrp ORDER BY PAYGRP";
+
+                    using (SqlCommand command = new SqlCommand(sql, connection))
+                    {
+                        using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                payGroups.Add(new PayGroup
+                                {
+                                    PayGroupId = !reader.IsDBNull(0) ? reader.GetString(0) : "",
+                                    Description = !reader.IsDBNull(1) ? reader.GetString(1) : "",
+                                    DefaultPriceLevel = !reader.IsDBNull(2) ? reader.GetDecimal(2) : 1m
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error getting pay groups: {ex.Message}");
+            }
+
+            return payGroups;
         }
     }
 }

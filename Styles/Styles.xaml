@@ -137,7 +137,55 @@
             </Setter.Value>
         </Setter>
     </Style>
-    
+
+    <!-- Toggle Button Style -->
+    <Style x:Key="ModernToggleButtonStyle" TargetType="ToggleButton">
+        <Setter Property="Width" Value="30"/>
+        <Setter Property="Height" Value="15"/>
+        <Setter Property="Background" Value="Gray"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Grid>
+                        <!-- Background -->
+                        <Border x:Name="SwitchBackground"
+                            Width="{TemplateBinding Width}"
+                            Height="{TemplateBinding Height}"
+                            CornerRadius="7.5"
+                            Background="{TemplateBinding Background}" />
+
+                        <!-- Toggle Knob -->
+                        <Ellipse x:Name="SwitchKnob"
+                             Width="{Binding ActualHeight, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource KnobSizeConverter}}"
+                             Height="{Binding ActualHeight, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource KnobSizeConverter}}"
+                             Fill="White"
+                             HorizontalAlignment="Left"
+                             Margin="1.5" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <!-- When IsChecked is True -->
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="SwitchBackground" Property="Background" Value="Green"/>
+                            <Setter TargetName="SwitchKnob" Property="HorizontalAlignment" Value="Right"/>
+                        </Trigger>
+
+                        <!-- When IsChecked is False -->
+                        <Trigger Property="IsChecked" Value="False">
+                            <Setter TargetName="SwitchBackground" Property="Background" Value="Gray"/>
+                            <Setter TargetName="SwitchKnob" Property="HorizontalAlignment" Value="Left"/>
+                        </Trigger>
+
+                        <!-- When Disabled -->
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="SwitchBackground" Property="Background" Value="LightGray"/>
+                            <Setter TargetName="SwitchKnob" Property="Fill" Value="DarkGray"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Menu Item Style for Hamburger Menu -->
     <Style x:Key="HamburgerMenuItemStyle" TargetType="ListBoxItem">
         <Setter Property="Height" Value="48"/>

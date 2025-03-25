@@ -14,11 +14,11 @@ namespace WPFGrowerApp.Models
         private string _postal;
         private string _phone;
         private decimal _acres;
-        private string _notes;
+        private string _notes = string.Empty;
         private string _contract;
         private char _currency = 'C';
         private int _contractLimit;
-        private int _payGroup = 1;
+        private string _payGroup = "1";
         private bool _onHold;
         private string _phoneAdditional1;
         private string _otherNames;
@@ -27,6 +27,7 @@ namespace WPFGrowerApp.Models
         private int _lyOther;
         private string _certified;
         private bool _chargeGST;
+        private int _priceLevel = 1;
 
         public decimal GrowerNumber
         {
@@ -134,7 +135,7 @@ namespace WPFGrowerApp.Models
 
         public string Notes
         {
-            get => _notes;
+            get => _notes ?? string.Empty;
             set
             {
                 if (_notes != value)
@@ -184,7 +185,7 @@ namespace WPFGrowerApp.Models
             }
         }
 
-        public int PayGroup
+        public string PayGroup
         {
             get => _payGroup;
             set
@@ -296,6 +297,19 @@ namespace WPFGrowerApp.Models
                 if (_chargeGST != value)
                 {
                     _chargeGST = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public int PriceLevel
+        {
+            get => _priceLevel;
+            set
+            {
+                if (_priceLevel != value)
+                {
+                    _priceLevel = value;
                     OnPropertyChanged();
                 }
             }

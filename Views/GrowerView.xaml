@@ -1,3 +1,4 @@
+<!-- filepath: c:\GitRepoForBerryFarms\WPFGrowerApp\Views\GrowerView.xaml -->
 <UserControl x:Class="WPFGrowerApp.Views.GrowerView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -12,320 +13,216 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Styles/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
-            
-            <!-- Converters -->
-            <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
         </ResourceDictionary>
     </UserControl.Resources>
-    
+
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        
+
         <!-- Header -->
         <Border Grid.Row="0" 
                 Background="{StaticResource PrimaryBrush}" 
                 Padding="15,10" 
                 Margin="0,0,0,15"
                 CornerRadius="4">
-            <TextBlock Text="Grower" 
+            <TextBlock Text="Grower Information" 
                        Foreground="White" 
                        FontSize="22" 
                        FontWeight="SemiBold" 
                        HorizontalAlignment="Center"/>
         </Border>
-        
-        <!-- Content -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                
+
+        <!-- Content -->        
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="0,0,0,15">
                 <!-- Identification Section -->
-                <Grid Grid.Row="0" Margin="0,0,0,15">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    
-                    <!-- Grower Number -->
-                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
-                        <TextBlock Text="Grower Number:" Style="{StaticResource LabelTextStyle}"/>
-                        <TextBox Text="{Binding CurrentGrower.GrowerNumber}" 
-                                 Style="{StaticResource ModernTextBoxStyle}"/>
-                    </StackPanel>
-                    
-                    <!-- On Hold -->
-                    <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,0,0,10">
-                        <TextBlock Text="On Hold:" Style="{StaticResource LabelTextStyle}"/>
-                        <CheckBox Content="Yes" 
-                                  IsChecked="{Binding CurrentGrower.OnHold}" 
-                                  Style="{StaticResource ModernCheckBoxStyle}"/>
-                    </StackPanel>
-                    
-                    <!-- Cheque Name -->
-                    <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,10">
-                        <TextBlock Text="Cheque Name:" Style="{StaticResource LabelTextStyle}"/>
-                        <TextBox Text="{Binding CurrentGrower.ChequeName}" 
-                                 Style="{StaticResource ModernTextBoxStyle}"/>
-                    </StackPanel>
-                    
-                    <!-- Grower Name -->
-                    <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,10">
-                        <TextBlock Text="Grower Name:" Style="{StaticResource LabelTextStyle}"/>
-                        <TextBox Text="{Binding CurrentGrower.GrowerName}" 
-                                 Style="{StaticResource ModernTextBoxStyle}"/>
-                    </StackPanel>
-                </Grid>
-                
-                <!-- Contact Information Section -->
-                <Grid Grid.Row="1" Margin="0,0,0,15">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="3*"/>
-                        <ColumnDefinition Width="2*"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    
-                    <!-- Address -->
-                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
-                        <TextBlock Text="Address:" Style="{StaticResource LabelTextStyle}"/>
-                        <TextBox Text="{Binding CurrentGrower.Address}" 
-                                 Style="{StaticResource ModernTextBoxStyle}"
-                                 Height="60"
-                                 TextWrapping="Wrap"
-                                 AcceptsReturn="True"
-                                 VerticalContentAlignment="Top"
-                                 VerticalScrollBarVisibility="Auto"/>
-                    </StackPanel>
-                    
-                    <!-- Financial Information -->
-                    <Grid Grid.Row="0" Grid.Column="1" Margin="10,0,0,10">
+                <GroupBox Header="Identification" Style="{StaticResource ModernGroupBoxStyle}" Margin="0,0,0,15">
+                    <Grid Margin="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1*"/>
+                            <ColumnDefinition Width="1*"/>
+                        </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                        
-                        <!-- Price Level -->
-                        <StackPanel Grid.Row="0" Margin="0,0,0,5">
-                            <TextBlock Text="Price Level:" Style="{StaticResource LabelTextStyle}"/>
-                            <TextBox Text="{Binding CurrentGrower.PriceLevel}" 
-                                     Style="{StaticResource ModernTextBoxStyle}"/>
+
+                        <!-- Grower Number -->
+                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
+                            <TextBlock Text="Grower Number:" Style="{StaticResource LabelTextStyle}"/>
+                            <TextBox Text="{Binding CurrentGrower.GrowerNumber}" 
+                             Style="{StaticResource ModernTextBoxStyle}" 
+                             IsReadOnly="True" 
+                             Background="#F0F0F0" />
                         </StackPanel>
-                        
-                        <!-- Currency -->
-                        <StackPanel Grid.Row="1" Margin="0,0,0,5">
-                            <TextBlock Text="Currency:" Style="{StaticResource LabelTextStyle}"/>
-                            <TextBox Text="{Binding CurrentGrower.Currency}" 
-                                     Style="{StaticResource ModernTextBoxStyle}"/>
+
+                        <!-- On Hold -->
+                        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,10">
+                            <TextBlock Text="On Hold:" Style="{StaticResource LabelTextStyle}" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <ToggleButton IsChecked="{Binding CurrentGrower.OnHold}" 
+                                          Style="{StaticResource ModernToggleButtonStyle}" 
+                                          Width="30" Height="15" />
                         </StackPanel>
-                        
-                        <!-- Pay Group -->
-                        <StackPanel Grid.Row="2" Margin="0,0,0,5">
-                            <TextBlock Text="Pay Group:" Style="{StaticResource LabelTextStyle}"/>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBox Grid.Column="0" 
-                                         Text="{Binding CurrentGrower.PayGroup}" 
-                                         Width="50"
-                                         Style="{StaticResource ModernTextBoxStyle}"/>
-                                <TextBlock Grid.Column="1" 
-                                           Text="regular payments" 
-                                           Margin="10,0,0,0"
-                                           VerticalAlignment="Center"
-                                           Foreground="{StaticResource TextSecondaryBrush}"/>
-                            </Grid>
+
+                        <!-- Cheque Name -->
+                        <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,10">
+                            <TextBlock Text="Cheque Name:" Style="{StaticResource LabelTextStyle}"/>
+                            <TextBox Text="{Binding CurrentGrower.ChequeName}" 
+                             Style="{StaticResource ModernTextBoxStyle}"/>
+                        </StackPanel>
+
+                        <!-- Grower Name -->
+                        <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,10">
+                            <TextBlock Text="Grower Name:" Style="{StaticResource LabelTextStyle}"/>
+                            <TextBox Text="{Binding CurrentGrower.GrowerName}" 
+                             Style="{StaticResource ModernTextBoxStyle}"/>
                         </StackPanel>
                     </Grid>
-                    
-                    <!-- City and Postal -->
-                    <Grid Grid.Row="1" Grid.Column="0" Margin="0,0,10,10">
+                </GroupBox>
+
+                <!-- Contact Information Section -->
+                <GroupBox Header="Contact Information" Style="{StaticResource ModernGroupBoxStyle}" Margin="0,0,0,15">
+                    <Grid Margin="10">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="3*"/>
+                            <ColumnDefinition Width="2*"/>
                         </Grid.ColumnDefinitions>
-                        
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Address -->
+                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
+                            <TextBlock Text="Address:" Style="{StaticResource LabelTextStyle}"/>
+                            <TextBox Text="{Binding CurrentGrower.Address}" 
+                             Style="{StaticResource ModernTextBoxStyle}"
+                             Height="60"
+                             TextWrapping="Wrap"
+                             AcceptsReturn="True"
+                             VerticalContentAlignment="Top"
+                             VerticalScrollBarVisibility="Auto"/>
+                        </StackPanel>
+
                         <!-- City -->
-                        <StackPanel Grid.Column="0" Margin="0,0,5,0">
+                        <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,10">
                             <TextBlock Text="City:" Style="{StaticResource LabelTextStyle}"/>
                             <TextBox Text="{Binding CurrentGrower.City}" 
-                                     Style="{StaticResource ModernTextBoxStyle}"/>
+                             Style="{StaticResource ModernTextBoxStyle}"/>
                         </StackPanel>
-                        
+
                         <!-- Postal -->
-                        <StackPanel Grid.Column="1" Margin="5,0,0,0">
+                        <StackPanel Grid.Row="1" Grid.Column="1" Margin="10,0,0,10">
                             <TextBlock Text="Postal:" Style="{StaticResource LabelTextStyle}"/>
                             <TextBox Text="{Binding CurrentGrower.Postal}" 
-                                     Style="{StaticResource ModernTextBoxStyle}"/>
+                             Style="{StaticResource ModernTextBoxStyle}"/>
+                        </StackPanel>
+
+                        <!-- Phone -->
+                        <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,10">
+                            <TextBlock Text="Phone:" Style="{StaticResource LabelTextStyle}"/>
+                            <TextBox Text="{Binding CurrentGrower.Phone}" 
+                             Style="{StaticResource ModernTextBoxStyle}"/>
+                        </StackPanel>
+
+                        <!-- Phone 2 -->
+                        <StackPanel Grid.Row="2" Grid.Column="1" Margin="10,0,0,10">
+                            <TextBlock Text="Phone 2:" Style="{StaticResource LabelTextStyle}"/>
+                            <TextBox Text="{Binding CurrentGrower.PhoneAdditional1}" 
+                             Style="{StaticResource ModernTextBoxStyle}"/>
                         </StackPanel>
                     </Grid>
-                    
-                    <!-- Farm Information -->
-                    <Grid Grid.Row="1" Grid.Column="1" Margin="10,0,0,10">
+                </GroupBox>
+
+                <!-- Financial Information Section -->
+                <GroupBox Header="Financial Information" Style="{StaticResource ModernGroupBoxStyle}" Margin="0,0,0,15">
+                    <Grid Margin="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1*"/>
+                            <ColumnDefinition Width="1*"/>
+                        </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                        
+
+                        <!-- Price Level -->
+                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
+                            <TextBlock Text="Price Level:" Style="{StaticResource LabelTextStyle}"/>
+                            <ComboBox Text="{Binding CurrentGrower.PayGroup, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                      Style="{StaticResource ModernComboBoxStyle}">
+                                <ComboBoxItem Content="1"/>
+                                <ComboBoxItem Content="2"/>
+                                <ComboBoxItem Content="3"/>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <!-- Currency -->
+                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,0,0,10">
+                            <TextBlock Text="Currency:" Style="{StaticResource LabelTextStyle}"/>
+                            <ComboBox Text="{Binding CurrencyDisplay, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                      Style="{StaticResource ModernComboBoxStyle}">
+                                <ComboBoxItem Content="CAD"/>
+                                <ComboBoxItem Content="USD"/>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <!-- Pay Group -->
+                        <StackPanel Grid.Row="1" Grid.Column="1" Margin="10,0,0,10">
+                            <TextBlock Text="Pay Group:" Style="{StaticResource LabelTextStyle}"/>
+                            <ComboBox SelectedValue="{Binding CurrentGrower.PayGroup, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                      ItemsSource="{Binding PayGroups}"
+                                      DisplayMemberPath="Description"
+                                      SelectedValuePath="PayGroupId"
+                                      Style="{StaticResource ModernComboBoxStyle}"/>
+                        </StackPanel>
+
                         <!-- Acres -->
-                        <StackPanel Grid.Row="0" Margin="0,0,0,5">
+                        <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,10">
                             <TextBlock Text="Acres:" Style="{StaticResource LabelTextStyle}"/>
                             <TextBox Text="{Binding CurrentGrower.Acres}" 
                                      Style="{StaticResource ModernTextBoxStyle}"/>
                         </StackPanel>
-                        
-                        <!-- LY Fresh -->
-                        <StackPanel Grid.Row="1" Margin="0,0,0,5">
-                            <TextBlock Text="LY Fresh:" Style="{StaticResource LabelTextStyle}"/>
-                            <TextBox Text="{Binding CurrentGrower.LYFresh}" 
-                                     Style="{StaticResource ModernTextBoxStyle}"/>
-                        </StackPanel>
-                        
-                        <!-- LY Other -->
-                        <StackPanel Grid.Row="2" Margin="0,0,0,5">
-                            <TextBlock Text="LY Other:" Style="{StaticResource LabelTextStyle}"/>
-                            <TextBox Text="{Binding CurrentGrower.LYOther}" 
-                                     Style="{StaticResource ModernTextBoxStyle}"/>
+
+                        <!-- Charge GST -->
+                        <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Top" Margin="0,0,10,10">
+                            <TextBlock Text="Charge GST:" Style="{StaticResource LabelTextStyle}" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <ToggleButton IsChecked="{Binding CurrentGrower.ChargeGST}" 
+                                          Style="{StaticResource ModernToggleButtonStyle}" 
+                                          Width="30" Height="15" />
                         </StackPanel>
                     </Grid>
-                    
-                    <!-- Phone and Contract Information -->
-                    <Grid Grid.Row="2" Grid.Column="0" Margin="0,0,10,10">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        
-                        <!-- Phone -->
-                        <StackPanel Grid.Row="0" Margin="0,0,0,5">
-                            <TextBlock Text="Phone #s:" Style="{StaticResource LabelTextStyle}"/>
-                            <TextBox Text="{Binding CurrentGrower.Phone}" 
-                                     Style="{StaticResource ModernTextBoxStyle}"/>
-                        </StackPanel>
-                        
-                        <!-- Contract -->
-                        <StackPanel Grid.Row="1" Margin="0,0,0,5">
-                            <TextBlock Text="Contract:" Style="{StaticResource LabelTextStyle}"/>
-                            <TextBox Text="{Binding CurrentGrower.Contract}" 
-                                     Style="{StaticResource ModernTextBoxStyle}"/>
-                        </StackPanel>
-                        
-                        <!-- Certified -->
-                        <StackPanel Grid.Row="2" Margin="0,0,0,5">
-                            <TextBlock Text="Certified:" Style="{StaticResource LabelTextStyle}"/>
-                            <TextBox Text="{Binding CurrentGrower.Certified}" 
-                                     Style="{StaticResource ModernTextBoxStyle}"/>
-                        </StackPanel>
-                    </Grid>
-                    
-                    <!-- Additional Information -->
-                    <Grid Grid.Row="2" Grid.Column="1" Margin="10,0,0,10">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        
-                        <!-- Ch. GST -->
-                        <StackPanel Grid.Row="0" Margin="0,0,0,5">
-                            <TextBlock Text="Ch. GST:" Style="{StaticResource LabelTextStyle}"/>
-                            <CheckBox Content="Yes" 
-                                      IsChecked="{Binding CurrentGrower.ChargeGST}" 
-                                      Style="{StaticResource ModernCheckBoxStyle}"/>
-                        </StackPanel>
-                        
-                        <!-- Contract Limit -->
-                        <StackPanel Grid.Row="1" Margin="0,0,0,5">
-                            <TextBlock Text="Cont. Lim:" Style="{StaticResource LabelTextStyle}"/>
-                            <TextBox Text="{Binding CurrentGrower.ContractLimit}" 
-                                     Style="{StaticResource ModernTextBoxStyle}"/>
-                        </StackPanel>
-                    </Grid>
-                </Grid>
-                
+                </GroupBox>
+
                 <!-- Notes Section -->
-                <Grid Grid.Row="2" Margin="0,0,0,15">
-                    <StackPanel>
-                        <TextBlock Text="Notes:" Style="{StaticResource LabelTextStyle}"/>
-                        <TextBox Text="{Binding CurrentGrower.Notes}" 
-                                 Style="{StaticResource ModernTextBoxStyle}"
-                                 Height="80"
-                                 TextWrapping="Wrap"
-                                 AcceptsReturn="True"
-                                 VerticalContentAlignment="Top"
-                                 VerticalScrollBarVisibility="Auto"/>
+                <GroupBox Header="Notes" Style="{StaticResource ModernGroupBoxStyle}" Margin="0,0,0,15">
+                    <StackPanel Margin="10">
+                        <TextBox Text="{Binding CurrentGrower.Notes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                         Style="{StaticResource ModernTextBoxStyle}"
+                         Height="100"
+                         TextWrapping="Wrap"
+                         AcceptsReturn="True"
+                         VerticalScrollBarVisibility="Auto"/>
                     </StackPanel>
-                </Grid>
-                
-                <!-- Other Names Section -->
-                <Grid Grid.Row="3" Margin="0,0,0,15">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="3*"/>
-                        <ColumnDefinition Width="2*"/>
-                    </Grid.ColumnDefinitions>
-                    
-                    <!-- Other Names -->
-                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                        <TextBlock Text="Other Names:" Style="{StaticResource LabelTextStyle}"/>
-                        <TextBox Text="{Binding CurrentGrower.OtherNames}" 
-                                 Style="{StaticResource ModernTextBoxStyle}"/>
-                    </StackPanel>
-                    
-                    <!-- Additional Phone Numbers -->
-                    <Grid Grid.Column="1" Margin="10,0,0,0">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        
-                        <!-- Phone 1 -->
-                        <StackPanel Grid.Row="0" Margin="0,0,0,5">
-                            <TextBlock Text="Ph:" Style="{StaticResource LabelTextStyle}"/>
-                            <TextBox Text="{Binding CurrentGrower.PhoneAdditional1}" 
-                                     Style="{StaticResource ModernTextBoxStyle}"/>
-                        </StackPanel>
-                        
-                        <!-- Phone 2 -->
-                        <StackPanel Grid.Row="1" Margin="0,0,0,5">
-                            <TextBlock Text="Ph:" Style="{StaticResource LabelTextStyle}"/>
-                            <TextBox Text="{Binding CurrentGrower.PhoneAdditional2}" 
-                                     Style="{StaticResource ModernTextBoxStyle}"/>
-                        </StackPanel>
-                    </Grid>
-                </Grid>
-                
+                </GroupBox>
+
                 <!-- Action Buttons -->
-                <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
                     <Button Content="Save" 
-                            Style="{StaticResource PrimaryButtonStyle}" 
-                            Width="100" 
-                            Margin="0,0,10,0"/>
+                    Style="{StaticResource PrimaryButtonStyle}" 
+                    Width="100" 
+                    Margin="0,0,10,0"/>
                     <Button Content="Cancel" 
-                            Style="{StaticResource SecondaryButtonStyle}" 
-                            Width="100"/>
+                    Style="{StaticResource SecondaryButtonStyle}" 
+                    Width="100"/>
                 </StackPanel>
-            </Grid>
+            </StackPanel>
         </ScrollViewer>
     </Grid>
 </UserControl>

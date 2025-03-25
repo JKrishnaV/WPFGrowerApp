@@ -3,6 +3,8 @@ using System.Windows;
 using System.Windows.Controls;
 using WPFGrowerApp.DataAccess;
 using WPFGrowerApp.Views;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace WPFGrowerApp.ViewModels
 {
@@ -13,6 +15,7 @@ namespace WPFGrowerApp.ViewModels
         private bool _isLoading;
         private bool _isSaving;
         private string _statusMessage;
+        private List<DatabaseService.PayGroup> _payGroups;
 
         public GrowerViewModel()
         {
@@ -21,7 +24,44 @@ namespace WPFGrowerApp.ViewModels
             SaveCommand = new RelayCommand(SaveCommandExecute, CanExecuteSaveCommand);
             NewCommand = new RelayCommand(NewCommandExecute);
             SearchCommand = new RelayCommand(SearchCommandExecute);
+            LoadPayGroupsAsync().ConfigureAwait(false);
         }
+
+        public List<DatabaseService.PayGroup> PayGroups
+        {
+            get => _payGroups;
+            set
+            {
+                if (_payGroups != value)
+                {
+                    _payGroups = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private async Task LoadPayGroupsAsync()
+        {
+            PayGroups = await _databaseService.GetPayGroupsAsync();
+        }
+
+        public string CurrencyDisplay
+        {
+            get
+            {
+                if (CurrentGrower == null) return "CAD";
+                return CurrentGrower.Currency == 'U' ? "USD" : "CAD";
+            }
+            set
+            {
+                if (CurrentGrower != null)
+                {
+                    CurrentGrower.Currency = value == "USD" ? 'U' : 'C';
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         private bool CanExecuteSaveCommand(object parameter)
         {
             return !IsSaving;
@@ -41,6 +81,7 @@ namespace WPFGrowerApp.ViewModels
         {
             SearchGrower();
         }
+
         public Models.Grower CurrentGrower
         {
             get => _currentGrower;
@@ -50,6 +91,7 @@ namespace WPFGrowerApp.ViewModels
                 {
                     _currentGrower = value;
                     OnPropertyChanged();
+                    OnPropertyChanged(nameof(CurrencyDisplay));
                 }
             }
         }
