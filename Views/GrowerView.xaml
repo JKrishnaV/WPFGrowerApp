@@ -6,7 +6,9 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:WPFGrowerApp.Views"
              mc:Ignorable="d" 
-             d:DesignHeight="600" d:DesignWidth="700">
+             d:DesignHeight="600" d:DesignWidth="700"
+             VerticalAlignment="Top"
+             HorizontalAlignment="Stretch">
 
     <UserControl.Resources>
         <ResourceDictionary>
@@ -16,17 +18,11 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <Grid Margin="10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-
+    <StackPanel>
         <!-- Header -->
-        <Border Grid.Row="0" 
-                Background="{StaticResource PrimaryBrush}" 
+        <Border Background="{StaticResource PrimaryBrush}" 
                 Padding="15,10" 
-                Margin="0,0,0,15"
+                Margin="10,10,10,15"
                 CornerRadius="4">
             <TextBlock Text="Grower Information" 
                        Foreground="White" 
@@ -35,9 +31,8 @@
                        HorizontalAlignment="Center"/>
         </Border>
 
-        <!-- Content -->        
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Margin="0,0,0,15">
+            <!-- Content -->        
+            <StackPanel Grid.Row="1" Margin="0,0,0,15">
                 <!-- Identification Section -->
                 <GroupBox Header="Identification" Style="{StaticResource ModernGroupBoxStyle}" Margin="0,0,0,15">
                     <Grid Margin="10">
@@ -232,6 +227,5 @@
                     Width="100"/>
                 </StackPanel>
             </StackPanel>
-        </ScrollViewer>
-    </Grid>
+    </StackPanel>
 </UserControl>
