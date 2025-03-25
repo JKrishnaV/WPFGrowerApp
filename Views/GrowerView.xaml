@@ -95,6 +95,7 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
                         <!-- Address -->
@@ -116,22 +117,30 @@
                              Style="{StaticResource ModernTextBoxStyle}"/>
                         </StackPanel>
 
-                        <!-- Postal -->
+                        <!-- Province -->
                         <StackPanel Grid.Row="1" Grid.Column="1" Margin="10,0,0,10">
+                            <TextBlock Text="Province:" Style="{StaticResource LabelTextStyle}"/>
+                            <TextBox Text="{Binding CurrentGrower.Prov}" 
+                             Style="{StaticResource ModernTextBoxStyle}"
+                             MaxLength="2"/>
+                        </StackPanel>
+
+                        <!-- Postal -->
+                        <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,10">
                             <TextBlock Text="Postal:" Style="{StaticResource LabelTextStyle}"/>
                             <TextBox Text="{Binding CurrentGrower.Postal}" 
                              Style="{StaticResource ModernTextBoxStyle}"/>
                         </StackPanel>
 
                         <!-- Phone -->
-                        <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,10">
+                        <StackPanel Grid.Row="2" Grid.Column="1" Margin="10,0,0,10">
                             <TextBlock Text="Phone:" Style="{StaticResource LabelTextStyle}"/>
                             <TextBox Text="{Binding CurrentGrower.Phone}" 
                              Style="{StaticResource ModernTextBoxStyle}"/>
                         </StackPanel>
 
                         <!-- Phone 2 -->
-                        <StackPanel Grid.Row="2" Grid.Column="1" Margin="10,0,0,10">
+                        <StackPanel Grid.Row="3" Grid.Column="0" Margin="0,0,10,10">
                             <TextBlock Text="Phone 2:" Style="{StaticResource LabelTextStyle}"/>
                             <TextBox Text="{Binding CurrentGrower.PhoneAdditional1}" 
                              Style="{StaticResource ModernTextBoxStyle}"/>

@@ -11,6 +11,7 @@ namespace WPFGrowerApp.Models
         private string _growerName;
         private string _address;
         private string _city;
+        private string _prov;
         private string _postal;
         private string _phone;
         private decimal _acres;
@@ -89,6 +90,19 @@ namespace WPFGrowerApp.Models
                 if (_city != value)
                 {
                     _city = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string Prov
+        {
+            get => _prov;
+            set
+            {
+                if (_prov != value)
+                {
+                    _prov = value;
                     OnPropertyChanged();
                 }
             }
