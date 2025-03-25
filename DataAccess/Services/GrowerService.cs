@@ -4,46 +4,13 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.Models;
 
-namespace WPFGrowerApp.DataAccess
+namespace WPFGrowerApp.DataAccess.Services
 {
-    public class DatabaseService
+    public class GrowerService : BaseDatabaseService, IGrowerService
     {
-        private readonly string _connectionString;
-
-        public DatabaseService()
-        {
-            // Connection string with the provided credentials
-            _connectionString = "Server=DESKTOP-LQ92Q06;Database=PackagingPaymentSystem;User Id=localDB;Password=528database@JK;";
-        }
-
-        /// <summary>
-        /// Tests the database connection
-        /// </summary>
-        /// <returns>True if connection successful, false otherwise</returns>
-        public async Task<bool> TestConnectionAsync()
-        {
-            try
-            {
-                using (SqlConnection connection = new SqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Connection test failed: {ex.Message}");
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Searches for growers by name or number
-        /// </summary>
-        /// <param name="searchTerm">The search term (name or number)</param>
-        /// <returns>List of matching growers</returns>
         public async Task<List<GrowerSearchResult>> SearchGrowersAsync(string searchTerm)
         {
             var results = new List<GrowerSearchResult>();
@@ -91,11 +58,6 @@ namespace WPFGrowerApp.DataAccess
             return results;
         }
 
-        /// <summary>
-        /// Gets a grower by number
-        /// </summary>
-        /// <param name="growerNumber">The grower number</param>
-        /// <returns>The grower if found, null otherwise</returns>
         public async Task<Grower> GetGrowerByNumberAsync(decimal growerNumber)
         {
             try
@@ -104,49 +66,18 @@ namespace WPFGrowerApp.DataAccess
                 {
                     await connection.OpenAsync();
 
-                    // First, let's check if the connection is successful and the Grower table exists
-                    string checkTableSql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Grower'";
-                    using (SqlCommand checkCommand = new SqlCommand(checkTableSql, connection))
-                    {
-                        int tableCount = (int)await checkCommand.ExecuteScalarAsync();
-                        if (tableCount == 0)
-                        {
-                            Debug.WriteLine("Grower table does not exist in the database");
-                            return null;
-                        }
-                    }
-
                     string sql = "SELECT * FROM Grower WHERE NUMBER = @GrowerNumber";
 
                     using (SqlCommand command = new SqlCommand(sql, connection))
                     {
                         command.Parameters.AddWithValue("@GrowerNumber", growerNumber);
 
-                        try
+                        using (SqlDataReader reader = await command.ExecuteReaderAsync())
                         {
-                            using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                            if (await reader.ReadAsync())
                             {
-                                // Debug column names
-                                var schemaTable = reader.GetSchemaTable();
-                                if (schemaTable != null)
-                                {
-                                    foreach (DataRow row in schemaTable.Rows)
-                                    {
-                                        string columnName = row["ColumnName"].ToString();
-                                        Debug.WriteLine($"Column found: {columnName}");
-                                    }
-                                }
-
-                                if (await reader.ReadAsync())
-                                {
-                                    return MapGrowerFromReader(reader);
-                                }
+                                return MapGrowerFromReader(reader);
                             }
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.WriteLine($"Error executing reader: {ex.Message}");
-                            throw;
                         }
                     }
                 }
@@ -155,8 +86,6 @@ namespace WPFGrowerApp.DataAccess
             {
                 Debug.WriteLine($"Error getting grower: {ex.Message}");
                 Debug.WriteLine($"Stack trace: {ex.StackTrace}");
-
-                // Create a default grower with the error message for debugging
                 return new Grower
                 {
                     GrowerNumber = growerNumber,
@@ -168,11 +97,6 @@ namespace WPFGrowerApp.DataAccess
             return null;
         }
 
-        /// <summary>
-        /// Saves a grower to the database
-        /// </summary>
-        /// <param name="grower">The grower to save</param>
-        /// <returns>True if successful, false otherwise</returns>
         public async Task<bool> SaveGrowerAsync(Grower grower)
         {
             try
@@ -181,7 +105,6 @@ namespace WPFGrowerApp.DataAccess
                 {
                     await connection.OpenAsync();
 
-                    // Check if the grower exists
                     string checkSql = "SELECT COUNT(*) FROM Grower WHERE NUMBER = @GrowerNumber";
                     bool growerExists = false;
 
@@ -194,7 +117,6 @@ namespace WPFGrowerApp.DataAccess
                     string sql;
                     if (growerExists)
                     {
-                        // Update existing grower
                         sql = @"
                             UPDATE Grower SET 
                                 STATUS = @Status,
@@ -230,7 +152,6 @@ namespace WPFGrowerApp.DataAccess
                     }
                     else
                     {
-                        // Insert new grower
                         sql = @"
                             INSERT INTO Grower (
                                 NUMBER, STATUS, CHEQNAME, NAME, STREET, CITY, PROV, PCODE, PHONE,
@@ -247,47 +168,7 @@ namespace WPFGrowerApp.DataAccess
 
                     using (SqlCommand command = new SqlCommand(sql, connection))
                     {
-                        // Add parameters
-                        command.Parameters.AddWithValue("@GrowerNumber", grower.GrowerNumber);
-                        command.Parameters.AddWithValue("@Status", 1); // Default status
-                        command.Parameters.AddWithValue("@ChequeName", grower.ChequeName ?? "");
-                        command.Parameters.AddWithValue("@GrowerName", grower.GrowerName ?? "");
-                        command.Parameters.AddWithValue("@Address", grower.Address ?? "");
-                        command.Parameters.AddWithValue("@City", grower.City ?? "");
-                        command.Parameters.AddWithValue("@Province", ""); // Not in the original model
-                        command.Parameters.AddWithValue("@Postal", grower.Postal ?? "");
-                        command.Parameters.AddWithValue("@Phone", grower.Phone ?? "");
-                        command.Parameters.AddWithValue("@Acres", grower.Acres);
-                        command.Parameters.AddWithValue("@Notes", grower.Notes ?? "");
-                        command.Parameters.AddWithValue("@Contract", grower.Contract ?? "");
-                        command.Parameters.AddWithValue("@Currency", grower.Currency.ToString());
-                        command.Parameters.AddWithValue("@ContractLimit", grower.ContractLimit);
-                        command.Parameters.AddWithValue("@PayGroup", grower.PayGroup.ToString());
-                        command.Parameters.AddWithValue("@OnHold", grower.OnHold);
-                        command.Parameters.AddWithValue("@PhoneAdditional1", grower.PhoneAdditional1 ?? "");
-                        command.Parameters.AddWithValue("@AddressLine2", ""); // Not in the original model
-                        command.Parameters.AddWithValue("@OtherNames", grower.OtherNames ?? "");
-                        command.Parameters.AddWithValue("@PhoneAdditional2", grower.PhoneAdditional2 ?? "");
-                        command.Parameters.AddWithValue("@LYFresh", grower.LYFresh);
-                        command.Parameters.AddWithValue("@LYOther", grower.LYOther);
-                        command.Parameters.AddWithValue("@Certified", grower.Certified ?? "");
-                        command.Parameters.AddWithValue("@ChargeGST", grower.ChargeGST);
-
-                        // Date/time parameters
-                        DateTime now = DateTime.Now;
-                        if (growerExists)
-                        {
-                            command.Parameters.AddWithValue("@EditDate", now.ToString("yyyyMMdd"));
-                            command.Parameters.AddWithValue("@EditTime", now.ToString("HHmmss"));
-                            command.Parameters.AddWithValue("@EditOperator", Environment.UserName);
-                        }
-                        else
-                        {
-                            command.Parameters.AddWithValue("@AddDate", now.ToString("yyyyMMdd"));
-                            command.Parameters.AddWithValue("@AddTime", now.ToString("HHmmss"));
-                            command.Parameters.AddWithValue("@AddOperator", Environment.UserName);
-                        }
-
+                        AddGrowerParameters(command, grower);
                         int rowsAffected = await command.ExecuteNonQueryAsync();
                         return rowsAffected > 0;
                     }
@@ -300,20 +181,60 @@ namespace WPFGrowerApp.DataAccess
             }
         }
 
+        public async Task<List<GrowerSearchResult>> GetAllGrowersAsync()
+        {
+            var results = new List<GrowerSearchResult>();
+
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+
+                    string sql = @"
+                        SELECT NUMBER, NAME, CHEQNAME, CITY, PHONE 
+                        FROM Grower 
+                        ORDER BY NAME";
+
+                    using (SqlCommand command = new SqlCommand(sql, connection))
+                    {
+                        using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                results.Add(new GrowerSearchResult
+                                {
+                                    GrowerNumber = reader.GetDecimal(0),
+                                    GrowerName = !reader.IsDBNull(1) ? reader.GetString(1) : "",
+                                    ChequeName = !reader.IsDBNull(2) ? reader.GetString(2) : "",
+                                    City = !reader.IsDBNull(3) ? reader.GetString(3) : "",
+                                    Phone = !reader.IsDBNull(4) ? reader.GetString(4) : ""
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error getting all growers: {ex.Message}");
+            }
+
+            return results;
+        }
+
         private Grower MapGrowerFromReader(SqlDataReader reader)
         {
             var grower = new Grower();
 
             try
             {
-                // Get all column names from the reader
                 var columnNames = new List<string>();
                 for (int i = 0; i < reader.FieldCount; i++)
                 {
                     columnNames.Add(reader.GetName(i));
                 }
 
-                // Map fields safely, checking if columns exist
                 if (columnNames.Contains("NUMBER"))
                     grower.GrowerNumber = reader.GetDecimal(reader.GetOrdinal("NUMBER"));
 
@@ -336,10 +257,7 @@ namespace WPFGrowerApp.DataAccess
                     grower.Phone = reader.GetString(reader.GetOrdinal("PHONE"));
 
                 if (columnNames.Contains("PHONE2") && !reader.IsDBNull(reader.GetOrdinal("PHONE2")))
-                {
                     grower.PhoneAdditional1 = reader.GetString(reader.GetOrdinal("PHONE2")).Trim();
-                    Debug.WriteLine($"Phone2 value from database: {grower.PhoneAdditional1}"); // Debug line
-                }
 
                 if (columnNames.Contains("ACRES") && !reader.IsDBNull(reader.GetOrdinal("ACRES")))
                     grower.Acres = reader.GetDecimal(reader.GetOrdinal("ACRES"));
@@ -391,7 +309,6 @@ namespace WPFGrowerApp.DataAccess
                     grower.OnHold = !reader.IsDBNull(onHoldOrdinal) && reader.GetBoolean(onHoldOrdinal);
                 }
 
-
                 if (columnNames.Contains("ALT_NAME1") && !reader.IsDBNull(reader.GetOrdinal("ALT_NAME1")))
                     grower.OtherNames = reader.GetString(reader.GetOrdinal("ALT_NAME1"));
 
@@ -419,94 +336,46 @@ namespace WPFGrowerApp.DataAccess
             return grower;
         }
 
-        /// <summary>
-        /// Gets all growers
-        /// </summary>
-        /// <returns>List of all growers</returns>
-        public async Task<List<GrowerSearchResult>> GetAllGrowersAsync()
+        private void AddGrowerParameters(SqlCommand command, Grower grower)
         {
-            var results = new List<GrowerSearchResult>();
+            command.Parameters.AddWithValue("@GrowerNumber", grower.GrowerNumber);
+            command.Parameters.AddWithValue("@Status", 1);
+            command.Parameters.AddWithValue("@ChequeName", grower.ChequeName ?? "");
+            command.Parameters.AddWithValue("@GrowerName", grower.GrowerName ?? "");
+            command.Parameters.AddWithValue("@Address", grower.Address ?? "");
+            command.Parameters.AddWithValue("@City", grower.City ?? "");
+            command.Parameters.AddWithValue("@Province", "");
+            command.Parameters.AddWithValue("@Postal", grower.Postal ?? "");
+            command.Parameters.AddWithValue("@Phone", grower.Phone ?? "");
+            command.Parameters.AddWithValue("@Acres", grower.Acres);
+            command.Parameters.AddWithValue("@Notes", grower.Notes ?? "");
+            command.Parameters.AddWithValue("@Contract", grower.Contract ?? "");
+            command.Parameters.AddWithValue("@Currency", grower.Currency.ToString());
+            command.Parameters.AddWithValue("@ContractLimit", grower.ContractLimit);
+            command.Parameters.AddWithValue("@PayGroup", grower.PayGroup.ToString());
+            command.Parameters.AddWithValue("@OnHold", grower.OnHold);
+            command.Parameters.AddWithValue("@PhoneAdditional1", grower.PhoneAdditional1 ?? "");
+            command.Parameters.AddWithValue("@AddressLine2", "");
+            command.Parameters.AddWithValue("@OtherNames", grower.OtherNames ?? "");
+            command.Parameters.AddWithValue("@PhoneAdditional2", grower.PhoneAdditional2 ?? "");
+            command.Parameters.AddWithValue("@LYFresh", grower.LYFresh);
+            command.Parameters.AddWithValue("@LYOther", grower.LYOther);
+            command.Parameters.AddWithValue("@Certified", grower.Certified ?? "");
+            command.Parameters.AddWithValue("@ChargeGST", grower.ChargeGST);
 
-            try
+            DateTime now = DateTime.Now;
+            if (command.CommandText.Contains("UPDATE"))
             {
-                using (SqlConnection connection = new SqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
-
-                    string sql = @"
-                SELECT NUMBER, NAME, CHEQNAME, CITY, PHONE 
-                FROM Grower 
-                ORDER BY NAME";
-
-                    using (SqlCommand command = new SqlCommand(sql, connection))
-                    {
-                        using (SqlDataReader reader = await command.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                results.Add(new GrowerSearchResult
-                                {
-                                    GrowerNumber = reader.GetDecimal(0),
-                                    GrowerName = !reader.IsDBNull(1) ? reader.GetString(1) : "",
-                                    ChequeName = !reader.IsDBNull(2) ? reader.GetString(2) : "",
-                                    City = !reader.IsDBNull(3) ? reader.GetString(3) : "",
-                                    Phone = !reader.IsDBNull(4) ? reader.GetString(4) : ""
-                                });
-                            }
-                        }
-                    }
-                }
+                command.Parameters.AddWithValue("@EditDate", now.ToString("yyyyMMdd"));
+                command.Parameters.AddWithValue("@EditTime", now.ToString("HHmmss"));
+                command.Parameters.AddWithValue("@EditOperator", Environment.UserName);
             }
-            catch (Exception ex)
+            else
             {
-                Debug.WriteLine($"Error getting all growers: {ex.Message}");
+                command.Parameters.AddWithValue("@AddDate", now.ToString("yyyyMMdd"));
+                command.Parameters.AddWithValue("@AddTime", now.ToString("HHmmss"));
+                command.Parameters.AddWithValue("@AddOperator", Environment.UserName);
             }
-
-            return results;
-        }
-
-        public class PayGroup
-        {
-            public string PayGroupId { get; set; }
-            public string Description { get; set; }
-            public decimal DefaultPriceLevel { get; set; }
-        }
-
-        public async Task<List<PayGroup>> GetPayGroupsAsync()
-        {
-            var payGroups = new List<PayGroup>();
-
-            try
-            {
-                using (SqlConnection connection = new SqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
-
-                    string sql = @"SELECT PAYGRP, Description, DEF_PRLVL FROM PayGrp ORDER BY PAYGRP";
-
-                    using (SqlCommand command = new SqlCommand(sql, connection))
-                    {
-                        using (SqlDataReader reader = await command.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                payGroups.Add(new PayGroup
-                                {
-                                    PayGroupId = !reader.IsDBNull(0) ? reader.GetString(0) : "",
-                                    Description = !reader.IsDBNull(1) ? reader.GetString(1) : "",
-                                    DefaultPriceLevel = !reader.IsDBNull(2) ? reader.GetDecimal(2) : 1m
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error getting pay groups: {ex.Message}");
-            }
-
-            return payGroups;
         }
     }
-}
+} 

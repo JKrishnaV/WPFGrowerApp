@@ -1,10 +1,9 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using WPFGrowerApp.DataAccess;
+using WPFGrowerApp.Services;
 using WPFGrowerApp.ViewModels;
 using WPFGrowerApp.Models;
-
 
 namespace WPFGrowerApp.Views
 {
@@ -20,7 +19,7 @@ namespace WPFGrowerApp.Views
         public GrowerSearchView()
         {
             InitializeComponent();
-            _viewModel = new GrowerSearchViewModel(new DatabaseService());
+            _viewModel = ServiceConfiguration.GetService<GrowerSearchViewModel>();
             DataContext = _viewModel;
             
             // Set focus to the search box
@@ -38,16 +37,21 @@ namespace WPFGrowerApp.Views
 
         private void ResultsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            // This is handled by the binding to the IsEnabled property of the Select button
+            // Selection handling is done through binding to the Select button's IsEnabled property
         }
 
         private void SelectButton_Click(object sender, RoutedEventArgs e)
         {
-            if (ResultsDataGrid.SelectedItem is GrowerSearchResult selectedGrower)
+            if (GrowersDataGrid.SelectedItem is GrowerSearchResult selectedGrower)
             {
                 SelectedGrowerNumber = selectedGrower.GrowerNumber;
                 DialogResult = true;
                 Close();
+            }
+            else
+            {
+                MessageBox.Show("Please select a grower first.", "No Selection",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 

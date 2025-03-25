@@ -1,7 +1,8 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
-using WPFGrowerApp.DataAccess;
+using WPFGrowerApp.DataAccess.Interfaces;
+using WPFGrowerApp.DataAccess.Models;
 using WPFGrowerApp.Views;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -10,16 +11,18 @@ namespace WPFGrowerApp.ViewModels
 {
     public class GrowerViewModel : ViewModelBase
     {
-        private readonly DatabaseService _databaseService;
+        private readonly IGrowerService _growerService;
+        private readonly IPayGroupService _payGroupService;
         private Models.Grower _currentGrower;
         private bool _isLoading;
         private bool _isSaving;
         private string _statusMessage;
-        private List<DatabaseService.PayGroup> _payGroups;
+        private List<PayGroup> _payGroups;
 
-        public GrowerViewModel()
+        public GrowerViewModel(IGrowerService growerService, IPayGroupService payGroupService)
         {
-            _databaseService = new DatabaseService();
+            _growerService = growerService ?? throw new ArgumentNullException(nameof(growerService));
+            _payGroupService = payGroupService ?? throw new ArgumentNullException(nameof(payGroupService));
             CurrentGrower = new Models.Grower();
             SaveCommand = new RelayCommand(SaveCommandExecute, CanExecuteSaveCommand);
             NewCommand = new RelayCommand(NewCommandExecute);
@@ -27,7 +30,7 @@ namespace WPFGrowerApp.ViewModels
             LoadPayGroupsAsync().ConfigureAwait(false);
         }
 
-        public List<DatabaseService.PayGroup> PayGroups
+        public List<PayGroup> PayGroups
         {
             get => _payGroups;
             set
@@ -42,7 +45,7 @@ namespace WPFGrowerApp.ViewModels
 
         private async Task LoadPayGroupsAsync()
         {
-            PayGroups = await _databaseService.GetPayGroupsAsync();
+            PayGroups = await _payGroupService.GetPayGroupsAsync();
         }
 
         public string CurrencyDisplay
@@ -146,7 +149,7 @@ namespace WPFGrowerApp.ViewModels
                 IsLoading = true;
                 StatusMessage = "Loading grower...";
 
-                var grower = await _databaseService.GetGrowerByNumberAsync(growerNumber);
+                var grower = await _growerService.GetGrowerByNumberAsync(growerNumber);
                 
                 if (grower != null)
                 {
@@ -171,14 +174,14 @@ namespace WPFGrowerApp.ViewModels
             }
         }
 
-        private async System.Threading.Tasks.Task SaveGrowerAsync()
+        private async Task SaveGrowerAsync()
         {
             try
             {
                 IsSaving = true;
                 StatusMessage = "Saving grower...";
 
-                bool success = await _databaseService.SaveGrowerAsync(CurrentGrower);
+                bool success = await _growerService.SaveGrowerAsync(CurrentGrower);
                 
                 if (success)
                 {

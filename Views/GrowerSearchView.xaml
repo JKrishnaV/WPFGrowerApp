@@ -4,10 +4,15 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WPFGrowerApp.Views"
+        xmlns:converters="clr-namespace:WPFGrowerApp.Converters"
         mc:Ignorable="d"
-        Title="Grower Search" Height="450" Width="600"
-        WindowStartupLocation="CenterScreen">
-    <Grid Margin="20">
+        Title="Grower Search" Height="450" Width="800"
+        WindowStartupLocation="CenterOwner"
+        Background="White">
+    <Window.Resources>
+        <converters:NotNullConverter x:Key="NotNullConverter"/>
+    </Window.Resources>
+    <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -16,7 +21,7 @@
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Text="Search for Grower" 
-                   FontSize="20" FontWeight="SemiBold" Margin="0,0,0,20"/>
+                   FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
 
         <Grid Grid.Row="1" Margin="0,0,0,10">
             <Grid.ColumnDefinitions>
@@ -24,32 +29,28 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             
-            <TextBox x:Name="SearchTextBox" Grid.Column="0" Margin="0,0,10,0"
-                     FontSize="14" Padding="5"
-                     Text="{Binding SearchTerm, UpdateSourceTrigger=PropertyChanged}"
+            <TextBox x:Name="SearchTextBox" Grid.Column="0" Height="25" Margin="0,0,10,0" VerticalContentAlignment="Center"
+                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                      KeyDown="SearchTextBox_KeyDown"/>
             
-            <Button Grid.Column="1" Content="Search" Padding="15,5"
-                    Command="{Binding SearchCommand}"/>
+            <Button Grid.Column="1" Content="Search" Width="80" Height="25" Command="{Binding SearchCommand}"/>
         </Grid>
 
-        <DataGrid Grid.Row="2" x:Name="ResultsDataGrid"
+        <DataGrid x:Name="GrowersDataGrid"
+                  Grid.Row="2"
+                  Margin="0,0,0,10"
                   ItemsSource="{Binding SearchResults}"
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
                   SelectionMode="Single"
                   SelectionChanged="ResultsDataGrid_SelectionChanged"
-                  BorderThickness="1" BorderBrush="#DDDDDD"
-                  RowHeaderWidth="0"
-                  CanUserAddRows="False"
-                  CanUserDeleteRows="False"
-                  CanUserReorderColumns="False"
-                  CanUserResizeRows="False"
-                  CanUserSortColumns="True"
+                  VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Auto"
+                  HeadersVisibility="Column"
                   GridLinesVisibility="Horizontal"
-                  HorizontalGridLinesBrush="#EEEEEE"
-                  AlternatingRowBackground="#F5F5F5"
-                  HeadersVisibility="Column">
+                  BorderThickness="1"
+                  BorderBrush="#DDDDDD"
+                  Background="White">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Number" Binding="{Binding GrowerNumber}" Width="80"/>
                 <DataGridTextColumn Header="Name" Binding="{Binding GrowerName}" Width="*"/>
@@ -57,12 +58,21 @@
                 <DataGridTextColumn Header="City" Binding="{Binding City}" Width="120"/>
                 <DataGridTextColumn Header="Phone" Binding="{Binding Phone}" Width="120"/>
             </DataGrid.Columns>
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Style.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="#CCE8FF"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.RowStyle>
         </DataGrid>
 
-        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
-            <Button Content="Cancel" Width="100" Margin="0,0,10,0" Click="CancelButton_Click"/>
-            <Button Content="Select" Width="100" IsDefault="True" Click="SelectButton_Click"
-                    IsEnabled="{Binding ElementName=ResultsDataGrid, Path=SelectedItem, Converter={StaticResource NullToBooleanConverter}}"/>
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Cancel" Width="80" Height="25" Margin="0,0,10,0" Click="CancelButton_Click"/>
+            <Button Content="Select" Width="80" Height="25" Click="SelectButton_Click"
+                    IsEnabled="{Binding SelectedItem, ElementName=GrowersDataGrid, Converter={StaticResource NotNullConverter}}"/>
         </StackPanel>
     </Grid>
 </Window>

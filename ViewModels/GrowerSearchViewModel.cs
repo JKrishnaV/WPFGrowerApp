@@ -4,106 +4,34 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using WPFGrowerApp.DataAccess;
+using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.Models;
-
 
 namespace WPFGrowerApp.ViewModels
 {
-    public class GrowerSearchViewModel : INotifyPropertyChanged
+    public class GrowerSearchViewModel : ViewModelBase
     {
-        private readonly DatabaseService _databaseService;
-        private string _searchTerm;
+        private readonly IGrowerService _growerService;
+        private string _searchText;
         private ObservableCollection<GrowerSearchResult> _searchResults;
         private bool _isSearching;
 
-
-        public GrowerSearchViewModel(DatabaseService databaseService)
+        public GrowerSearchViewModel(IGrowerService growerService)
         {
-            _databaseService = databaseService ?? throw new ArgumentNullException(nameof(databaseService));
+            _growerService = growerService ?? throw new ArgumentNullException(nameof(growerService));
             SearchResults = new ObservableCollection<GrowerSearchResult>();
-            SearchCommand = new AsyncRelayCommand(SearchCommandExecute, CanExecuteSearchCommand);
-
-            // Load all growers when the view is initialized
-            LoadAllGrowersAsync();
+            SearchCommand = new RelayCommand(ExecuteSearch, CanExecuteSearch);
+            LoadAllGrowersAsync().ConfigureAwait(false);
         }
 
-        // Add this new method to load all growers
-        private async void LoadAllGrowersAsync()
+        public string SearchText
         {
-            try
-            {
-                IsSearching = true;
-                SearchResults.Clear();
-
-                // Call a new method in DatabaseService to get all growers
-                var results = await _databaseService.GetAllGrowersAsync();
-
-                foreach (var result in results)
-                {
-                    SearchResults.Add(result);
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Windows.MessageBox.Show($"Error loading growers: {ex.Message}", "Error",
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-            }
-            finally
-            {
-                IsSearching = false;
-            }
-        }
-
-        // Modify the SearchAsync method to filter the existing results if search term is provided
-        private async Task SearchAsync()
-        {
-            try
-            {
-                IsSearching = true;
-
-                if (string.IsNullOrWhiteSpace(SearchTerm))
-                {
-                    // If search term is empty, load all growers
-                    await Task.Run(() => LoadAllGrowersAsync());
-                    return;
-                }
-
-                SearchResults.Clear();
-                var results = await _databaseService.SearchGrowersAsync(SearchTerm);
-
-                foreach (var result in results)
-                {
-                    SearchResults.Add(result);
-                }
-            }
-            catch (Exception ex)
-            {
-                // Error handling...
-            }
-            finally
-            {
-                IsSearching = false;
-            }
-        }
-
-        private bool CanExecuteSearchCommand(object parameter)
-        {
-            return !IsSearching;
-        }
-
-        private async Task SearchCommandExecute(object parameter)
-        {
-            await SearchAsync();
-        }
-        public string SearchTerm
-        {
-            get => _searchTerm;
+            get => _searchText;
             set
             {
-                if (_searchTerm != value)
+                if (_searchText != value)
                 {
-                    _searchTerm = value;
+                    _searchText = value;
                     OnPropertyChanged();
                 }
             }
@@ -131,47 +59,71 @@ namespace WPFGrowerApp.ViewModels
                 {
                     _isSearching = value;
                     OnPropertyChanged();
-                    CommandManager.InvalidateRequerySuggested();
+                    (SearchCommand as RelayCommand)?.RaiseCanExecuteChanged();
                 }
             }
         }
 
         public ICommand SearchCommand { get; }
 
-        //private async Task SearchAsync()
-        //{
-        //    if (string.IsNullOrWhiteSpace(SearchTerm))
-        //        return;
-
-        //    try
-        //    {
-        //        IsSearching = true;
-        //        SearchResults.Clear();
-
-        //        var results = await _databaseService.SearchGrowersAsync(SearchTerm);
-                
-        //        foreach (var result in results)
-        //        {
-        //            SearchResults.Add(result);
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        // In a production app, you would log this exception and show a user-friendly message
-        //        System.Windows.MessageBox.Show($"Error searching for growers: {ex.Message}", "Search Error", 
-        //            System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-        //    }
-        //    finally
-        //    {
-        //        IsSearching = false;
-        //    }
-        //}
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        private bool CanExecuteSearch(object parameter)
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            return !IsSearching;
+        }
+
+        private void ExecuteSearch(object parameter)
+        {
+            SearchAsync().ConfigureAwait(false);
+        }
+
+        private async Task SearchAsync()
+        {
+            try
+            {
+                IsSearching = true;
+                SearchResults.Clear();
+
+                var results = await _growerService.SearchGrowersAsync(SearchText ?? string.Empty);
+                
+                foreach (var result in results)
+                {
+                    SearchResults.Add(result);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Handle error appropriately
+                System.Diagnostics.Debug.WriteLine($"Search error: {ex.Message}");
+            }
+            finally
+            {
+                IsSearching = false;
+            }
+        }
+
+        private async Task LoadAllGrowersAsync()
+        {
+            try
+            {
+                IsSearching = true;
+                SearchResults.Clear();
+
+                var results = await _growerService.GetAllGrowersAsync();
+                
+                foreach (var result in results)
+                {
+                    SearchResults.Add(result);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Handle error appropriately
+                System.Diagnostics.Debug.WriteLine($"Load error: {ex.Message}");
+            }
+            finally
+            {
+                IsSearching = false;
+            }
         }
     }
 
@@ -201,49 +153,10 @@ namespace WPFGrowerApp.ViewModels
             add { CommandManager.RequerySuggested += value; }
             remove { CommandManager.RequerySuggested -= value; }
         }
-    }
 
-    public class AsyncRelayCommand : ICommand
-    {
-        private readonly Func<object, Task> _executeAsync;
-        private readonly Predicate<object> _canExecute;
-        private bool _isExecuting;
-
-        public AsyncRelayCommand(Func<object, Task> executeAsync, Predicate<object> canExecute = null)
+        public void RaiseCanExecuteChanged()
         {
-            _executeAsync = executeAsync ?? throw new ArgumentNullException(nameof(executeAsync));
-            _canExecute = canExecute;
-        }
-
-        public bool CanExecute(object parameter)
-        {
-            return !_isExecuting && (_canExecute == null || _canExecute(parameter));
-        }
-
-        public async void Execute(object parameter)
-        {
-            if (!CanExecute(parameter))
-                return;
-
-            _isExecuting = true;
             CommandManager.InvalidateRequerySuggested();
-
-            try
-            {
-                await _executeAsync(parameter);
-            }
-            finally
-            {
-                _isExecuting = false;
-                CommandManager.InvalidateRequerySuggested();
-            }
-        }
-
-        public event EventHandler CanExecuteChanged
-        {
-            add { CommandManager.RequerySuggested += value; }
-            remove { CommandManager.RequerySuggested -= value; }
         }
     }
-
 }

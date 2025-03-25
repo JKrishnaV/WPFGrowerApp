@@ -4,9 +4,9 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
 using WPFGrowerApp.Controls;
+using WPFGrowerApp.Services;
 using WPFGrowerApp.ViewModels;
 using WPFGrowerApp.Views;
-
 
 namespace WPFGrowerApp
 {
@@ -17,11 +17,16 @@ namespace WPFGrowerApp
     {
         private readonly MainViewModel _viewModel;
         private bool _isMenuExpanded = true;
+
         public MainWindow()
         {
             InitializeComponent();
             
-            _viewModel = new MainViewModel();
+            // Configure services
+            ServiceConfiguration.ConfigureServices();
+            
+            // Get MainViewModel from service provider
+            _viewModel = ServiceConfiguration.GetService<MainViewModel>();
             DataContext = _viewModel;
             
             // Subscribe to menu item clicked event
@@ -41,7 +46,7 @@ namespace WPFGrowerApp
                     var searchView = new GrowerSearchView();
                     if (searchView.ShowDialog() == true && searchView.SelectedGrowerNumber.HasValue)
                     {
-                        var growerViewModel = new GrowerViewModel();
+                        var growerViewModel = ServiceConfiguration.GetService<GrowerViewModel>();
                         growerViewModel.LoadGrowerAsync(searchView.SelectedGrowerNumber.Value);
                         _viewModel.CurrentViewModel = growerViewModel;
                     }
