@@ -6,7 +6,8 @@ using System.Windows.Media.Animation;
 using WPFGrowerApp.Controls;
 using WPFGrowerApp.ViewModels;
 using WPFGrowerApp.Views;
-
+using WPFGrowerApp.Reports;
+using WPFGrowerApp.DataAccess;
 
 namespace WPFGrowerApp
 {
@@ -16,11 +17,13 @@ namespace WPFGrowerApp
     public partial class MainWindow : Window
     {
         private readonly MainViewModel _viewModel;
+        private readonly DatabaseService _databaseService;
         private bool _isMenuExpanded = true;
         public MainWindow()
         {
             InitializeComponent();
             
+            _databaseService = new DatabaseService();
             _viewModel = new MainViewModel();
             DataContext = _viewModel;
             
@@ -46,7 +49,14 @@ namespace WPFGrowerApp
                         _viewModel.CurrentViewModel = growerViewModel;
                     }
                     break;
-                // Add other menu items as needed
+                case "Reports":
+                    {
+                        var reportViewer = new ReportViewerWindow(_databaseService);
+                        reportViewer.Owner = this;
+                        reportViewer.ShowDialog();
+                        break;
+                    }
+                    // Add other menu items as needed
             }
         }
 

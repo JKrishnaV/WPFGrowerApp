@@ -1,0 +1,58 @@
+<Window x:Class="WPFGrowerApp.Reports.EmailDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Send Report by Email" Height="450" Width="400"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Label Content="From Email:" Grid.Row="0" Grid.Column="0"/>
+        <TextBox x:Name="txtFromEmail" Grid.Row="0" Grid.Column="1" Margin="0,2"/>
+
+        <Label Content="To Email:" Grid.Row="1" Grid.Column="0"/>
+        <TextBox x:Name="txtToEmail" Grid.Row="1" Grid.Column="1" Margin="0,2"/>
+
+        <Label Content="Subject:" Grid.Row="2" Grid.Column="0"/>
+        <TextBox x:Name="txtSubject" Grid.Row="2" Grid.Column="1" Margin="0,2"/>
+
+        <Label Content="Body:" Grid.Row="3" Grid.Column="0"/>
+        <TextBox x:Name="txtBody" Grid.Row="3" Grid.Column="1" Margin="0,2"
+                 TextWrapping="Wrap" AcceptsReturn="True" Height="60"/>
+
+        <Label Content="SMTP Server:" Grid.Row="4" Grid.Column="0"/>
+        <TextBox x:Name="txtSmtpServer" Grid.Row="4" Grid.Column="1" Margin="0,2"/>
+
+        <Label Content="Port:" Grid.Row="5" Grid.Column="0"/>
+        <TextBox x:Name="txtPort" Grid.Row="5" Grid.Column="1" Margin="0,2"/>
+
+        <Label Content="Username:" Grid.Row="6" Grid.Column="0"/>
+        <TextBox x:Name="txtUsername" Grid.Row="6" Grid.Column="1" Margin="0,2"/>
+
+        <Label Content="Password:" Grid.Row="7" Grid.Column="0"/>
+        <PasswordBox x:Name="txtPassword" Grid.Row="7" Grid.Column="1" Margin="0,2"/>
+
+        <StackPanel Grid.Row="9" Grid.Column="0" Grid.ColumnSpan="2"
+                    Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Send" Click="SendButton_Click" Width="80" Margin="0,0,10,0"/>
+            <Button Content="Cancel" Click="CancelButton_Click" Width="80"/>
+        </StackPanel>
+    </Grid>
+</Window> 

@@ -14,7 +14,6 @@ namespace WPFGrowerApp.DataAccess
 
         public DatabaseService()
         {
-            // Connection string with the provided credentials
             _connectionString = "Server=DESKTOP-LQ92Q06;Database=PackagingPaymentSystem;User Id=localDB;Password=528database@JK;";
         }
 
@@ -254,7 +253,7 @@ namespace WPFGrowerApp.DataAccess
                         command.Parameters.AddWithValue("@GrowerName", grower.GrowerName ?? "");
                         command.Parameters.AddWithValue("@Address", grower.Address ?? "");
                         command.Parameters.AddWithValue("@City", grower.City ?? "");
-                        command.Parameters.AddWithValue("@Province", ""); // Not in the original model
+                        command.Parameters.AddWithValue("@Province", grower.Prov ?? "");
                         command.Parameters.AddWithValue("@Postal", grower.Postal ?? "");
                         command.Parameters.AddWithValue("@Phone", grower.Phone ?? "");
                         command.Parameters.AddWithValue("@Acres", grower.Acres);
@@ -328,6 +327,9 @@ namespace WPFGrowerApp.DataAccess
 
                 if (columnNames.Contains("CITY") && !reader.IsDBNull(reader.GetOrdinal("CITY")))
                     grower.City = reader.GetString(reader.GetOrdinal("CITY"));
+
+                if (columnNames.Contains("PROV") && !reader.IsDBNull(reader.GetOrdinal("PROV")))
+                    grower.Prov = reader.GetString(reader.GetOrdinal("PROV"));
 
                 if (columnNames.Contains("PCODE") && !reader.IsDBNull(reader.GetOrdinal("PCODE")))
                     grower.Postal = reader.GetString(reader.GetOrdinal("PCODE"));
@@ -465,48 +467,135 @@ namespace WPFGrowerApp.DataAccess
             return results;
         }
 
-        public class PayGroup
+        public async Task<List<Grower>> GetGrowersAsync()
         {
-            public string PayGroupId { get; set; }
-            public string Description { get; set; }
-            public decimal DefaultPriceLevel { get; set; }
+            var growers = new List<Grower>();
+
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+
+                using (var command = new SqlCommand(
+                    "SELECT NUMBER, NAME, STREET, CITY, PROV, PCODE, PHONE, PHONE2, CURRENCY, PAYGRP, CONTLIM, NOTES, ONHOLD " +
+                    "FROM Grower ORDER BY NUMBER", connection))
+                {
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            try
+                            {
+                                growers.Add(new Grower
+                                {
+                                    GrowerNumber = reader.GetDecimal(reader.GetOrdinal("NUMBER")),
+                                    GrowerName = reader["NAME"].ToString(),
+                                    Address = reader["STREET"].ToString(),
+                                    City = reader["CITY"].ToString(),
+                                    Postal = reader["PCODE"].ToString(),
+                                    Phone = reader["PHONE"].ToString(),
+                                    PhoneAdditional1 = reader["PHONE2"].ToString(),
+                                    Currency = !reader.IsDBNull(reader.GetOrdinal("CURRENCY")) ?
+                                    reader.GetString(reader.GetOrdinal("CURRENCY"))[0] : 'C',
+                                    PayGroup = reader["PAYGRP"].ToString(),
+                                    ContractLimit = !reader.IsDBNull(reader.GetOrdinal("CONTLIM")) ?
+                                        Convert.ToInt32(reader.GetValue(reader.GetOrdinal("CONTLIM"))) : 0,
+                                    Notes = reader["NOTES"].ToString(),
+                                    OnHold = !reader.IsDBNull(reader.GetOrdinal("ONHOLD")) &&
+                                        reader.GetBoolean(reader.GetOrdinal("ONHOLD"))
+                                });
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.WriteLine($"Error adding grower: {ex.Message}");
+                                Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+                                // Continue with next record instead of failing completely
+                                continue;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return growers;
+        }
+
+        public async Task<Grower> GetGrowerByIdAsync(string growerId)
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+
+                using (var command = new SqlCommand(
+                    "SELECT NUMBER, NAME, STREET, CITY, PROV, PCODE, PHONE, PHONE2, CURRENCY, PAYGRP, CONTLIM, NOTES, ONHOLD " +
+                    "FROM Grower WHERE NUMBER = @GrowerId", connection))
+                {
+                    command.Parameters.AddWithValue("@GrowerId", decimal.Parse(growerId));
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            return new Grower
+                            {
+                                GrowerNumber = reader.GetDecimal(reader.GetOrdinal("NUMBER")),
+                                GrowerName = reader["NAME"].ToString(),
+                                Address = reader["STREET"].ToString(),
+                                City = reader["CITY"].ToString(),
+                                Postal = reader["PCODE"].ToString(),
+                                Phone = reader["PHONE"].ToString(),
+                                PhoneAdditional1 = reader["PHONE2"].ToString(),
+                                Currency = !reader.IsDBNull(reader.GetOrdinal("CURRENCY")) ? 
+                                    reader.GetString(reader.GetOrdinal("CURRENCY"))[0] : 'C',
+                                PayGroup = reader["PAYGRP"].ToString(),
+                                ContractLimit = !reader.IsDBNull(reader.GetOrdinal("CONTLIM")) ? 
+                                    reader.GetInt32(reader.GetOrdinal("CONTLIM")) : 0,
+                                Notes = reader["NOTES"].ToString(),
+                                OnHold = !reader.IsDBNull(reader.GetOrdinal("ONHOLD")) && 
+                                    reader.GetBoolean(reader.GetOrdinal("ONHOLD"))
+                            };
+                        }
+                    }
+                }
+            }
+
+            return null;
         }
 
         public async Task<List<PayGroup>> GetPayGroupsAsync()
         {
             var payGroups = new List<PayGroup>();
 
-            try
+            using (var connection = new SqlConnection(_connectionString))
             {
-                using (SqlConnection connection = new SqlConnection(_connectionString))
+                await connection.OpenAsync();
+
+                using (var command = new SqlCommand(
+                    "SELECT PAYGRP, Description, DEF_PRLVL FROM PayGrp ORDER BY PAYGRP", connection))
                 {
-                    await connection.OpenAsync();
-
-                    string sql = @"SELECT PAYGRP, Description, DEF_PRLVL FROM PayGrp ORDER BY PAYGRP";
-
-                    using (SqlCommand command = new SqlCommand(sql, connection))
+                    using (var reader = await command.ExecuteReaderAsync())
                     {
-                        using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                        while (await reader.ReadAsync())
                         {
-                            while (await reader.ReadAsync())
+                            payGroups.Add(new PayGroup
                             {
-                                payGroups.Add(new PayGroup
-                                {
-                                    PayGroupId = !reader.IsDBNull(0) ? reader.GetString(0) : "",
-                                    Description = !reader.IsDBNull(1) ? reader.GetString(1) : "",
-                                    DefaultPriceLevel = !reader.IsDBNull(2) ? reader.GetDecimal(2) : 1m
-                                });
-                            }
+                                PayGroupId = reader["PAYGRP"].ToString(),
+                                Description = reader["Description"].ToString(),
+                                DefaultPriceLevel = reader["DEF_PRLVL"].ToString()
+                            });
                         }
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error getting pay groups: {ex.Message}");
-            }
 
             return payGroups;
         }
+        public class PayGroup
+        {
+            public string PayGroupId { get; set; }
+            public string Description { get; set; }
+            public string DefaultPriceLevel { get; set; }
+        }
     }
+
+    
 }
