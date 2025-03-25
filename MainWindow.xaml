@@ -117,9 +117,12 @@
                 </Grid>
                 
                 <!-- Content Area -->
-                <ContentControl Grid.Row="1" 
-                                Margin="15"
-                                Content="{Binding CurrentViewModel}"/>
+                <ScrollViewer Grid.Row="1" 
+                              Margin="15"
+                              VerticalScrollBarVisibility="Auto" 
+                              HorizontalScrollBarVisibility="Disabled">
+                    <ContentControl Content="{Binding CurrentViewModel}"/>
+                </ScrollViewer>
             </Grid>
         </Grid>
     </Grid>
