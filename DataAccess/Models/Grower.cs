@@ -2,7 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace WPFGrowerApp.Models
+namespace WPFGrowerApp.DataAccess.Models
 {
     public class Grower : INotifyPropertyChanged
     {

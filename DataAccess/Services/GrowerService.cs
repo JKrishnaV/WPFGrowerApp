@@ -5,6 +5,7 @@ using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using WPFGrowerApp.DataAccess.Interfaces;
+using WPFGrowerApp.DataAccess.Models;
 using WPFGrowerApp.Models;
 
 namespace WPFGrowerApp.DataAccess.Services
