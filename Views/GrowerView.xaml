@@ -7,7 +7,8 @@
              xmlns:local="clr-namespace:WPFGrowerApp.Views"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="700"
-             VerticalAlignment="Top">
+             VerticalAlignment="Top"
+             HorizontalAlignment="Stretch">
 
     <UserControl.Resources>
         <ResourceDictionary>
@@ -17,24 +18,18 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <Grid Margin="10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-
-            <!-- Header -->
-            <Border Grid.Row="0" 
-                    Background="{StaticResource PrimaryBrush}" 
-                    Padding="15,10" 
-                    Margin="0,0,0,15"
-                    CornerRadius="4">
-                <TextBlock Text="Grower Information" 
-                           Foreground="White" 
-                           FontSize="22" 
-                           FontWeight="SemiBold" 
-                           HorizontalAlignment="Center"/>
-            </Border>
+    <StackPanel>
+        <!-- Header -->
+        <Border Background="{StaticResource PrimaryBrush}" 
+                Padding="15,10" 
+                Margin="10,10,10,15"
+                CornerRadius="4">
+            <TextBlock Text="Grower Information" 
+                       Foreground="White" 
+                       FontSize="22" 
+                       FontWeight="SemiBold" 
+                       HorizontalAlignment="Center"/>
+        </Border>
 
             <!-- Content -->        
             <StackPanel Grid.Row="1" Margin="0,0,0,15">
@@ -232,5 +227,5 @@
                     Width="100"/>
                 </StackPanel>
             </StackPanel>
-        </Grid>
+    </StackPanel>
 </UserControl>

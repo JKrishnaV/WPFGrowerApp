@@ -117,14 +117,19 @@
                 </Grid>
                 
                 <!-- Content Area -->
-                <ScrollViewer Grid.Row="1"
-                              Margin="15"
-                              VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled">
-                    <ContentControl Content="{Binding CurrentViewModel}"
-                                    VerticalAlignment="Top"
-                                    HorizontalAlignment="Stretch"/>
-                </ScrollViewer>
+                <DockPanel Grid.Row="1" LastChildFill="True">
+                    <ScrollViewer DockPanel.Dock="Top"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  Margin="15"
+                                  PanningMode="VerticalOnly"
+                                  CanContentScroll="True">
+                        <ContentControl Content="{Binding CurrentViewModel}"
+                                        VerticalAlignment="Top"
+                                        HorizontalAlignment="Stretch"
+                                        Focusable="False"/>
+                    </ScrollViewer>
+                </DockPanel>
             </Grid>
         </Grid>
     </Grid>
