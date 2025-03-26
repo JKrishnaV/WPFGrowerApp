@@ -15,6 +15,7 @@
 
             <!-- Register KnobSizeConverter -->
             <converters:KnobSizeConverter x:Key="KnobSizeConverter"/>
+            <converters:VisibilityConverter x:Key="VisibilityConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -11,7 +11,8 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/Styles/Styles.xaml"/>
+                <ResourceDictionary Source="/WPFGrowerApp;component/Styles/Styles.xaml"/>
+              <ResourceDictionary Source="/WPFGrowerApp;component/Styles/Colors.xaml"/>
             </ResourceDictionary.MergedDictionaries>
             
             <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
