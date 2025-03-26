@@ -1,0 +1,180 @@
+<![CDATA[<UserControl x:Class="WPFGrowerApp.Views.Reports.PieChartReportView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:WPFGrowerApp.Views.Reports"
+             xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
+             xmlns:viewmodels="clr-namespace:WPFGrowerApp.ViewModels"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800">
+    
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Styles/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header -->
+        <Border Grid.Row="0" 
+                Background="{StaticResource PrimaryBrush}" 
+                Padding="15,10" 
+                Margin="0,0,0,20"
+                CornerRadius="4">
+            <TextBlock Text="Grower Distribution Reports" 
+                       Foreground="White" 
+                       FontSize="22" 
+                       FontWeight="SemiBold" 
+                       HorizontalAlignment="Center"/>
+        </Border>
+        
+        <!-- Report Selection -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,20">
+            <TextBlock Text="Select Report Type:" 
+                       Style="{StaticResource SubheaderTextStyle}" 
+                       Margin="0,0,0,10"/>
+            <ComboBox SelectedItem="{Binding SelectedReportType}" 
+                      Style="{StaticResource ModernComboBoxStyle}"
+                      Width="300"
+                      HorizontalAlignment="Left">
+                <ComboBoxItem>Province Distribution</ComboBoxItem>
+                <ComboBoxItem>Price Level Distribution</ComboBoxItem>
+                <ComboBoxItem>Pay Group Distribution</ComboBoxItem>
+            </ComboBox>
+        </StackPanel>
+        
+        <!-- Chart Area -->
+        <Grid Grid.Row="2">
+            <!-- Province Distribution Chart -->
+            <syncfusion:SfChart Visibility="{Binding SelectedReportType, Converter={StaticResource VisibilityConverter}, ConverterParameter='Province Distribution'}"
+                               Header="Distribution of Growers by Province"
+                               Margin="0,10">
+                <syncfusion:SfChart.PrimaryAxis>
+                    <syncfusion:CategoryAxis Header="Province" />
+                </syncfusion:SfChart.PrimaryAxis>
+                <syncfusion:SfChart.SecondaryAxis>
+                    <syncfusion:NumericalAxis Header="Number of Growers" />
+                </syncfusion:SfChart.SecondaryAxis>
+                <syncfusion:PieSeries ItemsSource="{Binding ProvinceDistribution}"
+                                     XBindingPath="Category"
+                                     YBindingPath="Value"
+                                     EnableAnimation="True"
+                                     ExplodeOnMouseClick="True"
+                                     ExplodeRadius="10"
+                                     ExplodeIndex="0"
+                                     Palette="BlueChrome">
+                    <syncfusion:PieSeries.AdornmentsInfo>
+                        <syncfusion:ChartAdornmentInfo ShowLabel="True" 
+                                                      ShowConnectorLine="True"
+                                                      ConnectorHeight="40"
+                                                      SegmentLabelContent="LabelAndPercent"
+                                                      LabelPosition="Outer"/>
+                    </syncfusion:PieSeries.AdornmentsInfo>
+                </syncfusion:PieSeries>
+            </syncfusion:SfChart>
+            
+            <!-- Price Level Distribution Chart -->
+            <syncfusion:SfChart Visibility="{Binding SelectedReportType, Converter={StaticResource VisibilityConverter}, ConverterParameter='Price Level Distribution'}"
+                               Header="Distribution of Growers by Price Level"
+                               Margin="0,10">
+                <syncfusion:SfChart.PrimaryAxis>
+                    <syncfusion:CategoryAxis Header="Price Level" />
+                </syncfusion:SfChart.PrimaryAxis>
+                <syncfusion:SfChart.SecondaryAxis>
+                    <syncfusion:NumericalAxis Header="Number of Growers" />
+                </syncfusion:SfChart.SecondaryAxis>
+                <syncfusion:DoughnutSeries ItemsSource="{Binding PriceLevelDistribution}"
+                                         XBindingPath="Category"
+                                         YBindingPath="Value"
+                                         EnableAnimation="True"
+                                         ExplodeOnMouseClick="True"
+                                         ExplodeRadius="10"
+                                         InnerRadius="0.4"
+                                         Palette="GreenChrome">
+                    <syncfusion:DoughnutSeries.AdornmentsInfo>
+                        <syncfusion:ChartAdornmentInfo ShowLabel="True" 
+                                                      ShowConnectorLine="True"
+                                                      ConnectorHeight="40"
+                                                      SegmentLabelContent="LabelAndPercent"
+                                                      LabelPosition="Outer"/>
+                    </syncfusion:DoughnutSeries.AdornmentsInfo>
+                </syncfusion:DoughnutSeries>
+            </syncfusion:SfChart>
+            
+            <!-- Pay Group Distribution Chart -->
+            <syncfusion:SfChart Visibility="{Binding SelectedReportType, Converter={StaticResource VisibilityConverter}, ConverterParameter='Pay Group Distribution'}"
+                               Header="Distribution of Growers by Pay Group"
+                               Margin="0,10">
+                <syncfusion:SfChart.PrimaryAxis>
+                    <syncfusion:CategoryAxis Header="Pay Group" />
+                </syncfusion:SfChart.PrimaryAxis>
+                <syncfusion:SfChart.SecondaryAxis>
+                    <syncfusion:NumericalAxis Header="Number of Growers" />
+                </syncfusion:SfChart.SecondaryAxis>
+                <syncfusion:PieSeries ItemsSource="{Binding PayGroupDistribution}"
+                                     XBindingPath="Category"
+                                     YBindingPath="Value"
+                                     EnableAnimation="True"
+                                     ExplodeOnMouseClick="True"
+                                     ExplodeRadius="10"
+                                     Palette="PurpleChrome">
+                    <syncfusion:PieSeries.AdornmentsInfo>
+                        <syncfusion:ChartAdornmentInfo ShowLabel="True" 
+                                                      ShowConnectorLine="True"
+                                                      ConnectorHeight="40"
+                                                      SegmentLabelContent="LabelAndPercent"
+                                                      LabelPosition="Outer"/>
+                    </syncfusion:PieSeries.AdornmentsInfo>
+                </syncfusion:PieSeries>
+            </syncfusion:SfChart>
+        </Grid>
+        
+        <!-- Export Options -->
+        <Grid Grid.Row="3" Margin="0,20,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            
+            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <TextBlock Text="Export Format:" 
+                           VerticalAlignment="Center"
+                           Margin="0,0,10,0"/>
+                <ComboBox SelectedItem="{Binding ExportFormat}" 
+                          Width="100"
+                          Style="{StaticResource ModernComboBoxStyle}">
+                    <ComboBoxItem>PDF</ComboBoxItem>
+                    <ComboBoxItem>Excel</ComboBoxItem>
+                    <ComboBoxItem>Word</ComboBoxItem>
+                </ComboBox>
+            </StackPanel>
+            
+            <Button Grid.Column="1" 
+                    Content="Export Report" 
+                    Command="{Binding ExportReportCommand}"
+                    Style="{StaticResource PrimaryButtonStyle}"
+                    Width="150">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsExporting}" Value="True">
+                                <Setter Property="Content" Value="Exporting..."/>
+                                <Setter Property="IsEnabled" Value="False"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </Grid>
+    </Grid>
+</UserControl>]]>

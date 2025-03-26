@@ -10,6 +10,11 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.3" />
     <PackageReference Include="System.Data.SqlClient" Version="4.9.0" />
+    <PackageReference Include="Syncfusion.SfChart.WPF" Version="23.1.36" />
+    <PackageReference Include="Syncfusion.Pdf.Wpf" Version="23.1.36" />
+    <PackageReference Include="Syncfusion.XlsIO.Wpf" Version="23.1.36" />
+    <PackageReference Include="Syncfusion.DocIO.Wpf" Version="23.1.36" />
+    <PackageReference Include="Syncfusion.SfGrid.WPF" Version="23.1.36" />
   </ItemGroup>
 
 </Project>
