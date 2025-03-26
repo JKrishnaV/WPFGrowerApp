@@ -5,12 +5,14 @@ using System.Windows;
 using Microsoft.Win32;
 using Syncfusion.Pdf;
 using Syncfusion.Pdf.Graphics;
-using Syncfusion.UI.Xaml.Grid.Converter;
 using Syncfusion.XlsIO;
 using Syncfusion.DocIO;
 using Syncfusion.DocIO.DLS;
 using WPFGrowerApp.Models;
 using WPFGrowerApp.ViewModels;
+using WPFGrowerApp.DataAccess.Models;
+using System.Drawing;
+using Syncfusion.Pdf.Grid;
 
 namespace WPFGrowerApp.Services
 {
@@ -148,7 +150,7 @@ namespace WPFGrowerApp.Services
                     
                     // Format column headers
                     sheet.Range["A5:K5"].CellStyle.Font.Bold = true;
-                    sheet.Range["A5:K5"].CellStyle.Color = Syncfusion.Drawing.Color.LightGray;
+                    sheet.Range["A5:K5"].CellStyle.Color = System.Drawing.Color.LightGray;
                     
                     // Add data
                     int row = 6;
@@ -238,9 +240,13 @@ namespace WPFGrowerApp.Services
                     table[0, 4].AddParagraph().AppendText("Phone");
                     table[0, 5].AddParagraph().AppendText("Acres");
                     table[0, 6].AddParagraph().AppendText("Pay Group");
-                    
+
                     // Format header row
-                    table.Rows[0].Cells.VerticalAlignment = VerticalAlignment.Middle;
+                    foreach (WTableCell cell in table.Rows[0].Cells)
+                    {
+                        cell.CellFormat.VerticalAlignment = Syncfusion.DocIO.DLS.VerticalAlignment.Middle;
+                    }
+                    //table.Rows[0].Cells.VerticalAlignment = Syncfusion.DocIO.DLS.VerticalAlignment.Middle;
                     table.Rows[0].Height = 20;
                     table.Rows[0].IsHeader = true;
                     
@@ -256,10 +262,12 @@ namespace WPFGrowerApp.Services
                         table[i + 1, 5].AddParagraph().AppendText(grower.Acres.ToString());
                         table[i + 1, 6].AddParagraph().AppendText(grower.PayGroup ?? string.Empty);
                     }
-                    
+
                     // Apply table formatting
-                    table.ApplyStyle(BuiltinStyle.LightGrid);
+                    // Apply table formatting
+                    table.ApplyStyle(BuiltinTableStyle.TableGrid);
                     
+
                     // Show save dialog
                     SaveFileDialog saveFileDialog = new SaveFileDialog
                     {

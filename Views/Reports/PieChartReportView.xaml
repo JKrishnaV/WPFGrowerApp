@@ -161,7 +161,6 @@
             <Button Grid.Column="1" 
                     Content="Export Report" 
                     Command="{Binding ExportReportCommand}"
-                    Style="{StaticResource PrimaryButtonStyle}"
                     Width="150">
                 <Button.Style>
                     <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
