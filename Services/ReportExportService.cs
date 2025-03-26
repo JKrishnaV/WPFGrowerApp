@@ -240,9 +240,13 @@ namespace WPFGrowerApp.Services
                     table[0, 4].AddParagraph().AppendText("Phone");
                     table[0, 5].AddParagraph().AppendText("Acres");
                     table[0, 6].AddParagraph().AppendText("Pay Group");
-                    
+
                     // Format header row
-                    table.Rows[0].Cells.VerticalAlignment = VerticalAlignment.Middle;
+                    foreach (WTableCell cell in table.Rows[0].Cells)
+                    {
+                        cell.CellFormat.VerticalAlignment = Syncfusion.DocIO.DLS.VerticalAlignment.Middle;
+                    }
+                    //table.Rows[0].Cells.VerticalAlignment = Syncfusion.DocIO.DLS.VerticalAlignment.Middle;
                     table.Rows[0].Height = 20;
                     table.Rows[0].IsHeader = true;
                     
@@ -258,10 +262,12 @@ namespace WPFGrowerApp.Services
                         table[i + 1, 5].AddParagraph().AppendText(grower.Acres.ToString());
                         table[i + 1, 6].AddParagraph().AppendText(grower.PayGroup ?? string.Empty);
                     }
-                    
+
                     // Apply table formatting
-                    table.ApplyStyle(BuiltinStyle.LightGrid);
+                    // Apply table formatting
+                    table.ApplyStyle(BuiltinTableStyle.TableGrid);
                     
+
                     // Show save dialog
                     SaveFileDialog saveFileDialog = new SaveFileDialog
                     {

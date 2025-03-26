@@ -97,7 +97,6 @@
             <syncfusion:SfDataGrid.Style>
                 <Style TargetType="syncfusion:SfDataGrid">
                     <Setter Property="GridLinesVisibility" Value="Both"/>
-                    <Setter Property="HeaderGridLinesVisibility" Value="Both"/>
                 </Style>
             </syncfusion:SfDataGrid.Style>
         </syncfusion:SfDataGrid>
