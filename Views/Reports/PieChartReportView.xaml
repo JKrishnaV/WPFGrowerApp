@@ -99,7 +99,6 @@
                                          EnableAnimation="True"
                                          ExplodeOnMouseClick="True"
                                          ExplodeRadius="10"
-                                         InnerRadius="0.4"
                                          Palette="GreenChrome">
                     <syncfusion:DoughnutSeries.AdornmentsInfo>
                         <syncfusion:ChartAdornmentInfo ShowLabel="True" 
