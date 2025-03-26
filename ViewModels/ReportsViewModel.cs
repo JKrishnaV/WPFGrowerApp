@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows.Input;
 using WPFGrowerApp.Models;
 using WPFGrowerApp.Services;
+using WPFGrowerApp.DataAccess.Models;
 
 namespace WPFGrowerApp.ViewModels
 {

@@ -5,12 +5,14 @@ using System.Windows;
 using Microsoft.Win32;
 using Syncfusion.Pdf;
 using Syncfusion.Pdf.Graphics;
-using Syncfusion.UI.Xaml.Grid.Converter;
 using Syncfusion.XlsIO;
 using Syncfusion.DocIO;
 using Syncfusion.DocIO.DLS;
 using WPFGrowerApp.Models;
 using WPFGrowerApp.ViewModels;
+using WPFGrowerApp.DataAccess.Models;
+using System.Drawing;
+using Syncfusion.Pdf.Grid;
 
 namespace WPFGrowerApp.Services
 {
@@ -148,7 +150,7 @@ namespace WPFGrowerApp.Services
                     
                     // Format column headers
                     sheet.Range["A5:K5"].CellStyle.Font.Bold = true;
-                    sheet.Range["A5:K5"].CellStyle.Color = Syncfusion.Drawing.Color.LightGray;
+                    sheet.Range["A5:K5"].CellStyle.Color = System.Drawing.Color.LightGray;
                     
                     // Add data
                     int row = 6;
