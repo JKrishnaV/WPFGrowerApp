@@ -13,7 +13,7 @@ namespace WPFGrowerApp.ViewModels
     {
         private readonly IGrowerService _growerService;
         private readonly IPayGroupService _payGroupService;
-        private Models.Grower _currentGrower;
+        private Grower _currentGrower;
         private bool _isLoading;
         private bool _isSaving;
         private string _statusMessage;
@@ -23,7 +23,7 @@ namespace WPFGrowerApp.ViewModels
         {
             _growerService = growerService ?? throw new ArgumentNullException(nameof(growerService));
             _payGroupService = payGroupService ?? throw new ArgumentNullException(nameof(payGroupService));
-            CurrentGrower = new Models.Grower();
+            CurrentGrower = new Grower();
             SaveCommand = new RelayCommand(SaveCommandExecute, CanExecuteSaveCommand);
             NewCommand = new RelayCommand(NewCommandExecute);
             SearchCommand = new RelayCommand(SearchCommandExecute);
@@ -85,7 +85,7 @@ namespace WPFGrowerApp.ViewModels
             SearchGrower();
         }
 
-        public Models.Grower CurrentGrower
+        public Grower CurrentGrower
         {
             get => _currentGrower;
             set
@@ -159,7 +159,7 @@ namespace WPFGrowerApp.ViewModels
                 else
                 {
                     StatusMessage = $"Grower {growerNumber} not found.";
-                    CurrentGrower = new Models.Grower { GrowerNumber = growerNumber };
+                    CurrentGrower = new Grower { GrowerNumber = growerNumber };
                 }
             }
             catch (Exception ex)
@@ -208,7 +208,7 @@ namespace WPFGrowerApp.ViewModels
 
         private void CreateNewGrower()
         {
-            CurrentGrower = new Models.Grower();
+            CurrentGrower = new Grower();
             StatusMessage = "Created new grower.";
         }
 

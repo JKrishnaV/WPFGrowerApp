@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using WPFGrowerApp.DataAccess.Models;
 using WPFGrowerApp.Models;
 
 namespace WPFGrowerApp.DataAccess.Interfaces
