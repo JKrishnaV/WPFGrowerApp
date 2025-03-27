@@ -65,69 +65,62 @@
         </ResourceDictionary>
     </Window.Resources>
     
-    <Window.Content>
-        <ScrollViewer VerticalScrollBarVisibility="Auto" 
-                      HorizontalScrollBarVisibility="Auto"
-                      PanningMode="Both">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition x:Name="MenuColumn" Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
 
-                <!-- Main Content -->
-                <Grid Grid.Row="0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition x:Name="MenuColumn" Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <!-- Hamburger Menu -->
-                    <controls:HamburgerMenu x:Name="MainMenu" Grid.Column="0" Width="250"/>
-                    
-                    <Grid Grid.Column="1">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="50"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        
-                        <!-- Header with Toggle Button -->
-                        <Grid Grid.Row="0" Background="#F8F8F8" MouseLeftButtonDown="HeaderArea_MouseLeftButtonDown">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="191*"/>
-                                <ColumnDefinition Width="133*"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="10,0,0,0">
-                                <Button x:Name="MenuToggleButton" 
-                                        HorizontalAlignment="Left" 
-                                        VerticalAlignment="Center"
-                                        Margin="15,0,0,0"
-                                        Width="30" 
-                                        Height="30"
-                                        Content="☰"
-                                        FontSize="16"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        Click="MenuToggleButton_Click"/>
-                            </StackPanel>
-                            
-                            <!-- Window Controls -->
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                                <Button x:Name="MinimizeButton" Content="&#xE921;" Style="{StaticResource WindowControlButtonStyle}" Click="MinimizeButton_Click"/>
-                                <Button x:Name="MaximizeButton" Content="&#xE922;" Style="{StaticResource WindowControlButtonStyle}" Click="MaximizeButton_Click"/>
-                                <Button x:Name="CloseButton" Content="&#xE8BB;" Style="{StaticResource CloseButtonStyle}" Click="CloseButton_Click"/>
-                            </StackPanel>
-                        </Grid>
-                        
-                        <!-- Content Area -->
-                        <ContentControl Grid.Row="1" 
-                                        Margin="15"
-                                        Content="{Binding CurrentViewModel}"
-                                        VerticalAlignment="Top"
-                                        HorizontalAlignment="Stretch"/>
-                    </Grid>
-                </Grid>
+        <!-- Hamburger Menu -->
+        <controls:HamburgerMenu x:Name="MainMenu" Grid.Column="0" Width="250"/>
+        
+        <!-- Main Content Area -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="50"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Header with Toggle Button -->
+            <Grid Grid.Row="0" Background="#F8F8F8" MouseLeftButtonDown="HeaderArea_MouseLeftButtonDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="10,0,0,0">
+                    <Button x:Name="MenuToggleButton" 
+                            HorizontalAlignment="Left" 
+                            VerticalAlignment="Center"
+                            Margin="15,0,0,0"
+                            Width="30" 
+                            Height="30"
+                            Content="☰"
+                            FontSize="16"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Click="MenuToggleButton_Click"/>
+                </StackPanel>
+                
+                <!-- Window Controls -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="MinimizeButton" Content="&#xE921;" Style="{StaticResource WindowControlButtonStyle}" Click="MinimizeButton_Click"/>
+                    <Button x:Name="MaximizeButton" Content="&#xE922;" Style="{StaticResource WindowControlButtonStyle}" Click="MaximizeButton_Click"/>
+                    <Button x:Name="CloseButton" Content="&#xE8BB;" Style="{StaticResource CloseButtonStyle}" Click="CloseButton_Click"/>
+                </StackPanel>
             </Grid>
-        </ScrollViewer>
-    </Window.Content>
+            
+            <!-- Content Area with ScrollViewer -->
+            <ScrollViewer Grid.Row="1" 
+                        VerticalScrollBarVisibility="Auto" 
+                        HorizontalScrollBarVisibility="Auto"
+                        PanningMode="Both">
+                <ContentControl Margin="15"
+                              Content="{Binding CurrentViewModel}"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Stretch"
+                              HorizontalContentAlignment="Stretch"
+                              VerticalContentAlignment="Stretch"/>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
 </Window>
