@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using WPFGrowerApp.DataAccess.Interfaces;
+using WPFGrowerApp.DataAccess.Models;
 using WPFGrowerApp.Models;
 
 namespace WPFGrowerApp.ViewModels

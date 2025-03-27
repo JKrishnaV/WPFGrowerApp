@@ -27,6 +27,7 @@ namespace WPFGrowerApp.ViewModels
             SaveCommand = new RelayCommand(SaveCommandExecute, CanExecuteSaveCommand);
             NewCommand = new RelayCommand(NewCommandExecute);
             SearchCommand = new RelayCommand(SearchCommandExecute);
+            CancelCommand = new RelayCommand(CancelCommandExecute);
             LoadPayGroupsAsync().ConfigureAwait(false);
         }
 
@@ -82,7 +83,39 @@ namespace WPFGrowerApp.ViewModels
 
         private void SearchCommandExecute(object parameter)
         {
-            SearchGrower();
+            var searchView = new GrowerSearchView();
+            
+            if (searchView.ShowDialog() == true)
+            {
+                if (searchView.SelectedGrowerNumber.HasValue)
+                {
+                    if (searchView.SelectedGrowerNumber.Value == 0)
+                    {
+                        // Create new grower
+                        CreateNewGrower();
+                    }
+                    else
+                    {
+                        // Load existing grower
+                        LoadGrowerAsync(searchView.SelectedGrowerNumber.Value);
+                    }
+                }
+            }
+        }
+
+        private void CancelCommandExecute(object parameter)
+        {
+            if (CurrentGrower != null && CurrentGrower.GrowerNumber > 0)
+            {
+                // If we're editing an existing grower, reload it to discard changes
+                LoadGrowerAsync(CurrentGrower.GrowerNumber);
+            }
+            else
+            {
+                // If we're creating a new grower, clear the form
+                CurrentGrower = new Grower();
+                StatusMessage = "Operation cancelled.";
+            }
         }
 
         public Grower CurrentGrower
@@ -141,6 +174,7 @@ namespace WPFGrowerApp.ViewModels
         public RelayCommand SaveCommand { get; }
         public RelayCommand NewCommand { get; }
         public RelayCommand SearchCommand { get; }
+        public RelayCommand CancelCommand { get; }
 
         public async void LoadGrowerAsync(decimal growerNumber)
         {
@@ -181,11 +215,28 @@ namespace WPFGrowerApp.ViewModels
                 IsSaving = true;
                 StatusMessage = "Saving grower...";
 
+                // Validate required fields
+                if (string.IsNullOrWhiteSpace(CurrentGrower.GrowerName))
+                {
+                    MessageBox.Show("Grower Name is required.", "Validation Error", 
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(CurrentGrower.ChequeName))
+                {
+                    MessageBox.Show("Cheque Name is required.", "Validation Error", 
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
                 bool success = await _growerService.SaveGrowerAsync(CurrentGrower);
                 
                 if (success)
                 {
                     StatusMessage = "Grower saved successfully.";
+                    MessageBox.Show("Grower saved successfully.", "Success", 
+                        MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 else
                 {
@@ -208,18 +259,17 @@ namespace WPFGrowerApp.ViewModels
 
         private void CreateNewGrower()
         {
-            CurrentGrower = new Grower();
-            StatusMessage = "Created new grower.";
-        }
-
-        private void SearchGrower()
-        {
-            var searchView = new GrowerSearchView();
-            
-            if (searchView.ShowDialog() == true && searchView.SelectedGrowerNumber.HasValue)
+            CurrentGrower = new Grower
             {
-                LoadGrowerAsync(searchView.SelectedGrowerNumber.Value);
-            }
+                GrowerNumber = 0, // This will be set by the database
+                Currency = 'C', // Default to CAD
+                PayGroup = "1", // Default pay group
+                PriceLevel = 1, // Default price level
+                ContractLimit = 0, // Default contract limit
+                OnHold = false,
+                ChargeGST = false
+            };
+            StatusMessage = "Created new grower.";
         }
     }
 }

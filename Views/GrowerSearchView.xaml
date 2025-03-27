@@ -70,6 +70,7 @@
         </DataGrid>
 
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="New Grower" Width="100" Height="25" Margin="0,0,10,0" Click="NewGrowerButton_Click"/>
             <Button Content="Cancel" Width="80" Height="25" Margin="0,0,10,0" Click="CancelButton_Click"/>
             <Button Content="Select" Width="80" Height="25" Click="SelectButton_Click"
                     IsEnabled="{Binding SelectedItem, ElementName=GrowersDataGrid, Converter={StaticResource NotNullConverter}}"/>

@@ -37,27 +37,35 @@ namespace WPFGrowerApp.Views
 
         private void ResultsDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            // Selection handling is done through binding to the Select button's IsEnabled property
+            if (GrowersDataGrid.SelectedItem != null)
+            {
+                var selectedGrower = GrowersDataGrid.SelectedItem as GrowerSearchResult;
+                if (selectedGrower != null)
+                {
+                    SelectedGrowerNumber = selectedGrower.GrowerNumber;
+                }
+            }
         }
 
         private void SelectButton_Click(object sender, RoutedEventArgs e)
         {
-            if (GrowersDataGrid.SelectedItem is GrowerSearchResult selectedGrower)
+            if (SelectedGrowerNumber.HasValue)
             {
-                SelectedGrowerNumber = selectedGrower.GrowerNumber;
                 DialogResult = true;
                 Close();
-            }
-            else
-            {
-                MessageBox.Show("Please select a grower first.", "No Selection",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
             DialogResult = false;
+            Close();
+        }
+
+        private void NewGrowerButton_Click(object sender, RoutedEventArgs e)
+        {
+            SelectedGrowerNumber = 0; // This will indicate a new grower
+            DialogResult = true;
             Close();
         }
     }
