@@ -12,7 +12,7 @@ namespace WPFGrowerApp.DataAccess
 
         protected BaseDatabaseService()
         {
-            // Connection string with the provided credentials
+            // Connection string 
             _connectionString = "Server=DESKTOP-LQ92Q06;Database=PackagingPaymentSystem;User Id=localDB;Password=528database@JK;";
         }
 
