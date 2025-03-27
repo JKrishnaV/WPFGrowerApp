@@ -16,7 +16,6 @@ namespace WPFGrowerApp
     public partial class MainWindow : Window
     {
         private readonly MainViewModel _viewModel;
-        private bool _isMenuExpanded = true;
 
         public MainWindow()
         {
@@ -63,10 +62,9 @@ namespace WPFGrowerApp
         {
             // Toggle the hamburger menu with animation
             MainMenu.ToggleMenu();
+            MainMenu.IsMenuExpanded = !MainMenu.IsMenuExpanded;
 
-            _isMenuExpanded = !_isMenuExpanded;
-
-            if (_isMenuExpanded)
+            if (MainMenu.IsMenuExpanded)
             {
                 // Expand menu
                 var animation = new DoubleAnimation

@@ -21,11 +21,20 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = @"
                         SELECT 
-                            PAY_GROUP_ID as PayGroupId,
-                            DESCRIPTION as Description,
-                            DEFAULT_PRICE_LEVEL as DefaultPriceLevel
-                        FROM PAY_GROUP 
-                        ORDER BY PAY_GROUP_ID";
+                            PAYGRP as PayGroupId,
+                            Description as Description,
+                            DEF_PRLVL as DefaultPriceLevel,
+                            QADD_DATE as QaddDate,
+                            QADD_TIME as QaddTime,
+                            QADD_OP as QaddOp,
+                            QED_DATE as QedDate,
+                            QED_TIME as QedTime,
+                            QED_OP as QedOp,
+                            QDEL_DATE as QdelDate,
+                            QDEL_TIME as QdelTime,
+                            QDEL_OP as QdelOp
+                        FROM PayGrp 
+                        ORDER BY PAYGRP";
 
                     return (await connection.QueryAsync<PayGroup>(sql)).ToList();
                 }

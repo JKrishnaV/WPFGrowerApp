@@ -23,6 +23,16 @@ namespace WPFGrowerApp.Controls
         {
             get { return _isMenuVisible; }
         }
+        private bool _isMenuExpanded = true;
+        // Property to track if menu is expanded
+        public bool IsMenuExpanded
+        {
+            get { return _isMenuExpanded; }
+            set
+            {
+                _isMenuExpanded = value;
+            }
+        }
         public HamburgerMenu()
         {
             InitializeComponent();
@@ -58,6 +68,18 @@ namespace WPFGrowerApp.Controls
         {
             if (sender is Button button)
             {
+                this.ToggleMenu();
+                _isMenuExpanded = !_isMenuExpanded;
+
+                var animation = new DoubleAnimation
+                {
+                    From = 250,
+                    To = 0,
+                    Duration = TimeSpan.FromMilliseconds(300)
+                };
+
+                this.BeginAnimation(FrameworkElement.WidthProperty, animation);                
+
                 // Get the menu item name from the button name (remove "Button" suffix)
                 string menuItem = button.Name.Replace("Button", "");
                 
