@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
+using Dapper;
 using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
 
@@ -12,22 +14,37 @@ namespace WPFGrowerApp.DataAccess.Services
     {
         public async Task<List<Cheque>> GetAllChequesAsync()
         {
-            var cheques = new List<Cheque>();
             try
             {
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    using (var command = new SqlCommand("SELECT * FROM CHEQUE ORDER BY DATE DESC", connection))
-                    {
-                        using (var reader = await command.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                cheques.Add(MapChequeFromReader(reader));
-                            }
-                        }
-                    }
+                    var sql = @"
+                        SELECT 
+                            SERIES as Series,
+                            CHEQUE as ChequeNumber,
+                            GROWER as GrowerNumber,
+                            DATE as Date,
+                            AMOUNT as Amount,
+                            YEAR as Year,
+                            CHEQUE_TYPE as ChequeType,
+                            VOID as Void,
+                            DATE_CLEAR as DateClear,
+                            IS_CLEARED as IsCleared,
+                            CURRENCY as Currency,
+                            QADD_DATE as QaddDate,
+                            QADD_TIME as QaddTime,
+                            QADD_OP as QaddOp,
+                            QED_DATE as QedDate,
+                            QED_TIME as QedTime,
+                            QED_OP as QedOp,
+                            QDEL_DATE as QdelDate,
+                            QDEL_TIME as QdelTime,
+                            QDEL_OP as QdelOp
+                        FROM CHEQUE 
+                        ORDER BY DATE DESC";
+
+                    return (await connection.QueryAsync<Cheque>(sql)).ToList();
                 }
             }
             catch (Exception ex)
@@ -35,7 +52,6 @@ namespace WPFGrowerApp.DataAccess.Services
                 Debug.WriteLine($"Error in GetAllChequesAsync: {ex.Message}");
                 throw;
             }
-            return cheques;
         }
 
         public async Task<Cheque> GetChequeBySeriesAndNumberAsync(string series, decimal chequeNumber)
@@ -45,19 +61,33 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    using (var command = new SqlCommand("SELECT * FROM CHEQUE WHERE SERIES = @Series AND CHEQUE_NUMBER = @ChequeNumber", connection))
-                    {
-                        command.Parameters.AddWithValue("@Series", series);
-                        command.Parameters.AddWithValue("@ChequeNumber", chequeNumber);
+                    var sql = @"
+                        SELECT 
+                            SERIES as Series,
+                            CHEQUE as ChequeNumber,
+                            GROWER as GrowerNumber,
+                            DATE as Date,
+                            AMOUNT as Amount,
+                            YEAR as Year,
+                            CHEQUE_TYPE as ChequeType,
+                            VOID as Void,
+                            DATE_CLEAR as DateClear,
+                            IS_CLEARED as IsCleared,
+                            CURRENCY as Currency,
+                            QADD_DATE as QaddDate,
+                            QADD_TIME as QaddTime,
+                            QADD_OP as QaddOp,
+                            QED_DATE as QedDate,
+                            QED_TIME as QedTime,
+                            QED_OP as QedOp,
+                            QDEL_DATE as QdelDate,
+                            QDEL_TIME as QdelTime,
+                            QDEL_OP as QdelOp
+                        FROM CHEQUE 
+                        WHERE SERIES = @Series AND CHEQUE = @ChequeNumber";
 
-                        using (var reader = await command.ExecuteReaderAsync())
-                        {
-                            if (await reader.ReadAsync())
-                            {
-                                return MapChequeFromReader(reader);
-                            }
-                        }
-                    }
+                    var parameters = new { Series = series, ChequeNumber = chequeNumber };
+                    return await connection.QueryFirstOrDefaultAsync<Cheque>(sql, parameters);
                 }
             }
             catch (Exception ex)
@@ -65,29 +95,43 @@ namespace WPFGrowerApp.DataAccess.Services
                 Debug.WriteLine($"Error in GetChequeBySeriesAndNumberAsync: {ex.Message}");
                 throw;
             }
-            return null;
         }
 
         public async Task<List<Cheque>> GetChequesByGrowerNumberAsync(decimal growerNumber)
         {
-            var cheques = new List<Cheque>();
             try
             {
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    using (var command = new SqlCommand("SELECT * FROM CHEQUE WHERE GROWER_NUMBER = @GrowerNumber ORDER BY DATE DESC", connection))
-                    {
-                        command.Parameters.AddWithValue("@GrowerNumber", growerNumber);
+                    var sql = @"
+                        SELECT 
+                            SERIES as Series,
+                            CHEQUE as ChequeNumber,
+                            GROWER as GrowerNumber,
+                            DATE as Date,
+                            AMOUNT as Amount,
+                            YEAR as Year,
+                            CHEQUE_TYPE as ChequeType,
+                            VOID as Void,
+                            DATE_CLEAR as DateClear,
+                            IS_CLEARED as IsCleared,
+                            CURRENCY as Currency,
+                            QADD_DATE as QaddDate,
+                            QADD_TIME as QaddTime,
+                            QADD_OP as QaddOp,
+                            QED_DATE as QedDate,
+                            QED_TIME as QedTime,
+                            QED_OP as QedOp,
+                            QDEL_DATE as QdelDate,
+                            QDEL_TIME as QdelTime,
+                            QDEL_OP as QdelOp
+                        FROM CHEQUE 
+                        WHERE GROWER = @GrowerNumber
+                        ORDER BY DATE DESC";
 
-                        using (var reader = await command.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                cheques.Add(MapChequeFromReader(reader));
-                            }
-                        }
-                    }
+                    var parameters = new { GrowerNumber = growerNumber };
+                    return (await connection.QueryAsync<Cheque>(sql, parameters)).ToList();
                 }
             }
             catch (Exception ex)
@@ -95,30 +139,43 @@ namespace WPFGrowerApp.DataAccess.Services
                 Debug.WriteLine($"Error in GetChequesByGrowerNumberAsync: {ex.Message}");
                 throw;
             }
-            return cheques;
         }
 
         public async Task<List<Cheque>> GetChequesByDateRangeAsync(DateTime startDate, DateTime endDate)
         {
-            var cheques = new List<Cheque>();
             try
             {
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    using (var command = new SqlCommand("SELECT * FROM CHEQUE WHERE DATE BETWEEN @StartDate AND @EndDate ORDER BY DATE DESC", connection))
-                    {
-                        command.Parameters.AddWithValue("@StartDate", startDate);
-                        command.Parameters.AddWithValue("@EndDate", endDate);
+                    var sql = @"
+                        SELECT 
+                            SERIES as Series,
+                            CHEQUE as ChequeNumber,
+                            GROWER as GrowerNumber,
+                            DATE as Date,
+                            AMOUNT as Amount,
+                            YEAR as Year,
+                            CHEQUE_TYPE as ChequeType,
+                            VOID as Void,
+                            DATE_CLEAR as DateClear,
+                            IS_CLEARED as IsCleared,
+                            CURRENCY as Currency,
+                            QADD_DATE as QaddDate,
+                            QADD_TIME as QaddTime,
+                            QADD_OP as QaddOp,
+                            QED_DATE as QedDate,
+                            QED_TIME as QedTime,
+                            QED_OP as QedOp,
+                            QDEL_DATE as QdelDate,
+                            QDEL_TIME as QdelTime,
+                            QDEL_OP as QdelOp
+                        FROM CHEQUE 
+                        WHERE DATE BETWEEN @StartDate AND @EndDate
+                        ORDER BY DATE DESC";
 
-                        using (var reader = await command.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                cheques.Add(MapChequeFromReader(reader));
-                            }
-                        }
-                    }
+                    var parameters = new { StartDate = startDate, EndDate = endDate };
+                    return (await connection.QueryAsync<Cheque>(sql, parameters)).ToList();
                 }
             }
             catch (Exception ex)
@@ -126,7 +183,6 @@ namespace WPFGrowerApp.DataAccess.Services
                 Debug.WriteLine($"Error in GetChequesByDateRangeAsync: {ex.Message}");
                 throw;
             }
-            return cheques;
         }
 
         public async Task<bool> SaveChequeAsync(Cheque cheque)
@@ -136,13 +192,13 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    using (var command = new SqlCommand(@"
+                    var sql = @"
                         MERGE INTO CHEQUE AS target
-                        USING (SELECT @Series AS SERIES, @ChequeNumber AS CHEQUE_NUMBER) AS source
-                        ON (target.SERIES = source.SERIES AND target.CHEQUE_NUMBER = source.CHEQUE_NUMBER)
+                        USING (SELECT @Series AS SERIES, @ChequeNumber AS CHEQUE) AS source
+                        ON (target.SERIES = source.SERIES AND target.CHEQUE = source.CHEQUE)
                         WHEN MATCHED THEN
                             UPDATE SET
-                                GROWER_NUMBER = @GrowerNumber,
+                                GROWER = @GrowerNumber,
                                 DATE = @Date,
                                 AMOUNT = @Amount,
                                 YEAR = @Year,
@@ -151,20 +207,39 @@ namespace WPFGrowerApp.DataAccess.Services
                                 DATE_CLEAR = @DateClear,
                                 IS_CLEARED = @IsCleared,
                                 CURRENCY = @Currency,
-                                QED_DATE = @QedDate,
-                                QED_TIME = @QedTime,
-                                QED_OP = @QedOp
+                                QED_DATE = GETDATE(),
+                                QED_TIME = CONVERT(varchar(8), GETDATE(), 108),
+                                QED_OP = SYSTEM_USER
                         WHEN NOT MATCHED THEN
-                            INSERT (SERIES, CHEQUE_NUMBER, GROWER_NUMBER, DATE, AMOUNT, YEAR, CHEQUE_TYPE, VOID, 
-                                   DATE_CLEAR, IS_CLEARED, CURRENCY, QADD_DATE, QADD_TIME, QADD_OP)
-                            VALUES (@Series, @ChequeNumber, @GrowerNumber, @Date, @Amount, @Year, @ChequeType, @Void,
-                                   @DateClear, @IsCleared, @Currency, GETDATE(), CONVERT(varchar(8), GETDATE(), 108), SYSTEM_USER);",
-                        connection))
+                            INSERT (
+                                SERIES, CHEQUE, GROWER, DATE, AMOUNT, YEAR,
+                                CHEQUE_TYPE, VOID, DATE_CLEAR, IS_CLEARED,
+                                CURRENCY, QADD_DATE, QADD_TIME, QADD_OP
+                            )
+                            VALUES (
+                                @Series, @ChequeNumber, @GrowerNumber, @Date,
+                                @Amount, @Year, @ChequeType, @Void, @DateClear,
+                                @IsCleared, @Currency, GETDATE(),
+                                CONVERT(varchar(8), GETDATE(), 108), SYSTEM_USER
+                            );";
+
+                    var parameters = new
                     {
-                        AddChequeParameters(command, cheque);
-                        int rowsAffected = await command.ExecuteNonQueryAsync();
-                        return rowsAffected > 0;
-                    }
+                        cheque.Series,
+                        cheque.ChequeNumber,
+                        cheque.GrowerNumber,
+                        cheque.Date,
+                        cheque.Amount,
+                        cheque.Year,
+                        cheque.ChequeType,
+                        cheque.Void,
+                        cheque.DateClear,
+                        cheque.IsCleared,
+                        cheque.Currency
+                    };
+
+                    int rowsAffected = await connection.ExecuteAsync(sql, parameters);
+                    return rowsAffected > 0;
                 }
             }
             catch (Exception ex)
@@ -181,20 +256,18 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    using (var command = new SqlCommand(@"
+                    var sql = @"
                         UPDATE CHEQUE 
-                        SET VOID = 1,
+                        SET 
+                            VOID = 1,
                             QED_DATE = GETDATE(),
                             QED_TIME = CONVERT(varchar(8), GETDATE(), 108),
                             QED_OP = SYSTEM_USER
-                        WHERE SERIES = @Series AND CHEQUE_NUMBER = @ChequeNumber",
-                        connection))
-                    {
-                        command.Parameters.AddWithValue("@Series", series);
-                        command.Parameters.AddWithValue("@ChequeNumber", chequeNumber);
-                        int rowsAffected = await command.ExecuteNonQueryAsync();
-                        return rowsAffected > 0;
-                    }
+                        WHERE SERIES = @Series AND CHEQUE = @ChequeNumber";
+
+                    var parameters = new { Series = series, ChequeNumber = chequeNumber };
+                    int rowsAffected = await connection.ExecuteAsync(sql, parameters);
+                    return rowsAffected > 0;
                 }
             }
             catch (Exception ex)
@@ -202,51 +275,6 @@ namespace WPFGrowerApp.DataAccess.Services
                 Debug.WriteLine($"Error in VoidChequeAsync: {ex.Message}");
                 return false;
             }
-        }
-
-        private Cheque MapChequeFromReader(SqlDataReader reader)
-        {
-            return new Cheque
-            {
-                Series = reader["SERIES"].ToString(),
-                ChequeNumber = Convert.ToDecimal(reader["CHEQUE_NUMBER"]),
-                GrowerNumber = Convert.ToDecimal(reader["GROWER_NUMBER"]),
-                Date = Convert.ToDateTime(reader["DATE"]),
-                Amount = Convert.ToDecimal(reader["AMOUNT"]),
-                Year = Convert.ToDecimal(reader["YEAR"]),
-                ChequeType = reader["CHEQUE_TYPE"].ToString(),
-                Void = Convert.ToBoolean(reader["VOID"]),
-                DateClear = reader["DATE_CLEAR"] != DBNull.Value ? Convert.ToDateTime(reader["DATE_CLEAR"]) : null,
-                IsCleared = Convert.ToBoolean(reader["IS_CLEARED"]),
-                Currency = reader["CURRENCY"].ToString(),
-                QaddDate = reader["QADD_DATE"] != DBNull.Value ? Convert.ToDateTime(reader["QADD_DATE"]) : null,
-                QaddTime = reader["QADD_TIME"].ToString(),
-                QaddOp = reader["QADD_OP"].ToString(),
-                QedDate = reader["QED_DATE"] != DBNull.Value ? Convert.ToDateTime(reader["QED_DATE"]) : null,
-                QedTime = reader["QED_TIME"].ToString(),
-                QedOp = reader["QED_OP"].ToString(),
-                QdelDate = reader["QDEL_DATE"] != DBNull.Value ? Convert.ToDateTime(reader["QDEL_DATE"]) : null,
-                QdelTime = reader["QDEL_TIME"].ToString(),
-                QdelOp = reader["QDEL_OP"].ToString()
-            };
-        }
-
-        private void AddChequeParameters(SqlCommand command, Cheque cheque)
-        {
-            command.Parameters.AddWithValue("@Series", cheque.Series);
-            command.Parameters.AddWithValue("@ChequeNumber", cheque.ChequeNumber);
-            command.Parameters.AddWithValue("@GrowerNumber", cheque.GrowerNumber);
-            command.Parameters.AddWithValue("@Date", cheque.Date);
-            command.Parameters.AddWithValue("@Amount", cheque.Amount);
-            command.Parameters.AddWithValue("@Year", cheque.Year);
-            command.Parameters.AddWithValue("@ChequeType", cheque.ChequeType ?? (object)DBNull.Value);
-            command.Parameters.AddWithValue("@Void", cheque.Void);
-            command.Parameters.AddWithValue("@DateClear", cheque.DateClear ?? (object)DBNull.Value);
-            command.Parameters.AddWithValue("@IsCleared", cheque.IsCleared);
-            command.Parameters.AddWithValue("@Currency", cheque.Currency ?? (object)DBNull.Value);
-            command.Parameters.AddWithValue("@QedDate", cheque.QedDate ?? (object)DBNull.Value);
-            command.Parameters.AddWithValue("@QedTime", cheque.QedTime ?? (object)DBNull.Value);
-            command.Parameters.AddWithValue("@QedOp", cheque.QedOp ?? (object)DBNull.Value);
         }
     }
 } 

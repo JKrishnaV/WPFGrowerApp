@@ -15,6 +15,7 @@
     <PackageReference Include="Syncfusion.XlsIO.Wpf" Version="23.1.36" />
     <PackageReference Include="Syncfusion.DocIO.Wpf" Version="23.1.36" />
     <PackageReference Include="Syncfusion.SfGrid.WPF" Version="23.1.36" />
+    <PackageReference Include="Dapper" Version="2.1.28" />
   </ItemGroup>
 
 </Project>

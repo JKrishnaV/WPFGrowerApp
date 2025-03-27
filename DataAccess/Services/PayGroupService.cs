@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
+using Dapper;
 using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
 
@@ -12,39 +14,27 @@ namespace WPFGrowerApp.DataAccess.Services
     {
         public async Task<List<PayGroup>> GetPayGroupsAsync()
         {
-            var payGroups = new List<PayGroup>();
-
             try
             {
-                using (SqlConnection connection = new SqlConnection(_connectionString))
+                using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
+                    var sql = @"
+                        SELECT 
+                            PAY_GROUP_ID as PayGroupId,
+                            DESCRIPTION as Description,
+                            DEFAULT_PRICE_LEVEL as DefaultPriceLevel
+                        FROM PAY_GROUP 
+                        ORDER BY PAY_GROUP_ID";
 
-                    string sql = @"SELECT PAYGRP, Description, DEF_PRLVL FROM PayGrp ORDER BY PAYGRP";
-
-                    using (SqlCommand command = new SqlCommand(sql, connection))
-                    {
-                        using (SqlDataReader reader = await command.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                payGroups.Add(new PayGroup
-                                {
-                                    PayGroupId = !reader.IsDBNull(0) ? reader.GetString(0) : "",
-                                    Description = !reader.IsDBNull(1) ? reader.GetString(1) : "",
-                                    DefaultPriceLevel = !reader.IsDBNull(2) ? reader.GetDecimal(2) : 1m
-                                });
-                            }
-                        }
-                    }
+                    return (await connection.QueryAsync<PayGroup>(sql)).ToList();
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error getting pay groups: {ex.Message}");
+                Debug.WriteLine($"Error in GetPayGroupsAsync: {ex.Message}");
+                throw;
             }
-
-            return payGroups;
         }
     }
 } 
