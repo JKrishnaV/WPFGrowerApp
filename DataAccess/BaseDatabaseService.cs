@@ -14,7 +14,7 @@ namespace WPFGrowerApp.DataAccess
         protected BaseDatabaseService()
         {
             //_connectionString = ConfigurationManager.ConnectionStrings["DefaultConnection"].ConnectionString;
-            _connectionString = "Server=DESKTOP-LQ92Q06;Database=PackagingPaymentSystem;User Id=localDB;Password=528database@JK;";
+            _connectionString = "Server=DESKTOP-LQ92Q06;Database=PackagingPaymentSystem;User Id=localDB;Password=528database@JK;TrustServerCertificate=True;";
         }
 
         protected SqlConnection CreateConnection()

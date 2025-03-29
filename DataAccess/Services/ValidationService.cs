@@ -37,10 +37,10 @@ namespace WPFGrowerApp.DataAccess.Services
                 errors.Add($"Invalid process code: {receipt.Process}");
             }
 
-            // Validate grade
-            if (!await ValidateGradeAsync(receipt.Grade))
+            // Validate grade (1-3 are valid grades based on the database schema)
+            if (receipt.Grade < 1 || receipt.Grade > 3)
             {
-                errors.Add($"Invalid grade code: {receipt.Grade}");
+                errors.Add($"Invalid grade code: {receipt.Grade}. Must be between 1 and 3.");
             }
 
             // Validate weights
@@ -109,18 +109,6 @@ namespace WPFGrowerApp.DataAccess.Services
                 var count = await connection.ExecuteScalarAsync<int>(
                     "SELECT COUNT(*) FROM Process WHERE PROCESS = @Process",
                     new { Process = process });
-                return count > 0;
-            }
-        }
-
-        private async Task<bool> ValidateGradeAsync(string grade)
-        {
-            using (var connection = new SqlConnection(_connectionString))
-            {
-                await connection.OpenAsync();
-                var count = await connection.ExecuteScalarAsync<int>(
-                    "SELECT COUNT(*) FROM Grade WHERE GRADE = @Grade",
-                    new { Grade = grade });
                 return count > 0;
             }
         }
