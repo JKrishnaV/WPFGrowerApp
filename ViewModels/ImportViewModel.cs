@@ -10,6 +10,8 @@ using Microsoft.Win32;
 using WPFGrowerApp.Commands;
 using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
+using WPFGrowerApp.DataAccess.Services;
+using WPFGrowerApp.DataAccess.Exceptions;
 using WPFGrowerApp.Infrastructure.Logging;
 
 namespace WPFGrowerApp.ViewModels
@@ -18,6 +20,7 @@ namespace WPFGrowerApp.ViewModels
     {
         private readonly IFileImportService _fileImportService;
         private readonly IImportBatchProcessor _importBatchProcessor;
+        private readonly ValidationService _validationService;
         private ObservableCollection<ImportFileInfo> _selectedFiles;
         private string _depot;
         private bool _isImporting;
@@ -30,10 +33,12 @@ namespace WPFGrowerApp.ViewModels
 
         public ImportViewModel(
             IFileImportService fileImportService,
-            IImportBatchProcessor importBatchProcessor)
+            IImportBatchProcessor importBatchProcessor,
+            ValidationService validationService)
         {
             _fileImportService = fileImportService ?? throw new ArgumentNullException(nameof(fileImportService));
             _importBatchProcessor = importBatchProcessor ?? throw new ArgumentNullException(nameof(importBatchProcessor));
+            _validationService = validationService ?? throw new ArgumentNullException(nameof(validationService));
             _errors = new ObservableCollection<string>();
             _selectedFiles = new ObservableCollection<ImportFileInfo>();
         }
@@ -147,6 +152,7 @@ namespace WPFGrowerApp.ViewModels
 
                 var totalFiles = SelectedFiles.Count;
                 var processedFiles = 0;
+                var failedFiles = 0;
 
                 foreach (var file in SelectedFiles)
                 {
@@ -160,6 +166,7 @@ namespace WPFGrowerApp.ViewModels
                         {
                             file.Status = "Invalid format";
                             Errors.Add($"Invalid file format: {System.IO.Path.GetFileName(file.FilePath)}");
+                            failedFiles++;
                             continue;
                         }
 
@@ -168,25 +175,37 @@ namespace WPFGrowerApp.ViewModels
                             Depot, 
                             System.IO.Path.GetFileName(file.FilePath));
 
+                        // Validate import batch
+                        await _validationService.ValidateImportBatchAsync(_currentBatch);
+
                         // Read receipts from file
                         var receipts = await _fileImportService.ReadReceiptsFromFileAsync(
                             file.FilePath,
                             new Progress<int>(p => file.Progress = p),
                             CancellationToken.None);
 
-                        // Validate receipts
-                        var (isValid, validationErrors) = await _fileImportService.ValidateReceiptsAsync(
-                            receipts,
-                            new Progress<int>(p => file.Progress = p),
-                            CancellationToken.None);
+                        // Validate each receipt
+                        var validationErrors = new List<string>();
+                        foreach (var receipt in receipts)
+                        {
+                            try
+                            {
+                                await _validationService.ValidateReceiptAsync(receipt);
+                            }
+                            catch (ImportValidationException ex)
+                            {
+                                validationErrors.AddRange(ex.ValidationErrors);
+                            }
+                        }
 
-                        if (!isValid)
+                        if (validationErrors.Any())
                         {
                             file.Status = "Validation failed";
                             foreach (var error in validationErrors)
                             {
                                 Errors.Add($"{System.IO.Path.GetFileName(file.FilePath)}: {error}");
                             }
+                            failedFiles++;
                             continue;
                         }
 
@@ -204,6 +223,7 @@ namespace WPFGrowerApp.ViewModels
                             {
                                 Errors.Add($"{System.IO.Path.GetFileName(file.FilePath)}: {error}");
                             }
+                            failedFiles++;
                             continue;
                         }
 
@@ -214,18 +234,36 @@ namespace WPFGrowerApp.ViewModels
                         file.Progress = 100;
                         processedFiles++;
                     }
+                    catch (ImportValidationException ex)
+                    {
+                        Logger.Error($"Validation error in file {file.FilePath}", ex);
+                        file.Status = "Validation error";
+                        foreach (var error in ex.ValidationErrors)
+                        {
+                            Errors.Add($"{System.IO.Path.GetFileName(file.FilePath)}: {error}");
+                        }
+                        failedFiles++;
+                    }
+                    catch (ImportProcessingException ex)
+                    {
+                        Logger.Error($"Processing error in file {file.FilePath}", ex);
+                        file.Status = "Processing error";
+                        Errors.Add($"Error processing {System.IO.Path.GetFileName(file.FilePath)}: {ex.Message}");
+                        failedFiles++;
+                    }
                     catch (Exception ex)
                     {
-                        Logger.Error($"Error processing file {file.FilePath}", ex);
+                        Logger.Error($"Unexpected error processing file {file.FilePath}", ex);
                         file.Status = "Error";
-                        Errors.Add($"Error processing {System.IO.Path.GetFileName(file.FilePath)}: {ex.Message}");
+                        Errors.Add($"Unexpected error processing {System.IO.Path.GetFileName(file.FilePath)}: {ex.Message}");
+                        failedFiles++;
                     }
 
                     // Update overall progress
                     Progress = (int)((processedFiles * 100.0) / totalFiles);
                 }
 
-                StatusMessage = $"Import completed. {processedFiles} of {totalFiles} files processed successfully.";
+                StatusMessage = $"Import completed. {processedFiles} of {totalFiles} files processed successfully. {failedFiles} files failed.";
             }
             catch (Exception ex)
             {
