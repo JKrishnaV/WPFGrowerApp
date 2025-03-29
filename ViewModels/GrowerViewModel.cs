@@ -18,6 +18,7 @@ namespace WPFGrowerApp.ViewModels
         private bool _isSaving;
         private string _statusMessage;
         private List<PayGroup> _payGroups;
+        private List<string> _provinces;
 
         public GrowerViewModel(IGrowerService growerService, IPayGroupService payGroupService)
         {
@@ -29,6 +30,7 @@ namespace WPFGrowerApp.ViewModels
             SearchCommand = new RelayCommand(SearchCommandExecute);
             CancelCommand = new RelayCommand(CancelCommandExecute);
             LoadPayGroupsAsync().ConfigureAwait(false);
+            LoadProvincesAsync().ConfigureAwait(false);
         }
 
         public List<PayGroup> PayGroups
@@ -44,9 +46,34 @@ namespace WPFGrowerApp.ViewModels
             }
         }
 
+        public List<string> Provinces
+        {
+            get => _provinces;
+            set
+            {
+                if (_provinces != value)
+                {
+                    _provinces = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         private async Task LoadPayGroupsAsync()
         {
             PayGroups = await _payGroupService.GetPayGroupsAsync();
+        }
+
+        private async Task LoadProvincesAsync()
+        {
+            try
+            {
+                Provinces = await _growerService.GetUniqueProvincesAsync();
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error loading provinces: {ex.Message}";
+            }
         }
 
         public string CurrencyDisplay

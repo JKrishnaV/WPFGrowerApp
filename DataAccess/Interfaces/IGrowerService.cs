@@ -11,5 +11,6 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         Task<Grower> GetGrowerByNumberAsync(decimal growerNumber);
         Task<bool> SaveGrowerAsync(Grower grower);
         Task<List<GrowerSearchResult>> GetAllGrowersAsync();
+        Task<List<string>> GetUniqueProvincesAsync();
     }
 } 

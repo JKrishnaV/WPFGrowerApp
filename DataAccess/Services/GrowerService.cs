@@ -205,5 +205,30 @@ namespace WPFGrowerApp.DataAccess.Services
                 throw;
             }
         }
+
+        public async Task<List<string>> GetUniqueProvincesAsync()
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = @"
+                        SELECT DISTINCT PROV 
+                        FROM GROWER 
+                        WHERE PROV IS NOT NULL 
+                        AND PROV <> ''
+                        ORDER BY PROV";
+
+                    var provinces = await connection.QueryAsync<string>(sql);
+                    return provinces.ToList();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error in GetUniqueProvincesAsync: {ex.Message}");
+                throw;
+            }
+        }
     }
 } 
