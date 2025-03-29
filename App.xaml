@@ -11,11 +11,13 @@
                 <ResourceDictionary Source="/Styles/Styles.xaml"/>
                 <ResourceDictionary Source="/Styles/ViewMappings.xaml"/>
                 <ResourceDictionary Source="/Styles/Animations.xaml"/>
+                <ResourceDictionary Source="/Styles/ButtonStyles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
             <!-- Register KnobSizeConverter -->
             <converters:KnobSizeConverter x:Key="KnobSizeConverter"/>
             <converters:VisibilityConverter x:Key="VisibilityConverter"/>
+            <converters:InverseBooleanToBooleanConverter x:Key="InverseBooleanToBooleanConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

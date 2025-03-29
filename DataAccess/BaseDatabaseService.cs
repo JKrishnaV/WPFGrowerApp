@@ -1,5 +1,6 @@
+using Microsoft.Data.SqlClient;
 using System;
-using System.Data.SqlClient;
+using System.Configuration;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using WPFGrowerApp.DataAccess.Interfaces;
@@ -12,8 +13,15 @@ namespace WPFGrowerApp.DataAccess
 
         protected BaseDatabaseService()
         {
-            // Connection string 
+            //_connectionString = ConfigurationManager.ConnectionStrings["DefaultConnection"].ConnectionString;
             _connectionString = "Server=DESKTOP-LQ92Q06;Database=PackagingPaymentSystem;User Id=localDB;Password=528database@JK;";
+        }
+
+        protected SqlConnection CreateConnection()
+        {
+            var connection = new SqlConnection(_connectionString);
+            connection.Open();
+            return connection;
         }
 
         public async Task<bool> TestConnectionAsync()
