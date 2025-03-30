@@ -7,6 +7,7 @@ using System.Windows.Input;
 using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
 using WPFGrowerApp.Models;
+using WPFGrowerApp.Commands;
 
 namespace WPFGrowerApp.ViewModels
 {

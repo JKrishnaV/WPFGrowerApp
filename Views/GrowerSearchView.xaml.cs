@@ -68,5 +68,17 @@ namespace WPFGrowerApp.Views
             DialogResult = true;
             Close();
         }
+
+        private void ClearButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Clear the search text
+            _viewModel.SearchText = string.Empty;
+            
+            // Trigger a search with empty text to show all records
+            _viewModel.SearchCommand.Execute(null);
+            
+            // Set focus back to the search box
+            SearchTextBox.Focus();
+        }
     }
 }

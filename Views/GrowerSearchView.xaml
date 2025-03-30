@@ -27,13 +27,15 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             
             <TextBox x:Name="SearchTextBox" Grid.Column="0" Height="25" Margin="0,0,10,0" VerticalContentAlignment="Center"
                      Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                      KeyDown="SearchTextBox_KeyDown"/>
             
-            <Button Grid.Column="1" Content="Search" Width="80" Height="25" Command="{Binding SearchCommand}"/>
+            <Button Grid.Column="1" Content="Search" Width="80" Height="25" Margin="0,0,10,0" Command="{Binding SearchCommand}"/>
+            <Button Grid.Column="2" Content="Clear" Width="80" Height="25" Click="ClearButton_Click"/>
         </Grid>
 
         <DataGrid x:Name="GrowersDataGrid"

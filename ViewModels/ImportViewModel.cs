@@ -104,7 +104,7 @@ namespace WPFGrowerApp.ViewModels
         }
 
         public ICommand BrowseFilesCommand => new RelayCommand(o => BrowseFiles());
-        public ICommand RemoveFileCommand => new RelayCommand<ImportFileInfo>(file => RemoveFile(file));
+        public ICommand RemoveFileCommand => new RelayCommand(o => RemoveFile((ImportFileInfo)o));
         public ICommand StartImportCommand => new RelayCommand(o => StartImport(), o => !IsImporting && SelectedFiles.Any() && !string.IsNullOrEmpty(Depot));
         public ICommand CancelImportCommand => new RelayCommand(o => CancelImport(), o => IsImporting);
 
