@@ -19,6 +19,9 @@ namespace WPFGrowerApp.Services
             services.AddSingleton<IFileImportService, FileImportService>();
             services.AddSingleton<IImportBatchProcessor, ImportBatchProcessor>();
             services.AddSingleton<ValidationService>();
+            services.AddSingleton<IImportBatchService, ImportBatchService>();
+            services.AddSingleton<IReceiptService, ReceiptService>();
+
 
             // Register ViewModels
             services.AddTransient<GrowerViewModel>();
