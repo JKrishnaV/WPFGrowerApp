@@ -16,10 +16,14 @@ namespace WPFGrowerApp.Services
             // Register services
             services.AddSingleton<IGrowerService, GrowerService>();
             services.AddSingleton<IPayGroupService, PayGroupService>();
+            services.AddSingleton<IFileImportService, FileImportService>();
+            services.AddSingleton<IImportBatchProcessor, ImportBatchProcessor>();
+            services.AddSingleton<ValidationService>();
 
             // Register ViewModels
             services.AddTransient<GrowerViewModel>();
             services.AddTransient<GrowerSearchViewModel>();
+            services.AddTransient<ImportViewModel>();
             services.AddSingleton<MainViewModel>();
 
             _serviceProvider = services.BuildServiceProvider();
@@ -30,4 +34,4 @@ namespace WPFGrowerApp.Services
             return _serviceProvider.GetService<T>();
         }
     }
-} 
+}

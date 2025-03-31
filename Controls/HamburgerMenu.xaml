@@ -87,6 +87,12 @@
                     Style="{StaticResource MenuButtonStyle}"
                     Click="MenuButton_Click"/>
 
+            <Button x:Name="ImportButton" 
+                    Content="Import" 
+                    Tag="&#xE8B5;"
+                    Style="{StaticResource MenuButtonStyle}"
+                    Click="MenuButton_Click"/>
+
             <Button x:Name="InventoryButton" 
                     Content="Inventory" 
                     Tag="&#xE7BF;"

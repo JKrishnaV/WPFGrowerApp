@@ -50,6 +50,11 @@ namespace WPFGrowerApp
                         _viewModel.CurrentViewModel = growerViewModel;
                     }
                     break;
+                case "Import":
+                    // Show import view
+                    var importViewModel = ServiceConfiguration.GetService<ImportViewModel>();
+                    _viewModel.CurrentViewModel = importViewModel;
+                    break;
                 case "Reports":
                     // Show reports view
                     _viewModel.CurrentViewModel = new ReportsViewModel();

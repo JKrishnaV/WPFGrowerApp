@@ -9,15 +9,12 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Styles/Colors.xaml"/>
                 <ResourceDictionary Source="/Styles/Styles.xaml"/>
-                <ResourceDictionary Source="/Styles/ViewMappings.xaml"/>
-                <ResourceDictionary Source="/Styles/Animations.xaml"/>
-                <ResourceDictionary Source="/Styles/ButtonStyles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
-
-            <!-- Register KnobSizeConverter -->
-            <converters:KnobSizeConverter x:Key="KnobSizeConverter"/>
-            <converters:VisibilityConverter x:Key="VisibilityConverter"/>
-            <converters:InverseBooleanToBooleanConverter x:Key="InverseBooleanToBooleanConverter"/>
+            
+            <!-- Converters -->
+            <converters:NotNullConverter x:Key="NotNullConverter"/>
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
