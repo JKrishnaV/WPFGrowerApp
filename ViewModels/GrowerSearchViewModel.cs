@@ -8,6 +8,7 @@ using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
 using WPFGrowerApp.Models;
 using WPFGrowerApp.Commands;
+using System.Threading;
 
 namespace WPFGrowerApp.ViewModels
 {
@@ -17,6 +18,8 @@ namespace WPFGrowerApp.ViewModels
         private string _searchText;
         private ObservableCollection<GrowerSearchResult> _searchResults;
         private bool _isSearching;
+        private CancellationTokenSource _debounceTokenSource;
+        private readonly int _debounceDelayMs = 500; // 500ms debounce delay
 
         public GrowerSearchViewModel(IGrowerService growerService)
         {
@@ -35,6 +38,9 @@ namespace WPFGrowerApp.ViewModels
                 {
                     _searchText = value;
                     OnPropertyChanged();
+                    
+                    // Implement debounce for auto-search
+                    DebounceSearch();
                 }
             }
         }
@@ -76,6 +82,24 @@ namespace WPFGrowerApp.ViewModels
         private void ExecuteSearch(object parameter)
         {
             SearchAsync().ConfigureAwait(false);
+        }
+
+        private void DebounceSearch()
+        {
+            // Cancel previous debounce timer
+            _debounceTokenSource?.Cancel();
+            _debounceTokenSource = new CancellationTokenSource();
+            
+            var token = _debounceTokenSource.Token;
+            
+            Task.Delay(_debounceDelayMs, token).ContinueWith(task => 
+            {
+                if (!task.IsCanceled)
+                {
+                    // Execute search after delay if not canceled
+                    ExecuteSearch(null);
+                }
+            }, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
         private async Task SearchAsync()

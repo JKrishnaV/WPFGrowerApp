@@ -1,23 +1,26 @@
-# WPF Grower Application Development Tasks
+# WPF Grower Application UI Enhancement Tasks
 
-## Analysis and Planning
-- [x] Create project directory
-- [x] Analyze the Grower screen requirements from screenshot
-- [x] Identify all fields and controls needed
-- [x] Plan the application architecture (MVVM)
-
-## UI Design and Implementation
-- [x] Design the main application window with hamburger menu
-- [x] Implement the hamburger menu control
-- [x] Create the Grower information screen layout
-- [x] Style the UI for a modern look and feel
-
-## Data Model Implementation
-- [x] Create Grower data model class
-- [x] Implement view models for data binding
-- [x] Create sample data for testing
-
-## Final Steps
-- [ ] Package all code files
-- [ ] Create documentation
-- [ ] Deliver complete solution to user
+## Tasks
+- [x] Clone repository
+- [x] Create new branch 'ui-enhancement'
+- [x] Analyze current UI implementation
+- [x] Implement auto-search with debounce functionality
+  - [x] Add debounce mechanism to ViewModel
+  - [x] Remove search and clear buttons from UI
+  - [x] Update search textbox to trigger search automatically
+- [x] Modernize grid with material design
+  - [x] Update DataGrid styling
+  - [x] Improve row and header styling
+  - [x] Apply consistent color scheme
+- [x] Add grid row double-click functionality
+  - [x] Implement MouseDoubleClick event handler
+  - [x] Ensure it performs the same action as Select button
+- [x] Update buttons look and feel
+  - [x] Apply material design styles to buttons
+  - [x] Ensure consistent sizing and spacing
+- [ ] Test changes locally
+  - [ ] Verify auto-search functionality works with debounce
+  - [ ] Verify grid styling appears correctly
+  - [ ] Test double-click functionality on grid rows
+- [ ] Commit and push changes
+- [ ] Create pull request to master branch
