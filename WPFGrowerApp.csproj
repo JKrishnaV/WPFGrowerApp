@@ -10,6 +10,8 @@
 
   <ItemGroup>
     <PackageReference Include="log4net" Version="3.0.4" />
+    <PackageReference Include="MaterialDesignColors" Version="5.2.1" />
+    <PackageReference Include="MaterialDesignThemes" Version="5.2.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.3" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.0" />
     <PackageReference Include="Syncfusion.SfChart.WPF" Version="23.1.36" />
