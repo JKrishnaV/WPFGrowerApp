@@ -10,7 +10,12 @@
         WindowStartupLocation="CenterOwner"
         Background="White">
     <Window.Resources>
-        <converters:NotNullConverter x:Key="NotNullConverter"/>
+        <ResourceDictionary>
+            <converters:NotNullConverter x:Key="NotNullConverter"/>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Styles/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Window.Resources>
     <Grid Margin="10">
         <Grid.RowDefinitions>
@@ -20,27 +25,73 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="Search for Grower" 
-                   FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
+        <Border Grid.Row="0" Background="{StaticResource PrimaryBrush}" 
+                Padding="15,10" 
+                Margin="0,0,0,15"
+                CornerRadius="4">
+            <TextBlock Text="Search for Grower" 
+                       Foreground="White" 
+                       FontSize="18" 
+                       FontWeight="SemiBold" 
+                       HorizontalAlignment="Center"/>
+        </Border>
 
-        <Grid Grid.Row="1" Margin="0,0,0,10">
+        <Grid Grid.Row="1" Margin="0,0,0,15">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             
-            <TextBox x:Name="SearchTextBox" Grid.Column="0" Height="25" Margin="0,0,10,0" VerticalContentAlignment="Center"
+            <TextBox x:Name="SearchTextBox" Grid.Column="0" Height="35" 
+                     Style="{StaticResource ModernTextBoxStyle}"
                      Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                     KeyDown="SearchTextBox_KeyDown"/>
-            
-            <Button Grid.Column="1" Content="Search" Width="80" Height="25" Margin="0,0,10,0" Command="{Binding SearchCommand}"/>
-            <Button Grid.Column="2" Content="Clear" Width="80" Height="25" Click="ClearButton_Click"/>
+                     KeyDown="SearchTextBox_KeyDown">
+                <TextBox.Resources>
+                    <Style TargetType="{x:Type Border}">
+                        <Setter Property="CornerRadius" Value="4"/>
+                    </Style>
+                </TextBox.Resources>
+                <TextBox.Template>
+                    <ControlTemplate TargetType="{x:Type TextBox}">
+                        <Border x:Name="border" 
+                                BorderBrush="{StaticResource PrimaryLightBrush}" 
+                                BorderThickness="1" 
+                                Background="{TemplateBinding Background}" 
+                                SnapsToDevicePixels="True"
+                                CornerRadius="4">
+                            <Grid>
+                                <ScrollViewer x:Name="PART_ContentHost" Focusable="False" 
+                                              HorizontalScrollBarVisibility="Hidden" 
+                                              VerticalScrollBarVisibility="Hidden"
+                                              Margin="8,0,30,0"/>
+                                <TextBlock Text="Search..." 
+                                           Foreground="Gray" 
+                                           Margin="10,0,0,0" 
+                                           VerticalAlignment="Center"
+                                           Visibility="{Binding Text.IsEmpty, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                <Image Source="/Images/search.png" 
+                                       Width="16" Height="16" 
+                                       HorizontalAlignment="Right" 
+                                       Margin="0,0,10,0"
+                                       Opacity="0.6"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="true">
+                                <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PrimaryBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="true">
+                                <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PrimaryBrush}"/>
+                                <Setter Property="BorderThickness" TargetName="border" Value="2"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </TextBox.Template>
+            </TextBox>
         </Grid>
 
         <DataGrid x:Name="GrowersDataGrid"
                   Grid.Row="2"
-                  Margin="0,0,0,10"
+                  Margin="0,0,0,15"
                   ItemsSource="{Binding SearchResults}"
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
@@ -49,22 +100,69 @@
                   VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Auto"
                   HeadersVisibility="Column"
-                  GridLinesVisibility="Horizontal"
+                  GridLinesVisibility="None"
                   BorderThickness="1"
-                  BorderBrush="#DDDDDD"
-                  Background="White">
+                  BorderBrush="{StaticResource PrimaryLightBrush}"
+                  Background="White"
+                  MouseDoubleClick="GrowersDataGrid_MouseDoubleClick">
+            <DataGrid.Resources>
+                <Style TargetType="{x:Type DataGridColumnHeader}">
+                    <Setter Property="Background" Value="{StaticResource PrimaryLightBrush}"/>
+                    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
+                    <Setter Property="Padding" Value="10,8"/>
+                    <Setter Property="BorderThickness" Value="0,0,1,0"/>
+                    <Setter Property="BorderBrush" Value="#E0E0E0"/>
+                </Style>
+            </DataGrid.Resources>
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Number" Binding="{Binding GrowerNumber}" Width="80"/>
-                <DataGridTextColumn Header="Name" Binding="{Binding GrowerName}" Width="*"/>
-                <DataGridTextColumn Header="Cheque Name" Binding="{Binding ChequeName}" Width="*"/>
-                <DataGridTextColumn Header="City" Binding="{Binding City}" Width="120"/>
-                <DataGridTextColumn Header="Phone" Binding="{Binding Phone}" Width="120"/>
+                <DataGridTextColumn Header="Number" Binding="{Binding GrowerNumber}" Width="80">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Padding" Value="10,8"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Name" Binding="{Binding GrowerName}" Width="*">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Padding" Value="10,8"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Cheque Name" Binding="{Binding ChequeName}" Width="*">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Padding" Value="10,8"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="City" Binding="{Binding City}" Width="120">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Padding" Value="10,8"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Phone" Binding="{Binding Phone}" Width="120">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Padding" Value="10,8"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
             </DataGrid.Columns>
             <DataGrid.RowStyle>
                 <Style TargetType="DataGridRow">
+                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                    <Setter Property="BorderBrush" Value="#E0E0E0"/>
                     <Style.Triggers>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="Background" Value="#CCE8FF"/>
+                            <Setter Property="Background" Value="{StaticResource PrimaryLightBrush}"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="#F5F5F5"/>
                         </Trigger>
                     </Style.Triggers>
                 </Style>
@@ -72,9 +170,20 @@
         </DataGrid>
 
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="New Grower" Width="100" Height="25" Margin="0,0,10,0" Click="NewGrowerButton_Click"/>
-            <Button Content="Cancel" Width="80" Height="25" Margin="0,0,10,0" Click="CancelButton_Click"/>
-            <Button Content="Select" Width="80" Height="25" Click="SelectButton_Click"
+            <Button Content="New Grower" 
+                    Style="{StaticResource PrimaryButtonStyle}" 
+                    Width="120" Height="35" 
+                    Margin="0,0,10,0" 
+                    Click="NewGrowerButton_Click"/>
+            <Button Content="Cancel" 
+                    Style="{StaticResource SecondaryButtonStyle}" 
+                    Width="100" Height="35" 
+                    Margin="0,0,10,0" 
+                    Click="CancelButton_Click"/>
+            <Button Content="Select" 
+                    Style="{StaticResource PrimaryButtonStyle}" 
+                    Width="100" Height="35" 
+                    Click="SelectButton_Click"
                     IsEnabled="{Binding SelectedItem, ElementName=GrowersDataGrid, Converter={StaticResource NotNullConverter}}"/>
         </StackPanel>
     </Grid>

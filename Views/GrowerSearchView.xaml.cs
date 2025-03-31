@@ -69,16 +69,13 @@ namespace WPFGrowerApp.Views
             Close();
         }
 
-        private void ClearButton_Click(object sender, RoutedEventArgs e)
+        private void GrowersDataGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            // Clear the search text
-            _viewModel.SearchText = string.Empty;
-            
-            // Trigger a search with empty text to show all records
-            _viewModel.SearchCommand.Execute(null);
-            
-            // Set focus back to the search box
-            SearchTextBox.Focus();
+            if (SelectedGrowerNumber.HasValue)
+            {
+                DialogResult = true;
+                Close();
+            }
         }
     }
 }
