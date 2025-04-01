@@ -77,52 +77,43 @@ namespace WPFGrowerApp
                 return;
             }
 
-            // Normal startup: Show LoginView
-            Logger.Info("Resolving LoginView.");
-            var loginView = ServiceProvider.GetRequiredService<LoginView>();
-            Logger.Info("Showing LoginView dialog.");
-            bool? loginResult = loginView.ShowDialog();
-            Logger.Info($"LoginView dialog closed with result: {loginResult?.ToString() ?? "null"}");
-
-            if (loginResult == true)
+            try
             {
-                Logger.Info("Login successful. Preparing MainWindow."); 
-                try
-                {
-                    // Resolve and set MainWindow first
-                    var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
-                    Logger.Info("Setting Application.MainWindow."); 
-                    Application.Current.MainWindow = mainWindow; 
+                // Create MainWindow first but don't show it
+                var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
+                Application.Current.MainWindow = mainWindow;
 
-                    // Schedule Show() via Dispatcher
-                    Logger.Info("Scheduling MainWindow.Show() via Dispatcher.");
-                    Dispatcher.InvokeAsync(() => {
-                        try 
-                        {
-                             Logger.Info("Dispatcher: Calling mainWindow.Show().");
-                             mainWindow.Show(); 
-                             Logger.Info("Dispatcher: mainWindow.Show() completed.");
-                        }
-                        catch (Exception exDisp) // Catch exceptions within the dispatcher action
-                        {
-                             Logger.Fatal("Dispatcher: Exception during mainWindow.Show().", exDisp); 
-                             MessageBox.Show($"A critical error occurred trying to show the main application window: {exDisp.Message}", "Startup Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                             if (Application.Current != null) Application.Current.Shutdown(-1);
-                        }
-                    });
-                    Logger.Info("MainWindow showing scheduled.");
-                }
-                catch (Exception ex) // Catch exceptions during resolving or setting MainWindow
+                // Show LoginView
+                Logger.Info("Resolving LoginView.");
+                var loginView = ServiceProvider.GetRequiredService<LoginView>();
+                Logger.Info("Showing LoginView dialog.");
+                
+                // Center LoginView relative to screen
+                loginView.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                
+                bool? loginResult = loginView.ShowDialog();
+                Logger.Info($"LoginView dialog closed with result: {loginResult?.ToString() ?? "null"}");
+
+                if (loginResult == true)
                 {
-                    Logger.Fatal("Failed to resolve or show MainWindow after successful login.", ex); 
-                    MessageBox.Show($"A critical error occurred trying to load the main application window: {ex.Message}", "Startup Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    Application.Current.Shutdown(-1); 
+                    Logger.Info("Login successful. Showing MainWindow.");
+                    mainWindow.Show();
+                    Logger.Info("MainWindow shown successfully.");
+                }
+                else
+                {
+                    Logger.Info("Login cancelled. Shutting down application.");
+                    Application.Current.Shutdown();
                 }
             }
-            else
+            catch (Exception ex)
             {
-                Logger.Info("Login failed or cancelled. Application exiting."); 
-                // No explicit shutdown needed due to ShutdownMode="OnMainWindowClose"
+                Logger.Fatal("Critical error during application startup.", ex);
+                MessageBox.Show($"A critical error occurred during startup: {ex.Message}", 
+                               "Startup Error", 
+                               MessageBoxButton.OK, 
+                               MessageBoxImage.Error);
+                Application.Current.Shutdown(-1);
             }
         }
 
