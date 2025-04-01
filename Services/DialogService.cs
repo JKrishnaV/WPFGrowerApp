@@ -45,7 +45,12 @@ namespace WPFGrowerApp.Services
         public (bool? DialogResult, decimal? SelectedGrowerNumber) ShowGrowerSearchDialog()
         {
             // Resolve the view using the DI container
+            // This ensures the view and its ViewModel are constructed via DI
             var searchView = _serviceProvider.GetRequiredService<GrowerSearchView>(); 
+            
+            // Consider setting owner if applicable (e.g., Application.Current.MainWindow)
+            // searchView.Owner = Application.Current.MainWindow; 
+
             bool? dialogResult = searchView.ShowDialog(); 
             
             if (dialogResult == true)

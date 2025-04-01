@@ -20,18 +20,35 @@ namespace WPFGrowerApp.ViewModels
         public MainViewModel(IServiceProvider serviceProvider, IDialogService dialogService) 
         {
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-            _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService)); 
+            _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
 
-            // Initialize commands
-            NavigateToDashboardCommand = new RelayCommand(NavigateToDashboardExecute, CanNavigate);
-            NavigateToGrowersCommand = new RelayCommand(NavigateToGrowersExecuteAsync, CanNavigate); 
-            NavigateToImportCommand = new RelayCommand(NavigateToImportExecute, CanNavigate);
-            NavigateToReportsCommand = new RelayCommand(NavigateToReportsExecute, CanNavigate);
-            NavigateToInventoryCommand = new RelayCommand(NavigateToInventoryExecute, CanNavigate); // Added
-            NavigateToSettingsCommand = new RelayCommand(NavigateToSettingsExecute, CanNavigate); // Added
+            // Initialize commands using the NavigateTo helper
+            NavigateToDashboardCommand = new RelayCommand(p => NavigateTo<DashboardViewModel>("Dashboard", p), CanNavigate); // Corrected
+            NavigateToGrowersCommand = new RelayCommand(NavigateToGrowersExecuteAsync, CanNavigate); // Keep async for special logic
+            NavigateToImportCommand = new RelayCommand(p => NavigateTo<ImportViewModel>("Import", p), CanNavigate); // Corrected
+            NavigateToReportsCommand = new RelayCommand(p => NavigateTo<ReportsViewModel>("Reports", p), CanNavigate); // Corrected
+            NavigateToInventoryCommand = new RelayCommand(p => NavigateTo<InventoryViewModel>("Inventory", p), CanNavigate); // Corrected
+            NavigateToSettingsCommand = new RelayCommand(p => NavigateTo<SettingsViewModel>("Settings", p), CanNavigate); // Corrected (added parameter passing)
 
             // Set default view model to Dashboard
-            NavigateToDashboardExecute(null); 
+            NavigateTo<DashboardViewModel>("Dashboard"); // Refactored initial navigation
+        }
+
+        // --- Navigation Helper ---
+        private void NavigateTo<TViewModel>(string viewName, object? parameter = null) where TViewModel : ViewModelBase
+        {
+            if (!CanNavigate(parameter)) return;
+
+            try
+            {
+                CurrentViewModel = _serviceProvider.GetRequiredService<TViewModel>();
+                // TODO: Consider if InitializeAsync pattern is needed for other ViewModels like Import/Reports
+            }
+            catch (Exception ex)
+            {
+                Infrastructure.Logging.Logger.Error($"Error navigating to {viewName}", ex);
+                _dialogService.ShowMessageBox($"Error navigating to {viewName}: {ex.Message}", "Navigation Error");
+            }
         }
 
         // --- Navigation Commands ---
@@ -42,22 +59,11 @@ namespace WPFGrowerApp.ViewModels
         public ICommand NavigateToInventoryCommand { get; } // Added
         public ICommand NavigateToSettingsCommand { get; } // Added
 
-        private bool CanNavigate(object parameter) => !_isNavigating;
+        private bool CanNavigate(object? parameter) => !_isNavigating; // Changed parameter to object?
 
-        private void NavigateToDashboardExecute(object parameter)
-        {
-            try
-            {
-                CurrentViewModel = _serviceProvider.GetRequiredService<DashboardViewModel>(); 
-            }
-            catch (Exception ex)
-            {
-                 Infrastructure.Logging.Logger.Error("Error navigating to Dashboard", ex);
-                 _dialogService.ShowMessageBox($"Error navigating to Dashboard: {ex.Message}", "Navigation Error");
-            }
-        }
+        // Removed NavigateToDashboardExecute - Handled by NavigateTo<TViewModel>
 
-        private async Task NavigateToGrowersExecuteAsync(object parameter)
+        private async Task NavigateToGrowersExecuteAsync(object? parameter) // Changed parameter to object?
         {
             if (!CanNavigate(parameter)) return; // Prevent re-entry
 
@@ -96,65 +102,11 @@ namespace WPFGrowerApp.ViewModels
             }
         }
 
-        private void NavigateToImportExecute(object parameter)
-        {
-             if (!CanNavigate(parameter)) return; 
-            try
-            {
-                var importViewModel = _serviceProvider.GetRequiredService<ImportViewModel>();
-                // TODO: Does ImportViewModel need an InitializeAsync? If so, make this method async.
-                CurrentViewModel = importViewModel;
-            }
-            catch (Exception ex)
-            {
-                 Infrastructure.Logging.Logger.Error("Error navigating to Import", ex);
-                 _dialogService.ShowMessageBox($"Error navigating to Import: {ex.Message}", "Navigation Error");
-            }
-        }
+        // Removed NavigateToImportExecute - Handled by NavigateTo<TViewModel> in command initialization
+        // Removed NavigateToReportsExecute - Handled by NavigateTo<TViewModel> in command initialization
+        // Removed NavigateToInventoryExecute - Handled by NavigateTo<TViewModel> in command initialization
+        // Removed NavigateToSettingsExecute - Handled by NavigateTo<TViewModel> in command initialization
 
-        private void NavigateToReportsExecute(object parameter)
-        {
-             if (!CanNavigate(parameter)) return; 
-            try
-            {
-                var reportsViewModel = _serviceProvider.GetRequiredService<ReportsViewModel>();
-                // TODO: Does ReportsViewModel need an InitializeAsync? If so, make this method async.
-                CurrentViewModel = reportsViewModel;
-            }
-            catch (Exception ex)
-            {
-                 Infrastructure.Logging.Logger.Error("Error navigating to Reports", ex);
-                 _dialogService.ShowMessageBox($"Error navigating to Reports: {ex.Message}", "Navigation Error");
-            }
-        }
-
-        private void NavigateToInventoryExecute(object parameter)
-        {
-             if (!CanNavigate(parameter)) return; 
-            try
-            {
-                CurrentViewModel = _serviceProvider.GetRequiredService<InventoryViewModel>();
-            }
-            catch (Exception ex)
-            {
-                 Infrastructure.Logging.Logger.Error("Error navigating to Inventory", ex);
-                 _dialogService.ShowMessageBox($"Error navigating to Inventory: {ex.Message}", "Navigation Error");
-            }
-        }
-
-        private void NavigateToSettingsExecute(object parameter)
-        {
-             if (!CanNavigate(parameter)) return; 
-            try
-            {
-                CurrentViewModel = _serviceProvider.GetRequiredService<SettingsViewModel>();
-            }
-            catch (Exception ex)
-            {
-                 Infrastructure.Logging.Logger.Error("Error navigating to Settings", ex);
-                 _dialogService.ShowMessageBox($"Error navigating to Settings: {ex.Message}", "Navigation Error");
-            }
-        }
         // --- End Navigation Commands ---
 
 

@@ -3,18 +3,15 @@ using System.Runtime.CompilerServices;
 
 namespace WPFGrowerApp.ViewModels
 {
-    public class DashboardViewModel : INotifyPropertyChanged
+    // Inherit from ViewModelBase
+    public class DashboardViewModel : ViewModelBase 
     {
         public DashboardViewModel()
         {
             // Initialize dashboard data if needed
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+        // Removed redundant INotifyPropertyChanged implementation
+        // OnPropertyChanged is inherited from ViewModelBase
     }
 }

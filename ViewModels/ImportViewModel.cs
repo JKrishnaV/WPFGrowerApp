@@ -16,7 +16,8 @@ using WPFGrowerApp.Infrastructure.Logging;
 
 namespace WPFGrowerApp.ViewModels
 {
-    public class ImportViewModel : INotifyPropertyChanged
+    // Inherit from ViewModelBase
+    public class ImportViewModel : ViewModelBase 
     {
         private readonly IFileImportService _fileImportService;
         private readonly IImportBatchProcessor _importBatchProcessor;
@@ -29,7 +30,7 @@ namespace WPFGrowerApp.ViewModels
         private ObservableCollection<string> _errors;
         private ImportBatch _currentBatch;
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        // Removed redundant PropertyChanged event
 
         public ImportViewModel(
             IFileImportService fileImportService,
@@ -287,19 +288,17 @@ namespace WPFGrowerApp.ViewModels
             StatusMessage = "Import cancelled.";
         }
 
-        protected virtual void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+        // Removed redundant OnPropertyChanged method (inherited from ViewModelBase)
     }
 
-    public class ImportFileInfo : INotifyPropertyChanged
+    // Inherit from ViewModelBase
+    public class ImportFileInfo : ViewModelBase 
     {
         private string _filePath;
         private string _status;
         private int _progress;
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        // Removed redundant PropertyChanged event
 
         public string FilePath
         {
@@ -331,9 +330,6 @@ namespace WPFGrowerApp.ViewModels
             }
         }
 
-        protected virtual void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+        // Removed redundant OnPropertyChanged method (inherited from ViewModelBase)
     }
-} 
+}

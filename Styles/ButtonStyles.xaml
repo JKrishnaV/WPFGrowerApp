@@ -10,7 +10,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="border" 
+                    <Border x:Name="border"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
@@ -40,16 +40,23 @@
 
     <!-- Primary Button Style -->
     <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
-        <Setter Property="Background" Value="#007ACC"/>
+        <Setter Property="Background" Value="#007ACC"/> <!-- Consider using DynamicResource from Colors.xaml -->
         <Setter Property="BorderBrush" Value="#006BB3"/>
         <Setter Property="BorderThickness" Value="1"/>
     </Style>
 
     <!-- Cancel Button Style -->
     <Style x:Key="CancelButtonStyle" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
-        <Setter Property="Background" Value="#E81123"/>
+        <Setter Property="Background" Value="#E81123"/> <!-- Consider using DynamicResource from Colors.xaml -->
         <Setter Property="BorderBrush" Value="#D10F1F"/>
         <Setter Property="BorderThickness" Value="1"/>
     </Style>
 
-</ResourceDictionary> 
+    <!-- Secondary Button Style (If used elsewhere, e.g., GrowerView had it) -->
+     <Style x:Key="SecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
+        <Setter Property="Background" Value="Gray"/> <!-- Example color -->
+        <Setter Property="BorderBrush" Value="DarkGray"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+
+</ResourceDictionary>
