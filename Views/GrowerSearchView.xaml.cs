@@ -1,3 +1,4 @@
+using System; // Added for ArgumentNullException
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -12,17 +13,26 @@ namespace WPFGrowerApp.Views
     /// </summary>
     public partial class GrowerSearchView : Window
     {
-        private readonly GrowerSearchViewModel _viewModel;
+        // Keep reference to ViewModel if needed for event handlers
+        private readonly GrowerSearchViewModel _viewModel; 
 
         public decimal? SelectedGrowerNumber { get; private set; }
 
-        public GrowerSearchView()
+        // Inject the ViewModel
+        public GrowerSearchView(GrowerSearchViewModel viewModel) 
         {
             InitializeComponent();
-            _viewModel = ServiceConfiguration.GetService<GrowerSearchViewModel>();
+            _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
             DataContext = _viewModel;
+
+            // Initialize the ViewModel asynchronously after the view is loaded
+            Loaded += async (s, e) => 
+            {
+                await _viewModel.InitializeAsync();
+                SearchTextBox.Focus(); // Set focus after initialization
+            };
             
-            // Set focus to the search box
+            // Set focus to the search box (moved to Loaded event)
             Loaded += (s, e) => SearchTextBox.Focus();
         }
 

@@ -15,53 +15,23 @@ namespace WPFGrowerApp
     /// </summary>
     public partial class MainWindow : Window
     {
-        private readonly MainViewModel _viewModel;
+        // No need for a private field if only used in constructor
+        // private readonly MainViewModel _viewModel; 
 
-        public MainWindow()
+        // Inject MainViewModel via constructor
+        public MainWindow(MainViewModel viewModel) 
         {
             InitializeComponent();
             
-            // Configure services
-            ServiceConfiguration.ConfigureServices();
-            
-            // Get MainViewModel from service provider
-            _viewModel = ServiceConfiguration.GetService<MainViewModel>();
-            DataContext = _viewModel;
-            
-            // Subscribe to menu item clicked event
-            MainMenu.MenuItemClicked += MainMenu_MenuItemClicked;
+            // ServiceConfiguration calls removed - DI container handles this
+
+            // Set DataContext to the injected ViewModel
+            DataContext = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
+
+            // Event subscription removed - Navigation is now handled by MainViewModel commands
         }
 
-        private void MainMenu_MenuItemClicked(object sender, MenuItemClickedEventArgs e)
-        {
-            // Handle menu item clicks
-            switch (e.MenuItem)
-            {
-                case "Dashboard":
-                    _viewModel.CurrentViewModel = new DashboardViewModel();
-                    break;
-                case "Growers":
-                    // Show grower search dialog before loading grower view
-                    var searchView = new GrowerSearchView();
-                    if (searchView.ShowDialog() == true && searchView.SelectedGrowerNumber.HasValue)
-                    {
-                        var growerViewModel = ServiceConfiguration.GetService<GrowerViewModel>();
-                        growerViewModel.LoadGrowerAsync(searchView.SelectedGrowerNumber.Value);
-                        _viewModel.CurrentViewModel = growerViewModel;
-                    }
-                    break;
-                case "Import":
-                    // Show import view
-                    var importViewModel = ServiceConfiguration.GetService<ImportViewModel>();
-                    _viewModel.CurrentViewModel = importViewModel;
-                    break;
-                case "Reports":
-                    // Show reports view
-                    _viewModel.CurrentViewModel = new ReportsViewModel();
-                    break;
-                // Add other menu items as needed
-            }
-        }
+        // MainMenu_MenuItemClicked event handler removed
 
         private void MenuToggleButton_Click(object sender, RoutedEventArgs e)
         {

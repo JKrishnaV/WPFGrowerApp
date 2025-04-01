@@ -8,25 +8,37 @@ using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
 using WPFGrowerApp.Models;
 using WPFGrowerApp.Commands;
+using WPFGrowerApp.Services; // Added for IDialogService
 using System.Threading;
+using WPFGrowerApp.Infrastructure.Logging; // Added for Logger
 
 namespace WPFGrowerApp.ViewModels
 {
     public class GrowerSearchViewModel : ViewModelBase
     {
         private readonly IGrowerService _growerService;
+        private readonly IDialogService _dialogService; // Added
         private string _searchText;
         private ObservableCollection<GrowerSearchResult> _searchResults;
         private bool _isSearching;
         private CancellationTokenSource _debounceTokenSource;
-        private readonly int _debounceDelayMs = 500; // 500ms debounce delay
+        private readonly int _debounceDelayMs = 500; 
 
-        public GrowerSearchViewModel(IGrowerService growerService)
+        // Inject IDialogService
+        public GrowerSearchViewModel(IGrowerService growerService, IDialogService dialogService)
         {
             _growerService = growerService ?? throw new ArgumentNullException(nameof(growerService));
+            _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService)); // Store service
             SearchResults = new ObservableCollection<GrowerSearchResult>();
-            SearchCommand = new RelayCommand(ExecuteSearch, CanExecuteSearch);
-            LoadAllGrowersAsync().ConfigureAwait(false);
+            // Use async RelayCommand
+            SearchCommand = new RelayCommand(ExecuteSearchAsync, CanExecuteSearch); 
+            // Initialization moved to InitializeAsync
+        }
+
+        // Call this after construction
+        public async Task InitializeAsync()
+        {
+            await LoadAllGrowersAsync();
         }
 
         public string SearchText
@@ -76,12 +88,15 @@ namespace WPFGrowerApp.ViewModels
 
         private bool CanExecuteSearch(object parameter)
         {
-            return !IsSearching;
+            // CanExecute should prevent search if already searching
+            return !IsSearching; 
         }
 
-        private void ExecuteSearch(object parameter)
+        // Renamed to indicate async
+        private async Task ExecuteSearchAsync(object parameter)
         {
-            SearchAsync().ConfigureAwait(false);
+            // Await the async search
+            await SearchAsync(); 
         }
 
         private void DebounceSearch()
@@ -97,9 +112,10 @@ namespace WPFGrowerApp.ViewModels
                 if (!task.IsCanceled)
                 {
                     // Execute search after delay if not canceled
-                    ExecuteSearch(null);
+                    // Use the async version
+                    ExecuteSearchAsync(null).ConfigureAwait(false); // Fire and forget is okay for debounce trigger
                 }
-            }, TaskScheduler.FromCurrentSynchronizationContext());
+            }, TaskScheduler.FromCurrentSynchronizationContext()); // Ensure UI updates happen on UI thread
         }
 
         private async Task SearchAsync()
@@ -118,8 +134,8 @@ namespace WPFGrowerApp.ViewModels
             }
             catch (Exception ex)
             {
-                // Handle error appropriately
-                System.Diagnostics.Debug.WriteLine($"Search error: {ex.Message}");
+                Logger.Error($"Error during grower search for '{SearchText}': {ex.Message}", ex);
+                _dialogService.ShowMessageBox($"Search failed: {ex.Message}", "Search Error");
             }
             finally
             {
@@ -143,8 +159,8 @@ namespace WPFGrowerApp.ViewModels
             }
             catch (Exception ex)
             {
-                // Handle error appropriately
-                System.Diagnostics.Debug.WriteLine($"Load error: {ex.Message}");
+                Logger.Error($"Error loading all growers: {ex.Message}", ex);
+                 _dialogService.ShowMessageBox($"Failed to load initial grower list: {ex.Message}", "Load Error");
             }
             finally
             {

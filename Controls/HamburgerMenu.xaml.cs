@@ -10,8 +10,7 @@ namespace WPFGrowerApp.Controls
     /// </summary>
     public partial class HamburgerMenu : UserControl
     {
-        // Event that will be raised when a menu item is clicked
-        public event EventHandler<MenuItemClickedEventArgs> MenuItemClicked;
+        // MenuItemClicked event removed - Navigation handled by ViewModel Commands
 
         // Storyboards for animations
         private Storyboard _fadeInStoryboard;
@@ -62,41 +61,8 @@ namespace WPFGrowerApp.Controls
             _isMenuVisible = !_isMenuVisible;
         }
 
-
-        // Event handler for menu button clicks
-        private void MenuButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is Button button)
-            {
-                this.ToggleMenu();
-                _isMenuExpanded = !_isMenuExpanded;
-
-                var animation = new DoubleAnimation
-                {
-                    From = 250,
-                    To = 0,
-                    Duration = TimeSpan.FromMilliseconds(300)
-                };
-
-                this.BeginAnimation(FrameworkElement.WidthProperty, animation);                
-
-                // Get the menu item name from the button name (remove "Button" suffix)
-                string menuItem = button.Name.Replace("Button", "");
-                
-                // Raise the event
-                MenuItemClicked?.Invoke(this, new MenuItemClickedEventArgs(menuItem));
-            }
-        }
+        // MenuButton_Click event handler removed
     }
 
-    // Custom event args for menu item clicks
-    public class MenuItemClickedEventArgs : EventArgs
-    {
-        public string MenuItem { get; }
-
-        public MenuItemClickedEventArgs(string menuItem)
-        {
-            MenuItem = menuItem;
-        }
-    }
+    // MenuItemClickedEventArgs class removed
 }

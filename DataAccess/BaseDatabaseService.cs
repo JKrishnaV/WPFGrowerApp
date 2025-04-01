@@ -13,8 +13,14 @@ namespace WPFGrowerApp.DataAccess
 
         protected BaseDatabaseService()
         {
-            //_connectionString = ConfigurationManager.ConnectionStrings["DefaultConnection"].ConnectionString;
-            _connectionString = "Server=DESKTOP-LQ92Q06;Database=PackagingPaymentSystem;User Id=localDB;Password=528database@JK;TrustServerCertificate=True;";
+            _connectionString = ConfigurationManager.ConnectionStrings["DefaultConnection"]?.ConnectionString;
+            if (string.IsNullOrEmpty(_connectionString))
+            {
+                // Log this critical error using the configured logger
+                Infrastructure.Logging.Logger.Fatal("FATAL ERROR: Connection string 'DefaultConnection' not found or empty in App.config.");
+                // Consider throwing a more specific exception or handling this scenario appropriately
+                throw new ConfigurationErrorsException("Connection string 'DefaultConnection' is missing or empty in App.config.");
+            }
         }
 
         protected SqlConnection CreateConnection()
@@ -36,9 +42,9 @@ namespace WPFGrowerApp.DataAccess
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Connection test failed: {ex.Message}");
+                Infrastructure.Logging.Logger.Error($"Connection test failed: {ex.Message}", ex);
                 return false;
             }
         }
     }
-} 
+}

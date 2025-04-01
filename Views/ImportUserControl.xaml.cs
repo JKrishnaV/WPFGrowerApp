@@ -1,6 +1,6 @@
 using System.Windows.Controls;
+using System.Windows.Controls;
 using WPFGrowerApp.ViewModels;
-using WPFGrowerApp.Services;
 
 namespace WPFGrowerApp.Views
 {
@@ -9,10 +9,12 @@ namespace WPFGrowerApp.Views
     /// </summary>
     public partial class ImportUserControl : UserControl
     {
+        // Parameterless constructor is required for instantiation via DataTemplate
         public ImportUserControl()
         {
             InitializeComponent();
-            DataContext = ServiceConfiguration.GetService<ImportViewModel>();
+            // DataContext will be set automatically by WPF based on the DataTemplate
+            // in ViewMappings.xaml when the bound content is an ImportViewModel.
         }
     }
 }

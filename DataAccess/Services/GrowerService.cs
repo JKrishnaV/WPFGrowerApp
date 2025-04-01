@@ -39,7 +39,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in SearchGrowersAsync: {ex.Message}");
+                Infrastructure.Logging.Logger.Error($"Error in SearchGrowersAsync for term '{searchTerm}': {ex.Message}", ex);
                 throw;
             }
         }
@@ -79,12 +79,30 @@ namespace WPFGrowerApp.DataAccess.Services
                         WHERE NUMBER = @GrowerNumber";
 
                     var parameters = new { GrowerNumber = growerNumber };
-                    return await connection.QueryFirstOrDefaultAsync<Grower>(sql, parameters);
+                    var grower = await connection.QueryFirstOrDefaultAsync<Grower>(sql, parameters);
+
+                    // Trim string properties after loading
+                    if (grower != null)
+                    {
+                        grower.GrowerName = grower.GrowerName?.Trim();
+                        grower.ChequeName = grower.ChequeName?.Trim();
+                        grower.Address = grower.Address?.Trim();
+                        grower.City = grower.City?.Trim();
+                        grower.Prov = grower.Prov?.Trim();
+                        grower.Postal = grower.Postal?.Trim();
+                        grower.Phone = grower.Phone?.Trim();
+                        grower.Notes = grower.Notes?.Trim();
+                        // Trim other relevant string fields if necessary
+                        grower.PhoneAdditional1 = grower.PhoneAdditional1?.Trim();
+                        grower.OtherNames = grower.OtherNames?.Trim();
+                        grower.PhoneAdditional2 = grower.PhoneAdditional2?.Trim();
+                    }
+                    return grower;
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in GetGrowerByNumberAsync: {ex.Message}");
+                Infrastructure.Logging.Logger.Error($"Error in GetGrowerByNumberAsync for GrowerNumber {growerNumber}: {ex.Message}", ex);
                 throw;
             }
         }
@@ -174,8 +192,9 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in SaveGrowerAsync: {ex.Message}");
-                return false;
+                Infrastructure.Logging.Logger.Error($"Error in SaveGrowerAsync for GrowerNumber {grower?.GrowerNumber}: {ex.Message}", ex);
+                // Re-throw the exception to allow the caller (ViewModel) to handle it
+                throw; 
             }
         }
 
@@ -201,7 +220,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in GetAllGrowersAsync: {ex.Message}");
+                Infrastructure.Logging.Logger.Error($"Error in GetAllGrowersAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -226,9 +245,9 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in GetUniqueProvincesAsync: {ex.Message}");
+                Infrastructure.Logging.Logger.Error($"Error in GetUniqueProvincesAsync: {ex.Message}", ex);
                 throw;
             }
         }
     }
-} 
+}
