@@ -17,4 +17,9 @@
         <reports:ReportsView />
     </DataTemplate>
     
+    <DataTemplate DataType="{x:Type viewmodels:ImportViewModel}">
+        <views:ImportUserControl />
+    </DataTemplate>
+
+
 </ResourceDictionary>

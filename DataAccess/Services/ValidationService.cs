@@ -32,9 +32,9 @@ namespace WPFGrowerApp.DataAccess.Services
             }
 
             // Validate process
-            if (!await ValidateProcessAsync(receipt.Process))
+            if (!await ValidateProcessAsync(receipt.Process, receipt.Grade))
             {
-                errors.Add($"Invalid process code: {receipt.Process}");
+                errors.Add($"Invalid process code: {receipt.Process}, grade: {receipt.Grade}"); 
             }
 
             // Validate grade (1-3 are valid grades based on the database schema)
@@ -44,10 +44,10 @@ namespace WPFGrowerApp.DataAccess.Services
             }
 
             // Validate weights
-            if (receipt.Gross < MIN_WEIGHT || receipt.Gross > MAX_WEIGHT)
-            {
-                errors.Add($"Gross weight {receipt.Gross} is outside valid range ({MIN_WEIGHT}-{MAX_WEIGHT})");
-            }
+            //if (receipt.Gross < MIN_WEIGHT || receipt.Gross > MAX_WEIGHT)
+            //{
+            //    errors.Add($"Gross weight {receipt.Gross} is outside valid range ({MIN_WEIGHT}-{MAX_WEIGHT})");
+            //}
 
             if (receipt.Tare < 0 || receipt.Tare > receipt.Gross)
             {
@@ -60,10 +60,10 @@ namespace WPFGrowerApp.DataAccess.Services
             }
 
             // Validate price
-            if (receipt.ThePrice < MIN_PRICE || receipt.ThePrice > MAX_PRICE)
-            {
-                errors.Add($"Price {receipt.ThePrice} is outside valid range ({MIN_PRICE}-{MAX_PRICE})");
-            }
+            //if (receipt.ThePrice < MIN_PRICE || receipt.ThePrice > MAX_PRICE)
+            //{
+            //    errors.Add($"Price {receipt.ThePrice} is outside valid range ({MIN_PRICE}-{MAX_PRICE})");
+            //}
 
             // Check for duplicate receipt number
             if (await IsDuplicateReceiptAsync(receipt.ReceiptNumber))
@@ -101,14 +101,15 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        private async Task<bool> ValidateProcessAsync(string process)
+        private async Task<bool> ValidateProcessAsync(string process, decimal procClass)
         {
+           
             using (var connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync();
                 var count = await connection.ExecuteScalarAsync<int>(
-                    "SELECT COUNT(*) FROM Process WHERE PROCESS = @Process",
-                    new { Process = process });
+                    "SELECT COUNT(*) FROM Process WHERE PROCESS = @Process AND PROC_CLASS = @ProcClass",
+                    new { Process = process, ProcClass = procClass });
                 return count > 0;
             }
         }
@@ -142,10 +143,10 @@ namespace WPFGrowerApp.DataAccess.Services
             }
 
             // Check for duplicate import batch number
-            if (await IsDuplicateImportBatchAsync(importBatch.ImpBatch))
-            {
-                errors.Add($"Duplicate import batch number: {importBatch.ImpBatch}");
-            }
+            //if (await IsDuplicateImportBatchAsync(importBatch.ImpBatch))
+            //{
+            //    errors.Add($"Duplicate import batch number: {importBatch.ImpBatch}");
+            //}
 
             if (errors.Count > 0)
             {

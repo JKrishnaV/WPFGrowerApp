@@ -87,6 +87,15 @@ namespace WPFGrowerApp.DataAccess.Services
                     receipt.ReceiptNumber = await GetNextReceiptNumberAsync();
                 }
 
+                // Validate string lengths
+                if (receipt.Depot?.Length > 1) throw new ArgumentException("Depot exceeds maximum length of 1.");
+                if (receipt.Product?.Length > 2) throw new ArgumentException("Product exceeds maximum length of 2.");
+                if (receipt.Process?.Length > 2) throw new ArgumentException("Process exceeds maximum length of 2.");
+                if (receipt.PrNote1?.Length > 50) throw new ArgumentException("PrNote1 exceeds maximum length of 50.");
+                if (receipt.NpNote1?.Length > 50) throw new ArgumentException("NpNote1 exceeds maximum length of 50.");
+                if (receipt.FromField?.Length > 10) throw new ArgumentException("FromField exceeds maximum length of 10.");
+                if (receipt.ContainerErrors?.Length > 10) throw new ArgumentException("ContainerErrors exceeds maximum length of 10.");
+
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
@@ -103,7 +112,33 @@ namespace WPFGrowerApp.DataAccess.Services
                             @NpNote1, @FromField, @Imported, @ContainerErrors
                         )";
 
-                    await connection.ExecuteAsync(sql, receipt);
+                    var parameters = new
+                    {
+                        receipt.Depot,
+                        receipt.Product,
+                        receipt.ReceiptNumber,
+                        receipt.GrowerNumber,
+                        receipt.Gross,
+                        receipt.Tare,
+                        receipt.Net,
+                        receipt.Grade,
+                        receipt.Process,
+                        receipt.Date,
+                        receipt.DayUniq,
+                        receipt.ImpBatch,
+                        receipt.FinBatch,
+                        receipt.DockPercent,
+                        receipt.IsVoid,
+                        receipt.ThePrice,
+                        receipt.PriceSource,
+                        receipt.PrNote1,
+                        receipt.NpNote1,
+                        receipt.FromField,
+                        receipt.Imported,
+                        receipt.ContainerErrors
+                    };
+
+                    await connection.ExecuteAsync(sql, parameters);
                     return receipt;
                 }
             }
@@ -214,7 +249,7 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    var sql = "SELECT * FROM Daily WHERE IMP_BAT = @ImpBatch ORDER BY Date DESC, ReceiptNumber DESC";
+                    var sql = "SELECT * FROM Daily WHERE IMP_BAT = @ImpBatch ORDER BY Date DESC, RECPT DESC";
                     var parameters = new { ImpBatch = impBatch };
                     return (await connection.QueryAsync<Receipt>(sql, parameters)).ToList();
                 }
@@ -285,7 +320,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     if (processCount == 0)
                     {
                         return false;
-                    }
+                    }                 
 
                     return true;
                 }

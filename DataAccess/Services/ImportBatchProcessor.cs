@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Controls;
+using WPFGrowerApp.DataAccess.Exceptions;
 using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
 using WPFGrowerApp.Infrastructure.Logging;
@@ -14,15 +16,18 @@ namespace WPFGrowerApp.DataAccess.Services
         private readonly IImportBatchService _importBatchService;
         private readonly IReceiptService _receiptService;
         private readonly IFileImportService _fileImportService;
+        private readonly ValidationService _validationService;
 
         public ImportBatchProcessor(
             IImportBatchService importBatchService,
             IReceiptService receiptService,
-            IFileImportService fileImportService)
+            IFileImportService fileImportService,
+            ValidationService validationService)
         {
             _importBatchService = importBatchService ?? throw new ArgumentNullException(nameof(importBatchService));
             _receiptService = receiptService ?? throw new ArgumentNullException(nameof(receiptService));
             _fileImportService = fileImportService ?? throw new ArgumentNullException(nameof(fileImportService));
+            _validationService = validationService ?? throw new ArgumentNullException(nameof(validationService));
         }
 
         public async Task<ImportBatch> StartImportBatchAsync(string depot, string fileName)
@@ -61,8 +66,12 @@ namespace WPFGrowerApp.DataAccess.Services
                     {
                         receipt.ImpBatch = importBatch.ImpBatch;
                         
-                        // Validate receipt
-                        if (!await _receiptService.ValidateReceiptAsync(receipt))
+                        // Validate receipt                     
+                        try
+                        {
+                            await _validationService.ValidateReceiptAsync(receipt);
+                        }
+                        catch (ImportValidationException ex)
                         {
                             errors.Add($"Invalid receipt data for grower {receipt.GrowerNumber}");
                             continue;

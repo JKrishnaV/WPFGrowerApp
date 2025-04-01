@@ -15,8 +15,10 @@ namespace WPFGrowerApp.DataAccess.Services
         private readonly IGrowerService _growerService;
         private readonly string[] _expectedHeaders = new[]
         {
-            "DEPOT", "PRODUCT", "NUMBER", "GROSS", "TARE", "NET",
-            "GRADE", "PROCESS", "DATE", "FROM_FIELD"
+            "SITEID", "TICKETNO", "VOIDED", "BATCHNO", "PRODUCTID", 
+            "GRADEID", "DATEIN", "TIMEIN", "GROWERID", "PRICE", 
+            "DOCKPERCENT", "NET", "ADD DATE", "ADD BY", "EDIT DATE", 
+            "EDIT BY", "EDIT REASON", "FIELDID"
         };
 
         public FileImportService(IGrowerService growerService)
@@ -46,7 +48,11 @@ namespace WPFGrowerApp.DataAccess.Services
                         return false;
                     }
 
-                    var headers = headerLine.Split(',').Select(h => h.Trim().ToUpper()).ToArray();
+                    // Remove quotes and split by comma
+                    var headers = headerLine.Replace("\"", "").Split(',')
+                        .Select(h => h.Trim().ToUpper())
+                        .ToArray();
+
                     var missingHeaders = _expectedHeaders.Except(headers).ToList();
 
                     if (missingHeaders.Any())
@@ -84,7 +90,11 @@ namespace WPFGrowerApp.DataAccess.Services
                 Logger.Info($"Reading receipts from file: {filePath}");
                 var receipts = new List<Receipt>();
                 var lines = await File.ReadAllLinesAsync(filePath, cancellationToken);
-                var headers = lines[0].Split(',').Select(h => h.Trim().ToUpper()).ToArray();
+                
+                // Remove quotes and split by comma for headers
+                var headers = lines[0].Replace("\"", "").Split(',')
+                    .Select(h => h.Trim().ToUpper())
+                    .ToArray();
 
                 // Create header index mapping
                 var headerIndexes = new Dictionary<string, int>();
@@ -101,21 +111,36 @@ namespace WPFGrowerApp.DataAccess.Services
                     var line = lines[i];
                     if (string.IsNullOrWhiteSpace(line)) continue;
 
-                    var values = line.Split(',').Select(v => v.Trim()).ToArray();
+                    // Remove quotes and split by comma
+                    var values = line.Replace("\"", "").Split(',')
+                        .Select(v => v.Trim())
+                        .ToArray();
+
+                    // Skip empty receipts (those with no product and zero NET)
+                    if (string.IsNullOrEmpty(GetValue(values, headerIndexes, "PRODUCTID")) &&
+                        decimal.Parse(GetValue(values, headerIndexes, "NET")) == 0)
+                    {
+                        continue;
+                    }
+
+                    var dateIn = DateTime.Parse(GetValue(values, headerIndexes, "DATEIN"));
+                    var timeIn = TimeSpan.Parse(GetValue(values, headerIndexes, "TIMEIN"));
+                    var receiptDateTime = dateIn.Add(timeIn);
+                    var result = ExtractGradeAndProcessID(GetValue(values, headerIndexes, "GRADEID"));
+
                     var receipt = new Receipt
                     {
-                        Depot = GetValue(values, headerIndexes, "DEPOT"),
-                        Product = GetValue(values, headerIndexes, "PRODUCT"),
-                        GrowerNumber = decimal.Parse(GetValue(values, headerIndexes, "NUMBER")),
-                        Gross = decimal.Parse(GetValue(values, headerIndexes, "GROSS")),
-                        Tare = decimal.Parse(GetValue(values, headerIndexes, "TARE")),
+                        Depot = GetValue(values, headerIndexes, "SITEID"),
+                        Product = GetValue(values, headerIndexes, "PRODUCTID"),
+                        GrowerNumber = decimal.Parse(GetValue(values, headerIndexes, "GROWERID")),
                         Net = decimal.Parse(GetValue(values, headerIndexes, "NET")),
-                        Grade = decimal.Parse(GetValue(values, headerIndexes, "GRADE")),
-                        Process = GetValue(values, headerIndexes, "PROCESS"),
-                        Date = DateTime.Parse(GetValue(values, headerIndexes, "DATE")),
-                        FromField = GetValue(values, headerIndexes, "FROM_FIELD"),
+                        ThePrice = decimal.Parse(GetValue(values, headerIndexes, "PRICE")), // Using PRICE as Grade
+                        Grade = result.Grade,
+                        Process = result.ProcessID,
+                        Date = receiptDateTime,
+                        FromField = GetValue(values, headerIndexes, "FIELDID"),
                         Imported = true,
-                        DayUniq = await GenerateDayUniqAsync(DateTime.Parse(GetValue(values, headerIndexes, "DATE")))
+                        DayUniq = await GenerateDayUniqAsync(receiptDateTime)
                     };
 
                     receipts.Add(receipt);
@@ -131,6 +156,20 @@ namespace WPFGrowerApp.DataAccess.Services
                 Logger.Error("Error reading receipts from file", ex);
                 throw;
             }
+        }
+        //how to use this method?   
+        private (int Grade, string ProcessID) ExtractGradeAndProcessID(string gradeId)
+        {
+            if (string.IsNullOrEmpty(gradeId) || gradeId.Length < 2)
+            {
+                throw new ArgumentException("Invalid gradeId format", nameof(gradeId));
+            }
+            if (int.TryParse(gradeId.Substring(2), out int grade))
+            {
+                return (grade, gradeId.Substring(0, 2));
+            }
+
+            throw new ArgumentException("Invalid gradeId format", nameof(gradeId));
         }
 
         public async Task<(bool IsValid, List<string> Errors)> ValidateReceiptsAsync(
