@@ -18,6 +18,7 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Styles/Animations.xaml"/>
+                <!-- Removed Button style references here as they should be in App.xaml or Styles/ButtonStyles.xaml -->
             </ResourceDictionary.MergedDictionaries>
             
             <!-- Window Control Button Style -->

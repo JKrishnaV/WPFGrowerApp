@@ -2,7 +2,9 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:WPFGrowerApp"
-             xmlns:converters="clr-namespace:WPFGrowerApp.Converters">
+             xmlns:converters="clr-namespace:WPFGrowerApp.Converters"
+             ShutdownMode="OnMainWindowClose"> 
+             <!-- Added ShutdownMode -->
              <!-- Removed Material Design namespace -->
              <!-- StartupUri removed; MainWindow is created and shown in App.xaml.cs -->
     <Application.Resources>
@@ -23,8 +25,9 @@
             <converters:InverseBooleanToBooleanConverter x:Key="InverseBooleanToBooleanConverter"/>
             <!-- Converters -->
             <converters:NotNullConverter x:Key="NotNullConverter"/>
-            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/> <!-- Built-in WPF converter -->
             <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+            <converters:NotNullOrEmptyToVisibilityConverter x:Key="NotNullOrEmptyToVisibilityConverter"/> <!-- Added -->
         </ResourceDictionary>
     </Application.Resources>
 </Application>

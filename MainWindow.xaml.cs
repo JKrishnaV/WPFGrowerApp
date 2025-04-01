@@ -7,6 +7,7 @@ using WPFGrowerApp.Controls;
 using WPFGrowerApp.Services;
 using WPFGrowerApp.ViewModels;
 using WPFGrowerApp.Views;
+using WPFGrowerApp.Infrastructure.Logging; // Added for Logger
 
 namespace WPFGrowerApp
 {
@@ -21,14 +22,39 @@ namespace WPFGrowerApp
         // Inject MainViewModel via constructor
         public MainWindow(MainViewModel viewModel) 
         {
-            InitializeComponent();
+            Logger.Info("MainWindow constructor starting."); // Added Log
+            try
+            {
+                InitializeComponent();
+                Logger.Info("InitializeComponent completed."); // Added Log
+            }
+            catch (Exception ex)
+            {
+                Logger.Fatal("Exception during InitializeComponent in MainWindow.", ex); // Added Log
+                // Rethrow or handle appropriately - maybe show message box and shutdown?
+                MessageBox.Show($"A critical error occurred initializing the main window UI: {ex.Message}", "UI Initialization Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                Application.Current.Shutdown(-1);
+                throw; // Rethrow to ensure constructor failure is clear if not shutting down
+            }
             
             // ServiceConfiguration calls removed - DI container handles this
 
             // Set DataContext to the injected ViewModel
+            Logger.Info("Setting MainWindow DataContext."); // Added Log
             DataContext = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
+            Logger.Info("MainWindow DataContext set."); // Added Log
 
             // Event subscription removed - Navigation is now handled by MainViewModel commands
+
+            // Add Loaded event handler for further logging
+            this.Loaded += MainWindow_Loaded;
+            Logger.Info("MainWindow constructor finished."); // Added Log
+        }
+
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            Logger.Info("MainWindow Loaded event fired."); // Added Log
+            // Add any other checks or logging needed after the window is fully loaded and rendered
         }
 
         // MainMenu_MenuItemClicked event handler removed
