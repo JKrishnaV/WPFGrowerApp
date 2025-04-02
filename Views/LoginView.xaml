@@ -5,34 +5,71 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WPFGrowerApp.Views"
         xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:LoginViewModel}"
-        Title="Login - Berry Farm App"
         Height="350" Width="350"
         WindowStartupLocation="CenterScreen"
-        WindowStyle="ToolWindow" 
-        ResizeMode="NoResize">
+        WindowStyle="None" 
+        AllowsTransparency="True" 
+        Background="Transparent">
 
     <!-- Removed Window.Resources - Styles and Converters should be available from App.xaml -->
 
-    <Border Padding="25" Background="WhiteSmoke">
-        <StackPanel VerticalAlignment="Center">
-            <TextBlock Text="Berry Farm Login"
-                       Style="{StaticResource HeaderTextStyle}"
+    <!-- Use Material Design Card for better appearance -->
+    <materialDesign:Card UniformCornerRadius="8" Margin="10" Padding="0"> <!-- Adjust Padding -->
+        <!-- Use Grid to overlay close button -->
+        <Grid>
+            <!-- Close Button -->
+            <Button HorizontalAlignment="Right" VerticalAlignment="Top" 
+                    Margin="0,5,5,0" 
+                    Style="{StaticResource MaterialDesignFlatButton}" 
+                    Click="CloseButton_Click" 
+                    ToolTip="Close"
+                    Width="30" Height="30" Padding="0">
+                <materialDesign:PackIcon Kind="Close" Foreground="Gray"/>
+            </Button>
+
+            <!-- Original Content -->
+            <StackPanel VerticalAlignment="Center" Margin="25"> <!-- Add margin back to StackPanel -->
+                <TextBlock Text="Berry Farm Login"
+                           Style="{StaticResource HeaderTextStyle}"
                        HorizontalAlignment="Center"
-                       Margin="0,0,0,20"/>
+                        Margin="0,0,0,20"/>
 
             <!-- Username -->
-            <TextBlock Text="Username:" Style="{StaticResource LabelTextStyle}"/>
-            <TextBox x:Name="UsernameTextBox" 
+            <TextBox x:Name="UsernameTextBox"
+                     materialDesign:HintAssist.Hint="Username"
                      Margin="0,0,0,10"
                      Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
-                     Style="{StaticResource ModernTextBoxStyle}" />
+                     Style="{StaticResource MaterialDesignFloatingHintTextBox}" />
 
             <!-- Password -->
-            <TextBlock Text="Password:" Style="{StaticResource LabelTextStyle}"/>
-            <PasswordBox x:Name="PasswordBox" Margin="0,0,0,10"
-                         Style="{StaticResource ModernPasswordBoxStyle}"/> <!-- Assuming a ModernPasswordBoxStyle exists or create one -->
+            <Grid>
+                <PasswordBox x:Name="PasswordBox"
+                             materialDesign:HintAssist.Hint="Password"
+                             Margin="0,0,0,10"
+                             Style="{StaticResource MaterialDesignFloatingHintPasswordBox}"/>
+                <TextBox x:Name="VisiblePasswordTextBox"
+                         materialDesign:HintAssist.Hint="Password"
+                         Margin="0,0,0,10"
+                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                         Visibility="Collapsed"/>
+                <ToggleButton HorizontalAlignment="Right" VerticalAlignment="Center"
+                              Margin="0,0,4,10"
+                              Command="{Binding TogglePasswordVisibilityCommand}" 
+                              x:Name="PasswordVisibilityToggle" 
+                              Checked="PasswordVisibilityToggle_Checked" 
+                              Unchecked="PasswordVisibilityToggle_Unchecked" 
+                              Style="{StaticResource MaterialDesignFlatToggleButton}"
+                              ToolTip="Show/Hide Password">
+                    <ToggleButton.Content>
+                        <!-- Bind Kind directly to ViewModel property -->
+                        <materialDesign:PackIcon Kind="{Binding PasswordToggleIconKind}" />
+                    </ToggleButton.Content>
+                    <!-- Removed ToggleButton.Triggers -->
+                </ToggleButton>
+            </Grid>
 
             <!-- Error Message -->
              <TextBlock Text="{Binding ErrorMessage}"
@@ -46,7 +83,7 @@
                     Command="{Binding LoginCommand}"
                     CommandParameter="{Binding ElementName=PasswordBox}"
                     IsEnabled="{Binding IsLoggingIn, Converter={StaticResource InverseBooleanConverter}}"
-                    Style="{StaticResource PrimaryButtonStyle}"
+                    Style="{StaticResource MaterialDesignRaisedButton}"
                     HorizontalAlignment="Stretch"
                     Margin="0,15,0,0"
                     Height="35"/>
@@ -56,6 +93,7 @@
                           Visibility="{Binding IsLoggingIn, Converter={StaticResource BooleanToVisibilityConverter}}"
                           Margin="0,10,0,0" Height="5"/>
 
-        </StackPanel>
-    </Border>
+            </StackPanel>
+        </Grid>
+    </materialDesign:Card> 
 </Window>

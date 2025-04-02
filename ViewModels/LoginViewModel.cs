@@ -4,9 +4,10 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using WPFGrowerApp.Commands;
 using WPFGrowerApp.DataAccess.Interfaces;
-using WPFGrowerApp.DataAccess.Models; 
+using WPFGrowerApp.DataAccess.Models;
 using WPFGrowerApp.Infrastructure.Logging;
 using WPFGrowerApp.Properties; // Added for Settings
+using MaterialDesignThemes.Wpf; // Added for PackIconKind
 
 namespace WPFGrowerApp.ViewModels
 {
@@ -17,17 +18,19 @@ namespace WPFGrowerApp.ViewModels
         private string _errorMessage;
         private bool _isLoggingIn;
         private User _authenticatedUser; // Added field to store the user
+        private bool _isPasswordVisible; // Added for password toggle
 
         // Action to be called by the View to close the window
         public Action<bool> CloseAction { get; set; }
 
         // Public property to expose the authenticated user
-        public User AuthenticatedUser => _authenticatedUser; 
+        public User AuthenticatedUser => _authenticatedUser;
 
         public LoginViewModel(IUserService userService)
         {
             _userService = userService ?? throw new ArgumentNullException(nameof(userService));
             LoginCommand = new RelayCommand(LoginExecuteAsync, CanLoginExecute);
+            TogglePasswordVisibilityCommand = new RelayCommand(TogglePasswordVisibilityExecute); // Added command
 
             // Load last username from settings
             try
@@ -46,7 +49,7 @@ namespace WPFGrowerApp.ViewModels
         public string Username
         {
             get => _username;
-            set 
+            set
             {
                 if (SetProperty(ref _username, value))
                 {
@@ -75,24 +78,44 @@ namespace WPFGrowerApp.ViewModels
             }
         }
 
+        public bool IsPasswordVisible
+        {
+            get => _isPasswordVisible;
+            set
+            {
+                // Call SetProperty and raise PropertyChanged for PasswordToggleIconKind as well
+                if (SetProperty(ref _isPasswordVisible, value))
+                {
+                    OnPropertyChanged(nameof(PasswordToggleIconKind));
+                }
+            }
+        }
+
+        // Property to return the correct icon kind based on visibility state
+        public PackIconKind PasswordToggleIconKind => IsPasswordVisible ? PackIconKind.Eye : PackIconKind.EyeOff;
+
         public ICommand LoginCommand { get; }
+        public ICommand TogglePasswordVisibilityCommand { get; } // Added command property
 
         private bool CanLoginExecute(object parameter)
         {
             // Corrected: Parameter is the PasswordBox from XAML binding
             var passwordBox = parameter as System.Windows.Controls.PasswordBox;
-            return !IsLoggingIn && 
-                   !string.IsNullOrWhiteSpace(Username) && 
-                   passwordBox != null && 
-                   passwordBox.SecurePassword != null && 
+            // Check if the VisiblePasswordTextBox is being used (if implemented this way)
+            // For now, assume PasswordBox is the source of truth for CanExecute
+            return !IsLoggingIn &&
+                   !string.IsNullOrWhiteSpace(Username) &&
+                   passwordBox != null &&
+                   passwordBox.SecurePassword != null &&
                    passwordBox.SecurePassword.Length > 0;
         }
 
         private async Task LoginExecuteAsync(object parameter)
         {
             // Corrected: Parameter is the PasswordBox from XAML binding
+            // The code-behind ensures PasswordBox.Password is updated before this might be called
             var passwordBox = parameter as System.Windows.Controls.PasswordBox;
-            if (passwordBox == null || passwordBox.SecurePassword == null) return; 
+            if (passwordBox == null || passwordBox.SecurePassword == null) return;
 
             var securePassword = passwordBox.SecurePassword; // Get SecureString here
 
@@ -116,7 +139,7 @@ namespace WPFGrowerApp.ViewModels
                     _authenticatedUser = user; // Store the authenticated user
                     Logger.Info($"User '{Username}' logged in successfully.");
                     // Signal success and close the login window
-                    CloseAction?.Invoke(true); 
+                    CloseAction?.Invoke(true);
                 }
                 else
                 {
@@ -139,6 +162,11 @@ namespace WPFGrowerApp.ViewModels
                 plainPassword = null; // Explicitly nullify
                 IsLoggingIn = false;
             }
+        }
+
+        private void TogglePasswordVisibilityExecute(object parameter)
+        {
+            IsPasswordVisible = !IsPasswordVisible;
         }
     }
 }
