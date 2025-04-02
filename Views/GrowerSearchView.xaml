@@ -5,186 +5,183 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WPFGrowerApp.Views"
         xmlns:converters="clr-namespace:WPFGrowerApp.Converters"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
-        Title="Grower Search" Height="450" Width="800"
+        Height="450" Width="800"
         WindowStartupLocation="CenterOwner"
-        Background="White">
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent">
+
+    <!-- Window.Resources MUST come before the main content element (Card) -->
     <Window.Resources>
         <ResourceDictionary>
-            <converters:NotNullConverter x:Key="NotNullConverter"/>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Styles/Styles.xaml"/>
+                <!-- Assuming Material Design styles are merged in App.xaml -->
             </ResourceDictionary.MergedDictionaries>
+            <converters:NotNullConverter x:Key="NotNullConverter"/>
+
+            <!-- Simple Style for Window Control Buttons -->
+            <Style x:Key="CustomWindowButtonStyle" TargetType="Button">
+                <Setter Property="Width" Value="30"/>
+                <Setter Property="Height" Value="30"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="Margin" Value="2,0"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Foreground" Value="{DynamicResource MaterialDesignBody}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}" CornerRadius="2">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#E0E0E0"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <Style x:Key="CustomCloseButtonStyle" TargetType="Button" BasedOn="{StaticResource CustomWindowButtonStyle}">
+                 <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="#E81123"/>
+                        <Setter Property="Foreground" Value="White"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
         </ResourceDictionary>
     </Window.Resources>
-    <Grid Margin="10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="{StaticResource PrimaryBrush}" 
-                Padding="15,10" 
-                Margin="0,0,0,15"
-                CornerRadius="4">
-            <TextBlock Text="Search for Grower" 
-                       Foreground="White" 
-                       FontSize="18" 
-                       FontWeight="SemiBold" 
-                       HorizontalAlignment="Center"/>
-        </Border>
+    <!-- Main Content wrapped in Card -->
+    <materialDesign:Card UniformCornerRadius="8" Background="White">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="30"/> <!-- Title Bar Row -->
+                <RowDefinition Height="*"/> <!-- Content Row -->
+            </Grid.RowDefinitions>
 
-        <Grid Grid.Row="1" Margin="0,0,0,15">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-            
-            <TextBox x:Name="SearchTextBox" Grid.Column="0" Height="35" 
-                     Style="{StaticResource ModernTextBoxStyle}"
-                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                     KeyDown="SearchTextBox_KeyDown">
-                <TextBox.Resources>
-                    <Style TargetType="{x:Type Border}">
-                        <Setter Property="CornerRadius" Value="4"/>
-                    </Style>
-                </TextBox.Resources>
-                <TextBox.Template>
-                    <ControlTemplate TargetType="{x:Type TextBox}">
-                        <Border x:Name="border" 
-                                BorderBrush="{StaticResource PrimaryLightBrush}" 
-                                BorderThickness="1" 
-                                Background="{TemplateBinding Background}" 
-                                SnapsToDevicePixels="True"
-                                CornerRadius="4">
-                            <Grid>
-                                <ScrollViewer x:Name="PART_ContentHost" Focusable="False" 
-                                              HorizontalScrollBarVisibility="Hidden" 
-                                              VerticalScrollBarVisibility="Hidden"
-                                              Margin="8,0,30,0"/>
-                                <TextBlock Text="Search..." 
-                                           Foreground="Gray" 
-                                           Margin="10,0,0,0" 
-                                           VerticalAlignment="Center"
-                                           Visibility="{Binding Text.IsEmpty, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                <Image Source="/Images/search.png" 
-                                       Width="16" Height="16" 
-                                       HorizontalAlignment="Right" 
-                                       Margin="0,0,10,0"
-                                       Opacity="0.6"/>
-                            </Grid>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="true">
-                                <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PrimaryBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsKeyboardFocused" Value="true">
-                                <Setter Property="BorderBrush" TargetName="border" Value="{StaticResource PrimaryBrush}"/>
-                                <Setter Property="BorderThickness" TargetName="border" Value="2"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </TextBox.Template>
-            </TextBox>
-        </Grid>
+            <!-- Custom Title Bar -->
+            <Grid Grid.Row="0" Background="Transparent" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button x:Name="MinimizeButton" Style="{StaticResource CustomWindowButtonStyle}" Click="MinimizeButton_Click" ToolTip="Minimize">
+                        <materialDesign:PackIcon Kind="WindowMinimize" Width="12" Height="12"/>
+                    </Button>
+                    <Button x:Name="MaximizeButton" Style="{StaticResource CustomWindowButtonStyle}" Click="MaximizeButton_Click" ToolTip="Maximize">
+                        <materialDesign:PackIcon Kind="WindowMaximize" Width="12" Height="12"/>
+                    </Button>
+                    <Button x:Name="CloseButton" Style="{StaticResource CustomCloseButtonStyle}" Click="CloseButton_Click" ToolTip="Close">
+                         <materialDesign:PackIcon Kind="Close" Width="12" Height="12"/>
+                    </Button>
+                </StackPanel>
+                
+            </Grid>
 
-        <DataGrid x:Name="GrowersDataGrid"
-                  Grid.Row="2"
-                  Margin="0,0,0,15"
-                  ItemsSource="{Binding SearchResults}"
-                  AutoGenerateColumns="False"
-                  IsReadOnly="True"
-                  SelectionMode="Single"
-                  SelectionChanged="ResultsDataGrid_SelectionChanged"
-                  VerticalScrollBarVisibility="Auto"
-                  HorizontalScrollBarVisibility="Auto"
-                  HeadersVisibility="Column"
-                  GridLinesVisibility="None"
-                  BorderThickness="1"
-                  BorderBrush="{StaticResource PrimaryLightBrush}"
-                  Background="White"
-                  MouseDoubleClick="GrowersDataGrid_MouseDoubleClick">
-            <DataGrid.Resources>
-                <Style TargetType="{x:Type DataGridColumnHeader}">
-                    <Setter Property="Background" Value="{StaticResource PrimaryLightBrush}"/>
-                    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-                    <Setter Property="FontWeight" Value="SemiBold"/>
-                    <Setter Property="Padding" Value="10,8"/>
-                    <Setter Property="BorderThickness" Value="0,0,1,0"/>
-                    <Setter Property="BorderBrush" Value="#E0E0E0"/>
-                </Style>
-            </DataGrid.Resources>
+            <!-- Original Content Grid -->
+            <Grid Grid.Row="1" Margin="10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Use ColorZone for Header -->
+                <materialDesign:ColorZone Grid.Row="0" Mode="PrimaryMid" Padding="15,10" Margin="0,0,0,15" CornerRadius="4">
+                    <TextBlock Text="Search for Grower"
+                               Foreground="White" 
+                               FontSize="18"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"/>
+                </materialDesign:ColorZone>
+
+                <!-- Material Design Search TextBox -->
+                <Grid Grid.Row="1" Margin="0,0,0,15">
+                    <TextBox x:Name="SearchTextBox"
+                             materialDesign:HintAssist.Hint="Search..."
+                             materialDesign:TextFieldAssist.LeadingIcon="Search"
+                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             KeyDown="SearchTextBox_KeyDown"
+                             Height="40"/> 
+                </Grid>
+
+                <DataGrid x:Name="GrowersDataGrid"
+                          Grid.Row="2"
+                          Margin="0,0,0,15"
+                          ItemsSource="{Binding SearchResults}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          SelectionMode="Single"
+                          SelectionChanged="ResultsDataGrid_SelectionChanged"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Auto"
+                          HeadersVisibility="Column"
+                          GridLinesVisibility="None" 
+                          Style="{StaticResource MaterialDesignDataGrid}" 
+                          AlternatingRowBackground="{DynamicResource MaterialDesignDivider}"
+                          MouseDoubleClick="GrowersDataGrid_MouseDoubleClick">
+            <!-- Removed DataGrid.Resources and DataGrid.RowStyle - Handled by MaterialDesignDataGrid style -->
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Number" Binding="{Binding GrowerNumber}" Width="80">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
-                            <Setter Property="Padding" Value="10,8"/>
+                            <Setter Property="Padding" Value="10,5"/> <!-- Reduced vertical padding -->
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
                 <DataGridTextColumn Header="Name" Binding="{Binding GrowerName}" Width="*">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
-                            <Setter Property="Padding" Value="10,8"/>
+                            <Setter Property="Padding" Value="10,5"/> <!-- Reduced vertical padding -->
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
                 <DataGridTextColumn Header="Cheque Name" Binding="{Binding ChequeName}" Width="*">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
-                            <Setter Property="Padding" Value="10,8"/>
+                            <Setter Property="Padding" Value="10,5"/> <!-- Reduced vertical padding -->
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
                 <DataGridTextColumn Header="City" Binding="{Binding City}" Width="120">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
-                            <Setter Property="Padding" Value="10,8"/>
+                            <Setter Property="Padding" Value="10,5"/> <!-- Reduced vertical padding -->
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
-                <DataGridTextColumn Header="Phone" Binding="{Binding Phone}" Width="120">
+                <DataGridTextColumn Header="Phone" Binding="{Binding Phone}" Width="150"> <!-- Increased Width -->
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
-                            <Setter Property="Padding" Value="10,8"/>
+                            <Setter Property="Padding" Value="10,5"/> <!-- Reduced vertical padding -->
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
             </DataGrid.Columns>
-            <DataGrid.RowStyle>
-                <Style TargetType="DataGridRow">
-                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                    <Setter Property="BorderBrush" Value="#E0E0E0"/>
-                    <Style.Triggers>
-                        <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="Background" Value="{StaticResource PrimaryLightBrush}"/>
-                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-                        </Trigger>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#F5F5F5"/>
-                        </Trigger>
-                    </Style.Triggers>
-                </Style>
-            </DataGrid.RowStyle>
-        </DataGrid>
+                </DataGrid>
 
-        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="New Grower" 
-                    Style="{StaticResource PrimaryButtonStyle}" 
-                    Width="120" Height="35" 
-                    Margin="0,0,10,0" 
-                    Click="NewGrowerButton_Click"/>
-            <Button Content="Cancel" 
-                    Style="{StaticResource SecondaryButtonStyle}" 
-                    Width="100" Height="35" 
-                    Margin="0,0,10,0" 
-                    Click="CancelButton_Click"/>
-            <Button Content="Select" 
-                    Style="{StaticResource PrimaryButtonStyle}" 
-                    Width="100" Height="35" 
-                    Click="SelectButton_Click"
-                    IsEnabled="{Binding SelectedItem, ElementName=GrowersDataGrid, Converter={StaticResource NotNullConverter}}"/>
-        </StackPanel>
-    </Grid>
+                <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="New Grower"
+                            Style="{StaticResource MaterialDesignRaisedButton}" 
+                            Width="120" Height="35"
+                            Margin="0,0,10,0"
+                            Click="NewGrowerButton_Click"/>
+                    <Button Content="Cancel"
+                            Style="{StaticResource MaterialDesignOutlinedButton}" 
+                            Width="100" Height="35"
+                            Margin="0,0,10,0"
+                            Click="CancelButton_Click"/>
+                    <Button Content="Select"
+                            Style="{StaticResource MaterialDesignRaisedButton}" 
+                            Width="100" Height="35"
+                            Click="SelectButton_Click"
+                            IsEnabled="{Binding SelectedItem, ElementName=GrowersDataGrid, Converter={StaticResource NotNullConverter}}"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </materialDesign:Card>
 </Window>

@@ -5,14 +5,14 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WPFGrowerApp"
         xmlns:controls="clr-namespace:WPFGrowerApp.Controls"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes" 
         mc:Ignorable="d"
         Title="Berry Farm Management" Height="600" Width="900"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None" 
         ResizeMode="CanResizeWithGrip"
         AllowsTransparency="True"
-        BorderThickness="1"
-        BorderBrush="#CCCCCC">
+        Background="Transparent"> 
     
     <Window.Resources>
         <ResourceDictionary>
@@ -66,30 +66,31 @@
         </ResourceDictionary>
     </Window.Resources>
     
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition x:Name="MenuColumn" Width="Auto"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+    <materialDesign:Card UniformCornerRadius="8" Background="White">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="MenuColumn" Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-        <!-- Hamburger Menu -->
-        <controls:HamburgerMenu x:Name="MainMenu" Grid.Column="0" Width="250"/>
-        
-        <!-- Main Content Area -->
-        <Grid Grid.Column="1">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="50"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-            
-            <!-- Header with Toggle Button -->
-            <Grid Grid.Row="0" Background="#F8F8F8" MouseLeftButtonDown="HeaderArea_MouseLeftButtonDown">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="10,0,0,0">
-                    <Button x:Name="MenuToggleButton" 
+            <!-- Hamburger Menu -->
+            <controls:HamburgerMenu x:Name="MainMenu" Grid.Column="0" Width="250"/>
+
+            <!-- Main Content Area -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="50"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header with Toggle Button -->
+                <Grid Grid.Row="0" Background="#F8F8F8" MouseLeftButtonDown="HeaderArea_MouseLeftButtonDown">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="10,0,0,0">
+                        <Button x:Name="MenuToggleButton" 
                             HorizontalAlignment="Left" 
                             VerticalAlignment="Center"
                             Margin="15,0,0,0"
@@ -100,28 +101,30 @@
                             Background="Transparent"
                             BorderThickness="0"
                             Click="MenuToggleButton_Click"/>
-                </StackPanel>
-                
-                <!-- Window Controls -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button x:Name="MinimizeButton" Content="&#xE921;" Style="{StaticResource WindowControlButtonStyle}" Click="MinimizeButton_Click"/>
-                    <Button x:Name="MaximizeButton" Content="&#xE922;" Style="{StaticResource WindowControlButtonStyle}" Click="MaximizeButton_Click"/>
-                    <Button x:Name="CloseButton" Content="&#xE8BB;" Style="{StaticResource CloseButtonStyle}" Click="CloseButton_Click"/>
-                </StackPanel>
-            </Grid>
-            
-            <!-- Content Area with ScrollViewer -->
-            <ScrollViewer Grid.Row="1" 
+                    </StackPanel>
+
+                    <!-- Window Controls -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button x:Name="MinimizeButton" Content="&#xE921;" Style="{StaticResource WindowControlButtonStyle}" Click="MinimizeButton_Click"/>
+                        <Button x:Name="MaximizeButton" Content="&#xE922;" Style="{StaticResource WindowControlButtonStyle}" Click="MaximizeButton_Click"/>
+                        <Button x:Name="CloseButton" Content="&#xE8BB;" Style="{StaticResource CloseButtonStyle}" Click="CloseButton_Click"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Content Area with ScrollViewer -->
+                <ScrollViewer Grid.Row="1" 
                         VerticalScrollBarVisibility="Auto" 
                         HorizontalScrollBarVisibility="Auto"
                         PanningMode="Both">
-                <ContentControl Margin="15"
+                    <ContentControl Margin="15"
                               Content="{Binding CurrentViewModel}"
                               HorizontalAlignment="Stretch"
                               VerticalAlignment="Stretch"
                               HorizontalContentAlignment="Stretch"
                               VerticalContentAlignment="Stretch"/>
-            </ScrollViewer>
+                </ScrollViewer>
+            </Grid>
+
         </Grid>
-    </Grid>
+    </materialDesign:Card>
 </Window>
