@@ -104,9 +104,9 @@
                              materialDesign:HintAssist.Hint="Search..."
                              materialDesign:TextFieldAssist.LeadingIcon="Search"
                              Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                             Foreground="Black" 
                              Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                             KeyDown="SearchTextBox_KeyDown"
-                             Height="40"/> 
+                             KeyDown="SearchTextBox_KeyDown" Margin="0,0,0,-15"/> 
                 </Grid>
 
                 <DataGrid x:Name="GrowersDataGrid"
