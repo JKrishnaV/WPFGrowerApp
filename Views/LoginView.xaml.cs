@@ -37,23 +37,46 @@ namespace WPFGrowerApp.Views
             // Handle password changes to update command CanExecute state
             _passwordBox.PasswordChanged += (s, e) => 
             {
-                if (_viewModel.LoginCommand.CanExecute(_passwordBox.SecurePassword))
-                {
-                    CommandManager.InvalidateRequerySuggested();
-                }
+                (_viewModel.LoginCommand as Commands.RelayCommand)?.RaiseCanExecuteChanged();
             };
 
             // Allow login on Enter key press in PasswordBox
             _passwordBox.KeyDown += PasswordBox_KeyDown;
+
+            // Add Loaded event handler for focus
+            Loaded += LoginView_Loaded;
+        }
+
+        private void LoginView_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Set initial focus based on whether username is pre-filled
+            if (this.FindName("UsernameTextBox") is TextBox usernameBox)
+            {
+                if (string.IsNullOrEmpty(usernameBox.Text))
+                {
+                    // Username is empty, focus it
+                    usernameBox.Focus();
+                }
+                else
+                {
+                    // Username is pre-filled, focus password box
+                    _passwordBox?.Focus(); // Use the cached _passwordBox reference
+                }
+            }
+            else // Fallback if UsernameTextBox isn't found (shouldn't happen)
+            {
+                 _passwordBox?.Focus();
+            }
         }
 
         private void PasswordBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
             {
-                if (_viewModel.LoginCommand.CanExecute(_passwordBox.SecurePassword))
+                // Pass the PasswordBox control itself, consistent with the Button's CommandParameter
+                if (_viewModel.LoginCommand.CanExecute(_passwordBox)) 
                 {
-                    _viewModel.LoginCommand.Execute(_passwordBox.SecurePassword);
+                    _viewModel.LoginCommand.Execute(_passwordBox); 
                     e.Handled = true;
                 }
             }

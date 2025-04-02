@@ -10,12 +10,15 @@ using WPFGrowerApp.Views;
 using WPFGrowerApp.Infrastructure.Security;
 using WPFGrowerApp.Infrastructure.Logging;
 using System.Threading.Tasks;
+using WPFGrowerApp.DataAccess.Models; 
+using WPFGrowerApp.Properties; 
 
 namespace WPFGrowerApp
 {
     public partial class App : Application
     {
         public static IServiceProvider ServiceProvider { get; private set; }
+        public static User CurrentUser { get; private set; } 
 
         public App()
         {
@@ -53,8 +56,9 @@ namespace WPFGrowerApp
             services.AddTransient<ImportViewModel>();
             services.AddTransient<ReportsViewModel>();
             services.AddTransient<InventoryViewModel>();
-            services.AddTransient<SettingsViewModel>();
+            services.AddTransient<SettingsViewModel>(); 
             services.AddTransient<LoginViewModel>();
+            services.AddTransient<ChangePasswordViewModel>(); 
 
             // Register Views
             services.AddTransient<GrowerSearchView>();
@@ -87,16 +91,37 @@ namespace WPFGrowerApp
                 Logger.Info("Resolving LoginView.");
                 var loginView = ServiceProvider.GetRequiredService<LoginView>();
                 Logger.Info("Showing LoginView dialog.");
-                
-                // Center LoginView relative to screen
                 loginView.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-                
                 bool? loginResult = loginView.ShowDialog();
                 Logger.Info($"LoginView dialog closed with result: {loginResult?.ToString() ?? "null"}");
 
                 if (loginResult == true)
                 {
-                    Logger.Info("Login successful. Showing MainWindow.");
+                    // Get the authenticated user from the LoginViewModel
+                    var loginViewModel = loginView.DataContext as LoginViewModel;
+                    CurrentUser = loginViewModel?.AuthenticatedUser; 
+
+                    if (CurrentUser == null)
+                    {
+                        Logger.Fatal("Login reported success, but authenticated user object was null. Shutting down.");
+                        MessageBox.Show("A critical error occurred after login (User object not found).", "Login Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        Application.Current.Shutdown(-1);
+                        return;
+                    }
+
+                    // Save username to settings (Correct placement)
+                    try
+                    {
+                        Settings.Default.LastUsername = CurrentUser.Username; // Use Properties namespace implicitly or explicitly
+                        Settings.Default.Save();
+                        Logger.Info($"Saved last username: {CurrentUser.Username}");
+                    }
+                    catch (Exception settingsEx)
+                    {
+                        Logger.Error("Failed to save LastUsername setting.", settingsEx);
+                    }
+
+                    Logger.Info($"Login successful for user '{CurrentUser.Username}'. Showing MainWindow.");
                     mainWindow.Show();
                     Logger.Info("MainWindow shown successfully.");
                 }
@@ -144,7 +169,7 @@ namespace WPFGrowerApp
             finally
             {
                  Console.ResetColor();
-                 Application.Current.Shutdown(); // Explicitly shutdown after setting password
+                 Application.Current.Shutdown(); 
             }
         }
 

@@ -25,9 +25,10 @@
             <converters:InverseBooleanToBooleanConverter x:Key="InverseBooleanToBooleanConverter"/>
             <!-- Converters -->
             <converters:NotNullConverter x:Key="NotNullConverter"/>
-            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/> <!-- Built-in WPF converter -->
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/> 
             <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
-            <converters:NotNullOrEmptyToVisibilityConverter x:Key="NotNullOrEmptyToVisibilityConverter"/> <!-- Added -->
+            <converters:NotNullOrEmptyToVisibilityConverter x:Key="NotNullOrEmptyToVisibilityConverter"/> 
+            <converters:SecureStringArrayConverter x:Key="SecureStringArrayConverter"/> <!-- Added -->
         </ResourceDictionary>
     </Application.Resources>
 </Application>

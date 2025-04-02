@@ -21,5 +21,8 @@
         <views:ImportUserControl />
     </DataTemplate>
 
+    <DataTemplate DataType="{x:Type viewmodels:ChangePasswordViewModel}">
+        <views:ChangePasswordView />
+    </DataTemplate>
 
 </ResourceDictionary>

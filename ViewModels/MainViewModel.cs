@@ -25,10 +25,11 @@ namespace WPFGrowerApp.ViewModels
             // Initialize commands using the NavigateTo helper
             NavigateToDashboardCommand = new RelayCommand(p => NavigateTo<DashboardViewModel>("Dashboard", p), CanNavigate); // Corrected
             NavigateToGrowersCommand = new RelayCommand(NavigateToGrowersExecuteAsync, CanNavigate); // Keep async for special logic
-            NavigateToImportCommand = new RelayCommand(p => NavigateTo<ImportViewModel>("Import", p), CanNavigate); // Corrected
-            NavigateToReportsCommand = new RelayCommand(p => NavigateTo<ReportsViewModel>("Reports", p), CanNavigate); // Corrected
-            NavigateToInventoryCommand = new RelayCommand(p => NavigateTo<InventoryViewModel>("Inventory", p), CanNavigate); // Corrected
-            NavigateToSettingsCommand = new RelayCommand(p => NavigateTo<SettingsViewModel>("Settings", p), CanNavigate); // Corrected (added parameter passing)
+            NavigateToImportCommand = new RelayCommand(p => NavigateTo<ImportViewModel>("Import", p), CanNavigate); 
+            NavigateToReportsCommand = new RelayCommand(p => NavigateTo<ReportsViewModel>("Reports", p), CanNavigate); 
+            NavigateToInventoryCommand = new RelayCommand(p => NavigateTo<InventoryViewModel>("Inventory", p), CanNavigate); 
+            // Update Settings command to navigate to ChangePasswordViewModel
+            NavigateToSettingsCommand = new RelayCommand(p => NavigateTo<ChangePasswordViewModel>("Change Password", p), CanNavigate); 
 
             // Set default view model to Dashboard
             NavigateTo<DashboardViewModel>("Dashboard"); // Refactored initial navigation

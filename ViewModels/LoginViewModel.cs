@@ -4,7 +4,9 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using WPFGrowerApp.Commands;
 using WPFGrowerApp.DataAccess.Interfaces;
+using WPFGrowerApp.DataAccess.Models; 
 using WPFGrowerApp.Infrastructure.Logging;
+using WPFGrowerApp.Properties; // Added for Settings
 
 namespace WPFGrowerApp.ViewModels
 {
@@ -14,20 +16,44 @@ namespace WPFGrowerApp.ViewModels
         private string _username;
         private string _errorMessage;
         private bool _isLoggingIn;
+        private User _authenticatedUser; // Added field to store the user
 
         // Action to be called by the View to close the window
         public Action<bool> CloseAction { get; set; }
+
+        // Public property to expose the authenticated user
+        public User AuthenticatedUser => _authenticatedUser; 
 
         public LoginViewModel(IUserService userService)
         {
             _userService = userService ?? throw new ArgumentNullException(nameof(userService));
             LoginCommand = new RelayCommand(LoginExecuteAsync, CanLoginExecute);
+
+            // Load last username from settings
+            try
+            {
+                Username = Properties.Settings.Default.LastUsername;
+                Logger.Info($"Loaded last username: {Username}");
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't prevent startup
+                Logger.Error("Failed to load LastUsername setting.", ex);
+                Username = string.Empty; // Default to empty if loading fails
+            }
         }
 
         public string Username
         {
             get => _username;
-            set => SetProperty(ref _username, value); // Assuming SetProperty is in ViewModelBase
+            set 
+            {
+                if (SetProperty(ref _username, value))
+                {
+                    // Also notify the command when Username changes
+                    ((RelayCommand)LoginCommand).RaiseCanExecuteChanged();
+                }
+            }
         }
 
         public string ErrorMessage
@@ -53,7 +79,7 @@ namespace WPFGrowerApp.ViewModels
 
         private bool CanLoginExecute(object parameter)
         {
-            // Parameter is expected to be the PasswordBox control itself
+            // Corrected: Parameter is the PasswordBox from XAML binding
             var passwordBox = parameter as System.Windows.Controls.PasswordBox;
             return !IsLoggingIn && 
                    !string.IsNullOrWhiteSpace(Username) && 
@@ -64,8 +90,9 @@ namespace WPFGrowerApp.ViewModels
 
         private async Task LoginExecuteAsync(object parameter)
         {
+            // Corrected: Parameter is the PasswordBox from XAML binding
             var passwordBox = parameter as System.Windows.Controls.PasswordBox;
-            if (passwordBox == null || passwordBox.SecurePassword == null) return; // Should not happen if CanExecute is correct
+            if (passwordBox == null || passwordBox.SecurePassword == null) return; 
 
             var securePassword = passwordBox.SecurePassword; // Get SecureString here
 
@@ -86,6 +113,7 @@ namespace WPFGrowerApp.ViewModels
 
                 if (user != null)
                 {
+                    _authenticatedUser = user; // Store the authenticated user
                     Logger.Info($"User '{Username}' logged in successfully.");
                     // Signal success and close the login window
                     CloseAction?.Invoke(true); 
