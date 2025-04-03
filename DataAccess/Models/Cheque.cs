@@ -13,9 +13,9 @@ namespace WPFGrowerApp.DataAccess.Models
         private decimal _amount;
         private decimal _year;
         private string _chequeType;
-        private bool _void;
+        private bool? _void; // Changed to nullable bool
         private DateTime? _dateClear;
-        private bool _isCleared;
+        private bool? _isCleared; // Changed to nullable bool
         private string _currency;
         private DateTime? _qaddDate;
         private string _qaddTime;
@@ -118,7 +118,7 @@ namespace WPFGrowerApp.DataAccess.Models
             }
         }
 
-        public bool Void
+        public bool? Void // Changed to nullable bool
         {
             get => _void;
             set
@@ -144,7 +144,7 @@ namespace WPFGrowerApp.DataAccess.Models
             }
         }
 
-        public bool IsCleared
+        public bool? IsCleared // Changed to nullable bool
         {
             get => _isCleared;
             set
@@ -294,4 +294,4 @@ namespace WPFGrowerApp.DataAccess.Models
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
-} 
+}

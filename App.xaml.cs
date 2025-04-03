@@ -41,6 +41,10 @@ namespace WPFGrowerApp
             services.AddTransient<IImportBatchService, ImportBatchService>();
             services.AddTransient<IPayGroupService, PayGroupService>();
             services.AddTransient<IReceiptService, ReceiptService>();
+            services.AddTransient<IPriceService, PriceService>(); // Added
+            services.AddTransient<IPostBatchService, PostBatchService>(); // Added
+            services.AddTransient<IPaymentService, PaymentService>(); // Added
+            services.AddTransient<IDepotService, DepotService>(); // Added
             services.AddTransient<ValidationService>();
             services.AddTransient<IUserService, UserService>();
 
@@ -56,9 +60,10 @@ namespace WPFGrowerApp
             services.AddTransient<ImportViewModel>();
             services.AddTransient<ReportsViewModel>();
             services.AddTransient<InventoryViewModel>();
-            services.AddTransient<SettingsViewModel>(); 
+            services.AddTransient<SettingsViewModel>();
+            services.AddTransient<PaymentRunViewModel>(); // Added
             services.AddTransient<LoginViewModel>();
-            services.AddTransient<ChangePasswordViewModel>(); 
+            services.AddTransient<ChangePasswordViewModel>();
 
             // Register Views
             services.AddTransient<GrowerSearchView>();

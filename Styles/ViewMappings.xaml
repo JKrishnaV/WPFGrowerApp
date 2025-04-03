@@ -25,4 +25,8 @@
         <views:ChangePasswordView />
     </DataTemplate>
 
+    <DataTemplate DataType="{x:Type viewmodels:PaymentRunViewModel}">
+        <views:PaymentRunView />
+    </DataTemplate>
+
 </ResourceDictionary>

@@ -27,9 +27,10 @@ namespace WPFGrowerApp.ViewModels
             NavigateToGrowersCommand = new RelayCommand(NavigateToGrowersExecuteAsync, CanNavigate); // Keep async for special logic
             NavigateToImportCommand = new RelayCommand(p => NavigateTo<ImportViewModel>("Import", p), CanNavigate); 
             NavigateToReportsCommand = new RelayCommand(p => NavigateTo<ReportsViewModel>("Reports", p), CanNavigate); 
-            NavigateToInventoryCommand = new RelayCommand(p => NavigateTo<InventoryViewModel>("Inventory", p), CanNavigate); 
+            NavigateToInventoryCommand = new RelayCommand(p => NavigateTo<InventoryViewModel>("Inventory", p), CanNavigate);
+            NavigateToPaymentRunCommand = new RelayCommand(p => NavigateTo<PaymentRunViewModel>("Payment Run", p), CanNavigate); // Added
             // Update Settings command to navigate to ChangePasswordViewModel
-            NavigateToSettingsCommand = new RelayCommand(p => NavigateTo<ChangePasswordViewModel>("Change Password", p), CanNavigate); 
+            NavigateToSettingsCommand = new RelayCommand(p => NavigateTo<ChangePasswordViewModel>("Change Password", p), CanNavigate);
 
             // Set default view model to Dashboard
             NavigateTo<DashboardViewModel>("Dashboard"); // Refactored initial navigation
@@ -57,8 +58,9 @@ namespace WPFGrowerApp.ViewModels
         public ICommand NavigateToGrowersCommand { get; }
         public ICommand NavigateToImportCommand { get; }
         public ICommand NavigateToReportsCommand { get; }
-        public ICommand NavigateToInventoryCommand { get; } // Added
-        public ICommand NavigateToSettingsCommand { get; } // Added
+        public ICommand NavigateToInventoryCommand { get; }
+        public ICommand NavigateToPaymentRunCommand { get; } // Added
+        public ICommand NavigateToSettingsCommand { get; }
 
         private bool CanNavigate(object? parameter) => !_isNavigating; // Changed parameter to object?
 

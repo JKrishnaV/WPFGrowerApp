@@ -116,35 +116,120 @@ namespace WPFGrowerApp.DataAccess.Services
                         .Select(v => v.Trim())
                         .ToArray();
 
-                    // Skip empty receipts (those with no product and zero NET)
-                    if (string.IsNullOrEmpty(GetValue(values, headerIndexes, "PRODUCTID")) &&
-                        decimal.Parse(GetValue(values, headerIndexes, "NET")) == 0)
-                    {
-                        continue;
-                    }
+                    //commented by Jay
+                    //// Skip empty receipts (those with no product and zero NET)
+                    //if (string.IsNullOrEmpty(GetValue(values, headerIndexes, "PRODUCTID")) &&
+                    //    decimal.Parse(GetValue(values, headerIndexes, "NET")) == 0)
+                    //{
+                    //    continue;
+                    //}
 
                     var dateIn = DateTime.Parse(GetValue(values, headerIndexes, "DATEIN"));
                     var timeIn = TimeSpan.Parse(GetValue(values, headerIndexes, "TIMEIN"));
                     var receiptDateTime = dateIn.Add(timeIn);
-                    var result = ExtractGradeAndProcessID(GetValue(values, headerIndexes, "GRADEID"));
+                    // Parse basic fields
+                    var depot = GetValueSafe(values, headerIndexes, "SITEID");
+                    var productId = GetValueSafe(values, headerIndexes, "PRODUCTID");
+                    var growerIdStr = GetValueSafe(values, headerIndexes, "GROWERID");
+                    var netStr = GetValueSafe(values, headerIndexes, "NET");
+                    var priceStr = GetValueSafe(values, headerIndexes, "PRICE");
+                    var fieldId = GetValueSafe(values, headerIndexes, "FIELDID");
+                    var ticketNoStr = GetValueSafe(values, headerIndexes, "TICKETNO");
+                    var timeInStr = GetValueSafe(values, headerIndexes, "TIMEIN"); // Get raw TimeIn
+                    var gradeId = GetValueSafe(values, headerIndexes, "GRADEID"); // Get raw GradeId
+                    var voidedStr = GetValueSafe(values, headerIndexes, "VOIDED"); // Get raw Voided
+                    var addDateStr = GetValueSafe(values, headerIndexes, "ADD DATE");
+                    var addBy = GetValueSafe(values, headerIndexes, "ADD BY");
+                    var editDateStr = GetValueSafe(values, headerIndexes, "EDIT DATE");
+                    var editBy = GetValueSafe(values, headerIndexes, "EDIT BY");
+                    var editReason = GetValueSafe(values, headerIndexes, "EDIT REASON");
+                    var dockPercentStr = GetValueSafe(values, headerIndexes, "DOCKPERCENT");
+
+                    // Basic validation and parsing
+                    if (!decimal.TryParse(growerIdStr, out var growerNumber) ||
+                        !decimal.TryParse(netStr, out var net) ||
+                        !decimal.TryParse(priceStr, out var price) ||
+                        !decimal.TryParse(ticketNoStr, out var ticketNumber) ||
+                        !decimal.TryParse(dockPercentStr, out var dockPercent))
+                    {
+                        Logger.Warn($"Skipping line {i + 1} due to parsing error for basic numeric fields.");
+                         continue; // Skip row if essential numbers can't be parsed
+                    }
+
+                    // Removed the check that skipped empty receipts
+
+                    // Parse Date and Time
+                    if (!DateTime.TryParse(GetValueSafe(values, headerIndexes, "DATEIN"), out var parsedDateIn) || // Renamed dateIn
+                        !TimeSpan.TryParse(timeInStr, out var timeInSpan)) // Use timeInStr
+                    {
+                         Logger.Warn($"Skipping line {i + 1} due to parsing error for date/time fields.");
+                         continue; // Skip row if date/time can't be parsed
+                    }
+                    var parsedReceiptDateTime = parsedDateIn.Add(timeInSpan); // Renamed receiptDateTime
+
+                    // Parse Audit Dates (handle potential nulls/empty strings)
+                    DateTime.TryParse(addDateStr, out var addDateParsed);
+                    DateTime? addDate = string.IsNullOrWhiteSpace(addDateStr) ? null : addDateParsed;
+                    DateTime.TryParse(editDateStr, out var editDateParsed);
+                    DateTime? editDate = string.IsNullOrWhiteSpace(editDateStr) ? null : editDateParsed;
+
 
                     var receipt = new Receipt
                     {
-                        Depot = GetValue(values, headerIndexes, "SITEID"),
-                        Product = GetValue(values, headerIndexes, "PRODUCTID"),
-                        GrowerNumber = decimal.Parse(GetValue(values, headerIndexes, "GROWERID")),
-                        Net = decimal.Parse(GetValue(values, headerIndexes, "NET")),
-                        ThePrice = decimal.Parse(GetValue(values, headerIndexes, "PRICE")), // Using PRICE as Grade
-                        Grade = result.Grade,
-                        Process = result.ProcessID,
-                        Date = receiptDateTime,
-                        FromField = GetValue(values, headerIndexes, "FIELDID"),
+                        Depot = depot,
+                        ReceiptNumber = ticketNumber, // Use parsed TICKETNO
+                        Product = productId,
+                        GrowerNumber = growerNumber,
+                        Net = net,
+                        ThePrice = price,
+                        DockPercent = dockPercent, // Parse DOCKPERCENT
+                        // Grade and Process are derived later in ReceiptService
+                        Date = parsedReceiptDateTime, // Use renamed variable
+                        FromField = fieldId,
                         Imported = true,
-                        DayUniq = await GenerateDayUniqAsync(receiptDateTime)
+                        DayUniq = await GenerateDayUniqAsync(receiptDateTime), // Consider if DayUniq needs adjustment
+
+                        // Add new fields
+                        TimeIn = timeInStr, // Store raw TimeIn string
+                        GradeId = gradeId, // Store raw GradeId string
+                        Voided = voidedStr, // Store raw Voided string
+                        AddDate = addDate,
+                        AddBy = addBy,
+                        EditDate = editDate,
+                        EditBy = editBy,
+                        EditReason = editReason,
+                        ContainerData = new List<ContainerInfo>() // Initialize container list
                     };
 
+                    // Parse Container Data (CONT1, IN1, OUT1, CONT2, IN2, OUT2...)
+                    for (int j = 1; j <= 12; j++) // Assuming max 12 containers based on CSV sample header
+                    {
+                        var contType = GetValueSafe(values, headerIndexes, $"CONT{j}");
+                        if (!string.IsNullOrEmpty(contType))
+                        {
+                            var inCountStr = GetValueSafe(values, headerIndexes, $"IN{j}");
+                            var outCountStr = GetValueSafe(values, headerIndexes, $"OUT{j}");
+
+                            int.TryParse(inCountStr, out var inCount);
+                            int.TryParse(outCountStr, out var outCount);
+
+                            receipt.ContainerData.Add(new ContainerInfo
+                            {
+                                Type = contType,
+                                InCount = inCount,
+                                OutCount = outCount
+                            });
+                        }
+                        else
+                        {
+                            // Stop parsing containers if CONTx is empty
+                            break;
+                        }
+                    }
+
+
                     receipts.Add(receipt);
-                    progress?.Report((int)((i - 1) * 100.0 / totalLines));
+                    progress?.Report((int)((i) * 100.0 / totalLines)); // Corrected progress calculation index
                 }
 
                 progress?.Report(100);
@@ -169,7 +254,22 @@ namespace WPFGrowerApp.DataAccess.Services
                 return (grade, gradeId.Substring(0, 2));
             }
 
-            throw new ArgumentException("Invalid gradeId format", nameof(gradeId));
+            // Keep original logic, but ensure it handles potential null/empty gradeId gracefully if needed
+            if (string.IsNullOrEmpty(gradeId) || gradeId.Length < 2)
+            {
+                 // Return default or handle as needed, maybe log a warning
+                 return (0, string.Empty);
+                // Or throw: throw new ArgumentException("Invalid gradeId format", nameof(gradeId));
+            }
+            // Use TryParse for robustness
+            if (int.TryParse(gradeId.Substring(gradeId.Length - 1), out int parsedGrade)) // Renamed grade
+            {
+                return (parsedGrade, gradeId.Substring(0, 2)); // First two chars for process
+            }
+
+            // Return default or handle as needed if parsing fails
+            return (0, gradeId.Substring(0, 2)); // Keep original return structure for default
+            // Or throw: throw new ArgumentException("Invalid gradeId format", nameof(gradeId));
         }
 
         public async Task<(bool IsValid, List<string> Errors)> ValidateReceiptsAsync(
@@ -241,12 +341,28 @@ namespace WPFGrowerApp.DataAccess.Services
 
         private string GetValue(string[] values, Dictionary<string, int> headerIndexes, string columnName)
         {
-            if (headerIndexes.TryGetValue(columnName, out int index) && index < values.Length)
+            // Combine the two TryGetValue calls and rename the index variable
+            if (headerIndexes.TryGetValue(columnName.ToUpper(), out int foundIndex) && foundIndex < values.Length)
+            {
+                return values[foundIndex];
+            }
+            // Logger.Warn($"Column {columnName} not found or value missing in CSV line.");
+            return null; // Or string.Empty
+        }
+
+        // Helper function for safer parsing
+        private string GetValueSafe(string[] values, Dictionary<string, int> headerIndexes, string columnName)
+        {
+            if (headerIndexes.TryGetValue(columnName.ToUpper(), out int index) && index < values.Length)
             {
                 return values[index];
             }
-            throw new InvalidOperationException($"Column {columnName} not found or value missing");
+            // Return empty string if column not found or value missing to avoid null reference issues downstream
+            // Log a warning if this is unexpected
+            // Logger.Warn($"Column '{columnName}' not found or value missing in CSV line.");
+            return string.Empty;
         }
+
 
         private async Task<decimal> GenerateDayUniqAsync(DateTime date)
         {
@@ -255,4 +371,4 @@ namespace WPFGrowerApp.DataAccess.Services
             return decimal.Parse(date.ToString("yyyyMMdd"));
         }
     }
-} 
+}

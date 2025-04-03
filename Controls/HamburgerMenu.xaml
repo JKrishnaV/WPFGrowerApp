@@ -93,8 +93,14 @@
                     Style="{StaticResource MenuButtonStyle}"
                     Command="{Binding DataContext.NavigateToImportCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/>
 
-            <Button x:Name="InventoryButton" 
-                    Content="Inventory" 
+            <Button x:Name="PaymentRunButton"
+                    Content="Payment Run"
+                    Tag="&#xE8C1;" 
+                    Style="{StaticResource MenuButtonStyle}"
+                    Command="{Binding DataContext.NavigateToPaymentRunCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/>
+
+            <Button x:Name="InventoryButton"
+                    Content="Inventory"
                     Tag="&#xE7BF;"
                     Style="{StaticResource MenuButtonStyle}"
                     Command="{Binding DataContext.NavigateToInventoryCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/> 

@@ -25,23 +25,27 @@ namespace WPFGrowerApp.DataAccess.Services
                 errors.Add($"Invalid grower number: {receipt.GrowerNumber}");
             }
 
-            // Validate product
-            if (!await ValidateProductAsync(receipt.Product))
+            // Validate product only if ProductID is present OR Net weight is non-zero
+            if (!string.IsNullOrEmpty(receipt.Product) || receipt.Net != 0)
             {
-                errors.Add($"Invalid product code: {receipt.Product}");
+                if (!await ValidateProductAsync(receipt.Product))
+                {
+                    errors.Add($"Invalid product code: {receipt.Product}");
+                }
             }
 
             // Validate process
-            if (!await ValidateProcessAsync(receipt.Process, receipt.Grade))
-            {
-                errors.Add($"Invalid process code: {receipt.Process}, grade: {receipt.Grade}"); 
-            }
+            //commented by Jay 
+            //if (!await ValidateProcessAsync(receipt.Process, receipt.Grade))
+            //{
+            //    errors.Add($"Invalid process code: {receipt.Process}, grade: {receipt.Grade}"); 
+            //}
 
             // Validate grade (1-3 are valid grades based on the database schema)
-            if (receipt.Grade < 1 || receipt.Grade > 3)
-            {
-                errors.Add($"Invalid grade code: {receipt.Grade}. Must be between 1 and 3.");
-            }
+            //if (receipt.Grade < 1 || receipt.Grade > 3)
+            //{
+            //    errors.Add($"Invalid grade code: {receipt.Grade}. Must be between 1 and 3.");
+            //}
 
             // Validate weights
             //if (receipt.Gross < MIN_WEIGHT || receipt.Gross > MAX_WEIGHT)
@@ -54,9 +58,18 @@ namespace WPFGrowerApp.DataAccess.Services
                 errors.Add($"Invalid tare weight: {receipt.Tare}");
             }
 
-            if (receipt.Net < MIN_WEIGHT || receipt.Net > MAX_WEIGHT)
+            // Validate net weight range only if ProductID is present OR Net weight is non-zero
+            if (!string.IsNullOrEmpty(receipt.Product) || receipt.Net != 0)
             {
-                errors.Add($"Net weight {receipt.Net} is outside valid range ({MIN_WEIGHT}-{MAX_WEIGHT})");
+                if (receipt.Net < MIN_WEIGHT || receipt.Net > MAX_WEIGHT)
+                {
+                    errors.Add($"Net weight {receipt.Net} is outside valid range ({MIN_WEIGHT}-{MAX_WEIGHT})");
+                }
+            }
+            // Allow Net == 0 if ProductID is empty (container movement)
+            else if (receipt.Net != 0) // If ProductID is empty, Net MUST be 0
+            {
+                 errors.Add($"Net weight must be 0 when Product ID is empty (found {receipt.Net})");
             }
 
             // Validate price
@@ -178,4 +191,4 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
     }
-} 
+}

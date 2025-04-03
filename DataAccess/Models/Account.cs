@@ -32,6 +32,18 @@ namespace WPFGrowerApp.DataAccess.Models
         private decimal _advBat;
         private decimal _finBat;
 
+        // Audit Fields
+        private DateTime? _qaddDate;
+        private string _qaddTime;
+        private string _qaddOp;
+        private DateTime? _qedDate;
+        private string _qedTime;
+        private string _qedOp;
+        private DateTime? _qdelDate;
+        private string _qdelTime;
+        private string _qdelOp;
+
+
         public decimal Number
         {
             get => _number;
@@ -357,11 +369,32 @@ namespace WPFGrowerApp.DataAccess.Models
             }
         }
 
+        // Audit Properties
+        public DateTime? QaddDate { get => _qaddDate; set => SetProperty(ref _qaddDate, value); }
+        public string QaddTime { get => _qaddTime; set => SetProperty(ref _qaddTime, value); }
+        public string QaddOp { get => _qaddOp; set => SetProperty(ref _qaddOp, value); }
+        public DateTime? QedDate { get => _qedDate; set => SetProperty(ref _qedDate, value); }
+        public string QedTime { get => _qedTime; set => SetProperty(ref _qedTime, value); }
+        public string QedOp { get => _qedOp; set => SetProperty(ref _qedOp, value); }
+        public DateTime? QdelDate { get => _qdelDate; set => SetProperty(ref _qdelDate, value); }
+        public string QdelTime { get => _qdelTime; set => SetProperty(ref _qdelTime, value); }
+        public string QdelOp { get => _qdelOp; set => SetProperty(ref _qdelOp, value); }
+
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
+
+        // Helper for INotifyPropertyChanged
+        protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = null)
+        {
+            if (Equals(field, value)) return false;
+            field = value;
+            OnPropertyChanged(propertyName);
+            return true;
+        }
     }
-} 
+}

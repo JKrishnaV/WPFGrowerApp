@@ -3,10 +3,57 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:WPFGrowerApp.Views"
-        xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels"
-        mc:Ignorable="d">
-    
+             xmlns:local="clr-namespace:WPFGrowerApp.Views"
+             xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:ImportViewModel, IsDesignTimeCreatable=False}">
+
+    <UserControl.Resources>
+        <!-- Style for ProgressBars with Color Triggers -->
+        <Style x:Key="StatusProgressBar" TargetType="ProgressBar">
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryHueMidBrush}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Status}" Value="Completed">
+                    <Setter Property="Foreground" Value="Green"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="Completed with errors">
+                    <Setter Property="Foreground" Value="Orange"/>
+                </DataTrigger>
+                 <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding Status}" Value="Error"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Foreground" Value="Red"/>
+                </MultiDataTrigger>
+                 <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding Status}" Value="Invalid format"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Foreground" Value="Red"/>
+                </MultiDataTrigger>
+                 <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding Status}" Value="Validation failed"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Foreground" Value="Red"/>
+                </MultiDataTrigger>
+                 <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding Status}" Value="Processing failed"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Foreground" Value="Red"/>
+                </MultiDataTrigger>
+                 <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding Status}" Value="Batch validation error"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Foreground" Value="Red"/>
+                </MultiDataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -50,7 +97,9 @@
                 <TextBlock Grid.Column="1"
                            Text="{Binding SelectedFiles.Count, StringFormat={}{0} files selected}"
                            VerticalAlignment="Center"
-                           Margin="10,0,0,0"/>
+                 Margin="10,0,0,0"
+                           Visibility="{Binding SelectedFiles.Count, Converter={StaticResource VisibilityConverter}}"/>
+                           <!-- Hide count if 0 files selected -->
             </Grid>
         </StackPanel>
 
@@ -59,12 +108,17 @@
             <TextBlock Text="Depot" 
                        FontSize="16" 
                        FontWeight="SemiBold" 
-                       Margin="0,0,0,10"/>
-            
-            <TextBox Text="{Binding Depot, UpdateSourceTrigger=PropertyChanged}"
-                     Style="{StaticResource ModernTextBoxStyle}"
-                     Margin="0,0,0,20"
-                     IsEnabled="{Binding IsImporting, Converter={StaticResource InverseBooleanConverter}}"/>
+                        Margin="0,0,0,10"/>
+
+            <!-- Replaced TextBox with ComboBox for Depot -->
+            <ComboBox ItemsSource="{Binding Depots}"
+                      SelectedItem="{Binding SelectedDepot}"
+                      DisplayMemberPath="DepotName"
+                      SelectedValuePath="DepotId" 
+                      materialDesign:HintAssist.Hint="Select Depot"
+                      Style="{StaticResource MaterialDesignFloatingHintComboBox}"
+                      Margin="0,0,0,20"
+                      IsEnabled="{Binding IsImporting, Converter={StaticResource InverseBooleanConverter}}"/>
 
             <!-- Files List and Progress Section -->
             <Grid Margin="0,0,0,20">
@@ -83,8 +137,10 @@
                     
                     <ProgressBar Height="20" 
                                 Value="{Binding Progress}"
-                                Margin="0,0,0,5"/>
-                    
+                                Margin="0,0,0,5"
+                                Style="{StaticResource StatusProgressBar}"/>
+                                <!-- Apply style for overall progress -->
+
                     <TextBlock Text="{Binding StatusMessage}"
                                Margin="0,0,0,10"/>
                 </StackPanel>
@@ -100,29 +156,56 @@
                         <DataTemplate>
                             <Grid Margin="5">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="100"/>
-                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>      <!-- File Path -->
+                                    <ColumnDefinition Width="Auto"/>   <!-- Progress Bar -->
+                                    <ColumnDefinition Width="150"/>  <!-- Status Text -->
+                                    <ColumnDefinition Width="Auto"/>   <!-- Processed Count -->
+                                    <ColumnDefinition Width="Auto"/>   <!-- Remove Button -->
                                 </Grid.ColumnDefinitions>
 
-                                <TextBlock Text="{Binding FilePath}"
+                                <TextBlock Grid.Column="0"
+                                           Text="{Binding FilePath}"
                                            TextTrimming="CharacterEllipsis"
-                                           VerticalAlignment="Center"/>
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,10,0"/>
 
                                 <ProgressBar Grid.Column="1"
                                             Value="{Binding Progress}"
                                             Width="100"
                                             Height="15"
-                                            Margin="10,0"
-                                            VerticalAlignment="Center"/>
+                                            VerticalAlignment="Center"
+                                            Style="{StaticResource StatusProgressBar}"/>
+                                            <!-- Apply style for individual progress -->
 
                                 <TextBlock Grid.Column="2"
                                            Text="{Binding Status}"
                                            VerticalAlignment="Center"
                                            Margin="10,0"/>
 
-                                <Button Grid.Column="3"
+                                <!-- Total Count Display -->
+                                <TextBlock Grid.Column="3" VerticalAlignment="Center" Margin="10,0" Foreground="Gray">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Status}" Value="Completed">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Status}" Value="Completed with errors">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                    <TextBlock.Text>
+                                        <MultiBinding StringFormat="({0}/{1} receipts loaded)">
+                                            <Binding Path="ProcessedReceiptCount" FallbackValue="?"/>
+                                            <Binding Path="TotalReceiptCount" FallbackValue="?"/>
+                                        </MultiBinding>
+                                    </TextBlock.Text>
+                                </TextBlock>
+
+                                <Button Grid.Column="4" 
                                         Content="Remove"
                                         Command="{Binding DataContext.RemoveFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         CommandParameter="{Binding}"
@@ -137,17 +220,34 @@
                 <!-- Errors List -->
                 <Grid Grid.Row="2">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/> <!-- Filter Controls -->
+                        <RowDefinition Height="Auto"/> <!-- Header -->
+                        <RowDefinition Height="*"/>    <!-- List -->
                     </Grid.RowDefinitions>
 
-                    <TextBlock Text="Errors" 
-                               FontSize="16" 
-                               FontWeight="SemiBold" 
+                     <!-- Error Filter Controls -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,10,0,10">
+                        <TextBlock Text="Filter Errors:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <ComboBox ItemsSource="{Binding SelectedFiles}"
+                                  DisplayMemberPath="FilePath"
+                                  SelectedValuePath="FilePath"
+                                  SelectedValue="{Binding SelectedFileNameFilter}"
+                                  materialDesign:HintAssist.Hint="Filter by File"
+                                  MinWidth="200" Margin="0,0,10,0">
+                            <!-- TODO: Add an "All Files" option if needed -->
+                        </ComboBox>
+                        <TextBox Text="{Binding ErrorTextFilter, UpdateSourceTrigger=PropertyChanged}"
+                                 materialDesign:HintAssist.Hint="Filter by text"
+                                 MinWidth="200"/>
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="1" Text="Errors"
+                               FontSize="16"
+                               FontWeight="SemiBold"
                                Margin="0,0,0,10"/>
 
-                    <ListView Grid.Row="1" 
-                              ItemsSource="{Binding Errors}"
+                    <ListView Grid.Row="2"
+                              ItemsSource="{Binding FilteredErrors}" 
                               BorderThickness="1"
                               BorderBrush="{StaticResource PrimaryLightBrush}"
                               MaxHeight="100">
@@ -165,8 +265,16 @@
 
         <!-- Action Buttons -->
         <StackPanel Grid.Row="3" 
-                    Orientation="Horizontal" 
+                    Orientation="Horizontal"
                     HorizontalAlignment="Right">
+            <Button Content="Revert Last Import"
+                    Command="{Binding RevertImportCommand}"
+                    Padding="15,5"
+                    Margin="0,0,10,0"
+                    Style="{StaticResource SecondaryButtonStyle}"
+                    ToolTip="Reverts the database changes made by the last import attempt."/>
+                    <!-- IsEnabled binding handled by RelayCommand CanExecute -->
+
             <Button Content="Cancel"
                     Command="{Binding CancelImportCommand}"
                     Padding="15,5"

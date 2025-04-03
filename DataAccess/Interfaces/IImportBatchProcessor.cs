@@ -14,13 +14,15 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         Task<ImportBatch> StartImportBatchAsync(string depot, string fileName);
 
         /// <summary>
-        /// Processes a collection of receipts within the specified import batch
+        /// Processes a single receipt within the specified import batch.
+        /// Includes validation, calculation, and saving.
         /// </summary>
-        Task<(bool Success, List<string> Errors)> ProcessReceiptsAsync(
+        /// <returns>True if the single receipt was processed and saved successfully, false otherwise.</returns>
+        Task<bool> ProcessSingleReceiptAsync(
             ImportBatch importBatch,
-            IEnumerable<Receipt> receipts,
-            IProgress<int> progress = null,
+            Receipt receipt,
             CancellationToken cancellationToken = default);
+        // Note: Progress reporting might need to be handled differently now, perhaps in the calling ViewModel loop.
 
         /// <summary>
         /// Updates the import batch statistics
@@ -42,4 +44,4 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// </summary>
         Task<(int TotalReceipts, int ProcessedReceipts, int ErrorCount)> GetBatchStatusAsync(ImportBatch importBatch);
     }
-} 
+}

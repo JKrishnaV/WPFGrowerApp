@@ -44,78 +44,64 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        public async Task<(bool Success, List<string> Errors)> ProcessReceiptsAsync(
+        // Renamed and modified to process a single receipt
+        public async Task<bool> ProcessSingleReceiptAsync(
             ImportBatch importBatch,
-            IEnumerable<Receipt> receipts,
-            IProgress<int> progress = null,
+            Receipt receipt,
             CancellationToken cancellationToken = default)
         {
             try
             {
-                Logger.Info($"Processing receipts for import batch {importBatch.ImpBatch}");
-                var errors = new List<string>();
-                var receiptList = receipts.ToList();
-                var totalReceipts = receiptList.Count;
-                var processedCount = 0;
+                cancellationToken.ThrowIfCancellationRequested();
 
-                foreach (var receipt in receiptList)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
+                receipt.ImpBatch = importBatch.ImpBatch;
 
-                    try
-                    {
-                        receipt.ImpBatch = importBatch.ImpBatch;
-                        
-                        // Validate receipt                     
-                        try
-                        {
-                            await _validationService.ValidateReceiptAsync(receipt);
-                        }
-                        catch (ImportValidationException ex)
-                        {
-                            errors.Add($"Invalid receipt data for grower {receipt.GrowerNumber}");
-                            continue;
-                        }
+                // Validate receipt (already done in ViewModel, but keep for robustness?)
+                // Consider if validation should solely live here or in ViewModel loop.
+                // For now, assume validation is primarily handled before calling this.
+                // If validation IS needed here, it should throw or return false on failure.
+                // try
+                // {
+                //     await _validationService.ValidateReceiptAsync(receipt);
+                // }
+                // catch (ImportValidationException ex)
+                // {
+                //     // Log the specific validation errors if needed
+                //     Logger.Warn($"Validation failed for receipt {receipt.ReceiptNumber}: {string.Join("; ", ex.ValidationErrors)}");
+                //     return false; // Indicate failure
+                // }
 
-                        // Calculate net weight if needed
-                        if (receipt.Net <= 0)
-                        {
-                            receipt.Net = await _receiptService.CalculateNetWeightAsync(receipt);
-                        }
+                // Calculate net weight if needed
+                // Note: Gross/Tare are now set to 0 in ReceiptService.SaveReceiptAsync based on sample.
+                // This calculation might need adjustment or removal depending on final logic for Gross/Tare.
+                // if (receipt.Net <= 0 && receipt.Gross > 0) // Only calculate if Gross is positive
+                // {
+                //     receipt.Net = await _receiptService.CalculateNetWeightAsync(receipt);
+                // }
 
-                        // Get price if not set
-                        if (receipt.ThePrice <= 0)
-                        {
-                            receipt.ThePrice = await _receiptService.GetPriceForReceiptAsync(receipt);
-                        }
+                // Get price if not set (Still commented out as per previous state)
+                //if (receipt.ThePrice <= 0)
+                //{
+                //    receipt.ThePrice = await _receiptService.GetPriceForReceiptAsync(receipt);
+                //}
 
-                        // Save receipt
-                        await _receiptService.SaveReceiptAsync(receipt);
+                // Save receipt
+                await _receiptService.SaveReceiptAsync(receipt);
 
-                        processedCount++;
-                        progress?.Report((int)(processedCount * 100.0 / totalReceipts));
-                    }
-                    catch (Exception ex)
-                    {
-                        var error = $"Error processing receipt for grower {receipt.GrowerNumber}: {ex.Message}";
-                        Logger.Error(error, ex);
-                        errors.Add(error);
-                    }
-                }
-
-                // Update batch statistics
-                await UpdateBatchStatisticsAsync(importBatch);
-
-                var success = !errors.Any();
-                Logger.Info($"Receipt processing completed. Success: {success}, Error count: {errors.Count}");
-                return (success, errors);
+                // Log success for this specific receipt
+                Logger.Info($"Successfully processed and saved receipt {receipt.ReceiptNumber} for batch {importBatch.ImpBatch}.");
+                return true; // Indicate success for this receipt
             }
             catch (Exception ex)
             {
-                Logger.Error("Error processing receipts", ex);
-                throw;
+                // Log error for this specific receipt
+                var error = $"Error processing receipt {receipt.ReceiptNumber} for grower {receipt.GrowerNumber}: {ex.Message}";
+                Logger.Error(error, ex);
+                // Do not add to a shared error list here, let the calling ViewModel handle errors per receipt.
+                return false; // Indicate failure for this receipt
             }
         }
+
 
         public async Task UpdateBatchStatisticsAsync(ImportBatch importBatch)
         {
@@ -204,4 +190,4 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
     }
-} 
+}
