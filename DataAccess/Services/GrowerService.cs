@@ -246,6 +246,59 @@ namespace WPFGrowerApp.DataAccess.Services
             catch (Exception ex)
             {
                 Infrastructure.Logging.Logger.Error($"Error in GetUniqueProvincesAsync: {ex.Message}", ex);
+                 throw;
+            }
+        }
+
+        public async Task<List<GrowerInfo>> GetAllGrowersBasicInfoAsync()
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    // Select only Number and Name for the basic info model
+                    var sql = @"
+                        SELECT
+                            NUMBER as Number, -- Corrected alias to match GrowerInfo.Number
+                            NAME as Name
+                        FROM GROWER
+                        ORDER BY NAME"; // Or order by Number if preferred
+
+                    var growers = await connection.QueryAsync<GrowerInfo>(sql);
+                    return growers.ToList();
+                }
+            }
+            catch (Exception ex)
+            {
+                Infrastructure.Logging.Logger.Error($"Error in GetAllGrowersBasicInfoAsync: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        public async Task<List<GrowerInfo>> GetOnHoldGrowersAsync()
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    // Select Number and Name for growers where OnHold is true (1)
+                    var sql = @"
+                        SELECT
+                            NUMBER as Number,
+                            NAME as Name
+                        FROM GROWER
+                        WHERE ONHOLD = 1
+                        ORDER BY NAME"; // Or order by Number
+
+                    var growers = await connection.QueryAsync<GrowerInfo>(sql);
+                    return growers.ToList();
+                }
+            }
+            catch (Exception ex)
+            {
+                Infrastructure.Logging.Logger.Error($"Error in GetOnHoldGrowersAsync: {ex.Message}", ex);
                 throw;
             }
         }

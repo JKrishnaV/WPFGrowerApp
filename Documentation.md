@@ -58,3 +58,65 @@ The application follows the MVVM (Model-View-ViewModel) architecture for clean s
 - Implement search functionality for growers
 - Add reporting features
 - Expand to include other aspects of farm management
+
+## Payment Module: Advance Payment Run
+
+This process calculates and posts advance payments (1st, 2nd, or 3rd) based on imported receipt data. It does *not* generate the final cheques; that is a subsequent step.
+
+### Workflow:
+
+1.  **Initiation (UI):**
+    *   User navigates to the "Payment Run" view.
+    *   User selects the desired **Advance Number** (1, 2, or 3).
+    *   User sets the **Payment Date** (date for accounting entries) and **Cutoff Date** (receipts up to this date are included).
+    *   User confirms the **Crop Year**.
+    *   User can optionally filter by Grower ID, Pay Group, Product ID, or Process ID.
+    *   User clicks the "Start Payment Run" button.
+
+2.  **ViewModel (`PaymentRunViewModel`):**
+    *   The `StartPaymentRunCommand` executes the `StartPaymentRunAsync` method.
+    *   UI is updated to show "Running" status.
+    *   Parameters are gathered from the UI.
+    *   Calls `IPaymentService.ProcessAdvancePaymentRunAsync`.
+
+3.  **Service Layer (`PaymentService`):**
+    *   Calls `IPostBatchService` to create a new `PostBat` record and get a unique batch ID.
+    *   Calls `IReceiptService.GetReceiptsForAdvancePaymentAsync` to fetch eligible `Daily` records based on:
+        *   `CutoffDate`.
+        *   Advance number (checking `POST_BAT1/2/3` is 0).
+        *   `FIN_BAT = 0`.
+        *   `ISVOID = 0`.
+        *   `Grower.ONHOLD = 0`.
+        *   Any user-specified filters.
+    *   Groups fetched receipts by Grower Number.
+    *   Loops through each grower:
+        *   Fetches grower details (`IGrowerService`).
+        *   Loops through each eligible receipt for the grower:
+            *   Finds the relevant price record ID (`IPriceService.FindPriceRecordIdAsync`).
+            *   Gets the base advance price for the current advance number (`IPriceService.GetAdvancePriceAsync`).
+            *   Calculates the net advance amount to pay for *this* advance by subtracting previously paid amounts (`ADV_PR1`, `ADV_PR2` - requires fetching these from the `Daily` record via `IReceiptService`).
+            *   If Advance 1, calculates time premium (`IPriceService.GetTimePremiumAsync`) and marketing deduction (`IPriceService.GetMarketingDeductionAsync`).
+            *   Creates in-memory `Account` objects for the net advance, premium (if Adv 1), and deduction (if Adv 1), assigning the batch ID.
+            *   Updates the `Daily` record via `IReceiptService.UpdateReceiptAdvanceDetailsAsync`, setting `ADV_PRN`, `ADV_PRIDN`, `POST_BATN`, `LAST_ADVPB`, and `PREM_PRICE` (if Adv 1).
+            *   Marks the price record as used via `IPriceService.MarkAdvancePriceAsUsedAsync`.
+        *   Saves the generated `Account` entries for the grower via `IAccountService.CreatePaymentAccountEntriesAsync`.
+    *   Returns success status, errors, and the created `PostBatch` object.
+
+4.  **ViewModel Wrap-up:**
+    *   Updates UI with final status message and any errors.
+    *   Displays confirmation/error dialog via `IDialogService`.
+    *   Resets `IsRunning` state.
+
+### Key Data Flow:
+
+*   Input Parameters (UI) -> `PaymentRunViewModel`
+*   `PaymentRunViewModel` -> `IPaymentService.ProcessAdvancePaymentRunAsync`
+*   `PaymentService` uses:
+    *   `IPostBatchService` (Create `PostBat`)
+    *   `IReceiptService` (Get eligible `Daily`, Update `Daily`)
+    *   `IGrowerService` (Get grower details)
+    *   `IPriceService` (Get prices, Mark used)
+    *   `IAccountService` (Create `Account` entries)
+*   Result/Errors -> `PaymentRunViewModel` -> UI Display
+
+This process prepares the `Account` table with payable entries, ready for the subsequent Cheque Generation step.

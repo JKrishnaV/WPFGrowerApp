@@ -1,0 +1,29 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Custom ListBoxItem Style for Selection Highlight -->
+    <Style x:Key="ListBoxItemStyle_CustomHighlight" TargetType="ListBoxItem">
+        <Setter Property="Padding" Value="5"/> <!-- Add some padding -->
+        <!-- EventSetter removed - cannot be in a standalone ResourceDictionary -->
+        <Style.Triggers>
+            <Trigger Property="IsSelected" Value="True">
+                <!-- Use a lighter shade of the primary color with some transparency -->
+                <Setter Property="Background">
+                    <Setter.Value>
+                        <SolidColorBrush Color="{DynamicResource PrimaryHueMidColor}" Opacity="0.3"/>
+                    </Setter.Value>
+                </Setter>
+                <Setter Property="Foreground" Value="{DynamicResource PrimaryHueMidForegroundBrush}"/>
+            </Trigger>
+            <Trigger Property="IsMouseOver" Value="True">
+                 <!-- Optional: Subtle highlight on mouse over -->
+                 <Setter Property="Background">
+                    <Setter.Value>
+                        <SolidColorBrush Color="{DynamicResource PrimaryHueLightColor}" Opacity="0.15"/>
+                    </Setter.Value>
+                </Setter>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+</ResourceDictionary>

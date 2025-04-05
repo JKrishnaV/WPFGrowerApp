@@ -546,12 +546,13 @@ namespace WPFGrowerApp.DataAccess.Services
         public async Task<List<Receipt>> GetReceiptsForAdvancePaymentAsync(
             int advanceNumber,
             DateTime cutoffDate,
-            decimal? includeGrowerId = null,
-            string includePayGroup = null,
-            decimal? excludeGrowerId = null,
-            string excludePayGroup = null,
-            string productId = null,
-            string processId = null)
+            // Updated signature to accept lists
+            List<decimal> includeGrowerIds = null,
+            List<string> includePayGroupIds = null,
+            List<decimal> excludeGrowerIds = null,
+            List<string> excludePayGroupIds = null,
+            List<string> productIds = null,
+            List<string> processIds = null)
         {
              if (advanceNumber < 1 || advanceNumber > 3)
             {
@@ -589,19 +590,19 @@ namespace WPFGrowerApp.DataAccess.Services
                     sqlBuilder.Where("d.ISVOID = 0"); // Not voided
                     sqlBuilder.Where("g.ONHOLD = 0"); // Grower not on hold
 
-                    // Add optional filters
-                    if (includeGrowerId.HasValue)
-                        sqlBuilder.Where("d.NUMBER = @IncludeGrowerId", new { IncludeGrowerId = includeGrowerId.Value });
-                    if (excludeGrowerId.HasValue)
-                        sqlBuilder.Where("d.NUMBER <> @ExcludeGrowerId", new { ExcludeGrowerId = excludeGrowerId.Value });
-                    if (!string.IsNullOrEmpty(includePayGroup))
-                        sqlBuilder.Where("g.PAYGRP = @IncludePayGroup", new { IncludePayGroup = includePayGroup });
-                    if (!string.IsNullOrEmpty(excludePayGroup))
-                        sqlBuilder.Where("g.PAYGRP <> @ExcludePayGroup", new { ExcludePayGroup = excludePayGroup });
-                    if (!string.IsNullOrEmpty(productId))
-                        sqlBuilder.Where("d.PRODUCT = @ProductId", new { ProductId = productId });
-                    if (!string.IsNullOrEmpty(processId))
-                        sqlBuilder.Where("d.PROCESS = @ProcessId", new { ProcessId = processId });
+                    // Add optional list filters using WHERE IN / NOT IN
+                    if (includeGrowerIds?.Any() ?? false)
+                        sqlBuilder.Where("d.NUMBER IN @IncludeGrowerIds", new { IncludeGrowerIds = includeGrowerIds });
+                    if (excludeGrowerIds?.Any() ?? false)
+                        sqlBuilder.Where("d.NUMBER NOT IN @ExcludeGrowerIds", new { ExcludeGrowerIds = excludeGrowerIds });
+                    if (includePayGroupIds?.Any() ?? false)
+                        sqlBuilder.Where("g.PAYGRP IN @IncludePayGroupIds", new { IncludePayGroupIds = includePayGroupIds });
+                    if (excludePayGroupIds?.Any() ?? false)
+                        sqlBuilder.Where("g.PAYGRP NOT IN @ExcludePayGroupIds", new { ExcludePayGroupIds = excludePayGroupIds });
+                    if (productIds?.Any() ?? false)
+                        sqlBuilder.Where("d.PRODUCT IN @ProductIds", new { ProductIds = productIds });
+                    if (processIds?.Any() ?? false)
+                        sqlBuilder.Where("d.PROCESS IN @ProcessIds", new { ProcessIds = processIds });
 
                     // Execute query
                     var results = await connection.QueryAsync<Receipt>(selector.RawSql, selector.Parameters);

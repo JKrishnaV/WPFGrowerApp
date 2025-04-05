@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using WPFGrowerApp.DataAccess.Models;
@@ -42,21 +42,21 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// </summary>
         /// <param name="advanceNumber">The advance number (1, 2, or 3).</param>
         /// <param name="cutoffDate">Include receipts up to this date.</param>
-        /// <param name="includeGrowerId">Optional: Filter by grower ID.</param>
-        /// <param name="includePayGroup">Optional: Filter by pay group.</param>
-        /// <param name="excludeGrowerId">Optional: Exclude grower ID.</param>
-        /// <param name="excludePayGroup">Optional: Exclude pay group.</param>
-        /// <param name="productId">Optional: Filter by product ID.</param>
-        /// <param name="processId">Optional: Filter by process ID.</param>
+        /// <param name="includeGrowerIds">Optional: List of grower IDs to include (if empty, include all).</param> // Assuming include might also become multi-select later
+        /// <param name="includePayGroupIds">Optional: List of pay group IDs to include (if empty, include all).</param> // Assuming include might also become multi-select later
+        /// <param name="excludeGrowerIds">Optional: List of grower IDs to exclude.</param>
+        /// <param name="excludePayGroupIds">Optional: List of pay group IDs to exclude.</param>
+        /// <param name="productIds">Optional: List of product IDs to include (if empty, include all).</param>
+        /// <param name="processIds">Optional: List of process IDs to include (if empty, include all).</param>
         /// <returns>A list of Receipt objects eligible for the payment run.</returns>
         Task<List<Receipt>> GetReceiptsForAdvancePaymentAsync(
             int advanceNumber,
             DateTime cutoffDate,
-            decimal? includeGrowerId = null,
-            string includePayGroup = null,
-            decimal? excludeGrowerId = null,
-            string excludePayGroup = null,
-            string productId = null,
-            string processId = null);
+            List<decimal> includeGrowerIds = null, // Changed to List
+            List<string> includePayGroupIds = null, // Changed to List
+            List<decimal> excludeGrowerIds = null, // Changed to List
+            List<string> excludePayGroupIds = null, // Changed to List
+            List<string> productIds = null, // Changed to List
+            List<string> processIds = null); // Changed to List
     }
 }

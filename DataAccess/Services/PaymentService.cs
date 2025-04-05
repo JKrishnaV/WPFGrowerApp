@@ -43,12 +43,11 @@ namespace WPFGrowerApp.DataAccess.Services
             DateTime paymentDate,
             DateTime cutoffDate,
             int cropYear,
-            decimal? includeGrowerId = null,
-            string includePayGroup = null,
-            decimal? excludeGrowerId = null,
-            string excludePayGroup = null,
-            string productId = null,
-            string processId = null,
+            // Updated signature to accept lists
+            List<decimal> excludeGrowerIds = null,
+            List<string> excludePayGroupIds = null,
+            List<string> productIds = null,
+            List<string> processIds = null,
             IProgress<string> progress = null)
         {
             var errors = new List<string>();
@@ -68,9 +67,16 @@ namespace WPFGrowerApp.DataAccess.Services
 
                 // 2. Get eligible receipts
                 progress?.Report("Fetching eligible receipts...");
+                // TODO: Update GetReceiptsForAdvancePaymentAsync signature in IReceiptService and ReceiptService
+                // The following line will cause compile errors until the service is updated.
                 var eligibleReceipts = await _receiptService.GetReceiptsForAdvancePaymentAsync(
-                    advanceNumber, cutoffDate, includeGrowerId, includePayGroup,
-                    excludeGrowerId, excludePayGroup, productId, processId);
+                    advanceNumber, cutoffDate,
+                    null, // includeGrowerId removed
+                    null, // includePayGroup removed
+                    excludeGrowerIds, // Pass list
+                    excludePayGroupIds, // Pass list
+                    productIds, // Pass list
+                    processIds); // Pass list
 
                 if (!eligibleReceipts.Any())
                 {

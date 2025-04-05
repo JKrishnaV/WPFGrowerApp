@@ -43,8 +43,10 @@ namespace WPFGrowerApp
             services.AddTransient<IReceiptService, ReceiptService>();
             services.AddTransient<IPriceService, PriceService>(); // Added
             services.AddTransient<IPostBatchService, PostBatchService>(); // Added
-            services.AddTransient<IPaymentService, PaymentService>(); // Added
-            services.AddTransient<IDepotService, DepotService>(); // Added
+            services.AddTransient<IPaymentService, PaymentService>();
+            services.AddTransient<IDepotService, DepotService>();
+            services.AddTransient<IProductService, ProductService>(); // Added
+            services.AddTransient<IProcessService, ProcessService>(); // Added
             services.AddTransient<ValidationService>();
             services.AddTransient<IUserService, UserService>();
 

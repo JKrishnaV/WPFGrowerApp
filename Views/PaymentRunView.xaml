@@ -6,6 +6,8 @@
              xmlns:local="clr-namespace:WPFGrowerApp.Views"
              xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:infra="clr-namespace:WPFGrowerApp.Infrastructure"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:PaymentRunViewModel, IsDesignTimeCreatable=False}"
              d:DesignHeight="600" d:DesignWidth="800"
@@ -15,7 +17,8 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>         <!-- Run Log -->
+            <RowDefinition Height="*"/>         <!-- On Hold Growers -->
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
@@ -24,79 +27,215 @@
         <!-- Parameters Section -->
         <materialDesign:Card Grid.Row="1" Padding="16" Margin="0,0,0,16">
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="20"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
+                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/> <!-- Row 0: Main Inputs -->
+                    <RowDefinition Height="Auto"/> <!-- Row 1: Filter GroupBox -->
+                    <RowDefinition Height="Auto"/> <!-- Row 2: Run Button -->
                 </Grid.RowDefinitions>
 
-                <!-- Left Column -->
-                <ComboBox Grid.Row="0" Grid.Column="0" Margin="0,5"
-                          materialDesign:HintAssist.Hint="Advance Number (1, 2, or 3)"
-                          Style="{StaticResource MaterialDesignFloatingHintComboBox}"
-                          SelectedValue="{Binding AdvanceNumber}">
-                    <ComboBoxItem Content="1"/>
-                    <ComboBoxItem Content="2"/>
-                    <ComboBoxItem Content="3"/>
-                </ComboBox>
+                <!-- Row 0: Main Inputs Grid -->
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>    <!-- Col 0 -->
+                        <ColumnDefinition Width="20"/>   <!-- Spacer -->
+                        <ColumnDefinition Width="*"/>    <!-- Col 2 -->
+                        <ColumnDefinition Width="20"/>   <!-- Spacer -->
+                        <ColumnDefinition Width="*"/>    <!-- Col 4 -->
+                        <ColumnDefinition Width="20"/>   <!-- Spacer -->
+                        <ColumnDefinition Width="*"/>    <!-- Col 6 -->
+                    </Grid.ColumnDefinitions>
 
-                <DatePicker Grid.Row="1" Grid.Column="0" Margin="0,5"
-                            materialDesign:HintAssist.Hint="Payment Date"
-                            Style="{StaticResource MaterialDesignFloatingHintDatePicker}"
-                            SelectedDate="{Binding PaymentDate}"/>
+                    <ComboBox Grid.Column="0" Margin="0,5"
+                              materialDesign:HintAssist.Hint="Advance Number"
+                              Style="{StaticResource MaterialDesignFloatingHintComboBox}"
+                              ItemsSource="{Binding AdvanceOptions}"
+                              DisplayMemberPath="Display"
+                              SelectedValuePath="Value"
+                              SelectedValue="{Binding AdvanceNumber}"/>
 
-                <DatePicker Grid.Row="2" Grid.Column="0" Margin="0,5"
-                            materialDesign:HintAssist.Hint="Include Receipts Up To"
-                            Style="{StaticResource MaterialDesignFloatingHintDatePicker}"
-                            SelectedDate="{Binding CutoffDate}"/>
+                    <DatePicker Grid.Column="2" Margin="0,5"
+                                materialDesign:HintAssist.Hint="Payment Date"
+                                Style="{StaticResource MaterialDesignFloatingHintDatePicker}"
+                                SelectedDate="{Binding PaymentDate}"/>
 
-                <TextBox Grid.Row="3" Grid.Column="0" Margin="0,5"
-                         materialDesign:HintAssist.Hint="Crop Year"
-                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"
-                         Text="{Binding CropYear}"/>
+                    <DatePicker Grid.Column="4" Margin="0,5"
+                                materialDesign:HintAssist.Hint="Include Receipts Up To"
+                                Style="{StaticResource MaterialDesignFloatingHintDatePicker}"
+                                SelectedDate="{Binding CutoffDate}"/>
 
-                <TextBox Grid.Row="4" Grid.Column="0" Margin="0,5"
-                         materialDesign:HintAssist.Hint="Product ID (Optional)"
-                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"
-                         Text="{Binding ProductId}"/>
+                    <TextBox Grid.Column="6" Margin="0,5"
+                             materialDesign:HintAssist.Hint="Crop Year"
+                             Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                             Text="{Binding CropYear}"/>
+                </Grid>
 
-                <TextBox Grid.Row="5" Grid.Column="0" Margin="0,5"
-                         materialDesign:HintAssist.Hint="Process ID (Optional)"
-                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"
-                         Text="{Binding ProcessId}"/>
+                <!-- Row 1: Filter GroupBox -->
+                <GroupBox Grid.Row="1" Margin="0,15,0,0"
+                          Header="Optional Filters"
+                          Style="{StaticResource MaterialDesignCardGroupBox}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>    <!-- Col 0 -->
+                            <ColumnDefinition Width="20"/>   <!-- Spacer -->
+                            <ColumnDefinition Width="*"/>    <!-- Col 2 -->
+                            <ColumnDefinition Width="20"/>   <!-- Spacer -->
+                            <ColumnDefinition Width="*"/>    <!-- Col 4 -->
+                            <ColumnDefinition Width="20"/>   <!-- Spacer -->
+                            <ColumnDefinition Width="*"/>    <!-- Col 6 -->
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/> <!-- Labels -->
+                            <RowDefinition Height="Auto"/> <!-- ListBoxes -->
+                        </Grid.RowDefinitions>
 
-                <!-- Right Column -->
-                 <TextBox Grid.Row="0" Grid.Column="2" Margin="0,5"
-                         materialDesign:HintAssist.Hint="Include Grower ID (Optional)"
-                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"
-                         Text="{Binding IncludeGrowerId}"/>
+                        <!-- Labels -->
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Product IDs:" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" VerticalAlignment="Bottom" Margin="0,0,0,0"/>
+                        <TextBlock Grid.Row="0" Grid.Column="2" Text="Process IDs:" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" VerticalAlignment="Bottom" Margin="0,0,0,0"/>
+                        <TextBlock Grid.Row="0" Grid.Column="4" Text="Exclude Growers:" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" VerticalAlignment="Bottom" Margin="0,0,0,0"/>
+                        <TextBlock Grid.Row="0" Grid.Column="6" Text="Exclude Pay Groups:" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" VerticalAlignment="Bottom" Margin="0,0,0,0"/>
 
-                 <TextBox Grid.Row="1" Grid.Column="2" Margin="0,5"
-                         materialDesign:HintAssist.Hint="Include Pay Group (Optional)"
-                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"
-                         Text="{Binding IncludePayGroup}"/>
+                        <!-- ListBoxes -->
+                        <ListBox Grid.Row="1" Grid.Column="0" Margin="0,5,0,5" MaxHeight="150"
+                         ItemsSource="{Binding Products}"
+                         SelectionMode="Extended"
+                         infra:ListBoxSelectedItemsBehavior.SelectedItems="{Binding SelectedProducts}"
+                         ItemContainerStyle="{StaticResource ListBoxItemStyle_CustomHighlight}"
+                         PreviewMouseLeftButtonDown="ListBoxItem_PreviewMouseLeftButtonDown_Toggle"
+                         IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBooleanConverter}}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                                    <TextBlock x:Name="ProductText">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text">
+                                                    <Setter.Value>
+                                                        <MultiBinding StringFormat="{}{0} - {1}">
+                                                            <Binding Path="ProductId"/>
+                                                            <Binding Path="Description"/>
+                                                        </MultiBinding>
+                                                    </Setter.Value>
+                                                </Setter>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding ProductId}" Value="{x:Null}">
+                                                        <Setter Property="Text" Value="{Binding Description}"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding ProductId}" Value="">
+                                                        <Setter Property="Text" Value="{Binding Description}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
 
-                 <TextBox Grid.Row="2" Grid.Column="2" Margin="0,5"
-                         materialDesign:HintAssist.Hint="Exclude Grower ID (Optional)"
-                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"
-                         Text="{Binding ExcludeGrowerId}"/>
+                        <ListBox Grid.Row="1" Grid.Column="2" Margin="0,5,0,5" MaxHeight="150"
+                         ItemsSource="{Binding Processes}"
+                         SelectionMode="Extended"
+                         infra:ListBoxSelectedItemsBehavior.SelectedItems="{Binding SelectedProcesses}"
+                         ItemContainerStyle="{StaticResource ListBoxItemStyle_CustomHighlight}"
+                         PreviewMouseLeftButtonDown="ListBoxItem_PreviewMouseLeftButtonDown_Toggle"
+                         IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBooleanConverter}}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                                    <TextBlock x:Name="ProcessText">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text">
+                                                    <Setter.Value>
+                                                        <MultiBinding StringFormat="{}{0} - {1}">
+                                                            <Binding Path="ProcessId"/>
+                                                            <Binding Path="Description"/>
+                                                        </MultiBinding>
+                                                    </Setter.Value>
+                                                </Setter>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding ProcessId}" Value="{x:Null}">
+                                                        <Setter Property="Text" Value="{Binding Description}"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding ProcessId}" Value="">
+                                                        <Setter Property="Text" Value="{Binding Description}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
 
-                 <TextBox Grid.Row="3" Grid.Column="2" Margin="0,5"
-                         materialDesign:HintAssist.Hint="Exclude Pay Group (Optional)"
-                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"
-                         Text="{Binding ExcludePayGroup}"/>
+                        <ListBox Grid.Row="1" Grid.Column="4" Margin="0,5,0,5" MaxHeight="150"
+                         ItemsSource="{Binding AllGrowers}"
+                         SelectionMode="Extended"
+                         infra:ListBoxSelectedItemsBehavior.SelectedItems="{Binding SelectedExcludeGrowers}"
+                         ItemContainerStyle="{StaticResource ListBoxItemStyle_CustomHighlight}"
+                         PreviewMouseLeftButtonDown="ListBoxItem_PreviewMouseLeftButtonDown_Toggle"
+                         IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBooleanConverter}}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                                    <TextBlock x:Name="GrowerText">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text">
+                                                    <Setter.Value>
+                                                        <MultiBinding StringFormat="{}{0} - {1}">
+                                                            <Binding Path="Name"/>
+                                                            <Binding Path="Number"/>
+                                                        </MultiBinding>
+                                                    </Setter.Value>
+                                                </Setter>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Number}" Value="0">
+                                                        <Setter Property="Text" Value="{Binding Name}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
 
-                <!-- Run Button -->
-                 <Button Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,16,0,0"
+                        <ListBox Grid.Row="1" Grid.Column="6" Margin="0,5,0,5" MaxHeight="150"
+                         ItemsSource="{Binding PayGroups}"
+                         SelectionMode="Extended"
+                         infra:ListBoxSelectedItemsBehavior.SelectedItems="{Binding SelectedExcludePayGroups}"
+                         ItemContainerStyle="{StaticResource ListBoxItemStyle_CustomHighlight}"
+                         PreviewMouseLeftButtonDown="ListBoxItem_PreviewMouseLeftButtonDown_Toggle"
+                         IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBooleanConverter}}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                                    <TextBlock x:Name="PayGroupText">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text">
+                                                    <Setter.Value>
+                                                        <MultiBinding StringFormat="{}{0} - {1}">
+                                                            <Binding Path="PayGroupId"/>
+                                                            <Binding Path="Description"/>
+                                                        </MultiBinding>
+                                                    </Setter.Value>
+                                                </Setter>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding PayGroupId}" Value="{x:Null}">
+                                                        <Setter Property="Text" Value="{Binding Description}"/>
+                                                    </DataTrigger>
+                                                     <DataTrigger Binding="{Binding PayGroupId}" Value="">
+                                                        <Setter Property="Text" Value="{Binding Description}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </GroupBox>
+
+                <!-- Row 2: Run Button -->
+                <Button Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="7" Margin="0,16,0,0"
                         Style="{StaticResource MaterialDesignRaisedButton}"
                         Command="{Binding StartPaymentRunCommand}"
                         IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBooleanConverter}}"
@@ -115,7 +254,25 @@
              <ListBox Grid.Row="1" ItemsSource="{Binding RunLog}" Margin="0,0,0,8" BorderThickness="1" BorderBrush="{DynamicResource MaterialDesignDivider}" VerticalAlignment="Stretch" HorizontalContentAlignment="Stretch"/>
         </Grid>
 
-        <StatusBar Grid.Row="3" VerticalAlignment="Bottom">
+         <!-- On Hold Growers Section -->
+         <GroupBox Grid.Row="3" Margin="0,10,0,0" Header="Growers Currently On Hold" Style="{StaticResource MaterialDesignCardGroupBox}">
+                  <!-- Wrap ListView in ScrollViewer with MaxHeight -->
+                  <ScrollViewer MaxHeight="250" VerticalScrollBarVisibility="Auto">
+                      <ListView ItemsSource="{Binding OnHoldGrowers}"
+                                MinHeight="100">
+                                <!-- Removed ScrollViewer attached property -->
+                          <ListView.View>
+                              <GridView>
+                            <GridViewColumn Header="Number" DisplayMemberBinding="{Binding Number}" Width="100"/>
+                             <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="250"/>
+                              </GridView>
+                          </ListView.View>
+                      </ListView>
+                  </ScrollViewer>
+          </GroupBox>
+
+
+        <StatusBar Grid.Row="4" VerticalAlignment="Bottom">
             <StatusBarItem>
                 <TextBlock Text="{Binding StatusMessage}" />
             </StatusBarItem>
