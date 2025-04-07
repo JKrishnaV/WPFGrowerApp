@@ -1,4 +1,5 @@
 using System;
+using MaterialDesignThemes.Wpf; // Added for PackIconKind
 
 namespace WPFGrowerApp.Models
 {
@@ -17,10 +18,17 @@ namespace WPFGrowerApp.Models
         /// </summary>
         public Type ViewModelType { get; }
 
-        public SettingsNavigationItem(string displayName, Type viewModelType)
+        /// <summary>
+        /// The Material Design icon kind for this setting item.
+        /// </summary>
+        public PackIconKind IconKind { get; } // Added IconKind property
+
+        // Updated constructor to include IconKind
+        public SettingsNavigationItem(string displayName, Type viewModelType, PackIconKind iconKind)
         {
             DisplayName = displayName ?? throw new ArgumentNullException(nameof(displayName));
             ViewModelType = viewModelType ?? throw new ArgumentNullException(nameof(viewModelType));
+            IconKind = iconKind; // Assign IconKind
         }
     }
 }

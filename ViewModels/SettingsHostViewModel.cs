@@ -4,7 +4,8 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
 using WPFGrowerApp.Commands;
-using WPFGrowerApp.Models; // Assuming SettingsNavigationItem will be created here
+using WPFGrowerApp.Models; 
+using MaterialDesignThemes.Wpf; // Added for PackIconKind
 
 namespace WPFGrowerApp.ViewModels
 {
@@ -22,10 +23,10 @@ namespace WPFGrowerApp.ViewModels
 
             SettingsOptions = new ObservableCollection<SettingsNavigationItem>
             {
-                new SettingsNavigationItem("Change Password", typeof(ChangePasswordViewModel)),
-                new SettingsNavigationItem("Products", typeof(ProductViewModel)),
-                new SettingsNavigationItem("Process Types", typeof(ProcessViewModel)), // Renamed
-                new SettingsNavigationItem("Depots", typeof(DepotViewModel)) // Renamed
+                new SettingsNavigationItem("Change Password", typeof(ChangePasswordViewModel), PackIconKind.Key),
+                new SettingsNavigationItem("Products", typeof(ProductViewModel), PackIconKind.PackageVariant),
+                new SettingsNavigationItem("Process Types", typeof(ProcessViewModel), PackIconKind.Cog), 
+                new SettingsNavigationItem("Depots", typeof(DepotViewModel), PackIconKind.Store) 
                 // Add more settings here as needed
             };
 

@@ -1,15 +1,24 @@
 <UserControl x:Class="WPFGrowerApp.Views.SettingsHostView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:WPFGrowerApp.Views"
              xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
-             mc:Ignorable="d" 
+             mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:SettingsHostViewModel, IsDesignTimeCreatable=False}"
              d:DesignHeight="450" d:DesignWidth="800"
              Background="{DynamicResource MaterialDesignPaper}">
+
+    <UserControl.Resources>
+        <DataTemplate x:Key="SettingsNavigationItemTemplate">
+            <StackPanel Orientation="Horizontal">
+                <materialDesign:PackIcon Kind="{Binding IconKind}" VerticalAlignment="Center" Margin="0,0,10,0" Width="20" Height="20"/>
+                <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
+            </StackPanel>
+        </DataTemplate>
+    </UserControl.Resources>
 
     <Grid>
         <Grid.ColumnDefinitions>
@@ -18,20 +27,37 @@
         </Grid.ColumnDefinitions>
 
         <!-- Settings Navigation List -->
-        <Border Grid.Column="0" Background="{DynamicResource MaterialDesignCardBackground}" BorderBrush="{DynamicResource MaterialDesignDivider}" BorderThickness="0,0,1,0">
+        <!-- Changed Border Background to match Hamburger Menu, Added CornerRadius -->
+        <Border Grid.Column="0" Background="#5454A8" BorderBrush="{DynamicResource MaterialDesignDivider}" BorderThickness="0,0,1,0" CornerRadius="8,0,0,8"> 
+            <!-- Applied radius only to top-left and bottom-left corners -->
             <ListBox ItemsSource="{Binding SettingsOptions}"
                      SelectedItem="{Binding SelectedSetting}"
-                     DisplayMemberPath="DisplayName"
+                     ItemTemplate="{StaticResource SettingsNavigationItemTemplate}"
                      Style="{StaticResource MaterialDesignNavigationListBox}"
                      ScrollViewer.VerticalScrollBarVisibility="Auto">
-                <!-- Use Material Design style for navigation -->
+                <ListBox.ItemContainerStyle>
+                     <!-- Adjusted Style for dark background -->
+                    <Style TargetType="ListBoxItem" BasedOn="{StaticResource MaterialDesignNavigationListBoxItem}">
+                        <!-- Default Foreground for non-selected items -->
+                        <Setter Property="Foreground" Value="White"/> 
+                        <Style.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <!-- Use a slightly different background for selection, e.g., main menu header color -->
+                                <Setter Property="Background" Value="#4A4A9E"/> 
+                                <Setter Property="Foreground" Value="White"/> <!-- Ensure selected text is white -->
+                                <Setter Property="FontWeight" Value="Medium"/>
+                            </Trigger>
+                            <!-- Keep default hover from base style or customize if needed -->
+                        </Style.Triggers>
+                    </Style>
+                </ListBox.ItemContainerStyle>
             </ListBox>
         </Border>
 
         <!-- Content Area for Selected Setting -->
-        <ContentControl Grid.Column="1" 
+        <ContentControl Grid.Column="1"
                         Content="{Binding CurrentSettingViewModel}"
-                        Margin="15"/> 
+                        Margin="15"/>
                         <!-- Add margin for spacing -->
 
     </Grid>
