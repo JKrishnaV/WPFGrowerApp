@@ -29,4 +29,14 @@
         <views:PaymentRunView />
     </DataTemplate>
 
+    <!-- Settings Host Mapping -->
+    <DataTemplate DataType="{x:Type viewmodels:SettingsHostViewModel}">
+        <views:SettingsHostView />
+    </DataTemplate>
+
+    <!-- Product Management Mapping -->
+    <DataTemplate DataType="{x:Type viewmodels:ProductViewModel}">
+        <views:ProductView />
+    </DataTemplate>
+
 </ResourceDictionary>

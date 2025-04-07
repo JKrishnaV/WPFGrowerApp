@@ -28,12 +28,12 @@ namespace WPFGrowerApp.ViewModels
             NavigateToImportCommand = new RelayCommand(p => NavigateTo<ImportViewModel>("Import", p), CanNavigate); 
             NavigateToReportsCommand = new RelayCommand(p => NavigateTo<ReportsViewModel>("Reports", p), CanNavigate); 
             NavigateToInventoryCommand = new RelayCommand(p => NavigateTo<InventoryViewModel>("Inventory", p), CanNavigate);
-            NavigateToPaymentRunCommand = new RelayCommand(p => NavigateTo<PaymentRunViewModel>("Payment Run", p), CanNavigate); // Added
-            // Update Settings command to navigate to ChangePasswordViewModel
-            NavigateToSettingsCommand = new RelayCommand(p => NavigateTo<ChangePasswordViewModel>("Change Password", p), CanNavigate);
+            NavigateToPaymentRunCommand = new RelayCommand(p => NavigateTo<PaymentRunViewModel>("Payment Run", p), CanNavigate); 
+            // Update Settings command to navigate to the new SettingsHostViewModel
+            NavigateToSettingsCommand = new RelayCommand(p => NavigateTo<SettingsHostViewModel>("Settings", p), CanNavigate);
 
             // Set default view model to Dashboard
-            NavigateTo<DashboardViewModel>("Dashboard"); // Refactored initial navigation
+            NavigateTo<DashboardViewModel>("Dashboard"); 
         }
 
         // --- Navigation Helper ---

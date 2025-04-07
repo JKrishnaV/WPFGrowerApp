@@ -45,8 +45,8 @@ namespace WPFGrowerApp
             services.AddTransient<IPostBatchService, PostBatchService>(); // Added
             services.AddTransient<IPaymentService, PaymentService>();
             services.AddTransient<IDepotService, DepotService>();
-            services.AddTransient<IProductService, ProductService>(); // Added
-            services.AddTransient<IProcessService, ProcessService>(); // Added
+            services.AddTransient<IProductService, ProductService>(); 
+            services.AddTransient<IProcessService, ProcessService>(); 
             services.AddTransient<ValidationService>();
             services.AddTransient<IUserService, UserService>();
 
@@ -62,14 +62,17 @@ namespace WPFGrowerApp
             services.AddTransient<ImportViewModel>();
             services.AddTransient<ReportsViewModel>();
             services.AddTransient<InventoryViewModel>();
-            services.AddTransient<SettingsViewModel>();
-            services.AddTransient<PaymentRunViewModel>(); // Added
+            services.AddTransient<SettingsViewModel>(); // Keep existing if used elsewhere, otherwise remove? Let's keep for now.
+            services.AddTransient<SettingsHostViewModel>(); // Added Settings Host
+            services.AddTransient<ProductViewModel>(); // Added Product VM
+            services.AddTransient<PaymentRunViewModel>(); 
             services.AddTransient<LoginViewModel>();
             services.AddTransient<ChangePasswordViewModel>();
 
-            // Register Views
-            services.AddTransient<GrowerSearchView>();
+            // Register Views (Views are typically not registered unless needed for DI resolution like DialogService)
+            services.AddTransient<GrowerSearchView>(); // Needed by DialogService
             services.AddTransient<LoginView>();
+            // SettingsHostView and ProductView don't need registration if only resolved via DataTemplates
             services.AddSingleton<MainWindow>();
         }
 

@@ -2,32 +2,31 @@ using System;
 
 namespace WPFGrowerApp.DataAccess.Models
 {
-    /// <summary>
-    /// Represents a record from the Product table.
-    /// </summary>
-    public class Product
+    public class Product : AuditableEntity // Assuming AuditableEntity exists for QADD/QED/QDEL fields
     {
-        // Corresponds to PRODUCT NVARCHAR(2)
-        public string ProductId { get; set; }
+        // From SQL Script: PRODUCT NVARCHAR(2)
+        public string ProductId { get; set; } // Renamed from PRODUCT for C# conventions
 
-        // Corresponds to Description NVARCHAR(15)
+        // From SQL Script: Description NVARCHAR(15)
         public string Description { get; set; }
 
-        // Corresponds to SHORTDescription NVARCHAR(4)
+        // From SQL Script: SHORTDescription NVARCHAR(4)
         public string ShortDescription { get; set; }
 
-        // Corresponds to DEDUCT DECIMAL(9, 6)
+        // From SQL Script: DEDUCT DECIMAL(9, 6)
         public decimal Deduct { get; set; }
 
-        // Corresponds to CATEGORY DECIMAL(1, 0)
-        public decimal Category { get; set; }
+        // From SQL Script: CATEGORY DECIMAL(1, 0)
+        public int Category { get; set; } // Using int for a single digit decimal
 
-        // Corresponds to CHG_GST BIT
-        public bool ChgGst { get; set; }
+        // From SQL Script: CHG_GST BIT
+        public bool ChargeGst { get; set; } // Renamed from CHG_GST
 
-        // Corresponds to VARIETY NVARCHAR(8)
+        // From SQL Script: VARIETY NVARCHAR(8)
         public string Variety { get; set; }
 
-        // Add audit fields if needed
+        // Note: Audit fields (QADD_DATE, QADD_TIME, QADD_OP, etc.)
+        // are assumed to be handled by the AuditableEntity base class
+        // or will be managed directly in the service layer during DB operations.
     }
 }

@@ -13,10 +13,18 @@ namespace WPFGrowerApp.Services
 
     public interface IDialogService
     {
-        void ShowMessageBox(string message, string title, DialogResult buttons = DialogResult.OK); // Simple version for now
-        
-        // Example for a more complex message box
-        // Task<DialogResult> ShowMessageBoxAsync(string message, string title, DialogResult buttons); 
+        /// <summary>
+        /// Shows a simple message box with an OK button.
+        /// </summary>
+        void ShowMessageBox(string message, string title); 
+
+        /// <summary>
+        /// Shows a confirmation message box with Yes/No buttons.
+        /// </summary>
+        /// <param name="message">The message to display.</param>
+        /// <param name="title">The title of the message box.</param>
+        /// <returns>True if the user clicked Yes, False otherwise.</returns>
+        bool ShowConfirmationDialog(string message, string title);
 
         // Method specific to the Grower Search interaction
         (bool? DialogResult, decimal? SelectedGrowerNumber) ShowGrowerSearchDialog(); 

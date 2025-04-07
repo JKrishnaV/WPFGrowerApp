@@ -1,0 +1,136 @@
+<UserControl x:Class="WPFGrowerApp.Views.ProductView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:WPFGrowerApp.Views"
+             xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels"
+             xmlns:models="clr-namespace:WPFGrowerApp.DataAccess.Models"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance Type=vm:ProductViewModel, IsDesignTimeCreatable=False}"
+             d:DesignHeight="600" d:DesignWidth="700"
+             Background="{DynamicResource MaterialDesignPaper}">
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Title -->
+            <RowDefinition Height="*"/>    <!-- DataGrid -->
+            <RowDefinition Height="Auto"/> <!-- Edit Form -->
+            <RowDefinition Height="Auto"/> <!-- Buttons -->
+        </Grid.RowDefinitions>
+
+        <!-- Title -->
+        <TextBlock Grid.Row="0" Text="Manage Products" Style="{StaticResource MaterialDesignHeadline5TextBlock}" Margin="0,0,0,15"/>
+
+        <!-- Product List -->
+        <DataGrid Grid.Row="1" 
+                  ItemsSource="{Binding Products}" 
+                  SelectedItem="{Binding SelectedProduct, Mode=TwoWay}"
+                  AutoGenerateColumns="False" 
+                  IsReadOnly="True" 
+                  CanUserAddRows="False"
+                  SelectionMode="Single"
+                  materialDesign:DataGridAssist.CellPadding="13 8 8 8"
+                  materialDesign:DataGridAssist.ColumnHeaderPadding="8"
+                  Margin="0,0,0,10"
+                  MaxHeight="350"> <!-- Added MaxHeight -->
+            <DataGrid.Columns>
+                <!-- Moved Description column up -->
+                <DataGridTextColumn Header="ID" Binding="{Binding ProductId}" Width="Auto"/>
+                <DataGridTextColumn Header="Description" Binding="{Binding Description}"/> <!-- Removed Width attribute -->
+                <DataGridTextColumn Header="Short Desc" Binding="{Binding ShortDescription}" Width="Auto"/>
+                <DataGridTextColumn Header="Deduct" Binding="{Binding Deduct, StringFormat=N6}" Width="Auto"/>
+                <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="Auto"/>
+                <DataGridCheckBoxColumn Header="Charge GST" Binding="{Binding ChargeGst}" Width="Auto"/>
+                <DataGridTextColumn Header="Variety" Binding="{Binding Variety}" Width="Auto"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Edit/Add Form -->
+        <materialDesign:Card Grid.Row="2" Margin="0,10,0,10" Padding="15"
+                             Visibility="{Binding SelectedProduct, Converter={StaticResource NotNullConverter}}"> 
+             <!-- Removed IsEnabled binding from Grid - fields are editable whenever the card is visible -->
+             <Grid> 
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBox Grid.Row="0" Grid.Column="1" Margin="5"
+                         materialDesign:HintAssist.Hint="Product ID (Max 2 Chars)"
+                         Text="{Binding SelectedProduct.ProductId, UpdateSourceTrigger=PropertyChanged}" 
+                         MaxLength="2"
+                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+
+                <TextBox Grid.Row="0" Grid.Column="3" Margin="5"
+                         materialDesign:HintAssist.Hint="Description"
+                         Text="{Binding SelectedProduct.Description, UpdateSourceTrigger=PropertyChanged}"
+                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                
+                <TextBox Grid.Row="1" Grid.Column="1" Margin="5"
+                         materialDesign:HintAssist.Hint="Short Description (Max 4 Chars)"
+                         Text="{Binding SelectedProduct.ShortDescription, UpdateSourceTrigger=PropertyChanged}" 
+                         MaxLength="4"
+                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+
+                <TextBox Grid.Row="1" Grid.Column="3" Margin="5"
+                         materialDesign:HintAssist.Hint="Deduct (e.g., 0.000000)"
+                         Text="{Binding SelectedProduct.Deduct, StringFormat=N6, UpdateSourceTrigger=PropertyChanged}"
+                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                         <!-- Add input validation for decimal if needed -->
+
+                <TextBox Grid.Row="2" Grid.Column="1" Margin="5"
+                         materialDesign:HintAssist.Hint="Category (Number)"
+                         Text="{Binding SelectedProduct.Category, UpdateSourceTrigger=PropertyChanged}"
+                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                         <!-- Add input validation for integer if needed -->
+
+                <TextBox Grid.Row="2" Grid.Column="3" Margin="5"
+                         materialDesign:HintAssist.Hint="Variety (Max 8 Chars)"
+                         Text="{Binding SelectedProduct.Variety, UpdateSourceTrigger=PropertyChanged}" 
+                         MaxLength="8"
+                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+
+                <CheckBox Grid.Row="3" Grid.Column="1" Margin="5,15,5,5"
+                          Content="Charge GST"
+                          IsChecked="{Binding SelectedProduct.ChargeGst}"/>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Action Buttons -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+             <!-- New button enabled only when NO product is selected (i.e., IsEditing is false) -->
+            <Button Content="New" Command="{Binding NewCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Margin="5"
+                    IsEnabled="{Binding IsEditing, Converter={StaticResource InverseBooleanConverter}}"/> 
+            <!-- Save, Delete, Cancel enabled only when a product IS selected -->
+            <Button Content="Save" Command="{Binding SaveCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Margin="5" 
+                    IsEnabled="{Binding SelectedProduct, Converter={StaticResource NotNullConverter}}" 
+                    Background="{DynamicResource PrimaryHueMidBrush}" Foreground="{DynamicResource PrimaryHueMidForegroundBrush}"/> 
+            <Button Content="Delete" Command="{Binding DeleteCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Background="IndianRed" Foreground="White" Margin="5" 
+                    IsEnabled="{Binding SelectedProduct, Converter={StaticResource NotNullConverter}}"/> 
+            <Button Content="Cancel" Command="{Binding CancelCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Margin="5" 
+                    IsEnabled="{Binding SelectedProduct, Converter={StaticResource NotNullConverter}}"/>
+        </StackPanel>
+        
+        <!-- Loading Indicator -->
+        <materialDesign:Card Grid.Row="1" Grid.RowSpan="3" 
+                             VerticalAlignment="Center" HorizontalAlignment="Center" 
+                             Padding="20" Background="{DynamicResource MaterialDesignCardBackground}"
+                             Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel Orientation="Horizontal">
+                <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}" Value="0" IsIndeterminate="True" />
+                <TextBlock Text="Loading..." VerticalAlignment="Center" Margin="10,0,0,0"/>
+            </StackPanel>
+        </materialDesign:Card>
+
+    </Grid>
+</UserControl>

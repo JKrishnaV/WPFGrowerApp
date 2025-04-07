@@ -36,10 +36,17 @@ namespace WPFGrowerApp.Services
             return MessageBoxImage.None; // Default
         }
 
-
-        public void ShowMessageBox(string message, string title, DialogResult buttons = DialogResult.OK)
+        // Updated ShowMessageBox to match the simplified interface definition
+        public void ShowMessageBox(string message, string title) 
         {
-            MessageBox.Show(message, title, GetMessageBoxButton(buttons), GetMessageBoxImage(title));
+            MessageBox.Show(message, title, MessageBoxButton.OK, GetMessageBoxImage(title));
+        }
+
+        // Implementation for the new confirmation dialog method
+        public bool ShowConfirmationDialog(string message, string title)
+        {
+            MessageBoxResult result = MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Warning); // Use Warning icon for confirmation
+            return result == MessageBoxResult.Yes;
         }
 
         public (bool? DialogResult, decimal? SelectedGrowerNumber) ShowGrowerSearchDialog()
