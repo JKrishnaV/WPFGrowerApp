@@ -44,6 +44,8 @@ namespace WPFGrowerApp
             DataContext = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
             Logger.Info("MainWindow DataContext set."); // Added Log
 
+            // Removed PropertyChanged subscription - Animation handled in XAML
+
             // Event subscription removed - Navigation is now handled by MainViewModel commands
 
             // Add Loaded event handler for further logging
@@ -59,37 +61,9 @@ namespace WPFGrowerApp
 
         // MainMenu_MenuItemClicked event handler removed
 
-        private void MenuToggleButton_Click(object sender, RoutedEventArgs e)
-        {
-            // Toggle the hamburger menu with animation
-            MainMenu.ToggleMenu();
-            MainMenu.IsMenuExpanded = !MainMenu.IsMenuExpanded;
+        // MenuToggleButton_Click event handler removed (now handled by Command in ViewModel)
 
-            if (MainMenu.IsMenuExpanded)
-            {
-                // Expand menu
-                var animation = new DoubleAnimation
-                {
-                    From = 0,
-                    To = 250,
-                    Duration = TimeSpan.FromMilliseconds(300)
-                };
-
-                MainMenu.BeginAnimation(FrameworkElement.WidthProperty, animation);
-            }
-            else
-            {
-                // Collapse menu
-                var animation = new DoubleAnimation
-                {
-                    From = 250,
-                    To = 0,
-                    Duration = TimeSpan.FromMilliseconds(300)
-                };
-
-                MainMenu.BeginAnimation(FrameworkElement.WidthProperty, animation);
-            }
-        }
+        // Removed MainViewModel_PropertyChanged handler and AnimateMenuColumn method
 
         // Add these methods to MainWindow.xaml.cs
         private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

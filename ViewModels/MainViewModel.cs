@@ -12,9 +12,10 @@ namespace WPFGrowerApp.ViewModels
     public class MainViewModel : ViewModelBase 
     {
         private object _currentViewModel;
-        private bool _isNavigating; 
-        private readonly IServiceProvider _serviceProvider; 
-        private readonly IDialogService _dialogService; 
+        private bool _isNavigating;
+        private bool _isMenuOpen = true; // Default to open
+        private readonly IServiceProvider _serviceProvider;
+        private readonly IDialogService _dialogService;
 
         // Inject IServiceProvider and IDialogService
         public MainViewModel(IServiceProvider serviceProvider, IDialogService dialogService) 
@@ -34,6 +35,23 @@ namespace WPFGrowerApp.ViewModels
 
             // Set default view model to Dashboard
             _ = NavigateToAsync<DashboardViewModel>("Dashboard"); // Call async method, discard task
+
+            // Initialize ToggleMenuCommand
+            ToggleMenuCommand = new RelayCommand(ToggleMenuExecute);
+        }
+
+        // --- Menu State ---
+        public bool IsMenuOpen
+        {
+            get => _isMenuOpen;
+            set => SetProperty(ref _isMenuOpen, value);
+        }
+
+        public ICommand ToggleMenuCommand { get; }
+
+        private void ToggleMenuExecute(object parameter)
+        {
+            IsMenuOpen = !IsMenuOpen;
         }
 
         // --- Navigation Helper ---
@@ -45,6 +63,7 @@ namespace WPFGrowerApp.ViewModels
             try
             {
                 CurrentViewModel = _serviceProvider.GetRequiredService<TViewModel>();
+                IsMenuOpen = false; // Close menu after navigation
                 // TODO: Consider if InitializeAsync pattern is needed for other ViewModels like Import/Reports
             }
             catch (Exception ex)
@@ -92,7 +111,9 @@ namespace WPFGrowerApp.ViewModels
                        await growerViewModel.LoadGrowerAsync(selectedGrowerNumber.Value);
                     }
                     CurrentViewModel = growerViewModel;
+                    IsMenuOpen = false; // Close menu after navigation
                 }
+                // If dialog is cancelled or no grower selected, leave menu state as is
             }
             catch (System.Exception ex)
             {
