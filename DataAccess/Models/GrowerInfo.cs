@@ -8,12 +8,12 @@ namespace WPFGrowerApp.DataAccess.Models
     public class GrowerInfo
     {
         // Corresponds to NUMBER DECIMAL(4, 0)
-        public decimal Number { get; set; }
+        public decimal GrowerNumber { get; set; }
 
         // Corresponds to NAME NVARCHAR(30)
         public string Name { get; set; }
 
         // Optional: Combine Name and Number for display
-        public string DisplayName => $"{Name} ({Number})";
+        public string DisplayName => $"{GrowerNumber} - ({Name})";
     }
 }

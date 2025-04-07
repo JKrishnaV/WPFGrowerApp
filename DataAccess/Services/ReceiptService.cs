@@ -13,7 +13,7 @@ namespace WPFGrowerApp.DataAccess.Services
 {
     public class ReceiptService : BaseDatabaseService, IReceiptService
     {
-       
+
 
         public async Task<List<Receipt>> GetReceiptsAsync(DateTime? startDate = null, DateTime? endDate = null)
         {
@@ -23,7 +23,7 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     var sql = @"
-                        SELECT * FROM Daily 
+                        SELECT * FROM Daily
                         WHERE 1=1
                         @StartDateFilter
                         @EndDateFilter
@@ -67,7 +67,23 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    var sql = "SELECT * FROM Daily WHERE RECPT = @ReceiptNumber";
+                    // Explicitly select columns and use aliases
+                    var sql = @"
+                        SELECT
+                            DEPOT as Depot, PRODUCT as Product, RECPT as ReceiptNumber, NUMBER as GrowerNumber,
+                            GROSS as Gross, TARE as Tare, NET as Net, GRADE as Grade, PROCESS as Process,
+                            DATE as Date, DAY_UNIQ as DayUniq, IMP_BAT as ImpBatch, FIN_BAT as FinBatch,
+                            DOCK_PCT as DockPercent, ISVOID as IsVoid, THEPRICE as ThePrice, PRICESRC as PriceSource,
+                            PR_NOTE1 as PrNote1, NP_NOTE1 as NpNote1, FROM_FIELD as FromField, IMPORTED as Imported,
+                            CONT_ERRS as ContainerErrors, ADV_PR1 as AdvPr1, ADV_PRID1 as AdvPrid1, POST_BAT1 as PostBat1,
+                            ADV_PR2 as AdvPr2, ADV_PRID2 as AdvPrid2, POST_BAT2 as PostBat2, ADV_PR3 as AdvPr3,
+                            ADV_PRID3 as AdvPrid3, POST_BAT3 as PostBat3, PREM_PRICE as PremPrice, LAST_ADVPB as LastAdvpb,
+                            ORI_NET as OriNet, CERTIFIED as Certified, VARIETY as Variety, TIME as Time,
+                            FIN_PRICE as FinPrice, FIN_PR_ID as FinPrId, ADD_DATE as AddDate, ADD_BY as AddBy,
+                            EDIT_DATE as EditDate, EDIT_BY as EditBy, EDIT_REAS as EditReason
+                            -- Exclude IN1-20, OUT1-20 as they are not directly mapped
+                        FROM Daily
+                        WHERE RECPT = @ReceiptNumber";
                     var parameters = new { ReceiptNumber = receiptNumber };
                     return await connection.QueryFirstOrDefaultAsync<Receipt>(sql, parameters);
                 }
@@ -164,6 +180,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         "DOCK_PCT", "ISVOID", "THEPRICE", "PRICESRC", "PR_NOTE1",
                         "NP_NOTE1", "FROM_FIELD", "IMPORTED", "CONT_ERRS",
                         "ADD_DATE", "ADD_BY", "EDIT_DATE", "EDIT_BY", "EDIT_REAS"
+                        // Add other mapped columns if needed (OriNet, Certified, Variety, FinPrice, FinPrId, LastAdvpb)
                     };
                     var values = new List<string>
                     {
@@ -172,6 +189,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         "@DockPercent", "@IsVoid", "@ThePrice", "@PriceSource", "@PrNote1",
                         "@NpNote1", "@FromField", "@Imported", "@ContErrs",
                         "@AddDate", "@AddBy", "@EditDate", "@EditBy", "@EditReason"
+                         // Add other mapped parameters if needed
                     };
 
                     // Add container columns dynamically
@@ -216,6 +234,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         receipt.EditDate,           // Use mapped
                         receipt.EditBy,             // Use mapped
                         receipt.EditReason          // Use mapped
+                        // Add other mapped properties if needed
                     });
                     parameters.AddDynamicParams(containerParams); // Add container parameters
 
@@ -258,8 +277,8 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     var sql = @"
-                        UPDATE Daily 
-                        SET ISVOID = 1, 
+                        UPDATE Daily
+                        SET ISVOID = 1,
                             EDIT_DATE = GETDATE(),
                             EDIT_REAS = @Reason
                         WHERE RECPT = @ReceiptNumber";
@@ -283,8 +302,21 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
+                    // Explicitly select columns and use aliases
                     var sql = @"
-                        SELECT * FROM Daily 
+                        SELECT
+                            DEPOT as Depot, PRODUCT as Product, RECPT as ReceiptNumber, NUMBER as GrowerNumber,
+                            GROSS as Gross, TARE as Tare, NET as Net, GRADE as Grade, PROCESS as Process,
+                            DATE as Date, DAY_UNIQ as DayUniq, IMP_BAT as ImpBatch, FIN_BAT as FinBatch,
+                            DOCK_PCT as DockPercent, ISVOID as IsVoid, THEPRICE as ThePrice, PRICESRC as PriceSource,
+                            PR_NOTE1 as PrNote1, NP_NOTE1 as NpNote1, FROM_FIELD as FromField, IMPORTED as Imported,
+                            CONT_ERRS as ContainerErrors, ADV_PR1 as AdvPr1, ADV_PRID1 as AdvPrid1, POST_BAT1 as PostBat1,
+                            ADV_PR2 as AdvPr2, ADV_PRID2 as AdvPrid2, POST_BAT2 as PostBat2, ADV_PR3 as AdvPr3,
+                            ADV_PRID3 as AdvPrid3, POST_BAT3 as PostBat3, PREM_PRICE as PremPrice, LAST_ADVPB as LastAdvpb,
+                            ORI_NET as OriNet, CERTIFIED as Certified, VARIETY as Variety, TIME as Time,
+                            FIN_PRICE as FinPrice, FIN_PR_ID as FinPrId, ADD_DATE as AddDate, ADD_BY as AddBy,
+                            EDIT_DATE as EditDate, EDIT_BY as EditBy, EDIT_REAS as EditReason
+                        FROM Daily
                         WHERE NUMBER = @GrowerNumber
                         @StartDateFilter
                         @EndDateFilter
@@ -330,7 +362,23 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    var sql = "SELECT * FROM Daily WHERE IMP_BAT = @ImpBatch ORDER BY Date DESC, RECPT DESC";
+                     // Explicitly select columns and use aliases
+                    var sql = @"
+                        SELECT
+                            DEPOT as Depot, PRODUCT as Product, RECPT as ReceiptNumber, NUMBER as GrowerNumber,
+                            GROSS as Gross, TARE as Tare, NET as Net, GRADE as Grade, PROCESS as Process,
+                            DATE as Date, DAY_UNIQ as DayUniq, IMP_BAT as ImpBatch, FIN_BAT as FinBatch,
+                            DOCK_PCT as DockPercent, ISVOID as IsVoid, THEPRICE as ThePrice, PRICESRC as PriceSource,
+                            PR_NOTE1 as PrNote1, NP_NOTE1 as NpNote1, FROM_FIELD as FromField, IMPORTED as Imported,
+                            CONT_ERRS as ContainerErrors, ADV_PR1 as AdvPr1, ADV_PRID1 as AdvPrid1, POST_BAT1 as PostBat1,
+                            ADV_PR2 as AdvPr2, ADV_PRID2 as AdvPrid2, POST_BAT2 as PostBat2, ADV_PR3 as AdvPr3,
+                            ADV_PRID3 as AdvPrid3, POST_BAT3 as PostBat3, PREM_PRICE as PremPrice, LAST_ADVPB as LastAdvpb,
+                            ORI_NET as OriNet, CERTIFIED as Certified, VARIETY as Variety, TIME as Time,
+                            FIN_PRICE as FinPrice, FIN_PR_ID as FinPrId, ADD_DATE as AddDate, ADD_BY as AddBy,
+                            EDIT_DATE as EditDate, EDIT_BY as EditBy, EDIT_REAS as EditReason
+                        FROM Daily
+                        WHERE IMP_BAT = @ImpBatch
+                        ORDER BY Date DESC, RECPT DESC";
                     var parameters = new { ImpBatch = impBatch };
                     return (await connection.QueryAsync<Receipt>(sql, parameters)).ToList();
                 }
@@ -401,7 +449,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     if (processCount == 0)
                     {
                         return false;
-                    }                 
+                    }
 
                     return true;
                 }
@@ -421,11 +469,11 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     var sql = @"
-                        SELECT SUM(TARE) as TotalTare 
-                        FROM Contain 
+                        SELECT SUM(TARE) as TotalTare
+                        FROM Contain
                         WHERE CONTAINER IN (
-                            SELECT DISTINCT CONTAINER 
-                            FROM Daily 
+                            SELECT DISTINCT CONTAINER
+                            FROM Daily
                             WHERE RECPT = @ReceiptNumber
                         )";
 
@@ -520,7 +568,7 @@ namespace WPFGrowerApp.DataAccess.Services
                             LAST_ADVPB = @PostBatchId
                             {(advanceNumber == 1 ? ", PREM_PRICE = @PremiumPrice" : "")}
                         WHERE RECPT = @ReceiptNumber
-                          AND {postBatchColumn} = 0"; // Ensure we don't overwrite existing batch info
+                          AND ( {postBatchColumn} = 0 OR {postBatchColumn} IS NULL)"; // Ensure we don't overwrite existing batch info
 
                     var parameters = new DynamicParameters();
                     parameters.Add("@ReceiptNumber", receiptNumber);
@@ -552,7 +600,8 @@ namespace WPFGrowerApp.DataAccess.Services
             List<decimal> excludeGrowerIds = null,
             List<string> excludePayGroupIds = null,
             List<string> productIds = null,
-            List<string> processIds = null)
+            List<string> processIds = null,
+            int? cropYear = null) // Added cropYear parameter
         {
              if (advanceNumber < 1 || advanceNumber > 3)
             {
@@ -575,8 +624,20 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     // Base query selects from Daily and joins Grower
                     var sqlBuilder = new SqlBuilder();
+                    // Updated SELECT to explicitly list columns with aliases
                     var selector = sqlBuilder.AddTemplate(@"
-                        SELECT d.*
+                        SELECT
+                            d.DEPOT as Depot, d.PRODUCT as Product, d.RECPT as ReceiptNumber, d.NUMBER as GrowerNumber,
+                            d.GROSS as Gross, d.TARE as Tare, d.NET as Net, d.GRADE as Grade, d.PROCESS as Process,
+                            d.DATE as Date, d.DAY_UNIQ as DayUniq, d.IMP_BAT as ImpBatch, d.FIN_BAT as FinBatch,
+                            d.DOCK_PCT as DockPercent, d.ISVOID as IsVoid, d.THEPRICE as ThePrice, d.PRICESRC as PriceSource,
+                            d.PR_NOTE1 as PrNote1, d.NP_NOTE1 as NpNote1, d.FROM_FIELD as FromField, d.IMPORTED as Imported,
+                            d.CONT_ERRS as ContainerErrors, d.ADV_PR1 as AdvPr1, d.ADV_PRID1 as AdvPrid1, d.POST_BAT1 as PostBat1,
+                            d.ADV_PR2 as AdvPr2, d.ADV_PRID2 as AdvPrid2, d.POST_BAT2 as PostBat2, d.ADV_PR3 as AdvPr3,
+                            d.ADV_PRID3 as AdvPrid3, d.POST_BAT3 as PostBat3, d.PREM_PRICE as PremPrice, d.LAST_ADVPB as LastAdvpb,
+                            d.ORI_NET as OriNet, d.CERTIFIED as Certified, d.VARIETY as Variety, d.TIME as Time,
+                            d.FIN_PRICE as FinPrice, d.FIN_PR_ID as FinPrId, d.ADD_DATE as AddDate, d.ADD_BY as AddBy,
+                            d.EDIT_DATE as EditDate, d.EDIT_BY as EditBy, d.EDIT_REAS as EditReason
                         FROM Daily d
                         INNER JOIN Grower g ON d.NUMBER = g.NUMBER
                         /**where**/
@@ -586,9 +647,14 @@ namespace WPFGrowerApp.DataAccess.Services
                     // Add mandatory conditions
                     sqlBuilder.Where("d.DATE <= @CutoffDate", new { CutoffDate = cutoffDate });
                     sqlBuilder.Where("d.FIN_BAT = 0"); // Not finalized
-                    sqlBuilder.Where($"d.{postBatchCheckColumn} = 0"); // This specific advance not yet paid
+                    sqlBuilder.Where($"(d.{postBatchCheckColumn} = 0 OR d.{postBatchCheckColumn} IS NULL)"); // Check for 0 or NULL
                     sqlBuilder.Where("d.ISVOID = 0"); // Not voided
                     sqlBuilder.Where("g.ONHOLD = 0"); // Grower not on hold
+                    if (cropYear.HasValue) // Add Crop Year filter using YEAR() function
+                    {
+                         sqlBuilder.Where("YEAR(d.DATE) = @CropYear", new { CropYear = cropYear.Value });
+                    }
+
 
                     // Add optional list filters using WHERE IN / NOT IN
                     if (includeGrowerIds?.Any() ?? false)

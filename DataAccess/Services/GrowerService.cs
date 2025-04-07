@@ -8,6 +8,7 @@ using Dapper;
 using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
 using WPFGrowerApp.Models;
+using WPFGrowerApp.Infrastructure.Logging; // Ensure Logger namespace is included
 
 namespace WPFGrowerApp.DataAccess.Services
 {
@@ -21,15 +22,15 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     var sql = @"
-                        SELECT 
+                        SELECT
                             NUMBER as GrowerNumber,
                             NAME as GrowerName,
                             CHEQNAME as ChequeName,
                             CITY as City,
                             PHONE as Phone
-                        FROM GROWER 
-                        WHERE NAME LIKE @SearchTerm 
-                           OR CHEQNAME LIKE @SearchTerm 
+                        FROM GROWER
+                        WHERE NAME LIKE @SearchTerm
+                           OR CHEQNAME LIKE @SearchTerm
                            OR CITY LIKE @SearchTerm
                         ORDER BY NAME";
 
@@ -39,7 +40,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Infrastructure.Logging.Logger.Error($"Error in SearchGrowersAsync for term '{searchTerm}': {ex.Message}", ex);
+                Logger.Error($"Error in SearchGrowersAsync for term '{searchTerm}': {ex.Message}", ex);
                 throw;
             }
         }
@@ -52,7 +53,7 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     var sql = @"
-                        SELECT 
+                        SELECT
                             NUMBER as GrowerNumber,
                             CHEQNAME as ChequeName,
                             NAME as GrowerName,
@@ -75,7 +76,7 @@ namespace WPFGrowerApp.DataAccess.Services
                             LY_OTHER as LYOther,
                             CERTIFIED as Certified,
                             CHG_GST as ChargeGST
-                        FROM GROWER 
+                        FROM GROWER
                         WHERE NUMBER = @GrowerNumber";
 
                     var parameters = new { GrowerNumber = growerNumber };
@@ -102,7 +103,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Infrastructure.Logging.Logger.Error($"Error in GetGrowerByNumberAsync for GrowerNumber {growerNumber}: {ex.Message}", ex);
+                Logger.Error($"Error in GetGrowerByNumberAsync for GrowerNumber {growerNumber}: {ex.Message}", ex);
                 throw;
             }
         }
@@ -192,9 +193,9 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Infrastructure.Logging.Logger.Error($"Error in SaveGrowerAsync for GrowerNumber {grower?.GrowerNumber}: {ex.Message}", ex);
+                Logger.Error($"Error in SaveGrowerAsync for GrowerNumber {grower?.GrowerNumber}: {ex.Message}", ex);
                 // Re-throw the exception to allow the caller (ViewModel) to handle it
-                throw; 
+                throw;
             }
         }
 
@@ -206,13 +207,13 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     var sql = @"
-                        SELECT 
+                        SELECT
                             NUMBER as GrowerNumber,
                             NAME as GrowerName,
                             CHEQNAME as ChequeName,
                             CITY as City,
                             PHONE as Phone
-                        FROM GROWER 
+                        FROM GROWER
                         ORDER BY NAME";
 
                     return (await connection.QueryAsync<GrowerSearchResult>(sql)).ToList();
@@ -220,7 +221,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Infrastructure.Logging.Logger.Error($"Error in GetAllGrowersAsync: {ex.Message}", ex);
+                Logger.Error($"Error in GetAllGrowersAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -233,9 +234,9 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     var sql = @"
-                        SELECT DISTINCT PROV 
-                        FROM GROWER 
-                        WHERE PROV IS NOT NULL 
+                        SELECT DISTINCT PROV
+                        FROM GROWER
+                        WHERE PROV IS NOT NULL
                         AND PROV <> ''
                         ORDER BY PROV";
 
@@ -245,7 +246,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Infrastructure.Logging.Logger.Error($"Error in GetUniqueProvincesAsync: {ex.Message}", ex);
+                Logger.Error($"Error in GetUniqueProvincesAsync: {ex.Message}", ex);
                  throw;
             }
         }
@@ -260,18 +261,26 @@ namespace WPFGrowerApp.DataAccess.Services
                     // Select only Number and Name for the basic info model
                     var sql = @"
                         SELECT
-                            NUMBER as Number, -- Corrected alias to match GrowerInfo.Number
+                            NUMBER as GrowerNumber, 
                             NAME as Name
                         FROM GROWER
-                        ORDER BY NAME"; // Or order by Number if preferred
+                        ORDER BY NUMBER"; // Or order by Number if preferred
 
                     var growers = await connection.QueryAsync<GrowerInfo>(sql);
+                    // Trim names after loading, checking for null
+                    foreach (var grower in growers)
+                    {
+                        if (grower.Name != null)
+                        {
+                            grower.Name = grower.Name.Trim();
+                        }
+                    }
                     return growers.ToList();
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) // Restored catch block
             {
-                Infrastructure.Logging.Logger.Error($"Error in GetAllGrowersBasicInfoAsync: {ex.Message}", ex);
+                Logger.Error($"Error in GetAllGrowersBasicInfoAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -286,19 +295,27 @@ namespace WPFGrowerApp.DataAccess.Services
                     // Select Number and Name for growers where OnHold is true (1)
                     var sql = @"
                         SELECT
-                            NUMBER as Number,
+                            NUMBER as GrowerNumber, 
                             NAME as Name
                         FROM GROWER
                         WHERE ONHOLD = 1
                         ORDER BY NAME"; // Or order by Number
 
                     var growers = await connection.QueryAsync<GrowerInfo>(sql);
+                    // Trim names after loading, checking for null
+                    foreach (var grower in growers)
+                    {
+                         if (grower.Name != null)
+                        {
+                            grower.Name = grower.Name.Trim();
+                        }
+                    }
                     return growers.ToList();
                 }
             }
             catch (Exception ex)
             {
-                Infrastructure.Logging.Logger.Error($"Error in GetOnHoldGrowersAsync: {ex.Message}", ex);
+                Logger.Error($"Error in GetOnHoldGrowersAsync: {ex.Message}", ex);
                 throw;
             }
         }

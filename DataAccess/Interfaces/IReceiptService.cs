@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using WPFGrowerApp.DataAccess.Models;
@@ -57,6 +57,7 @@ namespace WPFGrowerApp.DataAccess.Interfaces
             List<decimal> excludeGrowerIds = null, // Changed to List
             List<string> excludePayGroupIds = null, // Changed to List
             List<string> productIds = null, // Changed to List
-            List<string> processIds = null); // Changed to List
+            List<string> processIds = null, // Changed to List
+            int? cropYear = null); // Added cropYear parameter
     }
 }

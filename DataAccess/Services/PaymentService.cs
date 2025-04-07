@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
 using WPFGrowerApp.Infrastructure.Logging; // Assuming Logger is available
+using System.Diagnostics; // Added for Debug.WriteLine if needed
 
 namespace WPFGrowerApp.DataAccess.Services
 {
@@ -70,13 +71,15 @@ namespace WPFGrowerApp.DataAccess.Services
                 // TODO: Update GetReceiptsForAdvancePaymentAsync signature in IReceiptService and ReceiptService
                 // The following line will cause compile errors until the service is updated.
                 var eligibleReceipts = await _receiptService.GetReceiptsForAdvancePaymentAsync(
-                    advanceNumber, cutoffDate,
-                    null, // includeGrowerId removed
-                    null, // includePayGroup removed
+                    advanceNumber,
+                    cutoffDate,
+                    null, // includeGrowerIds removed (assuming no multi-select for include)
+                    null, // includePayGroupIds removed (assuming no multi-select for include)
                     excludeGrowerIds, // Pass list
                     excludePayGroupIds, // Pass list
                     productIds, // Pass list
-                    processIds); // Pass list
+                    processIds, // Pass list
+                    cropYear); // Pass cropYear
 
                 if (!eligibleReceipts.Any())
                 {

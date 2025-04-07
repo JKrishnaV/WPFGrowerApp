@@ -15,11 +15,11 @@
 
     <Grid Margin="16">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>         <!-- Run Log -->
-            <RowDefinition Height="*"/>         <!-- On Hold Growers -->
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/> <!-- Title -->
+            <RowDefinition Height="Auto"/> <!-- Parameters Card -->
+            <RowDefinition Height="*"/>    <!-- On Hold Growers -->
+            <RowDefinition Height="*"/>    <!-- Run Log -->
+            <RowDefinition Height="Auto"/> <!-- Status Bar -->
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Style="{StaticResource MaterialDesignHeadline5TextBlock}" Text="Run Advance Payment" Margin="0,0,0,16"/>
@@ -63,10 +63,12 @@
                                 Style="{StaticResource MaterialDesignFloatingHintDatePicker}"
                                 SelectedDate="{Binding CutoffDate}"/>
 
-                    <TextBox Grid.Column="6" Margin="0,5"
+                    <!-- Changed TextBox to ComboBox for Crop Year -->
+                    <ComboBox Grid.Column="6" Margin="0,5"
                              materialDesign:HintAssist.Hint="Crop Year"
-                             Style="{StaticResource MaterialDesignFloatingHintTextBox}"
-                             Text="{Binding CropYear}"/>
+                             Style="{StaticResource MaterialDesignFloatingHintComboBox}"
+                             ItemsSource="{Binding CropYears}"
+                             SelectedValue="{Binding CropYear}"/>
                 </Grid>
 
                 <!-- Row 1: Filter GroupBox -->
@@ -85,6 +87,7 @@
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/> <!-- Labels -->
+                            <RowDefinition Height="Auto"/> <!-- Search Boxes (Optional) -->
                             <RowDefinition Height="Auto"/> <!-- ListBoxes -->
                         </Grid.RowDefinitions>
 
@@ -94,8 +97,16 @@
                         <TextBlock Grid.Row="0" Grid.Column="4" Text="Exclude Growers:" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" VerticalAlignment="Bottom" Margin="0,0,0,0"/>
                         <TextBlock Grid.Row="0" Grid.Column="6" Text="Exclude Pay Groups:" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" VerticalAlignment="Bottom" Margin="0,0,0,0"/>
 
+                        <!-- Search Boxes -->
+                        <TextBox Grid.Row="1" Grid.Column="4" Margin="0,5,0,2"
+                                 materialDesign:HintAssist.Hint="Search..."
+                                 Text="{Binding GrowerSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                        <!-- Add Search TextBoxes for other lists if needed -->
+
+
                         <!-- ListBoxes -->
-                        <ListBox Grid.Row="1" Grid.Column="0" Margin="0,5,0,5" MaxHeight="150"
+                        <ListBox Grid.Row="2" Grid.Column="0" Margin="0,5,0,5" MaxHeight="150"
                          ItemsSource="{Binding Products}"
                          SelectionMode="Extended"
                          infra:ListBoxSelectedItemsBehavior.SelectedItems="{Binding SelectedProducts}"
@@ -130,7 +141,7 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
 
-                        <ListBox Grid.Row="1" Grid.Column="2" Margin="0,5,0,5" MaxHeight="150"
+                        <ListBox Grid.Row="2" Grid.Column="2" Margin="0,5,0,5" MaxHeight="150"
                          ItemsSource="{Binding Processes}"
                          SelectionMode="Extended"
                          infra:ListBoxSelectedItemsBehavior.SelectedItems="{Binding SelectedProcesses}"
@@ -165,8 +176,8 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
 
-                        <ListBox Grid.Row="1" Grid.Column="4" Margin="0,5,0,5" MaxHeight="150"
-                         ItemsSource="{Binding AllGrowers}"
+                        <ListBox Grid.Row="2" Grid.Column="4" Margin="0,5,0,5" MaxHeight="115" 
+                         ItemsSource="{Binding FilteredGrowers}" 
                          SelectionMode="Extended"
                          infra:ListBoxSelectedItemsBehavior.SelectedItems="{Binding SelectedExcludeGrowers}"
                          ItemContainerStyle="{StaticResource ListBoxItemStyle_CustomHighlight}"
@@ -179,14 +190,15 @@
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="Text">
                                                     <Setter.Value>
-                                                        <MultiBinding StringFormat="{}{0} - {1}">
+                                                        <MultiBinding StringFormat="{}{1} - {0}"> <!-- Swapped order -->
                                                             <Binding Path="Name"/>
-                                                            <Binding Path="Number"/>
+                                                            <Binding Path="GrowerNumber"/> <!-- Reverted Binding -->
                                                         </MultiBinding>
                                                     </Setter.Value>
                                                 </Setter>
                                                 <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding Number}" Value="0">
+                                                    <!-- Keep trigger for placeholder if re-added later -->
+                                                    <DataTrigger Binding="{Binding GrowerNumber}" Value="0"> <!-- Reverted Binding -->
                                                         <Setter Property="Text" Value="{Binding Name}"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
@@ -197,7 +209,7 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
 
-                        <ListBox Grid.Row="1" Grid.Column="6" Margin="0,5,0,5" MaxHeight="150"
+                        <ListBox Grid.Row="2" Grid.Column="6" Margin="0,5,0,5" MaxHeight="150"
                          ItemsSource="{Binding PayGroups}"
                          SelectionMode="Extended"
                          infra:ListBoxSelectedItemsBehavior.SelectedItems="{Binding SelectedExcludePayGroups}"
@@ -244,32 +256,35 @@
             </Grid>
         </materialDesign:Card>
 
+        <!-- On Hold Growers Section -->
+        <GroupBox Grid.Row="2" Margin="0,10,0,0" Header="Growers Currently On Hold" Style="{StaticResource MaterialDesignCardGroupBox}">
+                 <!-- Wrap ListView in ScrollViewer with MaxHeight -->
+                 <ScrollViewer MaxHeight="250" VerticalScrollBarVisibility="Auto">
+                     <ListView ItemsSource="{Binding OnHoldGrowers}"
+                               MinHeight="100">
+                               <!-- Removed ScrollViewer attached property -->
+                         <ListView.View>
+                             <GridView>
+                            <GridViewColumn Header="Number" DisplayMemberBinding="{Binding GrowerNumber}" Width="100"/> <!-- Reverted Binding -->
+                            <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="250"/>
+                             </GridView>
+                         </ListView.View>
+                     </ListView>
+                 </ScrollViewer>
+         </GroupBox>
+
         <!-- Log/Status Section -->
-        <Grid Grid.Row="2">
+        <Grid Grid.Row="3">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
              <TextBlock Grid.Row="0" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" Text="Run Log:" Margin="0,0,0,8"/>
-             <ListBox Grid.Row="1" ItemsSource="{Binding RunLog}" Margin="0,0,0,8" BorderThickness="1" BorderBrush="{DynamicResource MaterialDesignDivider}" VerticalAlignment="Stretch" HorizontalContentAlignment="Stretch"/>
+             <!-- Wrap ListBox in ScrollViewer with MaxHeight -->
+             <ScrollViewer Grid.Row="1" MaxHeight="200" VerticalScrollBarVisibility="Auto" Margin="0,0,0,8">
+                 <ListBox ItemsSource="{Binding RunLog}" BorderThickness="1" BorderBrush="{DynamicResource MaterialDesignDivider}" HorizontalContentAlignment="Stretch"/>
+             </ScrollViewer>
         </Grid>
-
-         <!-- On Hold Growers Section -->
-         <GroupBox Grid.Row="3" Margin="0,10,0,0" Header="Growers Currently On Hold" Style="{StaticResource MaterialDesignCardGroupBox}">
-                  <!-- Wrap ListView in ScrollViewer with MaxHeight -->
-                  <ScrollViewer MaxHeight="250" VerticalScrollBarVisibility="Auto">
-                      <ListView ItemsSource="{Binding OnHoldGrowers}"
-                                MinHeight="100">
-                                <!-- Removed ScrollViewer attached property -->
-                          <ListView.View>
-                              <GridView>
-                            <GridViewColumn Header="Number" DisplayMemberBinding="{Binding Number}" Width="100"/>
-                             <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="250"/>
-                              </GridView>
-                          </ListView.View>
-                      </ListView>
-                  </ScrollViewer>
-          </GroupBox>
 
 
         <StatusBar Grid.Row="4" VerticalAlignment="Bottom">

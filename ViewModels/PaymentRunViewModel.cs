@@ -11,7 +11,7 @@ using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
 using WPFGrowerApp.Infrastructure.Logging;
 using WPFGrowerApp.Services;
-using System.Windows.Data; // For ICollectionView (if used for OnHold)
+using System.Windows.Data; // For ICollectionView
 using System.Collections.Specialized; // For INotifyCollectionChanged
 using WPFGrowerApp.Models; // Added for AdvanceOption
 
@@ -41,9 +41,27 @@ namespace WPFGrowerApp.ViewModels
         private ObservableCollection<Process> _processes;
         private ObservableCollection<PayGroup> _payGroups;
         private ObservableCollection<GrowerInfo> _allGrowers;
+        private ICollectionView _filteredGrowersView; // View for filtering
 
         // Collection for Advance Number ComboBox
         public ObservableCollection<AdvanceOption> AdvanceOptions { get; } = new ObservableCollection<AdvanceOption>();
+
+        // Collection for Crop Year ComboBox
+        public ObservableCollection<int> CropYears { get; } = new ObservableCollection<int>();
+
+        // Search Text for Grower Filter
+        private string _growerSearchText;
+        public string GrowerSearchText
+        {
+            get => _growerSearchText;
+            set
+            {
+                if (SetProperty(ref _growerSearchText, value))
+                {
+                    _filteredGrowersView?.Refresh(); // Refresh the filtered view
+                }
+            }
+        }
 
         // Collections to hold selected items from ListBoxes
         public ObservableCollection<Product> SelectedProducts { get; private set; } = new ObservableCollection<Product>();
@@ -76,15 +94,24 @@ namespace WPFGrowerApp.ViewModels
             Products = new ObservableCollection<Product>();
             Processes = new ObservableCollection<Process>();
             PayGroups = new ObservableCollection<PayGroup>();
-            AllGrowers = new ObservableCollection<GrowerInfo>();
+            AllGrowers = new ObservableCollection<GrowerInfo>(); // Initialize the backing collection
             OnHoldGrowers = new ObservableCollection<GrowerInfo>();
+
+            // Setup filtered view for growers
+            _filteredGrowersView = CollectionViewSource.GetDefaultView(AllGrowers);
+            _filteredGrowersView.Filter = FilterGrowers;
 
             // Populate Advance Options
             AdvanceOptions.Add(new AdvanceOption { Display = "First Advance Payment", Value = 1 });
             AdvanceOptions.Add(new AdvanceOption { Display = "Second Advance Payment", Value = 2 });
             AdvanceOptions.Add(new AdvanceOption { Display = "Third Advance Payment", Value = 3 });
-            // Set default selection (optional, can bind SelectedValue directly)
-            // AdvanceNumber = AdvanceOptions[0].Value; // Default to 1
+
+            // Populate Crop Years
+            int currentYear = DateTime.Today.Year;
+            CropYears.Add(currentYear);
+            CropYears.Add(currentYear - 1);
+            CropYears.Add(currentYear - 2);
+            _cropYear = currentYear; // Set default
 
             // Add listeners for selection changes
             SelectedProducts.CollectionChanged += SelectedFilters_CollectionChanged;
@@ -98,36 +125,59 @@ namespace WPFGrowerApp.ViewModels
             _ = UpdateOnHoldGrowersAsync(); // Initial load
         }
 
+        // Filter logic for the Grower ListBox
+        private bool FilterGrowers(object item)
+        {
+            if (string.IsNullOrEmpty(GrowerSearchText))
+            {
+                return true; // No filter applied
+            }
+
+            if (item is GrowerInfo grower)
+            {
+                // Check if name or number contains the search text (case-insensitive)
+                return (grower.Name?.IndexOf(GrowerSearchText, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                       (grower.GrowerNumber.ToString().IndexOf(GrowerSearchText, StringComparison.OrdinalIgnoreCase) >= 0);
+            }
+
+            return false;
+        }
+
+
         // Properties for UI Binding
         public int AdvanceNumber
         {
             get => _advanceNumber;
-            set { if (SetProperty(ref _advanceNumber, value)) _ = UpdateOnHoldGrowersAsync(); }
+            set { SetProperty(ref _advanceNumber, value); }
         }
 
         public DateTime PaymentDate
         {
             get => _paymentDate;
-            set { if (SetProperty(ref _paymentDate, value)) _ = UpdateOnHoldGrowersAsync(); }
+            set { SetProperty(ref _paymentDate, value); }
         }
 
         public DateTime CutoffDate
         {
             get => _cutoffDate;
-             set { if (SetProperty(ref _cutoffDate, value)) _ = UpdateOnHoldGrowersAsync(); }
+             set { SetProperty(ref _cutoffDate, value); }
         }
 
         public int CropYear
         {
             get => _cropYear;
-            set { if (SetProperty(ref _cropYear, value)) _ = UpdateOnHoldGrowersAsync(); }
+            set { SetProperty(ref _cropYear, value); }
         }
 
          // Source Collections for ListBoxes
          public ObservableCollection<Product> Products { get => _products; set => SetProperty(ref _products, value); }
          public ObservableCollection<Process> Processes { get => _processes; set => SetProperty(ref _processes, value); }
          public ObservableCollection<PayGroup> PayGroups { get => _payGroups; set => SetProperty(ref _payGroups, value); }
+         // Expose the filtered view for binding
+         public ICollectionView FilteredGrowers => _filteredGrowersView;
+         // Keep the original collection for loading data
          public ObservableCollection<GrowerInfo> AllGrowers { get => _allGrowers; set => SetProperty(ref _allGrowers, value); }
+
 
          // Properties for On Hold List
          public ObservableCollection<GrowerInfo> OnHoldGrowers { get => _onHoldGrowers; private set => SetProperty(ref _onHoldGrowers, value); }
@@ -192,7 +242,7 @@ namespace WPFGrowerApp.ViewModels
             // Prepare lists of IDs from selected items
             var selectedProductIds = SelectedProducts.Select(p => p.ProductId).Where(id => !string.IsNullOrEmpty(id)).ToList();
             var selectedProcessIds = SelectedProcesses.Select(p => p.ProcessId).Where(id => !string.IsNullOrEmpty(id)).ToList();
-            var selectedExcludeGrowerIds = SelectedExcludeGrowers.Select(g => g.Number).Where(num => num != 0).ToList();
+            var selectedExcludeGrowerIds = SelectedExcludeGrowers.Select(g => g.GrowerNumber).Where(num => num != 0).ToList();
             var selectedExcludePayGroupIds = SelectedExcludePayGroups.Select(pg => pg.PayGroupId).Where(id => !string.IsNullOrEmpty(id)).ToList();
 
             // Log selected filters
@@ -272,8 +322,9 @@ namespace WPFGrowerApp.ViewModels
 
                 // Load Growers for Exclude ListBox
                 var growerList = await _growerService.GetAllGrowersBasicInfoAsync();
-                 AllGrowers.Clear();
+                 AllGrowers.Clear(); // Clear the backing collection
                  foreach (var g in growerList) AllGrowers.Add(g);
+                 _filteredGrowersView?.Refresh(); // Refresh the view after loading
 
             }
             catch (Exception ex)
@@ -293,10 +344,10 @@ namespace WPFGrowerApp.ViewModels
                 var onHold = await _growerService.GetOnHoldGrowersAsync();
 
                 // Apply client-side filtering based on Exclude options if needed
-                var excludedGrowerIds = SelectedExcludeGrowers.Select(g => g.Number).Where(num => num != 0).ToList();
+                var excludedGrowerIds = SelectedExcludeGrowers.Select(g => g.GrowerNumber).Where(num => num != 0).ToList();
                 if (excludedGrowerIds.Any())
                 {
-                    onHold = onHold.Where(g => !excludedGrowerIds.Contains(g.Number)).ToList();
+                    onHold = onHold.Where(g => !excludedGrowerIds.Contains(g.GrowerNumber)).ToList();
                 }
                 // TODO: Add filtering for Products, Processes, PayGroups if required by business logic
 
@@ -323,7 +374,7 @@ namespace WPFGrowerApp.ViewModels
         private void SelectedFilters_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
             // Re-calculate the OnHoldGrowers list whenever a filter selection changes
-            _ = UpdateOnHoldGrowersAsync();
+           // _ = UpdateOnHoldGrowersAsync();
         }
 
     }
