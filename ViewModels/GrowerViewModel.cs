@@ -72,7 +72,7 @@ namespace WPFGrowerApp.ViewModels
             {
                 // Logging should happen in the service layer
                 StatusMessage = $"Initialization failed: {ex.Message}";
-                _dialogService.ShowMessageBox($"Initialization failed: {ex.Message}", "Initialization Error");
+                await _dialogService.ShowMessageBoxAsync($"Initialization failed: {ex.Message}", "Initialization Error");
                 Infrastructure.Logging.Logger.Error("Initialization failed in GrowerViewModel", ex);
             }
             finally
@@ -290,7 +290,7 @@ namespace WPFGrowerApp.ViewModels
             {
                 // Logging should happen in service layer
                 StatusMessage = $"Error loading grower: {ex.Message}";
-                _dialogService.ShowMessageBox($"Error loading grower: {ex.Message}", "Loading Error");
+                await _dialogService.ShowMessageBoxAsync($"Error loading grower: {ex.Message}", "Loading Error");
                 Infrastructure.Logging.Logger.Error($"Error loading grower {growerNumber} in ViewModel", ex);
             }
             finally
@@ -311,7 +311,7 @@ namespace WPFGrowerApp.ViewModels
                 ValidateGrower(); // Ensure validation is run
                 if (HasErrors)
                 {
-                    _dialogService.ShowMessageBox("Please correct the validation errors before saving.", "Validation Error");
+                    await _dialogService.ShowMessageBoxAsync("Please correct the validation errors before saving.", "Validation Error");
                     IsSaving = false;
                     return;
                 }
@@ -321,13 +321,13 @@ namespace WPFGrowerApp.ViewModels
                 
                 // If SaveGrowerAsync throws, the catch block below handles it
                 StatusMessage = "Grower saved successfully.";
-                _dialogService.ShowMessageBox("Grower saved successfully.", "Save Success");
+                await _dialogService.ShowMessageBoxAsync("Grower saved successfully.", "Save Success");
             }
             catch (Exception ex)
             {
                 // Logging should happen in service layer
                 StatusMessage = $"Error saving grower: {ex.Message}";
-                _dialogService.ShowMessageBox($"Error saving grower: {ex.Message}", "Save Error");
+                await _dialogService.ShowMessageBoxAsync($"Error saving grower: {ex.Message}", "Save Error");
                 Infrastructure.Logging.Logger.Error($"Error saving grower {CurrentGrower?.GrowerNumber} in ViewModel", ex);
             }
             finally

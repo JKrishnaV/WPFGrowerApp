@@ -163,6 +163,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     };
 
                     int affectedRows = await connection.ExecuteAsync(sql, parameters);
+                    // Logger.Info($"Attempted soft delete for DepotId '{depotId}'. Rows affected reported by database: {affectedRows}"); // Removed log
                     return affectedRows > 0;
                 }
             }

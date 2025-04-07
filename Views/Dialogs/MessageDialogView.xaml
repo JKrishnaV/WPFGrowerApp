@@ -1,0 +1,33 @@
+<UserControl x:Class="WPFGrowerApp.Views.Dialogs.MessageDialogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:WPFGrowerApp.Views.Dialogs"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d" 
+             d:DesignHeight="150" d:DesignWidth="300" MaxWidth="400">
+    <StackPanel Margin="16">
+        <TextBlock x:Name="TitleTextBlock"
+                   Style="{StaticResource MaterialDesignHeadline6TextBlock}"
+                   Margin="0 0 0 8"
+                   TextWrapping="Wrap"
+                   Visibility="Collapsed"/> <!-- Set Visibility based on whether Title is provided -->
+
+        <TextBlock x:Name="MessageTextBlock"
+                   Margin="0 8 0 16"
+                   TextWrapping="Wrap">
+            <!-- Message content will be set from code-behind or ViewModel -->
+            Sample message text goes here.
+        </TextBlock>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Style="{StaticResource MaterialDesignFlatButton}"
+                    IsDefault="True"
+                    Margin="0 8 8 0"
+                    Command="{x:Static materialDesign:DialogHost.CloseDialogCommand}">
+                OK
+            </Button>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

@@ -1,54 +1,48 @@
-using System; // Added for IServiceProvider
+using System; 
 using System.Windows;
-using Microsoft.Extensions.DependencyInjection; // Added for GetRequiredService
+using Microsoft.Extensions.DependencyInjection; 
 using WPFGrowerApp.Views; 
+using System.Threading.Tasks; // Added for Task
+using MaterialDesignThemes.Wpf; // Added for DialogHost
+using WPFGrowerApp.Views.Dialogs; // Added for custom dialog views
 
 namespace WPFGrowerApp.Services
 {
     public class DialogService : IDialogService
     {
         private readonly IServiceProvider _serviceProvider;
+        private const string RootDialogHostId = "RootDialogHost"; // Identifier for the DialogHost in MainWindow
 
-        // Inject IServiceProvider
         public DialogService(IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider;
         }
 
-        // Maps our enum to WPF MessageBoxButton (can be expanded)
-        private MessageBoxButton GetMessageBoxButton(DialogResult buttons)
+        // ShowMessageBoxAsync using Material Design DialogHost
+        public async Task ShowMessageBoxAsync(string message, string title) 
         {
-            switch (buttons)
-            {
-                // Add cases for YesNo, YesNoCancel etc. if needed
-                case DialogResult.OK:
-                default:
-                    return MessageBoxButton.OK;
-            }
+            var view = new MessageDialogView();
+            view.SetContent(message, title); // Use the method we added to set content
+
+            // Show the view as a dialog using the DialogHost
+            await DialogHost.Show(view, RootDialogHostId); 
+            // We don't need to return anything for a simple message box
         }
 
-        // Maps our enum to WPF MessageBoxImage (can be expanded)
-        private MessageBoxImage GetMessageBoxImage(string title)
+        // ShowConfirmationDialogAsync using Material Design DialogHost
+        public async Task<bool> ShowConfirmationDialogAsync(string message, string title)
         {
-            if (title.Contains("Error")) return MessageBoxImage.Error;
-            if (title.Contains("Warning")) return MessageBoxImage.Warning;
-            if (title.Contains("Information") || title.Contains("Success")) return MessageBoxImage.Information;
-            return MessageBoxImage.None; // Default
+            var view = new ConfirmationDialogView();
+            view.SetContent(message, title); // Use the method we added
+
+            // Show the view as a dialog and wait for the result
+            var result = await DialogHost.Show(view, RootDialogHostId);
+
+            // Check if the result is the string "True"
+            return result is string stringResult && stringResult.Equals("True", StringComparison.OrdinalIgnoreCase);
         }
 
-        // Updated ShowMessageBox to match the simplified interface definition
-        public void ShowMessageBox(string message, string title) 
-        {
-            MessageBox.Show(message, title, MessageBoxButton.OK, GetMessageBoxImage(title));
-        }
-
-        // Implementation for the new confirmation dialog method
-        public bool ShowConfirmationDialog(string message, string title)
-        {
-            MessageBoxResult result = MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Warning); // Use Warning icon for confirmation
-            return result == MessageBoxResult.Yes;
-        }
-
+        // ShowGrowerSearchDialog remains synchronous for now, using standard Window.ShowDialog()
         public (bool? DialogResult, decimal? SelectedGrowerNumber) ShowGrowerSearchDialog()
         {
             // Resolve the view using the DI container

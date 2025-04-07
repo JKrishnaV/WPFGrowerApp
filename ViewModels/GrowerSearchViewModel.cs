@@ -135,7 +135,7 @@ namespace WPFGrowerApp.ViewModels
             catch (Exception ex)
             {
                 Logger.Error($"Error during grower search for '{SearchText}': {ex.Message}", ex);
-                _dialogService.ShowMessageBox($"Search failed: {ex.Message}", "Search Error");
+                await _dialogService.ShowMessageBoxAsync($"Search failed: {ex.Message}", "Search Error"); // Use async
             }
             finally
             {
@@ -160,7 +160,7 @@ namespace WPFGrowerApp.ViewModels
             catch (Exception ex)
             {
                 Logger.Error($"Error loading all growers: {ex.Message}", ex);
-                 _dialogService.ShowMessageBox($"Failed to load initial grower list: {ex.Message}", "Load Error");
+                 await _dialogService.ShowMessageBoxAsync($"Failed to load initial grower list: {ex.Message}", "Load Error"); // Use async
             }
             finally
             {

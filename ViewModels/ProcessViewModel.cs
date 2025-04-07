@@ -94,8 +94,8 @@ namespace WPFGrowerApp.ViewModels
             }
             catch (Exception ex)
             {
-                Infrastructure.Logging.Logger.Error("Error loading processes.", ex);
-                _dialogService?.ShowMessageBox($"Error loading processes: {ex.Message}", "Error");
+                Infrastructure.Logging.Logger.Error("Error loading process types.", ex);
+                await _dialogService?.ShowMessageBoxAsync($"Error loading process types: {ex.Message}", "Error"); // Use async
             }
             finally
             {
@@ -130,12 +130,12 @@ namespace WPFGrowerApp.ViewModels
             // Basic Validation 
             if (string.IsNullOrWhiteSpace(SelectedProcess.ProcessId) || SelectedProcess.ProcessId.Length > 2)
             {
-                 _dialogService?.ShowMessageBox("Process ID cannot be empty and must be 1 or 2 characters.", "Validation Error");
+                 await _dialogService?.ShowMessageBoxAsync("Process ID cannot be empty and must be 2 characters or less.", "Validation Error"); // Use async
                  return;
             }
-             if (string.IsNullOrWhiteSpace(SelectedProcess.Description))
+             if (string.IsNullOrWhiteSpace(SelectedProcess.Description) || SelectedProcess.Description.Length > 19)
             {
-                 _dialogService?.ShowMessageBox("Description cannot be empty.", "Validation Error");
+                 await _dialogService?.ShowMessageBoxAsync("Description cannot be empty and must be 19 characters or less.", "Validation Error"); // Use async
                  return;
             }
             // Add validation for DefGrade and ProcClass if needed (e.g., range checks)
@@ -151,13 +151,13 @@ namespace WPFGrowerApp.ViewModels
                 {
                     // Add new process
                     success = await _processService.AddProcessAsync(SelectedProcess);
-                    if(success) _dialogService?.ShowMessageBox("Process added successfully.", "Success");
+                    if(success) await _dialogService?.ShowMessageBoxAsync("Process type added successfully.", "Success"); // Use async
                 }
                 else
                 {
                     // Update existing process
                     success = await _processService.UpdateProcessAsync(SelectedProcess);
-                     if(success) _dialogService?.ShowMessageBox("Process updated successfully.", "Success");
+                     if(success) await _dialogService?.ShowMessageBoxAsync("Process type updated successfully.", "Success"); // Use async
                 }
 
                 if (success)
@@ -166,13 +166,13 @@ namespace WPFGrowerApp.ViewModels
                 }
                 else
                 {
-                     _dialogService?.ShowMessageBox("Failed to save the process.", "Error");
+                     await _dialogService?.ShowMessageBoxAsync("Failed to save the process type.", "Error"); // Use async
                 }
             }
             catch (Exception ex)
             {
-                Infrastructure.Logging.Logger.Error($"Error saving process {SelectedProcess.ProcessId}.", ex);
-                _dialogService?.ShowMessageBox($"Error saving process: {ex.Message}", "Error");
+                Infrastructure.Logging.Logger.Error($"Error saving process type {SelectedProcess.ProcessId}.", ex);
+                await _dialogService?.ShowMessageBoxAsync($"Error saving process type: {ex.Message}", "Error"); // Use async
             }
              finally
             {
@@ -184,7 +184,7 @@ namespace WPFGrowerApp.ViewModels
         {
              if (!CanSaveCancelDelete(parameter)) return; 
 
-            var confirm = _dialogService?.ShowConfirmationDialog($"Are you sure you want to delete process '{SelectedProcess.Description}' ({SelectedProcess.ProcessId})?", "Confirm Delete");
+            var confirm = await _dialogService?.ShowConfirmationDialogAsync($"Are you sure you want to delete process type '{SelectedProcess.Description}' ({SelectedProcess.ProcessId})?", "Confirm Delete"); // Use async
             if (confirm != true) return; 
 
             IsLoading = true;
@@ -194,18 +194,18 @@ namespace WPFGrowerApp.ViewModels
 
                 if (success)
                 {
-                    _dialogService?.ShowMessageBox("Process deleted successfully.", "Success");
+                    await _dialogService?.ShowMessageBoxAsync("Process type deleted successfully.", "Success"); // Use async
                     await LoadProcessesAsync(null); // Reload list
                 }
                 else
                 {
-                    _dialogService?.ShowMessageBox("Failed to delete the process.", "Error");
+                    await _dialogService?.ShowMessageBoxAsync("Failed to delete the process type.", "Error"); // Use async
                 }
             }
             catch (Exception ex)
             {
-                Infrastructure.Logging.Logger.Error($"Error deleting process {SelectedProcess.ProcessId}.", ex);
-                _dialogService?.ShowMessageBox($"Error deleting process: {ex.Message}", "Error");
+                Infrastructure.Logging.Logger.Error($"Error deleting process type {SelectedProcess.ProcessId}.", ex);
+                await _dialogService?.ShowMessageBoxAsync($"Error deleting process type: {ex.Message}", "Error"); // Use async
             }
              finally
             {

@@ -145,7 +145,7 @@ namespace WPFGrowerApp.ViewModels
                 {
                     StatusMessage = "Password changed successfully.";
                     // Optionally clear fields via messaging or direct view interaction if needed
-                    _dialogService.ShowMessageBox("Password changed successfully.", "Success"); 
+                    await _dialogService.ShowMessageBoxAsync("Password changed successfully.", "Success"); // Use async
                 }
                 else
                 {

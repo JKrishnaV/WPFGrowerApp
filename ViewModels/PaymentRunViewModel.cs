@@ -274,7 +274,7 @@ namespace WPFGrowerApp.ViewModels
                 {
                     StatusMessage = $"Payment run completed successfully for Batch {createdBatch?.PostBat}.";
                     Report("Payment run finished successfully.");
-                    _dialogService.ShowMessageBox($"Advance {AdvanceNumber} payment run completed successfully for Batch {createdBatch?.PostBat}.", "Payment Run Complete");
+                    await _dialogService.ShowMessageBoxAsync($"Advance {AdvanceNumber} payment run completed successfully for Batch {createdBatch?.PostBat}.", "Payment Run Complete"); // Use async
                 }
                 else
                 {
@@ -284,7 +284,7 @@ namespace WPFGrowerApp.ViewModels
                     {
                         Report($"ERROR: {error}");
                     }
-                     _dialogService.ShowMessageBox($"The payment run encountered errors. Please review the run log.\nBatch ID: {createdBatch?.PostBat}", "Payment Run Errors");
+                     await _dialogService.ShowMessageBoxAsync($"The payment run encountered errors. Please review the run log.\nBatch ID: {createdBatch?.PostBat}", "Payment Run Errors"); // Use async
                 }
             }
             catch (Exception ex)
@@ -292,7 +292,7 @@ namespace WPFGrowerApp.ViewModels
                 StatusMessage = "Payment run failed with a critical error.";
                 Report($"CRITICAL ERROR: {ex.Message}");
                 Logger.Error($"Critical error during payment run execution", ex);
-                _dialogService.ShowMessageBox($"A critical error occurred: {ex.Message}", "Payment Run Failed");
+                await _dialogService.ShowMessageBoxAsync($"A critical error occurred: {ex.Message}", "Payment Run Failed"); // Use async
             }
             finally
             {
@@ -330,7 +330,7 @@ namespace WPFGrowerApp.ViewModels
             catch (Exception ex)
             {
                 Logger.Error("Failed to load filter data for Payment Run", ex);
-                _dialogService.ShowMessageBox("Error loading filter options.", "Load Error");
+                await _dialogService.ShowMessageBoxAsync("Error loading filter options.", "Load Error"); // Use async
             }
         }
 

@@ -22,22 +22,23 @@ namespace WPFGrowerApp.ViewModels
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
             _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
 
-            // Initialize commands using the NavigateTo helper
-            NavigateToDashboardCommand = new RelayCommand(p => NavigateTo<DashboardViewModel>("Dashboard", p), CanNavigate); // Corrected
-            NavigateToGrowersCommand = new RelayCommand(NavigateToGrowersExecuteAsync, CanNavigate); // Keep async for special logic
-            NavigateToImportCommand = new RelayCommand(p => NavigateTo<ImportViewModel>("Import", p), CanNavigate); 
-            NavigateToReportsCommand = new RelayCommand(p => NavigateTo<ReportsViewModel>("Reports", p), CanNavigate); 
-            NavigateToInventoryCommand = new RelayCommand(p => NavigateTo<InventoryViewModel>("Inventory", p), CanNavigate);
-            NavigateToPaymentRunCommand = new RelayCommand(p => NavigateTo<PaymentRunViewModel>("Payment Run", p), CanNavigate); 
+            // Initialize commands using the NavigateToAsync helper
+            NavigateToDashboardCommand = new RelayCommand(async p => await NavigateToAsync<DashboardViewModel>("Dashboard", p), CanNavigate); // Use async lambda
+            NavigateToGrowersCommand = new RelayCommand(NavigateToGrowersExecuteAsync, CanNavigate); // Keep separate async logic
+            NavigateToImportCommand = new RelayCommand(async p => await NavigateToAsync<ImportViewModel>("Import", p), CanNavigate); // Use async lambda
+            NavigateToReportsCommand = new RelayCommand(async p => await NavigateToAsync<ReportsViewModel>("Reports", p), CanNavigate); // Use async lambda
+            NavigateToInventoryCommand = new RelayCommand(async p => await NavigateToAsync<InventoryViewModel>("Inventory", p), CanNavigate); // Use async lambda
+            NavigateToPaymentRunCommand = new RelayCommand(async p => await NavigateToAsync<PaymentRunViewModel>("Payment Run", p), CanNavigate); // Use async lambda
             // Update Settings command to navigate to the new SettingsHostViewModel
-            NavigateToSettingsCommand = new RelayCommand(p => NavigateTo<SettingsHostViewModel>("Settings", p), CanNavigate);
+            NavigateToSettingsCommand = new RelayCommand(async p => await NavigateToAsync<SettingsHostViewModel>("Settings", p), CanNavigate); // Use async lambda
 
             // Set default view model to Dashboard
-            NavigateTo<DashboardViewModel>("Dashboard"); 
+            _ = NavigateToAsync<DashboardViewModel>("Dashboard"); // Call async method, discard task
         }
 
         // --- Navigation Helper ---
-        private void NavigateTo<TViewModel>(string viewName, object? parameter = null) where TViewModel : ViewModelBase
+        // Changed to async Task
+        private async Task NavigateToAsync<TViewModel>(string viewName, object? parameter = null) where TViewModel : ViewModelBase 
         {
             if (!CanNavigate(parameter)) return;
 
@@ -49,7 +50,7 @@ namespace WPFGrowerApp.ViewModels
             catch (Exception ex)
             {
                 Infrastructure.Logging.Logger.Error($"Error navigating to {viewName}", ex);
-                _dialogService.ShowMessageBox($"Error navigating to {viewName}: {ex.Message}", "Navigation Error");
+                await _dialogService.ShowMessageBoxAsync($"Error navigating to {viewName}: {ex.Message}", "Navigation Error"); // Use async
             }
         }
 
@@ -96,7 +97,7 @@ namespace WPFGrowerApp.ViewModels
             catch (System.Exception ex)
             {
                  Infrastructure.Logging.Logger.Error("Error during grower navigation", ex);
-                 _dialogService.ShowMessageBox($"Error navigating to grower: {ex.Message}", "Navigation Error");
+                 await _dialogService.ShowMessageBoxAsync($"Error navigating to grower: {ex.Message}", "Navigation Error"); // Use async
             }
             finally
             {

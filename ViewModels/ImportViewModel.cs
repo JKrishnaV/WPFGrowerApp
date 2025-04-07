@@ -195,7 +195,7 @@ namespace WPFGrowerApp.ViewModels
             catch (Exception ex)
             {
                 Logger.Error("Failed to load depots", ex);
-                _dialogService.ShowMessageBox("Error loading depots. Please check connection or logs.", "Load Error");
+                await _dialogService.ShowMessageBoxAsync("Error loading depots. Please check connection or logs.", "Load Error");
             }
         }
 
@@ -383,12 +383,12 @@ namespace WPFGrowerApp.ViewModels
         {
             if (_currentBatch == null) // Check _currentBatch which stores the last processed batch
             {
-                _dialogService.ShowMessageBox("No import batch available to revert.", "Revert Failed");
+                await _dialogService.ShowMessageBoxAsync("No import batch available to revert.", "Revert Failed");
                 return;
             }
 
             // TODO: Implement proper confirmation dialog in IDialogService
-            _dialogService.ShowMessageBox($"Revert all changes from batch {_currentBatch.ImpBatch} (File: {_currentBatch.ImpFile})?", "Confirm Revert");
+            await _dialogService.ShowMessageBoxAsync($"Revert all changes from batch {_currentBatch.ImpBatch} (File: {_currentBatch.ImpFile})?", "Confirm Revert");
             bool confirmed = true; // Placeholder - Replace with actual dialog result
 
             if (confirmed)
@@ -418,7 +418,7 @@ namespace WPFGrowerApp.ViewModels
                 {
                     StatusMessage = $"Error reverting batch {_currentBatch.ImpBatch}.";
                     Logger.Error($"Error reverting batch {_currentBatch.ImpBatch}", ex);
-                    _dialogService.ShowMessageBox($"Failed to revert batch: {ex.Message}", "Revert Error");
+                    await _dialogService.ShowMessageBoxAsync($"Failed to revert batch: {ex.Message}", "Revert Error");
                 }
                 finally
                 {
