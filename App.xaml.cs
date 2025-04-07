@@ -46,7 +46,7 @@ namespace WPFGrowerApp
             services.AddTransient<IPaymentService, PaymentService>();
             services.AddTransient<IDepotService, DepotService>();
             services.AddTransient<IProductService, ProductService>(); 
-            services.AddTransient<IProcessService, ProcessService>(); 
+            services.AddTransient<IProcessService, ProcessService>(); // Already added, confirming
             services.AddTransient<ValidationService>();
             services.AddTransient<IUserService, UserService>();
 
@@ -62,9 +62,10 @@ namespace WPFGrowerApp
             services.AddTransient<ImportViewModel>();
             services.AddTransient<ReportsViewModel>();
             services.AddTransient<InventoryViewModel>();
-            services.AddTransient<SettingsViewModel>(); // Keep existing if used elsewhere, otherwise remove? Let's keep for now.
-            services.AddTransient<SettingsHostViewModel>(); // Added Settings Host
-            services.AddTransient<ProductViewModel>(); // Added Product VM
+            services.AddTransient<SettingsViewModel>(); 
+            services.AddTransient<SettingsHostViewModel>(); 
+            services.AddTransient<ProductViewModel>(); 
+            services.AddTransient<ProcessViewModel>(); // Added Process VM
             services.AddTransient<PaymentRunViewModel>(); 
             services.AddTransient<LoginViewModel>();
             services.AddTransient<ChangePasswordViewModel>();

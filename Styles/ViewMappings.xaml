@@ -39,4 +39,9 @@
         <views:ProductView />
     </DataTemplate>
 
+    <!-- Process Management Mapping -->
+    <DataTemplate DataType="{x:Type viewmodels:ProcessViewModel}">
+        <views:ProcessView />
+    </DataTemplate>
+
 </ResourceDictionary>

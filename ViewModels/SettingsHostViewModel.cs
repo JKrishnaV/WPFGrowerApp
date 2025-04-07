@@ -23,7 +23,8 @@ namespace WPFGrowerApp.ViewModels
             SettingsOptions = new ObservableCollection<SettingsNavigationItem>
             {
                 new SettingsNavigationItem("Change Password", typeof(ChangePasswordViewModel)),
-                new SettingsNavigationItem("Products", typeof(ProductViewModel)) 
+                new SettingsNavigationItem("Products", typeof(ProductViewModel)),
+                new SettingsNavigationItem("Process Type", typeof(ProcessViewModel)) // Added Process option
                 // Add more settings here as needed
             };
 

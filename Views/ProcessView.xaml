@@ -1,0 +1,113 @@
+<UserControl x:Class="WPFGrowerApp.Views.ProcessView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:WPFGrowerApp.Views"
+             xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels"
+             xmlns:models="clr-namespace:WPFGrowerApp.DataAccess.Models"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance Type=vm:ProcessViewModel, IsDesignTimeCreatable=False}"
+             d:DesignHeight="600" d:DesignWidth="700"
+             Background="{DynamicResource MaterialDesignPaper}">
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Title -->
+            <RowDefinition Height="*"/>    <!-- DataGrid -->
+            <RowDefinition Height="Auto"/> <!-- Edit Form -->
+            <RowDefinition Height="Auto"/> <!-- Buttons -->
+        </Grid.RowDefinitions>
+
+        <!-- Title -->
+        <TextBlock Grid.Row="0" Text="Manage Process Types" Style="{StaticResource MaterialDesignHeadline5TextBlock}" Margin="0,0,0,15"/>
+
+        <!-- Process List -->
+        <DataGrid Grid.Row="1" 
+                  ItemsSource="{Binding Processes}" 
+                  SelectedItem="{Binding SelectedProcess, Mode=TwoWay}"
+                  AutoGenerateColumns="False" 
+                  IsReadOnly="True" 
+                  CanUserAddRows="False"
+                  SelectionMode="Single"
+                  materialDesign:DataGridAssist.CellPadding="13 8 8 8"
+                  materialDesign:DataGridAssist.ColumnHeaderPadding="8"
+                  Margin="0,0,0,10"
+                  MaxHeight="350"> 
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="ID" Binding="{Binding ProcessId}" Width="Auto"/>
+                <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="Auto"/>
+                <DataGridTextColumn Header="Def Grade" Binding="{Binding DefGrade}" Width="Auto"/>
+                <DataGridTextColumn Header="Proc Class" Binding="{Binding ProcClass}" Width="Auto"/>
+                <!-- Add column for ProcClass Description if needed later -->
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Edit/Add Form -->
+        <materialDesign:Card Grid.Row="2" Margin="0,10,0,10" Padding="15"
+                             Visibility="{Binding SelectedProcess, Converter={StaticResource NotNullConverter}}"> 
+             <Grid> 
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBox Grid.Row="0" Grid.Column="1" Margin="5"
+                         materialDesign:HintAssist.Hint="Process ID (Max 2 Chars)"
+                         Text="{Binding SelectedProcess.ProcessId, UpdateSourceTrigger=PropertyChanged}" 
+                         MaxLength="2"
+                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+
+                <TextBox Grid.Row="0" Grid.Column="3" Margin="5"
+                         materialDesign:HintAssist.Hint="Description (Max 19 Chars)"
+                         Text="{Binding SelectedProcess.Description, UpdateSourceTrigger=PropertyChanged}"
+                         MaxLength="19"
+                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                
+                <TextBox Grid.Row="1" Grid.Column="1" Margin="5"
+                         materialDesign:HintAssist.Hint="Default Grade (Number 1-3)"
+                         Text="{Binding SelectedProcess.DefGrade, UpdateSourceTrigger=PropertyChanged}" 
+                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                         <!-- Add validation for 1-3 range if needed -->
+
+                <TextBox Grid.Row="1" Grid.Column="3" Margin="5"
+                         materialDesign:HintAssist.Hint="Process Class (Number 1-4)"
+                         Text="{Binding SelectedProcess.ProcClass, UpdateSourceTrigger=PropertyChanged}"
+                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                         <!-- Add validation for 1-4 range if needed -->
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Action Buttons -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="New" Command="{Binding NewCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Margin="5"
+                    IsEnabled="{Binding IsEditing, Converter={StaticResource InverseBooleanConverter}}"/> 
+            <Button Content="Save" Command="{Binding SaveCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Margin="5" 
+                    IsEnabled="{Binding SelectedProcess, Converter={StaticResource NotNullConverter}}" 
+                    Background="{DynamicResource PrimaryHueMidBrush}" Foreground="{DynamicResource PrimaryHueMidForegroundBrush}"/> 
+            <Button Content="Delete" Command="{Binding DeleteCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Background="IndianRed" Foreground="White" Margin="5" 
+                    IsEnabled="{Binding SelectedProcess, Converter={StaticResource NotNullConverter}}"/> 
+            <Button Content="Cancel" Command="{Binding CancelCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Margin="5" 
+                    IsEnabled="{Binding SelectedProcess, Converter={StaticResource NotNullConverter}}"/>
+        </StackPanel>
+        
+        <!-- Loading Indicator -->
+        <materialDesign:Card Grid.Row="1" Grid.RowSpan="3" 
+                             VerticalAlignment="Center" HorizontalAlignment="Center" 
+                             Padding="20" Background="{DynamicResource MaterialDesignCardBackground}"
+                             Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel Orientation="Horizontal">
+                <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}" Value="0" IsIndeterminate="True" />
+                <TextBlock Text="Loading..." VerticalAlignment="Center" Margin="10,0,0,0"/>
+            </StackPanel>
+        </materialDesign:Card>
+
+    </Grid>
+</UserControl>

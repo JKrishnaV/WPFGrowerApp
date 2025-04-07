@@ -5,7 +5,7 @@ namespace WPFGrowerApp.DataAccess.Models
     /// <summary>
     /// Represents a record from the Process table.
     /// </summary>
-    public class Process
+    public class Process : AuditableEntity // Inherit from AuditableEntity
     {
         // Corresponds to PROCESS NVARCHAR(2)
         public string ProcessId { get; set; }
@@ -14,11 +14,12 @@ namespace WPFGrowerApp.DataAccess.Models
         public string Description { get; set; }
 
         // Corresponds to DEF_GRADE DECIMAL(1, 0)
-        public decimal DefGrade { get; set; }
+        public int DefGrade { get; set; } // Use int for single digit
 
         // Corresponds to PROC_CLASS DECIMAL(1, 0)
-        public decimal ProcClass { get; set; }
+        public int ProcClass { get; set; } // Use int for single digit
 
-        // Add audit fields if needed
+        // Note: GRADE_N1, GRADE_N2, GRADE_N3 are excluded based on user request.
+        // Audit fields are inherited from AuditableEntity.
     }
 }
