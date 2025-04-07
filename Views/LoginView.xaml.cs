@@ -76,28 +76,6 @@ namespace WPFGrowerApp.Views
             this.Close();
         }
 
-        private void PasswordVisibilityToggle_Checked(object sender, RoutedEventArgs e)
-        {
-            // Show plain text password
-            VisiblePasswordTextBox.Text = PasswordBox.Password;
-            VisiblePasswordTextBox.Visibility = Visibility.Visible;
-            PasswordBox.Visibility = Visibility.Collapsed;
-            // Optionally, set focus to the visible text box
-            VisiblePasswordTextBox.Focus();
-            // Move cursor to end if needed
-            VisiblePasswordTextBox.CaretIndex = VisiblePasswordTextBox.Text.Length;
-        }
-
-        private void PasswordVisibilityToggle_Unchecked(object sender, RoutedEventArgs e)
-        {
-            // Hide plain text password
-            PasswordBox.Password = VisiblePasswordTextBox.Text;
-            PasswordBox.Visibility = Visibility.Visible;
-            VisiblePasswordTextBox.Visibility = Visibility.Collapsed;
-            // Optionally, set focus back to the password box
-            PasswordBox.Focus();
-        }
-
         private void PasswordBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)

@@ -45,31 +45,12 @@
                      Style="{StaticResource MaterialDesignFloatingHintTextBox}" />
 
             <!-- Password -->
-            <Grid>
-                <PasswordBox x:Name="PasswordBox"
-                             materialDesign:HintAssist.Hint="Password"
-                             Margin="0,0,0,10"
-                             Style="{StaticResource MaterialDesignFloatingHintPasswordBox}"/>
-                <TextBox x:Name="VisiblePasswordTextBox"
-                         materialDesign:HintAssist.Hint="Password"
-                         Margin="0,0,0,10"
-                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"
-                         Visibility="Collapsed"/>
-                <ToggleButton HorizontalAlignment="Right" VerticalAlignment="Center"
-                              Margin="0,0,4,10"
-                              Command="{Binding TogglePasswordVisibilityCommand}" 
-                              x:Name="PasswordVisibilityToggle" 
-                              Checked="PasswordVisibilityToggle_Checked" 
-                              Unchecked="PasswordVisibilityToggle_Unchecked" 
-                              Style="{StaticResource MaterialDesignFlatToggleButton}"
-                              ToolTip="Show/Hide Password">
-                    <ToggleButton.Content>
-                        <!-- Bind Kind directly to ViewModel property -->
-                        <materialDesign:PackIcon Kind="{Binding PasswordToggleIconKind}" />
-                    </ToggleButton.Content>
-                    <!-- Removed ToggleButton.Triggers -->
-                </ToggleButton>
-            </Grid>
+            
+            <PasswordBox x:Name="PasswordBox"
+                            materialDesign:HintAssist.Hint="Password"
+                            Margin="0,0,0,10"
+                            Style="{StaticResource MaterialDesignFloatingHintRevealPasswordBox}"/>                    
+                
 
             <!-- Error Message -->
              <TextBlock Text="{Binding ErrorMessage}"

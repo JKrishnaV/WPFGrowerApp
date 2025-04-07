@@ -105,8 +105,8 @@
 
         </ResourceDictionary>
     </Window.Resources>
-    
-    <materialDesign:Card UniformCornerRadius="8" Background="White">
+
+    <materialDesign:Card UniformCornerRadius="8" Background="#E6F0FA"><!--Warm Light Gray (#F0F0F0)-->
         <!-- Wrap the main Grid with DialogHost -->
         <materialDesign:DialogHost Identifier="RootDialogHost" CloseOnClickAway="True"> 
             <Grid>
