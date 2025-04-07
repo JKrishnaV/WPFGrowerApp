@@ -44,4 +44,9 @@
         <views:ProcessView />
     </DataTemplate>
 
+    <!-- Depot Management Mapping -->
+    <DataTemplate DataType="{x:Type viewmodels:DepotViewModel}">
+        <views:DepotView />
+    </DataTemplate>
+
 </ResourceDictionary>

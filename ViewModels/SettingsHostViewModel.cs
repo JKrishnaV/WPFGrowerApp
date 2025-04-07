@@ -24,7 +24,8 @@ namespace WPFGrowerApp.ViewModels
             {
                 new SettingsNavigationItem("Change Password", typeof(ChangePasswordViewModel)),
                 new SettingsNavigationItem("Products", typeof(ProductViewModel)),
-                new SettingsNavigationItem("Process Type", typeof(ProcessViewModel)) // Added Process option
+                new SettingsNavigationItem("Process Types", typeof(ProcessViewModel)), // Renamed
+                new SettingsNavigationItem("Depots", typeof(DepotViewModel)) // Renamed
                 // Add more settings here as needed
             };
 

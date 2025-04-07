@@ -1,0 +1,96 @@
+<UserControl x:Class="WPFGrowerApp.Views.DepotView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:WPFGrowerApp.Views"
+             xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels"
+             xmlns:models="clr-namespace:WPFGrowerApp.DataAccess.Models"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance Type=vm:DepotViewModel, IsDesignTimeCreatable=False}"
+             d:DesignHeight="600" d:DesignWidth="700"
+             Background="{DynamicResource MaterialDesignPaper}">
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Title -->
+            <RowDefinition Height="*"/>    <!-- DataGrid -->
+            <RowDefinition Height="Auto"/> <!-- Edit Form -->
+            <RowDefinition Height="Auto"/> <!-- Buttons -->
+        </Grid.RowDefinitions>
+
+        <!-- Title -->
+        <TextBlock Grid.Row="0" Text="Manage Depots" Style="{StaticResource MaterialDesignHeadline5TextBlock}" Margin="0,0,0,15"/>
+
+        <!-- Depot List -->
+        <DataGrid Grid.Row="1" 
+                  ItemsSource="{Binding Depots}" 
+                  SelectedItem="{Binding SelectedDepot, Mode=TwoWay}"
+                  AutoGenerateColumns="False" 
+                  IsReadOnly="True" 
+                  CanUserAddRows="False"
+                  SelectionMode="Single"
+                  materialDesign:DataGridAssist.CellPadding="13 8 8 8"
+                  materialDesign:DataGridAssist.ColumnHeaderPadding="8"
+                  Margin="0,0,0,10"
+                  MaxHeight="350"> 
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="ID" Binding="{Binding DepotId}" Width="Auto"/>
+                <DataGridTextColumn Header="Name" Binding="{Binding DepotName}" Width="Auto"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Edit/Add Form -->
+        <materialDesign:Card Grid.Row="2" Margin="0,10,0,10" Padding="15"
+                             Visibility="{Binding SelectedDepot, Converter={StaticResource NotNullConverter}}"> 
+             <Grid> 
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBox Grid.Row="0" Grid.Column="0" Margin="5"
+                         materialDesign:HintAssist.Hint="Depot ID (1 Char)"
+                         Text="{Binding SelectedDepot.DepotId, UpdateSourceTrigger=PropertyChanged}" 
+                         MaxLength="1"
+                         Width="100"
+                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+
+                <TextBox Grid.Row="0" Grid.Column="1" Margin="5"
+                         materialDesign:HintAssist.Hint="Depot Name (Max 12 Chars)"
+                         Text="{Binding SelectedDepot.DepotName, UpdateSourceTrigger=PropertyChanged}"
+                         MaxLength="12"
+                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Action Buttons -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="New" Command="{Binding NewCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Margin="5"
+                    IsEnabled="{Binding IsEditing, Converter={StaticResource InverseBooleanConverter}}"/> 
+            <Button Content="Save" Command="{Binding SaveCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Margin="5" 
+                    IsEnabled="{Binding SelectedDepot, Converter={StaticResource NotNullConverter}}" 
+                    Background="{DynamicResource PrimaryHueMidBrush}" Foreground="{DynamicResource PrimaryHueMidForegroundBrush}"/> 
+            <Button Content="Delete" Command="{Binding DeleteCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Background="IndianRed" Foreground="White" Margin="5" 
+                    IsEnabled="{Binding SelectedDepot, Converter={StaticResource NotNullConverter}}"/> 
+            <Button Content="Cancel" Command="{Binding CancelCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Margin="5" 
+                    IsEnabled="{Binding SelectedDepot, Converter={StaticResource NotNullConverter}}"/>
+        </StackPanel>
+        
+        <!-- Loading Indicator -->
+        <materialDesign:Card Grid.Row="1" Grid.RowSpan="3" 
+                             VerticalAlignment="Center" HorizontalAlignment="Center" 
+                             Padding="20" Background="{DynamicResource MaterialDesignCardBackground}"
+                             Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel Orientation="Horizontal">
+                <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}" Value="0" IsIndeterminate="True" />
+                <TextBlock Text="Loading..." VerticalAlignment="Center" Margin="10,0,0,0"/>
+            </StackPanel>
+        </materialDesign:Card>
+
+    </Grid>
+</UserControl>

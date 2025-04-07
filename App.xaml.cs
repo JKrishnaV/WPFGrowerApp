@@ -65,7 +65,8 @@ namespace WPFGrowerApp
             services.AddTransient<SettingsViewModel>(); 
             services.AddTransient<SettingsHostViewModel>(); 
             services.AddTransient<ProductViewModel>(); 
-            services.AddTransient<ProcessViewModel>(); // Added Process VM
+            services.AddTransient<ProcessViewModel>(); 
+            services.AddTransient<DepotViewModel>(); // Added Depot VM
             services.AddTransient<PaymentRunViewModel>(); 
             services.AddTransient<LoginViewModel>();
             services.AddTransient<ChangePasswordViewModel>();
