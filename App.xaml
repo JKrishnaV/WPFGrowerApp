@@ -29,12 +29,14 @@
              <!-- Converters -->
              <converters:KnobSizeConverter x:Key="KnobSizeConverter"/>
              <converters:VisibilityConverter x:Key="VisibilityConverter"/>
-            <converters:InverseBooleanToBooleanConverter x:Key="InverseBooleanToBooleanConverter"/>
-            <converters:NotNullConverter x:Key="NotNullConverter"/>
-            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/> 
-            <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
-            <converters:NotNullOrEmptyToVisibilityConverter x:Key="NotNullOrEmptyToVisibilityConverter"/> 
-            <converters:SecureStringArrayConverter x:Key="SecureStringArrayConverter"/> 
+             <converters:InverseBooleanToBooleanConverter x:Key="InverseBooleanToBooleanConverter"/>
+             <converters:NotNullConverter x:Key="NotNullConverter"/>
+             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/> 
+             <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+             <converters:NotNullOrEmptyToVisibilityConverter x:Key="NotNullOrEmptyToVisibilityConverter"/> 
+             <converters:SecureStringArrayConverter x:Key="SecureStringArrayConverter"/>
+             <converters:ActiveStatusConverter x:Key="ActiveStatusConverter"/>
+             <converters:ActiveStatusBrushConverter x:Key="ActiveStatusBrushConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

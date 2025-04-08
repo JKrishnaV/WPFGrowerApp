@@ -1,6 +1,8 @@
 using Dapper;
 using Microsoft.Data.SqlClient;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
@@ -180,6 +182,248 @@ namespace WPFGrowerApp.DataAccess.Services
             {
                  Logger.Error($"Error updating last login time for user '{user.Username}'.", ex);
                  // Decide if this error should prevent successful login
+            }
+        }
+
+        public async Task<bool> UpdateUserStatusAsync(int userId, bool isActive)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = @"
+                        UPDATE AppUsers 
+                        SET IsActive = @IsActive
+                        WHERE UserId = @UserId";
+
+                    int rowsAffected = await connection.ExecuteAsync(sql, new { UserId = userId, IsActive = isActive });
+
+                    if (rowsAffected > 0)
+                    {
+                        Logger.Info($"User status updated successfully. UserId: {userId}, IsActive: {isActive}");
+                        return true;
+                    }
+                    else
+                    {
+                        Logger.Warn($"Failed to update user status. UserId: {userId} not found.");
+                        return false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error updating user status for UserId: {userId}: {ex.Message}", ex);
+                return false;
+            }
+        }
+
+        public async Task<IEnumerable<User>> GetAllUsersAsync()
+        {
+            try
+            {
+                Logger.Info("Attempting to retrieve all users from database");
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    Logger.Info("Database connection opened successfully");
+                    
+                    var sql = @"
+                        SELECT UserId, Username, FullName, Email, RoleId, 
+                               IsActive, DateCreated, LastLoginDate, 
+                               FailedLoginAttempts, IsLockedOut, LastLockoutDate
+                        FROM AppUsers";
+
+                    Logger.Info("Executing SQL query to get all users");
+                    var result = (await connection.QueryAsync<User>(sql)).ToList();
+                    Logger.Info($"Query executed successfully. Retrieved {result.Count} users");
+                    
+                    return result;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error retrieving all users", ex);
+                return new List<User>(); // Return empty list on error
+            }
+        }
+
+        public async Task<User> GetUserByIdAsync(int userId)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = @"
+                        SELECT UserId, Username, FullName, Email, RoleId, 
+                               IsActive, DateCreated, LastLoginDate, 
+                               FailedLoginAttempts, IsLockedOut, LastLockoutDate
+                        FROM AppUsers 
+                        WHERE UserId = @UserId";
+
+                    return await connection.QuerySingleOrDefaultAsync<User>(sql, new { UserId = userId });
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error retrieving user by ID: {userId}", ex);
+                return null;
+            }
+        }
+
+        public async Task<User> GetUserByUsernameAsync(string username)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = @"
+                        SELECT UserId, Username, FullName, Email, RoleId, 
+                               IsActive, DateCreated, LastLoginDate, 
+                               FailedLoginAttempts, IsLockedOut, LastLockoutDate
+                        FROM AppUsers 
+                        WHERE Username = @Username";
+
+                    return await connection.QuerySingleOrDefaultAsync<User>(sql, new { Username = username });
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error retrieving user by username: {username}", ex);
+                return null;
+            }
+        }
+
+        public async Task<bool> CreateUserAsync(User user, string password)
+        {
+            if (user == null) throw new ArgumentNullException(nameof(user));
+            if (string.IsNullOrWhiteSpace(password)) throw new ArgumentException("Password cannot be empty", nameof(password));
+
+            try
+            {
+                var (hash, salt) = PasswordHasher.HashPassword(password);
+                user.PasswordHash = hash;
+                user.PasswordSalt = salt;
+                user.DateCreated = DateTime.UtcNow;
+
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = @"
+                        INSERT INTO AppUsers (
+                            Username, FullName, Email, PasswordHash, PasswordSalt,
+                            RoleId, IsActive, DateCreated, FailedLoginAttempts, IsLockedOut
+                        ) VALUES (
+                            @Username, @FullName, @Email, @PasswordHash, @PasswordSalt,
+                            @RoleId, @IsActive, @DateCreated, 0, 0
+                        )";
+
+                    int rowsAffected = await connection.ExecuteAsync(sql, user);
+                    
+                    if (rowsAffected > 0)
+                    {
+                        Logger.Info($"User created successfully: {user.Username}");
+                        return true;
+                    }
+                    else
+                    {
+                        Logger.Warn($"Failed to create user: {user.Username}");
+                        return false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error creating user: {user.Username}", ex);
+                return false;
+            }
+        }
+
+        public async Task<bool> UpdateUserAsync(User user)
+        {
+            if (user == null) throw new ArgumentNullException(nameof(user));
+
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = @"
+                        UPDATE AppUsers 
+                        SET Username = @Username,
+                            FullName = @FullName,
+                            Email = @Email,
+                            RoleId = @RoleId,
+                            IsActive = @IsActive
+                        WHERE UserId = @UserId";
+
+                    int rowsAffected = await connection.ExecuteAsync(sql, user);
+
+                    if (rowsAffected > 0)
+                    {
+                        Logger.Info($"User updated successfully: {user.Username}");
+                        return true;
+                    }
+                    else
+                    {
+                        Logger.Warn($"Failed to update user: {user.Username}");
+                        return false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error updating user: {user.Username}", ex);
+                return false;
+            }
+        }
+
+        public async Task<bool> DeleteUserAsync(int userId)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = "DELETE FROM AppUsers WHERE UserId = @UserId";
+
+                    int rowsAffected = await connection.ExecuteAsync(sql, new { UserId = userId });
+
+                    if (rowsAffected > 0)
+                    {
+                        Logger.Info($"User deleted successfully. UserId: {userId}");
+                        return true;
+                    }
+                    else
+                    {
+                        Logger.Warn($"Failed to delete user. UserId: {userId} not found.");
+                        return false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error deleting user. UserId: {userId}", ex);
+                return false;
+            }
+        }
+
+        public async Task<IEnumerable<Role>> GetAllRolesAsync()
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    var sql = "SELECT RoleId, RoleName, Description FROM Roles";
+                    return await connection.QueryAsync<Role>(sql);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error retrieving roles" ,ex);
+                throw;
             }
         }
     }

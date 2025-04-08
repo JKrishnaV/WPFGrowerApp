@@ -2,7 +2,8 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:viewmodels="clr-namespace:WPFGrowerApp.ViewModels"
                     xmlns:views="clr-namespace:WPFGrowerApp.Views"
-                    xmlns:reports="clr-namespace:WPFGrowerApp.Views.Reports">
+                    xmlns:reports="clr-namespace:WPFGrowerApp.Views.Reports"
+                    xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels">
 
     <!-- View Model to View Mappings -->
     <DataTemplate DataType="{x:Type viewmodels:DashboardViewModel}">
@@ -35,7 +36,7 @@
     </DataTemplate>
 
     <!-- Product Management Mapping -->
-    <DataTemplate DataType="{x:Type viewmodels:ProductViewModel}">
+    <DataTemplate DataType="{x:Type vm:ProductViewModel}">
         <views:ProductView />
     </DataTemplate>
 
@@ -47,6 +48,10 @@
     <!-- Depot Management Mapping -->
     <DataTemplate DataType="{x:Type viewmodels:DepotViewModel}">
         <views:DepotView />
+    </DataTemplate>
+    
+    <DataTemplate DataType="{x:Type vm:UserManagementViewModel}">
+        <views:UserManagementView/>
     </DataTemplate>
 
 </ResourceDictionary>

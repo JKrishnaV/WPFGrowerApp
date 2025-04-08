@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using WPFGrowerApp.DataAccess.Models;
 
@@ -21,10 +22,18 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// <returns>True if the password was updated successfully, otherwise false.</returns>
         Task<bool> SetPasswordAsync(string username, string newPassword);
 
+        Task<IEnumerable<User>> GetAllUsersAsync();
+        Task<User> GetUserByIdAsync(int userId);
+        Task<User> GetUserByUsernameAsync(string username);
+        Task<bool> CreateUserAsync(User user, string password);
+        Task<bool> UpdateUserAsync(User user);
+        Task<bool> DeleteUserAsync(int userId);
+        Task<bool> UpdateUserStatusAsync(int userId, bool isActive);
+        Task<IEnumerable<Role>> GetAllRolesAsync();
+
         // Add other methods as needed, e.g.:
         // Task<User> GetUserByUsernameAsync(string username);
         // Task CreateUserAsync(User user, string password); // Handles hashing internally
-        // Task UpdateUserAsync(User user);
         // Task LockUserAsync(string username);
         // Task UnlockUserAsync(string username);
     }

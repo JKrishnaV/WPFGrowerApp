@@ -1,0 +1,232 @@
+<UserControl x:Class="WPFGrowerApp.Views.UserManagementView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:WPFGrowerApp.Views"
+             xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels"
+             xmlns:converters="clr-namespace:WPFGrowerApp.Converters"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance Type=vm:UserManagementViewModel}"
+             d:DesignHeight="600" d:DesignWidth="800"
+             Background="{DynamicResource MaterialDesignPaper}"
+             x:Name="userManagementView">
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Title -->
+            <RowDefinition Height="Auto"/> <!-- Search -->
+            <RowDefinition Height="*"/>    <!-- DataGrid -->
+            <RowDefinition Height="Auto"/> <!-- Edit Form -->
+            <RowDefinition Height="Auto"/> <!-- Buttons -->
+        </Grid.RowDefinitions>
+
+        <!-- Title -->
+        <TextBlock Grid.Row="0" 
+                   Text="Manage Users" 
+                   Style="{StaticResource MaterialDesignHeadline5TextBlock}" 
+                   Margin="0,0,0,15"/>
+
+        <!-- Search Box -->
+        <Grid Grid.Row="1" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            
+            <TextBox Grid.Column="0"
+                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                     materialDesign:HintAssist.Hint="Search users..."
+                     Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                     Margin="0,0,10,0">
+                <TextBox.InputBindings>
+                    <KeyBinding Key="Enter" 
+                               Command="{Binding SearchCommand}"/>
+                </TextBox.InputBindings>
+            </TextBox>
+            
+            <Button Grid.Column="1"
+                    Style="{StaticResource MaterialDesignFloatingActionMiniLightButton}"
+                    ToolTip="Search">
+                <materialDesign:PackIcon Kind="Magnify" Height="24" Width="24"/>
+            </Button>
+        </Grid>
+
+        <!-- Users List -->
+        <DataGrid Grid.Row="2" 
+                  ItemsSource="{Binding FilteredUsers}" 
+                  SelectedItem="{Binding SelectedUser, Mode=TwoWay}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  CanUserAddRows="False"
+                  CanUserSortColumns="True"
+                  SelectionMode="Single"
+                  materialDesign:DataGridAssist.CellPadding="13 8 8 8"
+                  materialDesign:DataGridAssist.ColumnHeaderPadding="8"
+                  Margin="0,0,0,10"
+                  MaxHeight="350">
+            <DataGrid.Resources>
+                <Style TargetType="DataGridRow" BasedOn="{StaticResource MaterialDesignDataGridRow}">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsActive}" Value="False">
+                            <Setter Property="Background" Value="#FFF5F5F5"/>
+                            <Setter Property="Foreground" Value="#FF757575"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.Resources>
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Username" 
+                                  Binding="{Binding Username}" 
+                                  Width="Auto"
+                                  SortDirection="Ascending"/>
+                <DataGridTextColumn Header="Full Name" 
+                                  Binding="{Binding FullName}" 
+                                  Width="Auto"/>
+                <DataGridTextColumn Header="Email" 
+                                  Binding="{Binding Email}" 
+                                  Width="Auto"/>
+                <DataGridTemplateColumn Header="Status" Width="Auto">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding IsActive, Converter={StaticResource ActiveStatusConverter}}"
+                                     Foreground="{Binding IsActive, Converter={StaticResource ActiveStatusBrushConverter}}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Last Login" 
+                                  Binding="{Binding LastLoginDate, StringFormat={}{0:dd/MM/yyyy HH:mm}}" 
+                                  Width="Auto"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Edit/Add Form -->
+        <materialDesign:Card Grid.Row="3" 
+                            Margin="0,10,0,10" 
+                            Padding="15"
+                            Visibility="{Binding SelectedUser, Converter={StaticResource NotNullConverter}}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/> <!-- Error Message -->
+                    <RowDefinition Height="Auto"/> <!-- Username and Full Name -->
+                    <RowDefinition Height="Auto"/> <!-- Email and Password -->
+                    <RowDefinition Height="Auto"/> <!-- Status -->
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Error Message -->
+                <TextBlock Grid.Row="0" 
+                          Grid.ColumnSpan="2"
+                          Text="{Binding ErrorMessage}"
+                          Foreground="Red"
+                          TextWrapping="Wrap"
+                          Margin="5,0,5,10"
+                          Visibility="{Binding ErrorMessage, Converter={StaticResource NotNullOrEmptyToVisibilityConverter}}"/>
+
+                <!-- Username -->
+                <TextBox Grid.Row="1" 
+                        Grid.Column="0"
+                        Margin="5"
+                        materialDesign:HintAssist.Hint="Username"
+                        Text="{Binding EditUsername, UpdateSourceTrigger=PropertyChanged}"
+                        Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+
+                <!-- Full Name -->
+                <TextBox Grid.Row="1" 
+                        Grid.Column="1"
+                        Margin="5"
+                        materialDesign:HintAssist.Hint="Full Name"
+                        Text="{Binding EditFullName, UpdateSourceTrigger=PropertyChanged}"
+                        Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+
+                <!-- Email -->
+                <TextBox Grid.Row="2" 
+                        Grid.Column="0"
+                        Margin="5"
+                        materialDesign:HintAssist.Hint="Email"
+                        Text="{Binding EditEmail, UpdateSourceTrigger=PropertyChanged}"
+                        Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+
+                <!-- Password (only for new users) -->
+                <PasswordBox Grid.Row="2" 
+                           Grid.Column="1"
+                           Margin="5"
+                           materialDesign:HintAssist.Hint="Password"
+                           Style="{StaticResource MaterialDesignFloatingHintRevealPasswordBox}"
+                           Visibility="{Binding IsNewUser, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                <ComboBox Grid.Row="3" Grid.Column="1" 
+                          ItemsSource="{Binding Roles}"
+                          SelectedItem="{Binding SelectedRole}"
+                          DisplayMemberPath="RoleName"
+                          IsEnabled="{Binding CanEditRole}"
+                          Margin="5"  
+                          materialDesign:HintAssist.Hint="Role"
+                          Style="{StaticResource MaterialDesignFilledComboBox}"/>
+                <!-- Active Status -->
+                <StackPanel Grid.Row="3" 
+                          Grid.Column="0"
+                          Orientation="Horizontal"
+                          Margin="5">
+                    <TextBlock Text="Account Status:"
+                             VerticalAlignment="Center"
+                             Margin="0,0,10,0"/>
+                    <ToggleButton IsChecked="{Binding EditIsActive}"
+                                Style="{StaticResource MaterialDesignSwitchToggleButton}"/>
+                    <TextBlock Text="{Binding EditIsActive, Converter={StaticResource ActiveStatusConverter}}"
+                             VerticalAlignment="Center"
+                             Margin="10,0,0,0"/>
+                </StackPanel>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Action Buttons -->
+        <StackPanel Grid.Row="4" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right" 
+                    Margin="0,10,0,0">
+            <Button Content="New"
+                    Command="{Binding NewCommand}"
+                    Style="{StaticResource MaterialDesignRaisedButton}"
+                    Margin="5"
+                    IsEnabled="{Binding IsEditing, Converter={StaticResource InverseBooleanConverter}}"/>
+            <Button Content="Save"
+                    Command="{Binding SaveCommand}"
+                    Style="{StaticResource MaterialDesignRaisedButton}"
+                    Margin="5"
+                    Background="{DynamicResource PrimaryHueMidBrush}"
+                    Foreground="{DynamicResource PrimaryHueMidForegroundBrush}"/>
+            <Button Content="Delete"
+                    Command="{Binding DeleteCommand}"
+                    Style="{StaticResource MaterialDesignRaisedButton}"
+                    Background="IndianRed"
+                    Foreground="White"
+                    Margin="5"/>
+            <Button Content="Cancel"
+                    Command="{Binding CancelCommand}"
+                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                    Margin="5"/>
+        </StackPanel>
+
+        <!-- Loading Indicator -->
+        <materialDesign:Card Grid.Row="2" 
+                            Grid.RowSpan="4"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center"
+                            Padding="20"
+                            Background="{DynamicResource MaterialDesignCardBackground}"
+                            Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel Orientation="Horizontal">
+                <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}"
+                            Value="0"
+                            IsIndeterminate="True"/>
+                <TextBlock Text="Loading..."
+                          VerticalAlignment="Center"
+                          Margin="10,0,0,0"/>
+            </StackPanel>
+        </materialDesign:Card>
+    </Grid>
+</UserControl> 

@@ -70,6 +70,7 @@ namespace WPFGrowerApp
             services.AddTransient<PaymentRunViewModel>(); 
             services.AddTransient<LoginViewModel>();
             services.AddTransient<ChangePasswordViewModel>();
+            services.AddTransient<UserManagementViewModel>();
 
             // Register Views (Views are typically not registered unless needed for DI resolution like DialogService)
             services.AddTransient<GrowerSearchView>(); // Needed by DialogService
