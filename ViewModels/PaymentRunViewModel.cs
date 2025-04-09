@@ -33,8 +33,9 @@ namespace WPFGrowerApp.ViewModels
         private bool _isRunning;
         private string _statusMessage;
         private ObservableCollection<string> _runLog;
-        private PostBatch _lastRunBatch;
-        private List<string> _lastRunErrors;
+        private PostBatch _lastRunBatch; // For actual run
+        private List<string> _lastRunErrors; // For actual run
+        private TestRunResult _latestTestRunResult; // For test run
 
         // Collections for ListBox ItemsSources
         private ObservableCollection<Product> _products;
@@ -187,7 +188,15 @@ namespace WPFGrowerApp.ViewModels
         public bool IsRunning
         {
             get => _isRunning;
-            private set { SetProperty(ref _isRunning, value); ((RelayCommand)StartPaymentRunCommand).RaiseCanExecuteChanged(); }
+            private set
+            {
+                if (SetProperty(ref _isRunning, value))
+                {
+                    // Ensure both commands update their CanExecute status
+                    ((RelayCommand)StartPaymentRunCommand).RaiseCanExecuteChanged();
+                    ((RelayCommand)TestRunCommand).RaiseCanExecuteChanged();
+                }
+            }
         }
 
         public string StatusMessage
@@ -214,10 +223,18 @@ namespace WPFGrowerApp.ViewModels
             private set => SetProperty(ref _lastRunErrors, value);
         }
 
+        public TestRunResult LatestTestRunResult
+        {
+            get => _latestTestRunResult;
+            private set => SetProperty(ref _latestTestRunResult, value);
+        }
+
 
         // Commands
         public ICommand LoadFiltersCommand => new RelayCommand(async o => await LoadFiltersAsync());
         public ICommand StartPaymentRunCommand => new RelayCommand(async o => await StartPaymentRunAsync(), o => !IsRunning);
+        public ICommand TestRunCommand => new RelayCommand(async o => await PerformTestRunAsync(), o => !IsRunning); // Added Test Run Command
+
 
         // IProgress<string> implementation
         public void Report(string value)
@@ -299,6 +316,116 @@ namespace WPFGrowerApp.ViewModels
                 IsRunning = false;
             }
         }
+
+        private async Task PerformTestRunAsync()
+        {
+            IsRunning = true;
+            RunLog.Clear();
+            // Don't clear LastRunErrors/LastRunBatch as they belong to the actual run
+            LatestTestRunResult = null; // Clear previous test result
+            StatusMessage = "Starting test run simulation...";
+            Report($"Initiating Advance {AdvanceNumber} test run simulation...");
+            Report($"Parameters: PaymentDate={PaymentDate:d}, CutoffDate={CutoffDate:d}, CropYear={CropYear}");
+
+            // Prepare lists of IDs from selected items (same as actual run)
+            var selectedProductIds = SelectedProducts.Select(p => p.ProductId).Where(id => !string.IsNullOrEmpty(id)).ToList();
+            var selectedProcessIds = SelectedProcesses.Select(p => p.ProcessId).Where(id => !string.IsNullOrEmpty(id)).ToList();
+            var selectedExcludeGrowerIds = SelectedExcludeGrowers.Select(g => g.GrowerNumber).Where(num => num != 0).ToList();
+            var selectedExcludePayGroupIds = SelectedExcludePayGroups.Select(pg => pg.PayGroupId).Where(id => !string.IsNullOrEmpty(id)).ToList();
+
+            // Log selected filters
+            Report($"Filtering by Products: {(selectedProductIds.Any() ? string.Join(",", selectedProductIds) : "All")}");
+            Report($"Filtering by Processes: {(selectedProcessIds.Any() ? string.Join(",", selectedProcessIds) : "All")}");
+            Report($"Excluding Growers: {(selectedExcludeGrowerIds.Any() ? string.Join(",", selectedExcludeGrowerIds) : "None")}");
+            Report($"Excluding PayGroups: {(selectedExcludePayGroupIds.Any() ? string.Join(",", selectedExcludePayGroupIds) : "None")}");
+
+            // Prepare parameters object including descriptions
+            var parameters = new TestRunInputParameters
+            {
+                AdvanceNumber = AdvanceNumber,
+                PaymentDate = PaymentDate,
+                CutoffDate = CutoffDate,
+                CropYear = CropYear,
+                ExcludeGrowerIds = selectedExcludeGrowerIds,
+                ExcludePayGroupIds = selectedExcludePayGroupIds,
+                ProductIds = selectedProductIds,
+                ProcessIds = selectedProcessIds,
+                // Populate descriptions
+                ProductDescriptions = SelectedProducts.Select(p => $"{p.ProductId} - {p.Description}".TrimStart(' ', '-')).ToList(),
+                ProcessDescriptions = SelectedProcesses.Select(p => $"{p.ProcessId} - {p.Description}".TrimStart(' ', '-')).ToList(),
+                ExcludedGrowerDescriptions = SelectedExcludeGrowers.Select(g => $"{g.GrowerNumber} - {g.Name}".TrimStart(' ', '-')).ToList(),
+                ExcludedPayGroupDescriptions = SelectedExcludePayGroups.Select(pg => $"{pg.PayGroupId} - {pg.Description}".TrimStart(' ', '-')).ToList()
+            };
+
+
+            try
+            {
+                // Call the service method with the parameters object
+                var testResult = await _paymentService.PerformAdvancePaymentTestRunAsync(
+                    parameters.AdvanceNumber,
+                    parameters.PaymentDate, 
+                    parameters.CutoffDate,
+                    parameters.CropYear,
+                    parameters.ExcludeGrowerIds,
+                    parameters.ExcludePayGroupIds,
+                    parameters.ProductIds,
+                    parameters.ProcessIds,
+                    this); // Pass progress reporter
+
+                // Store the result which now includes the input parameters with descriptions
+                LatestTestRunResult = testResult;
+                // Update the parameters in the result object just in case the service didn't preserve the exact instance
+                // (though our current service implementation does)
+                if (LatestTestRunResult != null) LatestTestRunResult.InputParameters = parameters; 
+
+                if (testResult.HasAnyErrors)
+                {
+                    StatusMessage = "Test run simulation completed with calculation errors. Check log.";
+                    Report("Test run simulation finished with errors:");
+                    // Log general errors
+                    foreach(var error in testResult.GeneralErrors)
+                    {
+                        Report($"ERROR: {error}");
+                    }
+                    // Log grower/receipt specific errors
+                    foreach(var gp in testResult.GrowerPayments.Where(g => g.HasErrors))
+                    {
+                         foreach(var errorMsg in gp.ErrorMessages)
+                         {
+                             Report($"ERROR (Grower {gp.GrowerNumber}): {errorMsg}");
+                         }
+                    }
+                    await _dialogService.ShowMessageBoxAsync("The test run simulation encountered errors during calculation. Please review the run log.", "Test Run Errors");
+                }
+                else if (!testResult.GrowerPayments.Any())
+                {
+                     StatusMessage = "Test run simulation completed. No eligible growers/receipts found.";
+                     Report("Test run simulation finished: No eligible growers/receipts found.");
+                     await _dialogService.ShowMessageBoxAsync("Test run simulation completed, but no eligible growers or receipts were found based on the selected criteria.", "Test Run Complete - No Results");
+                }
+                else
+                {
+                    StatusMessage = $"Test run simulation completed successfully. {testResult.GrowerPayments.Count} growers processed.";
+                    Report("Test run simulation finished successfully.");
+
+                    // Show the Report Dialog using the updated DialogService
+                    var reportViewModel = new PaymentTestRunReportViewModel(LatestTestRunResult);
+                    await _dialogService.ShowDialogAsync(reportViewModel);
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Test run simulation failed with a critical error.";
+                Report($"CRITICAL ERROR during test run: {ex.Message}");
+                Logger.Error($"Critical error during test run execution", ex);
+                await _dialogService.ShowMessageBoxAsync($"A critical error occurred during the test run simulation: {ex.Message}", "Test Run Failed");
+            }
+            finally
+            {
+                IsRunning = false;
+            }
+        }
+
 
         // Method to load ListBox data sources
         private async Task LoadFiltersAsync()

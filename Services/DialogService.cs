@@ -63,5 +63,16 @@ namespace WPFGrowerApp.Services
                 return (dialogResult, null); // Return false or null result, null grower number
             }
         }
+
+        // Implementation for showing custom ViewModels as dialogs
+        public async Task ShowDialogAsync(object viewModel)
+        {
+            // Assuming DataTemplates are set up in XAML to map ViewModel types to View types
+            // MaterialDesign's DialogHost will use these templates to display the correct view.
+            await DialogHost.Show(viewModel, RootDialogHostId);
+            // This method doesn't currently return a specific result, but could be modified
+            // if the dialog needs to pass back information (e.g., by having the ViewModel set a property
+            // that DialogHost.Show returns).
+        }
     }
 }

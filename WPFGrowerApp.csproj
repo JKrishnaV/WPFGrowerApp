@@ -15,12 +15,12 @@
     <PackageReference Include="MaterialDesignThemes" Version="5.2.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.3" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.0" />
-    <PackageReference Include="Syncfusion.SfChart.WPF" Version="23.1.36" />
-    <PackageReference Include="Syncfusion.Pdf.Wpf" Version="23.1.36" />
-    <PackageReference Include="Syncfusion.XlsIO.Wpf" Version="23.1.36" />
-    <PackageReference Include="Syncfusion.DocIO.Wpf" Version="23.1.36" />
-    <PackageReference Include="Syncfusion.SfGrid.WPF" Version="23.1.36" />
     <PackageReference Include="Dapper" Version="2.1.66" />
+	<PackageReference Include="Syncfusion.SfChart.WPF" Version="25.1.37" />
+    <PackageReference Include="Syncfusion.Pdf.Wpf" Version="25.1.37" />
+    <PackageReference Include="Syncfusion.XlsIO.Wpf" Version="25.1.37" />
+    <PackageReference Include="Syncfusion.DocIO.Wpf" Version="25.1.37" />
+    <PackageReference Include="Syncfusion.SfGrid.WPF" Version="25.1.37" />
   </ItemGroup>
 
 </Project>

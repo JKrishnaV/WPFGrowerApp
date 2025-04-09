@@ -246,12 +246,18 @@
                     </Grid>
                 </GroupBox>
 
-                <!-- Row 2: Run Button -->
-                <Button Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="7" Margin="0,16,0,0"
-                        Style="{StaticResource MaterialDesignRaisedButton}"
-                        Command="{Binding StartPaymentRunCommand}"
-                        IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBooleanConverter}}"
-                        Content="Start Payment Run"/>
+                <!-- Row 2: Run Buttons -->
+                <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                    <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                            Command="{Binding TestRunCommand}"
+                            IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBooleanConverter}}"
+                            Content="Test Run"
+                            Margin="0,0,8,0"/>
+                    <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                            Command="{Binding StartPaymentRunCommand}"
+                            IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBooleanConverter}}"
+                            Content="Start Payment Run"/>
+                </StackPanel>
 
             </Grid>
         </materialDesign:Card>

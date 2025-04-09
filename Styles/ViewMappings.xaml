@@ -3,6 +3,7 @@
                     xmlns:viewmodels="clr-namespace:WPFGrowerApp.ViewModels"
                     xmlns:views="clr-namespace:WPFGrowerApp.Views"
                     xmlns:reports="clr-namespace:WPFGrowerApp.Views.Reports"
+                    xmlns:dialogs="clr-namespace:WPFGrowerApp.Views.Dialogs" 
                     xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels">
 
     <!-- View Model to View Mappings -->
@@ -53,5 +54,12 @@
     <DataTemplate DataType="{x:Type vm:UserManagementViewModel}">
         <views:UserManagementView/>
     </DataTemplate>
+
+    <!-- Dialog View Model Mappings -->
+    <DataTemplate DataType="{x:Type vm:PaymentTestRunReportViewModel}">
+        <dialogs:PaymentTestRunReportView/>
+    </DataTemplate>
+    
+    <!-- Add other dialog mappings here if needed -->
 
 </ResourceDictionary>

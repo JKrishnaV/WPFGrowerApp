@@ -35,8 +35,9 @@
              <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
              <converters:NotNullOrEmptyToVisibilityConverter x:Key="NotNullOrEmptyToVisibilityConverter"/> 
              <converters:SecureStringArrayConverter x:Key="SecureStringArrayConverter"/>
-             <converters:ActiveStatusConverter x:Key="ActiveStatusConverter"/>
-             <converters:ActiveStatusBrushConverter x:Key="ActiveStatusBrushConverter"/>
-        </ResourceDictionary>
-    </Application.Resources>
-</Application>
+              <converters:ActiveStatusConverter x:Key="ActiveStatusConverter"/>
+              <converters:ActiveStatusBrushConverter x:Key="ActiveStatusBrushConverter"/>
+              <converters:StringListConverter x:Key="StringListConverter"/> <!-- Added StringListConverter -->
+         </ResourceDictionary>
+     </Application.Resources>
+ </Application>

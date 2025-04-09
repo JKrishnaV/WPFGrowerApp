@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using WPFGrowerApp.DataAccess.Models; // Assuming models like Grower, PostBatch etc. might be needed
+using WPFGrowerApp.Models; // Added for TestRunResult
 
 namespace WPFGrowerApp.DataAccess.Interfaces
 {
@@ -29,6 +30,30 @@ namespace WPFGrowerApp.DataAccess.Interfaces
             DateTime cutoffDate,
             int cropYear,
             // Removed includeGrowerId and includePayGroup
+            List<decimal> excludeGrowerIds = null,
+            List<string> excludePayGroupIds = null,
+            List<string> productIds = null,
+            List<string> processIds = null,
+            IProgress<string> progress = null);
+
+        /// <summary>
+        /// Performs a test run simulation of an advance payment run without committing changes.
+        /// </summary>
+        /// <param name="advanceNumber">The advance number (1, 2, or 3).</param>
+        /// <param name="paymentDate">The date to simulate payment transactions.</param>
+        /// <param name="cutoffDate">The cutoff date for including receipts.</param>
+        /// <param name="cropYear">The crop year for the payment.</param>
+        /// <param name="excludeGrowerIds">Optional: List of grower IDs to exclude.</param>
+        /// <param name="excludePayGroupIds">Optional: List of pay group IDs to exclude.</param>
+        /// <param name="productIds">Optional: List of product IDs to include (if empty, include all).</param>
+        /// <param name="processIds">Optional: List of process IDs to include (if empty, include all).</param>
+        /// <param name="progress">Optional: Progress reporting.</param>
+        /// <returns>A TestRunResult object containing the input parameters and calculated payment details.</returns>
+        Task<TestRunResult> PerformAdvancePaymentTestRunAsync(
+            int advanceNumber,
+            DateTime paymentDate,
+            DateTime cutoffDate,
+            int cropYear,
             List<decimal> excludeGrowerIds = null,
             List<string> excludePayGroupIds = null,
             List<string> productIds = null,

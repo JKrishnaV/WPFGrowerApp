@@ -163,7 +163,9 @@ namespace WPFGrowerApp.DataAccess.Services
                         ORDER BY [FROM] DESC, TIME DESC";
 
                      var priceId = await connection.ExecuteScalarAsync<decimal?>(sql, new { ProductId = productId, ProcessId = processId, ReceiptDate = receiptDate });
-                     return priceId ?? 0;
+                    if(priceId == null)
+                        Logger.Warn($"No PriceRecordId found for Product: {productId}, Process: {processId}, Date: {receiptDate}");
+                    return priceId ?? 0;
                  }
              }
              catch (Exception ex)
