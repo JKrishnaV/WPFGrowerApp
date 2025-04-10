@@ -1,0 +1,17 @@
+<Window x:Class="WPFGrowerApp.Views.PdfViewerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:WPFGrowerApp.Views"
+        xmlns:syncfusion="clr-namespace:Syncfusion.Windows.PdfViewer;assembly=Syncfusion.PdfViewer.WPF"
+        mc:Ignorable="d"
+        Title="PDF Report Viewer" Height="700" Width="900"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"> 
+        <!-- Removed Owner setting, better handled in code-behind if needed -->
+        <!-- Use WindowStyle="ToolWindow" if you want a simpler border -->
+    <Grid>
+        <syncfusion:PdfViewerControl x:Name="pdfViewer"/>
+    </Grid>
+</Window>

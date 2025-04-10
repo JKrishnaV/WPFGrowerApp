@@ -9,6 +9,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Reports\PaymentTestRunReport.rdlc" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Reports\PaymentTestRunReport.rdlc" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BoldReports.WPF" Version="8.1.8" />
     <PackageReference Include="Dapper.Contrib" Version="2.0.78" />
     <PackageReference Include="Dapper.SqlBuilder" Version="2.1.66" />
     <PackageReference Include="log4net" Version="3.0.4" />
@@ -16,11 +25,12 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.3" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.0" />
     <PackageReference Include="Dapper" Version="2.1.66" />
-	<PackageReference Include="Syncfusion.SfChart.WPF" Version="25.1.37" />
-    <PackageReference Include="Syncfusion.Pdf.Wpf" Version="25.1.37" />
-    <PackageReference Include="Syncfusion.XlsIO.Wpf" Version="25.1.37" />
-    <PackageReference Include="Syncfusion.DocIO.Wpf" Version="25.1.37" />
-    <PackageReference Include="Syncfusion.SfGrid.WPF" Version="25.1.37" />
+    <PackageReference Include="Syncfusion.PdfViewer.WPF" Version="28.2.3" />
+    <PackageReference Include="Syncfusion.SfChart.WPF" Version="28.2.3" />
+    <PackageReference Include="Syncfusion.Pdf.Wpf" Version="28.2.3" />
+    <PackageReference Include="Syncfusion.XlsIO.Wpf" Version="28.2.3" />
+    <PackageReference Include="Syncfusion.DocIO.Wpf" Version="28.2.3" />
+    <PackageReference Include="Syncfusion.SfGrid.WPF" Version="28.2.3" />
   </ItemGroup>
 
 </Project>

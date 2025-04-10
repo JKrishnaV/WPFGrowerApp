@@ -81,7 +81,8 @@ namespace WPFGrowerApp
 
         protected override void OnStartup(StartupEventArgs e)
         {
-            Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense("Ngo9BigBOggjHTQxAR8/V1NBaF5cXmZCf1FpRmJGdld5fUVHYVZUTXxaS00DNHVRdkdmWXteeXRXRmReWUR3VkZWYUw=");
+            Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense("Ngo9BigBOggjHTQxAR8/V1NMaF5cXmBCf1FpRmJGdld5fUVHYVZUTXxaS00DNHVRdkdmWXteeXZXR2ZdVkByXUdWYUE=");
+            Bold.Licensing.BoldLicenseProvider.RegisterLicense("thM9QOwjcTvfk9RnKaWmdI8poSCmqPFEvoqx7cPcCCs=");
             Logger.Info("Application starting up.");
             base.OnStartup(e);
 

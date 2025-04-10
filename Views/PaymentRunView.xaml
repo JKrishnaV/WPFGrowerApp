@@ -98,16 +98,27 @@
                         <TextBlock Grid.Row="0" Grid.Column="6" Text="Exclude Pay Groups:" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" VerticalAlignment="Bottom" Margin="0,0,0,0"/>
 
                         <!-- Search Boxes -->
+                        <TextBox Grid.Row="1" Grid.Column="0" Margin="0,5,0,2"
+                                 materialDesign:HintAssist.Hint="Search..."
+                                 Text="{Binding ProductSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                        <TextBox Grid.Row="1" Grid.Column="2" Margin="0,5,0,2"
+                                 materialDesign:HintAssist.Hint="Search..."
+                                 Text="{Binding ProcessSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
                         <TextBox Grid.Row="1" Grid.Column="4" Margin="0,5,0,2"
                                  materialDesign:HintAssist.Hint="Search..."
                                  Text="{Binding GrowerSearchText, UpdateSourceTrigger=PropertyChanged}"
                                  Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
-                        <!-- Add Search TextBoxes for other lists if needed -->
+                        <TextBox Grid.Row="1" Grid.Column="6" Margin="0,5,0,2"
+                                 materialDesign:HintAssist.Hint="Search..."
+                                 Text="{Binding PayGroupSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
 
 
                         <!-- ListBoxes -->
-                        <ListBox Grid.Row="2" Grid.Column="0" Margin="0,5,0,5" MaxHeight="150"
-                         ItemsSource="{Binding Products}"
+                        <ListBox Grid.Row="2" Grid.Column="0" Margin="0,5,0,5" MaxHeight="115" 
+                         ItemsSource="{Binding FilteredProducts}" 
                          SelectionMode="Extended"
                          infra:ListBoxSelectedItemsBehavior.SelectedItems="{Binding SelectedProducts}"
                          ItemContainerStyle="{StaticResource ListBoxItemStyle_CustomHighlight}"
@@ -141,8 +152,8 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
 
-                        <ListBox Grid.Row="2" Grid.Column="2" Margin="0,5,0,5" MaxHeight="150"
-                         ItemsSource="{Binding Processes}"
+                        <ListBox Grid.Row="2" Grid.Column="2" Margin="0,5,0,5" MaxHeight="115" 
+                         ItemsSource="{Binding FilteredProcesses}" 
                          SelectionMode="Extended"
                          infra:ListBoxSelectedItemsBehavior.SelectedItems="{Binding SelectedProcesses}"
                          ItemContainerStyle="{StaticResource ListBoxItemStyle_CustomHighlight}"
@@ -209,8 +220,8 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
 
-                        <ListBox Grid.Row="2" Grid.Column="6" Margin="0,5,0,5" MaxHeight="150"
-                         ItemsSource="{Binding PayGroups}"
+                        <ListBox Grid.Row="2" Grid.Column="6" Margin="0,5,0,5" MaxHeight="115" 
+                         ItemsSource="{Binding FilteredPayGroups}"
                          SelectionMode="Extended"
                          infra:ListBoxSelectedItemsBehavior.SelectedItems="{Binding SelectedExcludePayGroups}"
                          ItemContainerStyle="{StaticResource ListBoxItemStyle_CustomHighlight}"
@@ -251,7 +262,14 @@
                     <Button Style="{StaticResource MaterialDesignRaisedButton}"
                             Command="{Binding TestRunCommand}"
                             IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBooleanConverter}}"
-                            Content="Test Run"
+                            Content="Test Run (Dialog)"
+                            ToolTip="Run simulation and show results in a dialog."
+                            Margin="0,0,8,0"/>
+                    <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                            Command="{Binding ViewBoldReportCommand}"
+                            IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBooleanConverter}}"
+                            Content="View Report"
+                            ToolTip="Run simulation and show results in the report viewer."
                             Margin="0,0,8,0"/>
                     <Button Style="{StaticResource MaterialDesignRaisedButton}"
                             Command="{Binding StartPaymentRunCommand}"

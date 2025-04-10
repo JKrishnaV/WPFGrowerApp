@@ -172,7 +172,7 @@
             <Button Content="Export PDF" Command="{Binding ExportPdfCommand}" IsEnabled="{Binding IsExportingOrPrinting, Converter={StaticResource InverseBooleanConverter}}" Margin="0,0,8,0"/>
             <Button Content="Export Excel" Command="{Binding ExportExcelCommand}" IsEnabled="{Binding IsExportingOrPrinting, Converter={StaticResource InverseBooleanConverter}}" Margin="0,0,8,0"/>
             <Button Content="Print" Command="{Binding PrintCommand}" IsEnabled="{Binding IsExportingOrPrinting, Converter={StaticResource InverseBooleanConverter}}" Margin="0,0,8,0"/>
-            <Button Content="Close" IsCancel="True" MinWidth="80"/> <!-- Assuming this is hosted in a dialog -->
+            <Button Content="Close" Command="{x:Static materialDesign:DialogHost.CloseDialogCommand}" MinWidth="80"/> <!-- Use DialogHost command -->
         </StackPanel>
 
     </Grid>

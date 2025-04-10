@@ -1,0 +1,17 @@
+<Window x:Class="WPFGrowerApp.Views.BoldReportViewerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:WPFGrowerApp.Views"
+        xmlns:bold="clr-namespace:BoldReports.UI.Xaml;assembly=BoldReports.WPF"
+        mc:Ignorable="d"
+        Title="{Binding ReportTitle}" Height="700" Width="900"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False">
+    <Grid>
+        <bold:ReportViewer x:Name="reportViewer" 
+                          ProcessingMode="Local"
+                          Loaded="ReportViewer_Loaded"/>
+    </Grid>
+</Window>

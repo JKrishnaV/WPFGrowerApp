@@ -15,6 +15,16 @@ using System.Windows.Data; // For ICollectionView
 using System.Collections.Specialized; // For INotifyCollectionChanged
 using WPFGrowerApp.Models; // Added for AdvanceOption
 
+// Need this for the PdfViewerWindow call later
+using WPFGrowerApp.Views;
+// Need this for the PaymentTestRunReportViewModel call later
+using WPFGrowerApp.ViewModels; // Assuming PaymentTestRunReportViewModel is here now
+// Need this for MemoryStream
+using System.IO;
+// Add using for Bold Reports (Found in code-behind)
+using BoldReports.Windows;
+
+
 namespace WPFGrowerApp.ViewModels
 {
     public class PaymentRunViewModel : ViewModelBase, IProgress<string>
@@ -37,12 +47,18 @@ namespace WPFGrowerApp.ViewModels
         private List<string> _lastRunErrors; // For actual run
         private TestRunResult _latestTestRunResult; // For test run
 
-        // Collections for ListBox ItemsSources
-        private ObservableCollection<Product> _products;
-        private ObservableCollection<Process> _processes;
-        private ObservableCollection<PayGroup> _payGroups;
+        // --- Collections ---
+        // Original backing collections for all items
+        private ObservableCollection<Product> _allProducts;
+        private ObservableCollection<Process> _allProcesses;
+        private ObservableCollection<PayGroup> _allPayGroups;
         private ObservableCollection<GrowerInfo> _allGrowers;
-        private ICollectionView _filteredGrowersView; // View for filtering
+
+        // ICollectionView wrappers for filtering ListBoxes
+        private ICollectionView _filteredProductsView;
+        private ICollectionView _filteredProcessesView;
+        private ICollectionView _filteredPayGroupsView;
+        private ICollectionView _filteredGrowersView;
 
         // Collection for Advance Number ComboBox
         public ObservableCollection<AdvanceOption> AdvanceOptions { get; } = new ObservableCollection<AdvanceOption>();
@@ -63,6 +79,47 @@ namespace WPFGrowerApp.ViewModels
                 }
             }
         }
+
+        private string _productSearchText;
+        public string ProductSearchText
+        {
+            get => _productSearchText;
+            set
+            {
+                if (SetProperty(ref _productSearchText, value))
+                {
+                    _filteredProductsView?.Refresh();
+                }
+            }
+        }
+
+        private string _processSearchText;
+        public string ProcessSearchText
+        {
+            get => _processSearchText;
+            set
+            {
+                if (SetProperty(ref _processSearchText, value))
+                {
+                    _filteredProcessesView?.Refresh();
+                }
+            }
+        }
+
+        private string _payGroupSearchText;
+        public string PayGroupSearchText
+        {
+            get => _payGroupSearchText;
+            set
+            {
+                if (SetProperty(ref _payGroupSearchText, value))
+                {
+                    _filteredPayGroupsView?.Refresh();
+                }
+            }
+        }
+        // --- End Search Text Properties ---
+
 
         // Collections to hold selected items from ListBoxes
         public ObservableCollection<Product> SelectedProducts { get; private set; } = new ObservableCollection<Product>();
@@ -92,15 +149,23 @@ namespace WPFGrowerApp.ViewModels
 
             RunLog = new ObservableCollection<string>();
             LastRunErrors = new List<string>();
-            Products = new ObservableCollection<Product>();
-            Processes = new ObservableCollection<Process>();
-            PayGroups = new ObservableCollection<PayGroup>();
-            AllGrowers = new ObservableCollection<GrowerInfo>(); // Initialize the backing collection
+
+            // Initialize backing collections
+            _allProducts = new ObservableCollection<Product>();
+            _allProcesses = new ObservableCollection<Process>();
+            _allPayGroups = new ObservableCollection<PayGroup>();
+            _allGrowers = new ObservableCollection<GrowerInfo>();
             OnHoldGrowers = new ObservableCollection<GrowerInfo>();
 
-            // Setup filtered view for growers
-            _filteredGrowersView = CollectionViewSource.GetDefaultView(AllGrowers);
-            _filteredGrowersView.Filter = FilterGrowers;
+            // Setup filtered views
+            _filteredProductsView = CollectionViewSource.GetDefaultView(_allProducts);
+            _filteredProductsView.Filter = FilterProducts; // Assign filter predicate
+            _filteredProcessesView = CollectionViewSource.GetDefaultView(_allProcesses);
+            _filteredProcessesView.Filter = FilterProcesses; // Assign filter predicate
+            _filteredPayGroupsView = CollectionViewSource.GetDefaultView(_allPayGroups);
+            _filteredPayGroupsView.Filter = FilterPayGroups; // Assign filter predicate
+            _filteredGrowersView = CollectionViewSource.GetDefaultView(_allGrowers);
+            _filteredGrowersView.Filter = FilterGrowers; // Existing filter
 
             // Populate Advance Options
             AdvanceOptions.Add(new AdvanceOption { Display = "First Advance Payment", Value = 1 });
@@ -144,6 +209,42 @@ namespace WPFGrowerApp.ViewModels
             return false;
         }
 
+        // Filter logic for Products
+        private bool FilterProducts(object item)
+        {
+            if (string.IsNullOrEmpty(ProductSearchText)) return true;
+            if (item is Product product)
+            {
+                return (product.ProductId?.IndexOf(ProductSearchText, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                       (product.Description?.IndexOf(ProductSearchText, StringComparison.OrdinalIgnoreCase) >= 0);
+            }
+            return false;
+        }
+
+        // Filter logic for Processes
+        private bool FilterProcesses(object item)
+        {
+            if (string.IsNullOrEmpty(ProcessSearchText)) return true;
+            if (item is Process process)
+            {
+                return (process.ProcessId?.IndexOf(ProcessSearchText, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                       (process.Description?.IndexOf(ProcessSearchText, StringComparison.OrdinalIgnoreCase) >= 0);
+            }
+            return false;
+        }
+
+        // Filter logic for PayGroups
+        private bool FilterPayGroups(object item)
+        {
+            if (string.IsNullOrEmpty(PayGroupSearchText)) return true;
+            if (item is PayGroup payGroup)
+            {
+                return (payGroup.PayGroupId?.IndexOf(PayGroupSearchText, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                       (payGroup.Description?.IndexOf(PayGroupSearchText, StringComparison.OrdinalIgnoreCase) >= 0);
+            }
+            return false;
+        }
+
 
         // Properties for UI Binding
         public int AdvanceNumber
@@ -170,14 +271,17 @@ namespace WPFGrowerApp.ViewModels
             set { SetProperty(ref _cropYear, value); }
         }
 
-         // Source Collections for ListBoxes
-         public ObservableCollection<Product> Products { get => _products; set => SetProperty(ref _products, value); }
-         public ObservableCollection<Process> Processes { get => _processes; set => SetProperty(ref _processes, value); }
-         public ObservableCollection<PayGroup> PayGroups { get => _payGroups; set => SetProperty(ref _payGroups, value); }
-         // Expose the filtered view for binding
-         public ICollectionView FilteredGrowers => _filteredGrowersView;
-         // Keep the original collection for loading data
-         public ObservableCollection<GrowerInfo> AllGrowers { get => _allGrowers; set => SetProperty(ref _allGrowers, value); }
+         // Expose the filtered views for binding
+         public ICollectionView FilteredProducts => _filteredProductsView;
+         public ICollectionView FilteredProcesses => _filteredProcessesView;
+         public ICollectionView FilteredPayGroups => _filteredPayGroupsView;
+         public ICollectionView FilteredGrowers => _filteredGrowersView; // Existing
+
+         // Keep original collections accessible if needed internally, but UI binds to filtered views
+         // public ObservableCollection<Product> AllProducts { get => _allProducts; } // Example if needed
+         // public ObservableCollection<Process> AllProcesses { get => _allProcesses; }
+         // public ObservableCollection<PayGroup> AllPayGroups { get => _allPayGroups; }
+         // public ObservableCollection<GrowerInfo> AllGrowers { get => _allGrowers; }
 
 
          // Properties for On Hold List
@@ -192,9 +296,10 @@ namespace WPFGrowerApp.ViewModels
             {
                 if (SetProperty(ref _isRunning, value))
                 {
-                    // Ensure both commands update their CanExecute status
+                    // Ensure all commands update their CanExecute status
                     ((RelayCommand)StartPaymentRunCommand).RaiseCanExecuteChanged();
                     ((RelayCommand)TestRunCommand).RaiseCanExecuteChanged();
+                    ((RelayCommand)ViewBoldReportCommand).RaiseCanExecuteChanged(); // Add new command here
                 }
             }
         }
@@ -233,7 +338,8 @@ namespace WPFGrowerApp.ViewModels
         // Commands
         public ICommand LoadFiltersCommand => new RelayCommand(async o => await LoadFiltersAsync());
         public ICommand StartPaymentRunCommand => new RelayCommand(async o => await StartPaymentRunAsync(), o => !IsRunning);
-        public ICommand TestRunCommand => new RelayCommand(async o => await PerformTestRunAsync(), o => !IsRunning); // Added Test Run Command
+        public ICommand TestRunCommand => new RelayCommand(async o => await PerformTestRunAsync(), o => !IsRunning); // Shows Dialog Report
+        public ICommand ViewBoldReportCommand => new RelayCommand(async o => await PerformViewBoldReportAsync(), o => !IsRunning); // Shows Bold Report Viewer
 
 
         // IProgress<string> implementation
@@ -317,6 +423,7 @@ namespace WPFGrowerApp.ViewModels
             }
         }
 
+        // Method to run test and show results in Dialog
         private async Task PerformTestRunAsync()
         {
             IsRunning = true;
@@ -363,7 +470,7 @@ namespace WPFGrowerApp.ViewModels
                 // Call the service method with the parameters object
                 var testResult = await _paymentService.PerformAdvancePaymentTestRunAsync(
                     parameters.AdvanceNumber,
-                    parameters.PaymentDate, 
+                    parameters.PaymentDate,
                     parameters.CutoffDate,
                     parameters.CropYear,
                     parameters.ExcludeGrowerIds,
@@ -376,7 +483,7 @@ namespace WPFGrowerApp.ViewModels
                 LatestTestRunResult = testResult;
                 // Update the parameters in the result object just in case the service didn't preserve the exact instance
                 // (though our current service implementation does)
-                if (LatestTestRunResult != null) LatestTestRunResult.InputParameters = parameters; 
+                if (LatestTestRunResult != null) LatestTestRunResult.InputParameters = parameters;
 
                 if (testResult.HasAnyErrors)
                 {
@@ -426,32 +533,202 @@ namespace WPFGrowerApp.ViewModels
             }
         }
 
+        // Method to run test and show results in PDF Viewer Window - REMOVED
+        /*
+        private async Task PerformViewTestReportAsync()
+        {
+            // ... (Code removed) ...
+        }
+        */
+
+        // Method to run test and show results in Bold Report Viewer Window
+        private async Task PerformViewBoldReportAsync()
+        {
+            IsRunning = true;
+            RunLog.Clear();
+            LatestTestRunResult = null;
+            StatusMessage = "Starting test run for report viewer...";
+            Report($"Initiating Advance {AdvanceNumber} test run for report viewer...");
+            Report($"Parameters: PaymentDate={PaymentDate:d}, CutoffDate={CutoffDate:d}, CropYear={CropYear}");
+
+            // Prepare lists of IDs from selected items (same as actual run)
+            var selectedProductIds = SelectedProducts.Select(p => p.ProductId).Where(id => !string.IsNullOrEmpty(id)).ToList();
+            var selectedProcessIds = SelectedProcesses.Select(p => p.ProcessId).Where(id => !string.IsNullOrEmpty(id)).ToList();
+            var selectedExcludeGrowerIds = SelectedExcludeGrowers.Select(g => g.GrowerNumber).Where(num => num != 0).ToList();
+            var selectedExcludePayGroupIds = SelectedExcludePayGroups.Select(pg => pg.PayGroupId).Where(id => !string.IsNullOrEmpty(id)).ToList();
+
+            // Log selected filters
+            Report($"Filtering by Products: {(selectedProductIds.Any() ? string.Join(",", selectedProductIds) : "All")}");
+            Report($"Filtering by Processes: {(selectedProcessIds.Any() ? string.Join(",", selectedProcessIds) : "All")}");
+            Report($"Excluding Growers: {(selectedExcludeGrowerIds.Any() ? string.Join(",", selectedExcludeGrowerIds) : "None")}");
+            Report($"Excluding PayGroups: {(selectedExcludePayGroupIds.Any() ? string.Join(",", selectedExcludePayGroupIds) : "None")}");
+
+            // Prepare parameters object including descriptions
+            var parameters = new TestRunInputParameters
+            {
+                AdvanceNumber = AdvanceNumber,
+                PaymentDate = PaymentDate,
+                CutoffDate = CutoffDate,
+                CropYear = CropYear,
+                ExcludeGrowerIds = selectedExcludeGrowerIds,
+                ExcludePayGroupIds = selectedExcludePayGroupIds,
+                ProductIds = selectedProductIds,
+                ProcessIds = selectedProcessIds,
+                ProductDescriptions = SelectedProducts.Select(p => $"{p.ProductId} - {p.Description}".TrimStart(' ', '-')).ToList(),
+                ProcessDescriptions = SelectedProcesses.Select(p => $"{p.ProcessId} - {p.Description}".TrimStart(' ', '-')).ToList(),
+                ExcludedGrowerDescriptions = SelectedExcludeGrowers.Select(g => $"{g.GrowerNumber} - {g.Name}".TrimStart(' ', '-')).ToList(),
+                ExcludedPayGroupDescriptions = SelectedExcludePayGroups.Select(pg => $"{pg.PayGroupId} - {pg.Description}".TrimStart(' ', '-')).ToList()
+            };
+
+            try
+            {
+                // Call the service method
+                var testResult = await _paymentService.PerformAdvancePaymentTestRunAsync(
+                    parameters.AdvanceNumber, parameters.PaymentDate, parameters.CutoffDate, parameters.CropYear,
+                    parameters.ExcludeGrowerIds, parameters.ExcludePayGroupIds, parameters.ProductIds, parameters.ProcessIds, this);
+
+                LatestTestRunResult = testResult;
+                if (LatestTestRunResult != null) LatestTestRunResult.InputParameters = parameters;
+
+                if (testResult.HasAnyErrors)
+                {
+                    StatusMessage = "Test run completed with calculation errors. Cannot show report viewer.";
+                    Report("Test run finished with errors:");
+                    foreach(var error in testResult.GeneralErrors) { Report($"ERROR: {error}"); }
+                    foreach(var gp in testResult.GrowerPayments.Where(g => g.HasErrors)) {
+                         foreach(var errorMsg in gp.ErrorMessages) { Report($"ERROR (Grower {gp.GrowerNumber}): {errorMsg}"); }
+                    }
+                    await _dialogService.ShowMessageBoxAsync("The test run encountered errors during calculation. Report viewer cannot be shown.", "Test Run Errors");
+                }
+                else if (!testResult.GrowerPayments.Any())
+                {
+                     StatusMessage = "Test run completed. No eligible growers/receipts found.";
+                     Report("Test run finished: No eligible growers/receipts found.");
+                     await _dialogService.ShowMessageBoxAsync("Test run completed, but no eligible growers or receipts were found. Report viewer not shown.", "Test Run Complete - No Results");
+                }
+                else
+                {
+                    StatusMessage = $"Test run simulation completed successfully. Preparing report viewer...";
+                    Report("Test run simulation finished successfully. Preparing report viewer...");
+
+                    // Create DataTable for the report
+                    // Need access to the helper method, temporarily create instance of other VM
+                    // TODO: Refactor DataTable creation into a shared service/helper
+                    var tempReportViewModel = new PaymentTestRunReportViewModel(LatestTestRunResult);
+                    System.Data.DataTable reportDataTable = tempReportViewModel.CreateDataTableFromGrowerPayments(); // Assuming this is made public/internal
+
+                    // Prepare data sources for Bold Reports Viewer
+                    // Use the correct ReportDataSource class from BoldReports.Windows
+                    var reportDataSource = new ReportDataSource
+                    {
+                         Name = "GrowerPayments", // MUST match the DataSet name in RDL
+                         Value = reportDataTable
+                    };
+                    var dataSources = new List<ReportDataSource> { reportDataSource };
+
+
+                    // Prepare parameters for Bold Reports Viewer
+                    // Use ReportParameter from BoldReports.Windows namespace
+                    var reportParameters = new List<ReportParameter>();
+                    reportParameters.Add(new ReportParameter() { Name = "ParamAdvanceNumber", Values = new List<string>() { parameters.AdvanceNumber.ToString() } });
+                    reportParameters.Add(new ReportParameter() { Name = "ParamPaymentDate", Values = new List<string>() { parameters.PaymentDate.ToString("d") } }); // Format date
+                    reportParameters.Add(new ReportParameter() { Name = "ParamCutoffDate", Values = new List<string>() { parameters.CutoffDate.ToString("d") } }); // Format date
+                    reportParameters.Add(new ReportParameter() { Name = "ParamCropYear", Values = new List<string>() { parameters.CropYear.ToString() } });
+                    reportParameters.Add(new ReportParameter() { Name = "ParamProductsFilter", Values = new List<string>() { parameters.ProductDescriptions.Any() ? string.Join(", ", parameters.ProductDescriptions) : "All" } });
+                    reportParameters.Add(new ReportParameter() { Name = "ParamProcessesFilter", Values = new List<string>() { parameters.ProcessDescriptions.Any() ? string.Join(", ", parameters.ProcessDescriptions) : "All" } });
+                    reportParameters.Add(new ReportParameter() { Name = "ParamExcludedGrowersFilter", Values = new List<string>() { parameters.ExcludedGrowerDescriptions.Any() ? string.Join(", ", parameters.ExcludedGrowerDescriptions) : "None" } });
+                    reportParameters.Add(new ReportParameter() { Name = "ParamExcludedPayGroupsFilter", Values = new List<string>() { parameters.ExcludedPayGroupDescriptions.Any() ? string.Join(", ", parameters.ExcludedPayGroupDescriptions) : "None" } });
+
+
+                    // --- Load Report from Stream ---
+                    System.IO.Stream reportStream = null;
+                    try
+                    {
+                        // Get the current assembly
+                        var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+                        // Standard resource name (AssemblyName.Folder.File.Extension)
+                        string resourceName = "WPFGrowerApp.Reports.PaymentTestRunReport.rdlc";
+                        reportStream = assembly.GetManifestResourceStream(resourceName);
+
+                        if (reportStream == null)
+                        {
+                            // Attempt with just Folder.File.Extension (sometimes works if default namespace differs unexpectedly)
+                            resourceName = "Reports.PaymentTestRunReport.rdlc";
+                            reportStream = assembly.GetManifestResourceStream(resourceName);
+                        }
+
+                        if (reportStream == null)
+                        {
+                            throw new Exception($"Embedded report resource not found. Tried paths: WPFGrowerApp.Reports.PaymentTestRunReport.rdlc and Reports.PaymentTestRunReport.rdlc");
+                        }
+                    }
+                    catch (Exception streamEx)
+                    {
+                         Report($"CRITICAL ERROR: Failed to load embedded report stream: {streamEx.Message}");
+                         await _dialogService.ShowMessageBoxAsync($"Could not load the embedded report resource: {streamEx.Message}", "Report Load Error");
+                         IsRunning = false; // Ensure IsRunning is reset
+                         return; // Stop execution
+                    }
+                    // --- End Load Report from Stream ---
+
+
+                    // Create the ViewModel for the viewer window, passing the stream, data sources, and parameters
+                    var viewerViewModel = new BoldReportViewerViewModel(reportStream, dataSources, reportParameters);
+                    viewerViewModel.ReportTitle = $"Payment Test Run - {DateTime.Now:g}";
+
+                    // Show the Bold Report Viewer Window
+                    var reportViewerWindow = new Views.BoldReportViewerWindow();
+                    reportViewerWindow.DataContext = viewerViewModel;
+                    // Set owner if desired for modality/behavior
+                    // reportViewerWindow.Owner = Application.Current.MainWindow;
+                    reportViewerWindow.Show(); // Show as a non-modal window
+
+                    StatusMessage = "Report viewer displayed.";
+                    Report("Report viewer displayed.");
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "Test run for report viewer failed with a critical error.";
+                Report($"CRITICAL ERROR during report viewer test run: {ex.Message}");
+                Logger.Error($"Critical error during report viewer test run execution", ex);
+                await _dialogService.ShowMessageBoxAsync($"A critical error occurred: {ex.Message}", "Test Run Failed");
+            }
+            finally
+            {
+                IsRunning = false;
+            }
+        }
+
 
         // Method to load ListBox data sources
         private async Task LoadFiltersAsync()
         {
             try
             {
-                // Load Products
+                // Load Products into the backing collection
                 var productList = await _productService.GetAllProductsAsync();
-                 Products.Clear();
-                 foreach (var p in productList) Products.Add(p);
+                 _allProducts.Clear();
+                 foreach (var p in productList) _allProducts.Add(p);
+                 _filteredProductsView?.Refresh(); // Refresh the view
 
-                // Load Processes
+                // Load Processes into the backing collection
                 var processList = await _processService.GetAllProcessesAsync();
-                 Processes.Clear();
-                 foreach (var p in processList) Processes.Add(p);
+                 _allProcesses.Clear();
+                 foreach (var p in processList) _allProcesses.Add(p);
+                 _filteredProcessesView?.Refresh(); // Refresh the view
 
-                // Load PayGroups
+                // Load PayGroups into the backing collection
                 var payGroupList = await _payGroupService.GetPayGroupsAsync();
-                 PayGroups.Clear();
-                 foreach (var pg in payGroupList) PayGroups.Add(pg);
+                 _allPayGroups.Clear();
+                 foreach (var pg in payGroupList) _allPayGroups.Add(pg);
+                 _filteredPayGroupsView?.Refresh(); // Refresh the view
 
-                // Load Growers for Exclude ListBox
+                // Load Growers into the backing collection
                 var growerList = await _growerService.GetAllGrowersBasicInfoAsync();
-                 AllGrowers.Clear(); // Clear the backing collection
-                 foreach (var g in growerList) AllGrowers.Add(g);
-                 _filteredGrowersView?.Refresh(); // Refresh the view after loading
+                 _allGrowers.Clear();
+                 foreach (var g in growerList) _allGrowers.Add(g);
+                 _filteredGrowersView?.Refresh(); // Refresh the view
 
             }
             catch (Exception ex)

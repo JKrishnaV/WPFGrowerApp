@@ -15,6 +15,7 @@ using Syncfusion.Pdf.Grid; // For PDF grid
 using System.Drawing; // For PointF, SizeF etc.
 using Syncfusion.XlsIO; // For Excel export
 using System.Data; // For DataTable
+using System.IO; // For MemoryStream
 
 // Using the correct namespace after the file move
 namespace WPFGrowerApp.ViewModels 
@@ -130,7 +131,15 @@ namespace WPFGrowerApp.ViewModels
 
                     if (format.Equals("PDF", StringComparison.OrdinalIgnoreCase))
                     {
-                        await GeneratePdfReport(filePath);
+                        // Generate PDF into a stream
+                        using (MemoryStream pdfStream = await GeneratePdfReport()) 
+                        {
+                            // Save the stream to the chosen file path
+                            using (FileStream fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write))
+                            {
+                                pdfStream.CopyTo(fileStream);
+                            }
+                        }
                     }
                     else if (format.Equals("Excel", StringComparison.OrdinalIgnoreCase))
                     {
@@ -154,10 +163,13 @@ namespace WPFGrowerApp.ViewModels
              }
          }
 
-        private Task GeneratePdfReport(string filePath)
+        // Modified to return MemoryStream instead of saving to file path
+        // Made public to be callable from PaymentRunViewModel
+        public Task<MemoryStream> GeneratePdfReport() 
         {
             return Task.Run(() => // Run PDF generation on a background thread
             {
+                MemoryStream pdfStream = new MemoryStream();
                 try
                 {
                     using (PdfDocument document = new PdfDocument())
@@ -223,16 +235,21 @@ namespace WPFGrowerApp.ViewModels
                         PdfGridLayoutFormat layoutFormat = new PdfGridLayoutFormat() { Layout = PdfLayoutType.Paginate };
                         pdfGrid.Draw(page, new PointF(xMargin, yPos), layoutFormat);
 
-                        //Save the document
-                        document.Save(filePath);
+                        //Save the document to the stream
+                        document.Save(pdfStream);
+                        // Ensure the stream position is at the beginning for reading
+                        pdfStream.Position = 0; 
                     }
+                    return pdfStream;
                 }
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"Error generating PDF report: {ex.Message}");
+                    pdfStream.Dispose(); // Dispose stream on error
                     // Rethrow or handle appropriately (e.g., show message via dispatcher)
                     throw; 
                 }
+                // Note: The caller is responsible for disposing the returned MemoryStream
             });
         }
 
@@ -305,35 +322,38 @@ namespace WPFGrowerApp.ViewModels
              });
         }
 
-        private DataTable CreateDataTableFromGrowerPayments()
+        // Made internal to be accessible by PaymentRunViewModel (or use public)
+        // TODO: Refactor this into a shared helper/service later
+        internal DataTable CreateDataTableFromGrowerPayments()
         {
              DataTable dataTable = new DataTable();
-             // Define columns matching the grid
-             dataTable.Columns.Add("Grower #", typeof(decimal));
-             dataTable.Columns.Add("Name", typeof(string));
-             dataTable.Columns.Add("On Hold", typeof(bool));
-             dataTable.Columns.Add("Receipts", typeof(int));
-             dataTable.Columns.Add("Total Weight", typeof(decimal));
-             dataTable.Columns.Add("Total Advance $", typeof(decimal));
-             dataTable.Columns.Add("Total Premium $", typeof(decimal));
-             dataTable.Columns.Add("Total Deduction $", typeof(decimal));
-             dataTable.Columns.Add("Total Payment $", typeof(decimal));
-             dataTable.Columns.Add("Has Errors", typeof(bool));
+             // Define columns matching the RDLC DataSet Fields EXACTLY (Names and Types)
+             dataTable.Columns.Add("Grower", typeof(float)); // Match RDLC TypeName="System.Single"
+             dataTable.Columns.Add("Name", typeof(string)); // Matches
+             dataTable.Columns.Add("OnHold", typeof(bool)); // Matches
+             dataTable.Columns.Add("Receipts", typeof(int)); // Matches
+             dataTable.Columns.Add("TotalWeight", typeof(float)); // Match RDLC TypeName="System.Single"
+             dataTable.Columns.Add("TotalAdvance", typeof(float)); // Match RDLC TypeName="System.Single"
+             dataTable.Columns.Add("TotalPremium", typeof(float)); // Match RDLC TypeName="System.Single"
+             dataTable.Columns.Add("TotalDeduction", typeof(float)); // Match RDLC TypeName="System.Single"
+             dataTable.Columns.Add("TotalPayment", typeof(float)); // Match RDLC TypeName="System.Single"
+             dataTable.Columns.Add("HasErrors", typeof(bool)); // Matches
 
              // Populate rows
              foreach (var growerPayment in GrowerPayments)
              {
+                 // Add data, casting decimals to float where necessary
                  dataTable.Rows.Add(
-                     growerPayment.GrowerNumber,
+                     (float)growerPayment.GrowerNumber, // Cast int to float
                      growerPayment.GrowerName,
                      growerPayment.IsOnHold,
-                     growerPayment.ReceiptCount,
-                     growerPayment.TotalNetWeight,
-                     growerPayment.TotalCalculatedAdvanceAmount,
-                     growerPayment.TotalCalculatedPremiumAmount,
-                     growerPayment.TotalCalculatedDeductionAmount,
-                     growerPayment.TotalCalculatedPayment,
-                     growerPayment.HasErrors
+                     growerPayment.ReceiptCount, // int matches
+                     (float)growerPayment.TotalNetWeight, // Cast decimal to float
+                     (float)growerPayment.TotalCalculatedAdvanceAmount, // Cast decimal to float
+                     (float)growerPayment.TotalCalculatedPremiumAmount, // Cast decimal to float
+                     (float)growerPayment.TotalCalculatedDeductionAmount, // Cast decimal to float
+                     (float)growerPayment.TotalCalculatedPayment, // Cast decimal to float
+                     growerPayment.HasErrors // bool matches
                  );
              }
              return dataTable;
