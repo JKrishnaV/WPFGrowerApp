@@ -1,0 +1,71 @@
+<UserControl x:Class="WPFGrowerApp.Views.Dialogs.PayGroupEditDialogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:WPFGrowerApp.Views.Dialogs"
+             xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels.Dialogs"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:PayGroupEditDialogViewModel}"
+             d:DesignHeight="250" d:DesignWidth="400" MaxWidth="500">
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="{Binding Title}" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,16"/>
+
+        <StackPanel Grid.Row="1">
+            <TextBox materialDesign:HintAssist.Hint="Payment Group ID"
+                     Text="{Binding PayGroupData.PayGroupId, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True}"
+                     IsEnabled="{Binding IsEditMode, Converter={StaticResource InverseBooleanConverter}}"
+                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                     Margin="0,8,0,8"
+                     MaxLength="1"/> 
+                     
+            <TextBox materialDesign:HintAssist.Hint="Description"
+                     Text="{Binding PayGroupData.Description, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True}"
+                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                     Margin="0,8,0,8"
+                     MaxLength="30"/>
+
+            <TextBox materialDesign:HintAssist.Hint="Default Pay Level (0-9)"
+                     Text="{Binding PayGroupData.DefaultPayLevel, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, TargetNullValue=''}"
+                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                     Margin="0,8,0,8">
+                <!-- Optional: Add input validation for numbers only if needed -->
+                 <materialDesign:TextFieldAssist.CharacterCounterStyle>
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource MaterialDesignHelperTextBlock}"/>
+                </materialDesign:TextFieldAssist.CharacterCounterStyle>
+            </TextBox>
+
+        </StackPanel>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <!-- Changed Style to MaterialDesignOutlinedButton -->
+            <Button Content="Cancel" IsCancel="True" Style="{StaticResource MaterialDesignOutlinedButton}" 
+                    Command="{x:Static materialDesign:DialogHost.CloseDialogCommand}">
+                 <!-- Explicitly pass False for Cancel -->
+                 <Button.CommandParameter>
+                    <system:Boolean xmlns:system="clr-namespace:System;assembly=mscorlib">False</system:Boolean>
+                </Button.CommandParameter>
+            </Button>
+                    
+            <Button Content="Save" IsDefault="True" Style="{StaticResource MaterialDesignFlatButton}"
+                    Command="{Binding SaveCommand}" 
+                    Margin="8,0,0,0">
+                 <!-- CommandParameter removed from attribute list -->
+                 <!-- Keep explicit CommandParameter for DialogHost closing if SaveCommand handles it -->
+                 <!-- If SaveCommand doesn't close dialog, this parameter might be used differently -->
+                 <!-- Let's assume SaveCommand will handle closing for now -->
+                 <!-- <Button.CommandParameter>
+                    <system:Boolean xmlns:system="clr-namespace:System;assembly=mscorlib">True</system:Boolean> 
+                </Button.CommandParameter> -->
+            </Button>
+        </StackPanel>
+    </Grid>
+</UserControl>

@@ -109,7 +109,7 @@ namespace WPFGrowerApp.ViewModels
 
         private async Task LoadPayGroupsAsync()
         {
-            PayGroups = await _payGroupService.GetPayGroupsAsync();
+            PayGroups = (await _payGroupService.GetAllPayGroupsAsync()).ToList();
         }
 
         private async Task LoadProvincesAsync()

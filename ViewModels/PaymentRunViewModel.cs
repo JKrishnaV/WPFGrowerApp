@@ -719,7 +719,7 @@ namespace WPFGrowerApp.ViewModels
                  _filteredProcessesView?.Refresh(); // Refresh the view
 
                 // Load PayGroups into the backing collection
-                var payGroupList = await _payGroupService.GetPayGroupsAsync();
+                var payGroupList = await _payGroupService.GetAllPayGroupsAsync();
                  _allPayGroups.Clear();
                  foreach (var pg in payGroupList) _allPayGroups.Add(pg);
                  _filteredPayGroupsView?.Refresh(); // Refresh the view

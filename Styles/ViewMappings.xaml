@@ -4,7 +4,8 @@
                     xmlns:views="clr-namespace:WPFGrowerApp.Views"
                     xmlns:reports="clr-namespace:WPFGrowerApp.Views.Reports"
                     xmlns:dialogs="clr-namespace:WPFGrowerApp.Views.Dialogs" 
-                    xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels">
+                    xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels"
+                    xmlns:vmDialogs="clr-namespace:WPFGrowerApp.ViewModels.Dialogs">  <!-- Added namespace for dialog VMs -->
 
     <!-- View Model to View Mappings -->
     <DataTemplate DataType="{x:Type viewmodels:DashboardViewModel}">
@@ -50,7 +51,12 @@
     <DataTemplate DataType="{x:Type viewmodels:DepotViewModel}">
         <views:DepotView />
     </DataTemplate>
-    
+
+    <!-- Payment Group Management Mapping -->
+    <DataTemplate DataType="{x:Type viewmodels:PaymentGroupViewModel}">
+        <views:PaymentGroupView />
+    </DataTemplate>
+
     <DataTemplate DataType="{x:Type vm:UserManagementViewModel}">
         <views:UserManagementView/>
     </DataTemplate>
@@ -58,6 +64,11 @@
     <!-- Dialog View Model Mappings -->
     <DataTemplate DataType="{x:Type vm:PaymentTestRunReportViewModel}">
         <dialogs:PaymentTestRunReportView/>
+    </DataTemplate>
+
+    <!-- Use the correct namespace prefix 'vmDialogs' -->
+    <DataTemplate DataType="{x:Type vmDialogs:PayGroupEditDialogViewModel}"> 
+        <dialogs:PayGroupEditDialogView/>
     </DataTemplate>
     
     <!-- Add other dialog mappings here if needed -->
