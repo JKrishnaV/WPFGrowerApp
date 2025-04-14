@@ -6,6 +6,13 @@ namespace WPFGrowerApp.ViewModels
 {
     public abstract class ViewModelBase : INotifyPropertyChanged
     {
+        private bool _isBusy;
+        public bool IsBusy
+        {
+            get => _isBusy;
+            protected set => SetProperty(ref _isBusy, value);
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)

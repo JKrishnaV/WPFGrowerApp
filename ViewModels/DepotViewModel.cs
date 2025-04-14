@@ -273,7 +273,7 @@ namespace WPFGrowerApp.ViewModels
                 Infrastructure.Logging.Logger.Error($"Error deleting depot {SelectedDepot.DepotId}.", ex);
                 await _dialogService?.ShowMessageBoxAsync($"Error deleting depot: {ex.Message}", "Error"); // Use async
             }
-             finally
+            finally
             {
                 IsLoading = false;
             }

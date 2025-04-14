@@ -27,7 +27,8 @@ namespace WPFGrowerApp.ViewModels
             NavigateToDashboardCommand = new RelayCommand(async p => await NavigateToAsync<DashboardViewModel>("Dashboard", p), CanNavigate); // Use async lambda
             NavigateToGrowersCommand = new RelayCommand(NavigateToGrowersExecuteAsync, CanNavigate); // Keep separate async logic
             NavigateToImportCommand = new RelayCommand(async p => await NavigateToAsync<ImportViewModel>("Import", p), CanNavigate); // Use async lambda
-            NavigateToReportsCommand = new RelayCommand(async p => await NavigateToAsync<ReportsViewModel>("Reports", p), CanNavigate); // Use async lambda
+            // Update Reports command to navigate to the new ReportsHostViewModel
+            NavigateToReportsCommand = new RelayCommand(async p => await NavigateToAsync<ReportsHostViewModel>("Reports", p), CanNavigate); // Use async lambda
             NavigateToInventoryCommand = new RelayCommand(async p => await NavigateToAsync<InventoryViewModel>("Inventory", p), CanNavigate); // Use async lambda
             NavigateToPaymentRunCommand = new RelayCommand(async p => await NavigateToAsync<PaymentRunViewModel>("Payment Run", p), CanNavigate); // Use async lambda
             // Update Settings command to navigate to the new SettingsHostViewModel

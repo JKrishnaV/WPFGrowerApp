@@ -64,6 +64,8 @@ namespace WPFGrowerApp
             services.AddTransient<InventoryViewModel>();
             services.AddTransient<SettingsViewModel>(); 
             services.AddTransient<SettingsHostViewModel>(); 
+            services.AddTransient<ReportsHostViewModel>(); // Added Reports Host VM
+            services.AddTransient<GrowerReportViewModel>(); // Added Grower Report VM
             services.AddTransient<ProductViewModel>(); 
             services.AddTransient<ProcessViewModel>(); 
             services.AddTransient<DepotViewModel>(); // Added Depot VM
