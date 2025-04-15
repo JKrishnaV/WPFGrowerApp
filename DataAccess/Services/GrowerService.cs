@@ -32,6 +32,8 @@ namespace WPFGrowerApp.DataAccess.Services
                         WHERE NAME LIKE @SearchTerm
                            OR CHEQNAME LIKE @SearchTerm
                            OR CITY LIKE @SearchTerm
+                           OR PHONE LIKE @SearchTerm
+                           OR CONVERT(VARCHAR, NUMBER) LIKE @SearchTerm -- Search by Grower Number (converted to string)
                         ORDER BY NAME";
 
                     var parameters = new { SearchTerm = $"%{searchTerm}%" };
@@ -212,7 +214,13 @@ namespace WPFGrowerApp.DataAccess.Services
                             NAME as GrowerName,
                             CHEQNAME as ChequeName,
                             CITY as City,
-                            PHONE as Phone
+                            PHONE as Phone,
+                            PROV as Province,
+                            ACRES as Acres,
+                            NOTES as Notes,
+                            PAYGRP as PayGroup,
+                            PHONE2 as Phone2,
+                            ONHOLD as IsOnHold
                         FROM GROWER
                         ORDER BY NAME";
 

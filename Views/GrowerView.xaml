@@ -107,7 +107,7 @@
                     <!-- Province -->
                     <ComboBox Grid.Row="1" Grid.Column="1" Margin="5,0,0,10"
                               materialDesign:HintAssist.Hint="Province"
-                              Text="{Binding CurrentGrower.Prov, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                              SelectedValue="{Binding CurrentGrower.Prov, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                               ItemsSource="{Binding Provinces}"
                               Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
 

@@ -6,18 +6,20 @@
              xmlns:local="clr-namespace:WPFGrowerApp.Views"
              xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
-             xmlns:bold="clr-namespace:BoldReports.UI.Xaml;assembly=BoldReports.WPF" 
+             xmlns:bold="clr-namespace:BoldReports.UI.Xaml;assembly=BoldReports.WPF"
+             xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:infrastructure="clr-namespace:WPFGrowerApp.Infrastructure"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:GrowerReportViewModel, IsDesignTimeCreatable=False}"
-             d:DesignHeight="600" d:DesignWidth="800"
+             d:DesignHeight="700" d:DesignWidth="1100" 
              Background="{DynamicResource MaterialDesignPaper}">
 
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/> <!-- Title -->
-            <RowDefinition Height="Auto"/> <!-- Filters/Options -->
+            <RowDefinition Height="Auto"/> <!-- Filters/Options Card -->
+            <!-- Removed Pay Group Card RowDefinition -->
             <RowDefinition Height="*"/>    <!-- Report Viewer -->
-            <RowDefinition Height="Auto"/> <!-- Action Buttons -->
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Style="{StaticResource MaterialDesignHeadline5TextBlock}" Text="Grower Report" Margin="0,0,0,16"/>
@@ -26,132 +28,183 @@
         <materialDesign:Card Grid.Row="1" Padding="16" Margin="0,0,0,16">
             <StackPanel>
                 <TextBlock Style="{StaticResource MaterialDesignSubtitle1TextBlock}" Text="Report Options" Margin="0,0,0,8"/>
-                <WrapPanel Orientation="Horizontal">
-                    <!-- Example Filter -->
-                    <TextBox materialDesign:HintAssist.Hint="Filter by Name/Number"
-                             Style="{StaticResource MaterialDesignFloatingHintTextBox}"
-                             Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
-                             MinWidth="200" Margin="0,0,15,5"/>
+                <!-- Replaced WrapPanel with Grid -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" MinWidth="200"/> <!-- General Filters -->
+                        <ColumnDefinition Width="Auto"/> <!-- Column Toggles -->
+                        <ColumnDefinition Width="*" MinWidth="250"/>    <!-- Pay Group Filter -->
+                        <ColumnDefinition Width="Auto"/> <!-- Pagination & Actions -->
+                    </Grid.ColumnDefinitions>
 
-                    <!-- Example Column Selection -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,15,5" VerticalAlignment="Center">
-                        <materialDesign:PackIcon Kind="Phone" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
-                        <CheckBox Content="Show Phone Number" IsChecked="{Binding ShowPhoneNumber}" VerticalAlignment="Center"/>
+                    <!-- Column 0: General Filters -->
+                    <StackPanel Grid.Column="0" Margin="0,0,20,0" VerticalAlignment="Top">
+                        <TextBox materialDesign:HintAssist.Hint="Filter by Name/Number"
+                                 Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                                 Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
+                                 materialDesign:TextFieldAssist.HasClearButton="True"
+                                 Margin="0,0,0,10"/>
+                        <ComboBox materialDesign:HintAssist.Hint="Hold Status"
+                                  ItemsSource="{Binding OnHoldFilterOptions}"
+                                  SelectedItem="{Binding SelectedOnHoldFilter}"
+                                  Style="{StaticResource MaterialDesignFloatingHintComboBox}"
+                                  Margin="0,10,0,0" VerticalAlignment="Center"/>
+                        <!-- Pagination Controls -->
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,5,0,10" HorizontalAlignment="Left">
+                            <!-- Align left -->
+                            <Button Style="{StaticResource MaterialDesignToolButton}"
+                                     Command="{Binding FirstPageCommand}"
+                                     ToolTip="First Page"
+                                     Margin="0,0,2,0">
+                                <materialDesign:PackIcon Kind="PageFirst" />
+                            </Button>
+                            <Button Style="{StaticResource MaterialDesignToolButton}"
+                                    Command="{Binding PreviousPageCommand}"
+                                    ToolTip="Previous Page"
+                                    Margin="0,0,2,0">
+                                <materialDesign:PackIcon Kind="ChevronLeft" />
+                            </Button>
+                            <TextBlock Text="{Binding PageInfo}" VerticalAlignment="Center" Margin="8,0,8,0" />
+                            <Button Style="{StaticResource MaterialDesignToolButton}"
+                                    Command="{Binding NextPageCommand}"
+                                    ToolTip="Next Page"
+                                    Margin="0,0,2,0">
+                                <materialDesign:PackIcon Kind="ChevronRight" />
+                            </Button>
+                            <Button Style="{StaticResource MaterialDesignToolButton}"
+             Command="{Binding LastPageCommand}"
+             ToolTip="Last Page"
+             Margin="0,0,0,0">
+                                <materialDesign:PackIcon Kind="PageLast" />
+                            </Button>
+                        </StackPanel>
                     </StackPanel>
-                    <!-- Add more checkboxes for other columns -->
-                    <!-- Example: Add checkboxes for Address and City if needed -->
-                    <!-- 
-                    <StackPanel Orientation="Horizontal" Margin="0,0,15,5" VerticalAlignment="Center">
-                        <materialDesign:PackIcon Kind="MapMarker" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
-                        <CheckBox Content="Show Address" IsChecked="{Binding ShowAddress}" VerticalAlignment="Center"/>
+
+                    <!-- Column 1: Column Visibility Toggles (Vertical) -->
+                    <StackPanel Grid.Column="1" Orientation="Vertical" Margin="0,0,20,0" VerticalAlignment="Top">
+                         <StackPanel Orientation="Horizontal" Margin="0,5,0,5" VerticalAlignment="Center">
+                            <materialDesign:PackIcon Kind="Phone" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                            <TextBlock Text="Phone:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <ToggleButton Style="{StaticResource MaterialDesignSwitchToggleButton}" IsChecked="{Binding ShowPhoneNumber}" ToolTip="Toggle Phone Number Visibility"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,5,0,5" VerticalAlignment="Center">
+                            <materialDesign:PackIcon Kind="MapMarker" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                            <TextBlock Text="Address:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <ToggleButton Style="{StaticResource MaterialDesignSwitchToggleButton}" IsChecked="{Binding ShowAddress}" ToolTip="Toggle Address Visibility"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,5,0,5" VerticalAlignment="Center">
+                            <materialDesign:PackIcon Kind="City" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                            <TextBlock Text="City:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <ToggleButton Style="{StaticResource MaterialDesignSwitchToggleButton}" IsChecked="{Binding ShowCity}" ToolTip="Toggle City Visibility"/>
+                        </StackPanel>
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,15,5" VerticalAlignment="Center">
-                        <materialDesign:PackIcon Kind="City" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
-                        <CheckBox Content="Show City" IsChecked="{Binding ShowCity}" VerticalAlignment="Center"/>
-                     </StackPanel>
-                     -->
- 
-                     <!-- Pagination Controls -->
-                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0,15,0">
-                         <Button Style="{StaticResource MaterialDesignToolButton}"
-                                Command="{Binding FirstPageCommand}"
-                                ToolTip="First Page"
-                                Margin="0,0,2,0">
-                            <materialDesign:PackIcon Kind="PageFirst" />
-                        </Button>
-                        <Button Style="{StaticResource MaterialDesignToolButton}"
-                                Command="{Binding PreviousPageCommand}"
-                                ToolTip="Previous Page"
-                                Margin="0,0,2,0">
-                            <materialDesign:PackIcon Kind="ChevronLeft" />
-                        </Button>
-                        <TextBlock Text="{Binding PageInfo}" VerticalAlignment="Center" Margin="8,0,8,0" />
-                        <Button Style="{StaticResource MaterialDesignToolButton}"
-                                Command="{Binding NextPageCommand}"
-                                ToolTip="Next Page"
-                                Margin="0,0,2,0">
-                            <materialDesign:PackIcon Kind="ChevronRight" />
-                        </Button>
-                        <Button Style="{StaticResource MaterialDesignToolButton}"
-                                Command="{Binding LastPageCommand}"
-                                ToolTip="Last Page"
-                                Margin="0,0,0,0">
-                            <materialDesign:PackIcon Kind="PageLast" />
-                        </Button>
-                     </StackPanel>
- 
-                     <!-- Action Buttons Moved Here -->
-                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
-                         <!-- Reload Button -->
-                         <Button Content="Reload Report"
-                                 Command="{Binding LoadReportCommand}"
-                                 IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBooleanConverter}}"
-                                 Style="{StaticResource MaterialDesignRaisedButton}"
-                                 Margin="0,0,8,0"
-                                 ToolTip="Reload report data"/>
-                         
-                         <!-- Email Button -->
-                         <Button Content="Email Report"
-                                 Command="{Binding EmailReportCommand}"
-                                 IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBooleanConverter}}"
-                                 Style="{StaticResource MaterialDesignRaisedButton}"
-                                 Margin="0,0,8,0"
-                                  ToolTip="Email the full report as PDF"/>
-  
-                           <!-- Grouped Export Split Button -->
-                         <materialDesign:SplitButton ToolTip="Export Full Report" 
-                                                   Margin="0,0,8,0"
-                                                   IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBooleanConverter}}">
-                               <materialDesign:SplitButton.Content>
-                                   <StackPanel Orientation="Horizontal">
-                                       <materialDesign:PackIcon Kind="Download" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                       <TextBlock Text="Export"/>
-                                   </StackPanel>
-                                   <!-- Removed duplicate TextBlock and extra closing StackPanel -->
-                                </materialDesign:SplitButton.Content>
-                                <materialDesign:SplitButton.PopupContent>
-                                    <!-- Reverting to StackPanel containing MenuItems -->
-                                    <StackPanel>
-                                        <MenuItem Header="Export as PDF" Command="{Binding ExportAllPdfCommand}" Style="{StaticResource MaterialDesignMenuItem}">
-                                            <MenuItem.Icon>
-                                                <materialDesign:PackIcon Kind="FilePdfBox" />
-                                     </MenuItem.Icon>
-                                 </MenuItem>
-                                 <MenuItem Header="Export as Excel" Command="{Binding ExportAllExcelCommand}" Style="{StaticResource MaterialDesignMenuItem}">
-                                     <MenuItem.Icon>
-                                         <materialDesign:PackIcon Kind="FileExcelBox" />
-                                     </MenuItem.Icon>
-                                 </MenuItem>
-                                 <MenuItem Header="Export as CSV" Command="{Binding ExportAllCsvCommand}" Style="{StaticResource MaterialDesignMenuItem}">
-                                     <MenuItem.Icon>
-                                         <materialDesign:PackIcon Kind="FileDelimitedOutline" />
-                                             </MenuItem.Icon>
-                                         </MenuItem>
-                                    </StackPanel>
-                                </materialDesign:SplitButton.PopupContent>
-                            </materialDesign:SplitButton>
-                      </StackPanel>
-  
-                 </WrapPanel>
-                  <!-- Add more filter controls as needed -->
+
+                     <!-- Column 2: Pay Group Filter -->
+                     <GroupBox Grid.Column="2" Header="Filter by Pay Group" Style="{StaticResource MaterialDesignCardGroupBox}" Margin="0,0,20,0" Padding="8" VerticalAlignment="Top">
+                         <StackPanel>
+                             <Grid>
+                                 <Grid.ColumnDefinitions>
+                                     <ColumnDefinition Width="*"/>
+                                     <ColumnDefinition Width="Auto"/>
+                                     <ColumnDefinition Width="Auto"/>
+                                 </Grid.ColumnDefinitions>
+                                 <TextBox Grid.Column="0"
+                                          materialDesign:HintAssist.Hint="Search Pay Groups"
+                                          Text="{Binding PayGroupSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                          Style="{StaticResource MaterialDesignFloatingHintTextBox}"
+                                          Margin="0,0,8,8"/>
+                                 <Button Grid.Column="1" Content="All" Command="{Binding SelectAllPayGroupsCommand}" Style="{StaticResource MaterialDesignToolButton}" Margin="0,0,4,8" ToolTip="Select All Pay Groups"/>
+                                 <Button Grid.Column="2" Content="None" Command="{Binding DeselectAllPayGroupsCommand}" Style="{StaticResource MaterialDesignToolButton}" Margin="0,0,0,8" ToolTip="Deselect All Pay Groups"/>
+                             </Grid>
+                             <ListBox x:Name="PayGroupListBox"
+                                      ItemsSource="{Binding FilteredPayGroups}"
+                                      DisplayMemberPath="Description"
+                                      SelectionMode="Extended"
+                                      MaxHeight="110" 
+                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                      infrastructure:ListBoxSelectedItemsBehavior.SelectedItems="{Binding SelectedPayGroups}"
+                                      ItemContainerStyle="{StaticResource ListBoxItemStyle_CustomHighlight}"
+                                      PreviewMouseLeftButtonDown="ListBoxItem_PreviewMouseLeftButtonDown_Toggle">
+                                 <ListBox.Style>
+                                     <StaticResource ResourceKey="MaterialDesignListBox"/>
+                                 </ListBox.Style>
+                             </ListBox>
+                         </StackPanel>
+                     </GroupBox>
+
+                    <!-- Column 3: Pagination & Actions -->
+                    <StackPanel Grid.Column="3" Orientation="Vertical" VerticalAlignment="Top" Margin="0,0,0,0"> <!-- Removed left margin -->
+
+                         <!-- Action Buttons -->
+                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,10,0,0" HorizontalAlignment="Left"> <!-- Align left -->
+                             <!-- Reload Button -->
+                             <Button Content="Reload Report"
+                                     Command="{Binding LoadReportCommand}"
+                                     IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBooleanConverter}}"
+                                     Style="{StaticResource MaterialDesignRaisedButton}"
+                                     Margin="0,0,8,0"
+                                     ToolTip="Reload report data"/>
+
+                             <!-- Email Button -->
+                             <Button Content="Email Report"
+                                     Command="{Binding EmailReportCommand}"
+                                     IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBooleanConverter}}"
+                                     Style="{StaticResource MaterialDesignRaisedButton}"
+                                     Margin="0,0,8,0"
+                                      ToolTip="Email the full report as PDF"/>
+
+                               <!-- Grouped Export Split Button -->
+                             <materialDesign:SplitButton ToolTip="Export Full Report"
+                                                       Margin="0,0,8,0"
+                                                       IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBooleanConverter}}">
+                                   <materialDesign:SplitButton.Content>
+                                       <StackPanel Orientation="Horizontal">
+                                           <materialDesign:PackIcon Kind="Download" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                           <TextBlock Text="Export"/>
+                                       </StackPanel>
+                                   </materialDesign:SplitButton.Content>
+                                   <materialDesign:SplitButton.PopupContent>
+                                       <StackPanel>
+                                           <MenuItem Header="Export as PDF" Command="{Binding ExportAllPdfCommand}" Style="{StaticResource MaterialDesignMenuItem}">
+                                               <MenuItem.Icon>
+                                                   <materialDesign:PackIcon Kind="FilePdfBox" />
+                                               </MenuItem.Icon>
+                                           </MenuItem>
+                                           <MenuItem Header="Export as Excel" Command="{Binding ExportAllExcelCommand}" Style="{StaticResource MaterialDesignMenuItem}">
+                                               <MenuItem.Icon>
+                                                   <materialDesign:PackIcon Kind="FileExcelBox" />
+                                               </MenuItem.Icon>
+                                           </MenuItem>
+                                           <MenuItem Header="Export as CSV" Command="{Binding ExportAllCsvCommand}" Style="{StaticResource MaterialDesignMenuItem}">
+                                               <MenuItem.Icon>
+                                                   <materialDesign:PackIcon Kind="FileDelimitedOutline" />
+                                               </MenuItem.Icon>
+                                           </MenuItem>
+                                       </StackPanel>
+                                   </materialDesign:SplitButton.PopupContent>
+                               </materialDesign:SplitButton>
+                        </StackPanel>
+                        
+                       
+                    </StackPanel>
+                </Grid>
              </StackPanel>
          </materialDesign:Card>
 
+        <!-- Removed Pay Group Filter Section Card -->
+
         <!-- Bold Reports Viewer -->
-        <bold:ReportViewer Grid.Row="2" x:Name="ReportViewer"
-                           ReportPath="{Binding ReportPath}" 
+        <bold:ReportViewer Grid.Row="2" x:Name="ReportViewer" 
+                           ReportPath="{Binding ReportPath}"
                            ProcessingMode="Local"
                            ViewMode="Normal"
-                           ShowPageNavigationControls="False" 
+                           ShowPageNavigationControls="False"
                            Loaded="ReportViewer_Loaded"
-                           Margin="0,0,0,16">
+                           Margin="0,16,0,0"> <!-- Added top margin -->
          </bold:ReportViewer>
- 
-         <!-- Action Buttons (REMOVED FROM HERE) -->
-         <!-- <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right"> ... </StackPanel> -->
- 
+
           <!-- Busy Indicator -->
-        <materialDesign:Card Grid.Row="0" Grid.RowSpan="4"
+        <materialDesign:Card Grid.Row="0" Grid.RowSpan="3"
                              VerticalAlignment="Center" HorizontalAlignment="Center"
                              Padding="20" Background="{DynamicResource MaterialDesignPaper}"
                              Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"

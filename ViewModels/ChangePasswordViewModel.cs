@@ -18,9 +18,12 @@ namespace WPFGrowerApp.ViewModels
         private string _username;
         private string _statusMessage;
         private string _errorMessage;
-        private bool _isBusy;
+         private bool _isBusy;
 
-        public ChangePasswordViewModel(IUserService userService, IDialogService dialogService)
+         // Event to signal successful password change
+         public event EventHandler PasswordChangeSuccess;
+
+         public ChangePasswordViewModel(IUserService userService, IDialogService dialogService)
         {
             _userService = userService ?? throw new ArgumentNullException(nameof(userService));
             _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
@@ -141,13 +144,14 @@ namespace WPFGrowerApp.ViewModels
                 StatusMessage = "Setting new password...";
                 bool success = await _userService.SetPasswordAsync(Username, newPlain);
 
-                if (success)
-                {
-                    StatusMessage = "Password changed successfully.";
-                    // Optionally clear fields via messaging or direct view interaction if needed
-                    await _dialogService.ShowMessageBoxAsync("Password changed successfully.", "Success"); // Use async
-                }
-                else
+                 if (success)
+                 {
+                     StatusMessage = "Password changed successfully.";
+                     // Raise the success event before showing the dialog
+                     PasswordChangeSuccess?.Invoke(this, EventArgs.Empty); 
+                     await _dialogService.ShowMessageBoxAsync("Password changed successfully.", "Success"); // Use async
+                 }
+                 else
                 {
                     ErrorMessage = "Failed to update password. Please try again.";
                 }

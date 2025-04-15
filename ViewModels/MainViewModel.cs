@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection; // For IServiceProvider
-using System; 
-using System.Threading.Tasks; 
-using System.Windows.Input; 
+using System;
+using System.Threading.Tasks;
+using System.Windows; // Added for Application.Current
+using System.Windows.Input;
 using WPFGrowerApp.Commands;
 using WPFGrowerApp.Services; // Added for IDialogService
 using WPFGrowerApp.Views; // Still needed for GrowerSearchView in DialogService implementation (can be removed if DialogService is refactored)
@@ -39,6 +40,9 @@ namespace WPFGrowerApp.ViewModels
 
             // Initialize ToggleMenuCommand
             ToggleMenuCommand = new RelayCommand(ToggleMenuExecute);
+
+            // Initialize LogoutCommand
+            LogoutCommand = new RelayCommand(async p => await LogoutExecuteAsync(), CanLogout);
         }
 
         // --- Menu State ---
@@ -82,6 +86,7 @@ namespace WPFGrowerApp.ViewModels
         public ICommand NavigateToInventoryCommand { get; }
         public ICommand NavigateToPaymentRunCommand { get; } // Added
         public ICommand NavigateToSettingsCommand { get; }
+        public ICommand LogoutCommand { get; } // Added
 
         private bool CanNavigate(object? parameter) => !_isNavigating; // Changed parameter to object?
 
@@ -132,6 +137,35 @@ namespace WPFGrowerApp.ViewModels
         // Removed NavigateToReportsExecute - Handled by NavigateTo<TViewModel> in command initialization
         // Removed NavigateToInventoryExecute - Handled by NavigateTo<TViewModel> in command initialization
         // Removed NavigateToSettingsExecute - Handled by NavigateTo<TViewModel> in command initialization
+
+        // --- Logout Logic ---
+        private bool CanLogout(object? parameter) => true; // Always allow logout
+
+        private async Task LogoutExecuteAsync()
+        {
+            bool confirmLogout = await _dialogService.ShowConfirmationDialogAsync("Confirm Logout", "Are you sure you want to log out?");
+            if (confirmLogout)
+            {
+                try
+                {
+                    // Get the current main window
+                    var mainWindow = Application.Current.MainWindow;
+
+                    // Resolve and show the login view
+                    var loginView = _serviceProvider.GetRequiredService<LoginView>();
+                    loginView.WindowStartupLocation = WindowStartupLocation.CenterScreen; // Ensure it's centered
+                    loginView.Show();
+
+                    // Close the main window
+                    mainWindow?.Close();
+                }
+                catch (Exception ex)
+                {
+                    Infrastructure.Logging.Logger.Error("Error during logout process.", ex);
+                    await _dialogService.ShowMessageBoxAsync($"An error occurred during logout: {ex.Message}", "Logout Error");
+                }
+            }
+        }
 
         // --- End Navigation Commands ---
 

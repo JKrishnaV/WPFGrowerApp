@@ -1,171 +1,186 @@
 <Window x:Class="WPFGrowerApp.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:WPFGrowerApp"
-        xmlns:controls="clr-namespace:WPFGrowerApp.Controls"
-        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes" 
-        mc:Ignorable="d"
-        Title="Berry Farm Management" Height="600" Width="900"
-        WindowStartupLocation="CenterScreen"
-        WindowStyle="None" 
-        ResizeMode="CanResizeWithGrip"
-        AllowsTransparency="True"
-        Background="Transparent"> 
-    
-    <Window.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/Styles/Animations.xaml"/>
-                <!-- Removed Button style references here as they should be in App.xaml or Styles/ButtonStyles.xaml -->
-            </ResourceDictionary.MergedDictionaries>
-            
-            <!-- Window Control Button Style -->
-            <Style x:Key="WindowControlButtonStyle" TargetType="Button">
-                <Setter Property="Width" Value="46"/>
-                <Setter Property="Height" Value="30"/>
-                <Setter Property="Background" Value="Transparent"/>
-                <Setter Property="BorderThickness" Value="0"/>
-                <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
-                <Setter Property="FontSize" Value="12"/>
-                <Setter Property="Foreground" Value="#333333"/>
-                <Setter Property="Template">
-                    <Setter.Value>
-                        <ControlTemplate TargetType="Button">
-                            <Border x:Name="border" Background="{TemplateBinding Background}">
-                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#E5E5E5" TargetName="border"/>
-                                    <Setter Property="Foreground" Value="#000000"/>
-                                </Trigger>
-                                <Trigger Property="IsPressed" Value="True">
-                                    <Setter Property="Background" Value="#CCCCCC" TargetName="border"/>
-                                </Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Setter.Value>
-                </Setter>
-            </Style>
-            
-            <!-- Close Button Style -->
-            <Style x:Key="CloseButtonStyle" TargetType="Button" BasedOn="{StaticResource WindowControlButtonStyle}">
-                <Style.Triggers>
-                    <Trigger Property="IsMouseOver" Value="True">
-                        <Setter Property="Background" Value="#E81123"/>
-                        <Setter Property="Foreground" Value="White"/>
-                    </Trigger>
-                    <Trigger Property="IsPressed" Value="True">
-                        <Setter Property="Background" Value="#F1707A"/>
-                        <Setter Property="Foreground" Value="White"/>
-                    </Trigger>
-                </Style.Triggers>
-            </Style>
-            
-            <!-- Style for the Menu Toggle Button -->
-            <Style x:Key="MenuToggleButtonStyle" TargetType="Button">
-                <Setter Property="Width" Value="30"/>
-                <Setter Property="Height" Value="30"/>
-                <Setter Property="Content" Value="☰"/>
-                <Setter Property="FontSize" Value="16"/>
-                <Setter Property="Background" Value="Transparent"/>
-                <Setter Property="Foreground" Value="Black"/> <!-- Set foreground to Black -->
-                <Setter Property="BorderThickness" Value="0"/>
-                <Setter Property="VerticalAlignment" Value="Center"/>
-                <Setter Property="HorizontalAlignment" Value="Left"/>
-                <Setter Property="Margin" Value="15,0,0,0"/>
-                <Setter Property="Command" Value="{Binding ToggleMenuCommand}"/>
-                <!-- Add triggers for hover/pressed if needed, otherwise default button behavior applies -->
-            </Style>
+       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+       xmlns:local="clr-namespace:WPFGrowerApp"
+       xmlns:controls="clr-namespace:WPFGrowerApp.Controls"
+       xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes" 
+       mc:Ignorable="d"
+       Title="Berry Farm Management" Height="600" Width="900"
+       WindowStartupLocation="CenterScreen"
+       WindowStyle="None" 
+       ResizeMode="CanResizeWithGrip"
+       AllowsTransparency="True"
+       Background="Transparent"> 
+   
+   <Window.Resources>
+       <ResourceDictionary>
+           <ResourceDictionary.MergedDictionaries>
+               <ResourceDictionary Source="/Styles/Animations.xaml"/>
+           </ResourceDictionary.MergedDictionaries>
+           
+           <!-- Window Control Button Style -->
+           <Style x:Key="WindowControlButtonStyle" TargetType="Button">
+               <Setter Property="Width" Value="46"/>
+               <Setter Property="Height" Value="30"/>
+               <Setter Property="Background" Value="Transparent"/>
+               <Setter Property="BorderThickness" Value="0"/>
+               <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+               <Setter Property="FontSize" Value="12"/>
+               <Setter Property="Foreground" Value="#333333"/>
+               <Setter Property="Template">
+                   <Setter.Value>
+                       <ControlTemplate TargetType="Button">
+                           <Border x:Name="border" Background="{TemplateBinding Background}">
+                               <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                           </Border>
+                           <ControlTemplate.Triggers>
+                               <Trigger Property="IsMouseOver" Value="True">
+                                   <Setter Property="Background" Value="#E5E5E5" TargetName="border"/>
+                                   <Setter Property="Foreground" Value="#000000"/>
+                               </Trigger>
+                               <Trigger Property="IsPressed" Value="True">
+                                   <Setter Property="Background" Value="#CCCCCC" TargetName="border"/>
+                               </Trigger>
+                           </ControlTemplate.Triggers>
+                       </ControlTemplate>
+                   </Setter.Value>
+               </Setter>
+           </Style>
+           
+           <!-- Close Button Style -->
+           <Style x:Key="CloseButtonStyle" TargetType="Button" BasedOn="{StaticResource WindowControlButtonStyle}">
+               <Setter Property="Template">
+                   <Setter.Value>
+                       <ControlTemplate TargetType="Button">
+                           <Border x:Name="border" Background="{TemplateBinding Background}">
+                               <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                           </Border>
+                           <ControlTemplate.Triggers>
+                               <Trigger Property="IsMouseOver" Value="True">
+                                   <Setter Property="Background" Value="#E81123" />
+                                   <Setter Property="Foreground" Value="White"/>
+                               </Trigger>
+                               <Trigger Property="IsPressed" Value="True">
+                                   <Setter Property="Background" Value="#F1707A" />
+                                   <Setter Property="Foreground" Value="White"/>
+                               </Trigger>
+                           </ControlTemplate.Triggers>
+                       </ControlTemplate>
+                   </Setter.Value>
+               </Setter>
+           </Style>
 
-            <!-- Style for HamburgerMenu Width Animation -->
-            <Style x:Key="HamburgerMenuStyle" TargetType="controls:HamburgerMenu">
-                <Setter Property="Width" Value="250"/> <!-- Default width -->
-                <Style.Triggers>
-                    <DataTrigger Binding="{Binding IsMenuOpen}" Value="False">
-                        <DataTrigger.EnterActions>
-                            <BeginStoryboard>
-                                <Storyboard>
-                                    <DoubleAnimation Storyboard.TargetProperty="Width" To="0" Duration="0:0:0.3"/>
-                                </Storyboard>
-                            </BeginStoryboard>
-                        </DataTrigger.EnterActions>
-                        <DataTrigger.ExitActions>
-                            <BeginStoryboard>
-                                <Storyboard>
-                                    <DoubleAnimation Storyboard.TargetProperty="Width" To="250" Duration="0:0:0.3"/>
-                                </Storyboard>
-                            </BeginStoryboard>
-                        </DataTrigger.ExitActions>
-                    </DataTrigger>
-                </Style.Triggers>
-            </Style>
+           <!-- Style for the Menu Toggle Button -->
+           <Style x:Key="MenuToggleButtonStyle" TargetType="Button">
+               <Setter Property="Width" Value="30"/>
+               <Setter Property="Height" Value="30"/>
+               <Setter Property="Content" Value="☰"/>
+               <Setter Property="FontSize" Value="16"/>
+               <Setter Property="Background" Value="Transparent"/>
+               <Setter Property="Foreground" Value="Black"/>
+               <Setter Property="BorderThickness" Value="0"/>
+               <Setter Property="VerticalAlignment" Value="Center"/>
+               <Setter Property="HorizontalAlignment" Value="Left"/>
+               <Setter Property="Margin" Value="15,0,0,0"/>
+               <Setter Property="Command" Value="{Binding ToggleMenuCommand}"/>
+           </Style>
 
-        </ResourceDictionary>
-    </Window.Resources>
+           <!-- Style for HamburgerMenu Width Animation -->
+           <Style x:Key="HamburgerMenuStyle" TargetType="controls:HamburgerMenu">
+               <Setter Property="Width" Value="250"/>
+               <Style.Triggers>
+                   <DataTrigger Binding="{Binding IsMenuOpen}" Value="False">
+                       <DataTrigger.EnterActions>
+                           <BeginStoryboard>
+                               <Storyboard>
+                                   <DoubleAnimation Storyboard.TargetProperty="Width" To="0" Duration="0:0:0.3"/>
+                               </Storyboard>
+                           </BeginStoryboard>
+                       </DataTrigger.EnterActions>
+                       <DataTrigger.ExitActions>
+                           <BeginStoryboard>
+                               <Storyboard>
+                                   <DoubleAnimation Storyboard.TargetProperty="Width" To="250" Duration="0:0:0.3"/>
+                               </Storyboard>
+                           </BeginStoryboard>
+                       </DataTrigger.ExitActions>
+                   </DataTrigger>
+               </Style.Triggers>
+           </Style>
 
-    <materialDesign:Card UniformCornerRadius="8" Background="#E6F0FA"><!--Warm Light Gray (#F0F0F0)-->
-        <!-- Wrap the main Grid with DialogHost -->
-        <materialDesign:DialogHost Identifier="RootDialogHost" CloseOnClickAway="True"> 
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition x:Name="MenuColumn" Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+       </ResourceDictionary>
+   </Window.Resources>
 
-            <!-- Hamburger Menu -->
-            <!-- Re-added Style binding, Removed explicit Width -->
-            <controls:HamburgerMenu Grid.Column="0" Style="{StaticResource HamburgerMenuStyle}"/> 
+   <materialDesign:Card UniformCornerRadius="8" Background="#F0F0F0">
+       <materialDesign:DialogHost Identifier="RootDialogHost" CloseOnClickAway="True"> 
+           <Grid>
+               <Grid.ColumnDefinitions>
+                   <ColumnDefinition x:Name="MenuColumn" Width="Auto"/>
+                   <ColumnDefinition Width="*"/>
+               </Grid.ColumnDefinitions>
 
-            <!-- Main Content Area -->
-            <Grid Grid.Column="1">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="50"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+               <controls:HamburgerMenu Grid.Column="0" Style="{StaticResource HamburgerMenuStyle}"/> 
 
-                <!-- Header with Toggle Button -->
-                <Grid Grid.Row="0" Background="#F8F8F8" MouseLeftButtonDown="HeaderArea_MouseLeftButtonDown">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="10,0,0,0">
-                        <Button x:Name="MenuToggleButton" 
-                            HorizontalAlignment="Left" 
-                            VerticalAlignment="Center"
-                            Margin="15,0,0,0"
-                            Width="30" 
-                            Height="30" 
-                            Style="{StaticResource MenuToggleButtonStyle}"/> 
-                            <!-- Apply the specific style, removed inline properties -->
-                    </StackPanel>
+               <Grid Grid.Column="1">
+                   <Grid.RowDefinitions>
+                       <RowDefinition Height="50"/>
+                       <RowDefinition Height="*"/>
+                   </Grid.RowDefinitions>
 
-                    <!-- Window Controls -->
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button x:Name="MinimizeButton" Content="&#xE921;" Style="{StaticResource WindowControlButtonStyle}" Click="MinimizeButton_Click"/>
-                        <Button x:Name="MaximizeButton" Content="&#xE922;" Style="{StaticResource WindowControlButtonStyle}" Click="MaximizeButton_Click"/>
-                        <Button x:Name="CloseButton" Content="&#xE8BB;" Style="{StaticResource CloseButtonStyle}" Click="CloseButton_Click"/>
-                    </StackPanel>
-                </Grid>
+                   <Grid Grid.Row="0" Background="#5454A8" MouseLeftButtonDown="HeaderArea_MouseLeftButtonDown">
+                       <Grid.ColumnDefinitions>
+                           <ColumnDefinition Width="*"/>
+                           <ColumnDefinition Width="Auto"/>
+                       </Grid.ColumnDefinitions>
+                       <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="10,0,0,0">
+                           <Button x:Name="MenuToggleButton" 
+                               HorizontalAlignment="Left" 
+                               VerticalAlignment="Center"
+                               Margin="15,0,0,0"
+                               Width="30" 
+                               Height="30"
+                               Style="{StaticResource MenuToggleButtonStyle}"/>
+                           <Button x:Name="HomeButton"
+                                   HorizontalAlignment="Left"
+                                   VerticalAlignment="Center"
+                                   Margin="10,0,0,0"
+                                   Width="30"
+                                   Height="30"
+                                   Style="{StaticResource MenuToggleButtonStyle}" 
+                                   Command="{Binding NavigateToDashboardCommand}"
+                                   ToolTip="Go to Dashboard">
+                               <materialDesign:PackIcon Kind="Home" Width="16" Height="16" />
+                           </Button>
+                       </StackPanel>
 
-                <!-- Content Area with ScrollViewer -->
-                <ScrollViewer Grid.Row="1" 
-                        VerticalScrollBarVisibility="Auto" 
-                        HorizontalScrollBarVisibility="Auto"
-                        PanningMode="Both">
-                    <ContentControl Margin="15"
-                              Content="{Binding CurrentViewModel}"
-                              HorizontalAlignment="Stretch"
-                              VerticalAlignment="Stretch"
-                              HorizontalContentAlignment="Stretch"
-                              VerticalContentAlignment="Stretch"/>
-                </ScrollViewer>
-                </Grid>
+                       <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                           <Button x:Name="LogoutButton" 
+                                   Style="{StaticResource WindowControlButtonStyle}" 
+                                   Command="{Binding LogoutCommand}"
+                                   ToolTip="Logout">
+                               <materialDesign:PackIcon Kind="Logout" Width="16" Height="16" />
+                           </Button>
+                           <Button x:Name="MinimizeButton" Content="&#xE921;" Style="{StaticResource WindowControlButtonStyle}" Click="MinimizeButton_Click"/>
+                           <Button x:Name="MaximizeButton" Content="&#xE922;" Style="{StaticResource WindowControlButtonStyle}" Click="MaximizeButton_Click"/>
+                           <Button x:Name="CloseButton" Content="&#xE8BB;" Style="{StaticResource CloseButtonStyle}" Click="CloseButton_Click"/>
+                       </StackPanel>
+                   </Grid>
 
-            </Grid>
-        </materialDesign:DialogHost>
-    </materialDesign:Card>
+                   <ScrollViewer Grid.Row="1" 
+                           VerticalScrollBarVisibility="Auto" 
+                           HorizontalScrollBarVisibility="Auto"
+                           PanningMode="Both">
+                       <ContentControl Margin="15"
+                                 Content="{Binding CurrentViewModel}"
+                                 HorizontalAlignment="Stretch"
+                                 VerticalAlignment="Stretch"
+                                 HorizontalContentAlignment="Stretch"
+                                 VerticalContentAlignment="Stretch"/>
+                   </ScrollViewer>
+               </Grid>
+           </Grid>
+       </materialDesign:DialogHost>
+   </materialDesign:Card>
 </Window>

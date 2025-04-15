@@ -1,15 +1,18 @@
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized; // For NotifyCollectionChangedEventArgs
+using System.ComponentModel; // For INotifyPropertyChanged (already in ViewModelBase)
 using System.Diagnostics; // Added for Process
 using System.IO;
 using System.Linq; // Added for LINQ Select
 using System.Reflection; // Added for Assembly
 using System.Threading.Tasks;
-using System.Windows.Input;
-using WPFGrowerApp.Commands;
 using System.Windows; // For MessageBox (if needed, though DialogService is preferred)
+using System.Windows.Input;
+using WPFGrowerApp.Commands; // Added for RelayCommand
 using BoldReports.UI.Xaml; // For ReportViewer
 using BoldReports.Windows; // Added for ReportDataSource, ReportParameter
 using BoldReports.Writer; // Added for WriterFormat, ReportWriter
@@ -24,10 +27,13 @@ namespace WPFGrowerApp.ViewModels
     public class GrowerReportViewModel : ViewModelBase
     {
         private readonly IGrowerService _growerService;
-        // Removed duplicate _growerService definition
+        private readonly IPayGroupService _payGroupService; // Added PayGroupService
         private readonly IDialogService _dialogService;
         private ReportViewer _reportViewer; // To hold the instance from the View
-        private List<Grower> _allGrowers; // Store all fetched growers for pagination
+        private List<Grower> _allGrowers; // Store all fetched growers AFTER filtering for pagination
+        private List<PayGroup> _allPayGroups; // Store all fetched pay groups
+        private bool _isUpdatingSelection = false; // Flag for Select/Deselect All re-entrancy
+        private bool _isLoadReportDataAsyncBusy = false; // For busy state management
 
         // --- Pagination Properties ---
         private const int PageSize = 25; // Records per page
@@ -130,7 +136,42 @@ namespace WPFGrowerApp.ViewModels
             }
         }
 
-        // Example properties for column selection (could be more complex)
+        // --- On Hold Filter ---
+        public List<string> OnHoldFilterOptions { get; } = new List<string> { "Show All", "Show On Hold Only", "Show Not On Hold" };
+
+        private string _selectedOnHoldFilter = "Show All";
+        public string SelectedOnHoldFilter
+        {
+            get => _selectedOnHoldFilter;
+            set
+            {
+                if (SetProperty(ref _selectedOnHoldFilter, value))
+                {
+                    CurrentPage = 1; // Reset page on filter change
+                    _ = LoadReportDataAsync(); // Reload and re-apply filter/pagination
+                }
+            }
+        }
+
+        // --- Pay Group Filter ---
+        public ObservableCollection<PayGroup> FilteredPayGroups { get; } = new ObservableCollection<PayGroup>();
+        public ObservableCollection<object> SelectedPayGroups { get; } = new ObservableCollection<object>();
+
+        private string _payGroupSearchText;
+        public string PayGroupSearchText
+        {
+            get => _payGroupSearchText;
+            set
+            {
+                if (SetProperty(ref _payGroupSearchText, value))
+                {
+                    FilterPayGroups(); // Update the filtered list when search text changes
+                }
+            }
+        }
+
+
+        // --- Column Visibility ---
         private bool _showPhoneNumber = true;
         public bool ShowPhoneNumber
         {
@@ -187,18 +228,22 @@ namespace WPFGrowerApp.ViewModels
         public ICommand NextPageCommand { get; }
         public ICommand LastPageCommand { get; }
         public ICommand ExportAllPdfCommand { get; }
-        public ICommand ExportAllExcelCommand { get; } // Added Excel command
-        public ICommand ExportAllCsvCommand { get; } // Added CSV command
-                                                     // Export/Print are usually handled by the viewer's toolbar
+        public ICommand ExportAllExcelCommand { get; }
+        public ICommand ExportAllCsvCommand { get; }
+        public ICommand SelectAllPayGroupsCommand { get; } // Added PayGroup commands
+        public ICommand DeselectAllPayGroupsCommand { get; } // Added PayGroup commands
 
-        public GrowerReportViewModel(IGrowerService growerService, IDialogService dialogService)
+
+        public GrowerReportViewModel(IGrowerService growerService, IPayGroupService payGroupService, IDialogService dialogService) // Added payGroupService
         {
             _growerService = growerService ?? throw new ArgumentNullException(nameof(growerService));
+            _payGroupService = payGroupService ?? throw new ArgumentNullException(nameof(payGroupService)); // Store payGroupService
             _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
             _allGrowers = new List<Grower>();
+            _allPayGroups = new List<PayGroup>(); // Initialize pay group list
             PagedGrowerData = new ObservableCollection<Grower>();
 
-            // Use RelayCommand for async methods as well
+            // Commands
             LoadReportCommand = new RelayCommand(async _ => await LoadReportDataAsync(), _ => !IsBusy);
             EmailReportCommand = new RelayCommand(async _ => await EmailReportAsync(), _ => !IsBusy && _reportViewer != null && PagedGrowerData.Any());
 
@@ -207,26 +252,55 @@ namespace WPFGrowerApp.ViewModels
             PreviousPageCommand = new RelayCommand(_ => GoToPreviousPage(), _ => CanGoToPreviousPage());
             NextPageCommand = new RelayCommand(_ => GoToNextPage(), _ => CanGoToNextPage());
             LastPageCommand = new RelayCommand(_ => GoToLastPage(), _ => CanGoToNextPage());
-            ExportAllPdfCommand = new RelayCommand(async _ => await ExportAllAsync(WriterFormat.PDF), _ => CanExport()); // Changed to generic method
-            ExportAllExcelCommand = new RelayCommand(async _ => await ExportAllAsync(WriterFormat.Excel), _ => CanExport()); // Added Excel init
-            ExportAllCsvCommand = new RelayCommand(async _ => await ExportAllAsync(WriterFormat.CSV), _ => CanExport()); // Added CSV init
+            ExportAllPdfCommand = new RelayCommand(async _ => await ExportAllAsync(WriterFormat.PDF), _ => CanExport());
+            ExportAllExcelCommand = new RelayCommand(async _ => await ExportAllAsync(WriterFormat.Excel), _ => CanExport());
+            ExportAllCsvCommand = new RelayCommand(async _ => await ExportAllAsync(WriterFormat.CSV), _ => CanExport());
+            SelectAllPayGroupsCommand = new RelayCommand(_ => SelectAllPayGroups(), _ => FilteredPayGroups.Any()); // Wrapped in lambda
+            DeselectAllPayGroupsCommand = new RelayCommand(_ => DeselectAllPayGroups(), _ => SelectedPayGroups.Any()); // Wrapped in lambda
 
+            // Subscribe to selection changes
+            SelectedPayGroups.CollectionChanged += SelectedPayGroups_CollectionChanged;
 
-            // Don't load initial data here, wait for viewer to be set
+            // Don't load initial data here, wait for viewer to be set and InitializeAsync
             UpdatePageInfo(); // Set initial page info
+
+            _ = InitializeAsync(); // Start async initialization
         }
+
+
+        private async Task InitializeAsync()
+        {
+            try
+            {
+                IsBusy = true;
+                _allPayGroups = (await _payGroupService.GetAllPayGroupsAsync()).OrderBy(pg => pg.Description).ToList();
+                FilterPayGroups(); // Populate the FilteredPayGroups initially
+            }
+            catch (Exception ex)
+            {
+                Infrastructure.Logging.Logger.Error("Error initializing Grower Report ViewModel (loading pay groups)", ex);
+                await _dialogService.ShowMessageBoxAsync($"Error loading pay groups: {ex.Message}", "Initialization Error");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
 
         // Method for the View to pass the ReportViewer instance
         public void SetReportViewer(ReportViewer reportViewer)
         {
             _reportViewer = reportViewer;
-            _ = LoadReportDataAsync(); // Load data when viewer is ready
+            // Data loading is now triggered by InitializeAsync completion or filter changes
+            // _ = LoadReportDataAsync(); // Don't load here anymore
 
             ((RelayCommand)EmailReportCommand).RaiseCanExecuteChanged();
             ((RelayCommand)ExportAllPdfCommand).RaiseCanExecuteChanged();
-            ((RelayCommand)ExportAllExcelCommand).RaiseCanExecuteChanged(); // Added CanExecute update
-            ((RelayCommand)ExportAllCsvCommand).RaiseCanExecuteChanged(); // Added CanExecute update
+            ((RelayCommand)ExportAllExcelCommand).RaiseCanExecuteChanged();
+            ((RelayCommand)ExportAllCsvCommand).RaiseCanExecuteChanged();
         }
+
 
         private void UpdatePageInfo()
         {
@@ -237,13 +311,14 @@ namespace WPFGrowerApp.ViewModels
         }
 
 
-        private async Task LoadReportDataAsync()
+        public async Task LoadReportDataAsync() // Made public
         {
             if (_reportViewer == null) return; // Don't load if viewer isn't set
-
+            if(_isLoadReportDataAsyncBusy) return; // Prevent re-entrancy
             try
             {
                 IsBusy = true;
+                _isLoadReportDataAsyncBusy = true; 
                 // Raise CanExecuteChanged for all relevant commands
                 ((RelayCommand)LoadReportCommand)?.RaiseCanExecuteChanged();
                 ((RelayCommand)EmailReportCommand)?.RaiseCanExecuteChanged();
@@ -260,35 +335,94 @@ namespace WPFGrowerApp.ViewModels
                 if (string.IsNullOrEmpty(ReportPath))
                 {
                     await _dialogService.ShowMessageBoxAsync("Report file not found. Please verify the report is properly embedded in the project.", "Report Error");
+                    IsBusy = false; // Ensure IsBusy is reset
+                    _isLoadReportDataAsyncBusy = false;
                     return;
                 }
 
-                // Fetch data
+                // Fetch ALL data first
                 var growerSearchResults = await _growerService.GetAllGrowersAsync();
 
-                // Apply filtering from ViewModel property BEFORE mapping
+                // Apply filtering BEFORE mapping and pagination
                 IEnumerable<GrowerSearchResult> filteredResults = growerSearchResults;
+
+                // Text Filter
                 if (!string.IsNullOrWhiteSpace(FilterText))
                 {
                     string lowerFilter = FilterText.ToLower();
-                    filteredResults = growerSearchResults.Where(g =>
+                    filteredResults = filteredResults.Where(g =>
                         (g.GrowerName != null && g.GrowerName.ToLower().Contains(lowerFilter)) ||
                         g.GrowerNumber.ToString().Contains(lowerFilter) // Simple number check
                     );
                 }
 
-                // Map GrowerSearchResult to Grower and store in the full list
+                // On Hold Filter
+                switch (SelectedOnHoldFilter)
+                {
+                    case "Show On Hold Only":
+                        filteredResults = filteredResults.Where(g => g.IsOnHold);
+                        break;
+                    case "Show Not On Hold":
+                        filteredResults = filteredResults.Where(g => !g.IsOnHold);
+                        break;
+                        // Default "Show All" does nothing
+                }
+
+                // Pay Group Filter
+                if (SelectedPayGroups.Any())
+                {
+                    // Get the PayGroupIds from the selected objects
+                    var selectedPayGroupIds = SelectedPayGroups.OfType<PayGroup>().Select(pg => pg.PayGroupId).ToList();
+                    if (selectedPayGroupIds.Any())
+                    {
+                        // Filter growers whose PayGroup is in the selected list
+                        filteredResults = filteredResults.Where(g => g.PayGroup != null && selectedPayGroupIds.Contains(g.PayGroup));
+                    }
+                }
+
+
+                // Map the FINAL filtered results to Grower model and store for pagination
                 _allGrowers = filteredResults.Select(gsr => new Grower
                 {
                     GrowerNumber = gsr.GrowerNumber,
                     GrowerName = gsr.GrowerName,
                     ChequeName = gsr.ChequeName,
                     City = gsr.City,
-                    Phone = gsr.Phone
-                    // Map other properties if needed, otherwise they'll be default
-                }).ToList(); // Store all results
+                    Phone = gsr.Phone,
+                    Prov = gsr.Province,
+                    Acres = gsr.Acres,
+                    Notes = gsr.Notes?.Trim(), // Handle potential null Notes
+                    PayGroup = gsr.PayGroup, // Ensure PayGroup is mapped
+                    Phone2 = gsr.Phone2,
+                    OnHold = gsr.IsOnHold // Ensure OnHold is mapped
+                    // Removed Address and PostalCode mapping assumptions
+                    // Map other properties if needed
+                }).ToList(); // Store the filtered results
 
-                // Calculate total pages
+                //if _allGrowers has no data, add a empty record
+                if (_allGrowers == null || !_allGrowers.Any())
+                {
+                    _allGrowers = new List<Grower>
+                    {
+                        new Grower
+                        {
+                            GrowerNumber = 0,
+                            GrowerName = "No growers found with current filters",
+                            ChequeName = string.Empty,
+                            City = string.Empty,
+                            Phone = string.Empty,
+                            Prov = string.Empty,
+                            Acres = 0,
+                            Notes = string.Empty,
+                            PayGroup = string.Empty,
+                            Phone2 = string.Empty,
+                            OnHold = false
+                        }
+                    };
+                    Infrastructure.Logging.Logger.Info("No growers found with current filters - adding empty placeholder record");
+                }
+
+                // Calculate total pages based on the FILTERED list
                 TotalPages = (int)Math.Ceiling((double)_allGrowers.Count / PageSize);
                 if (TotalPages == 0) TotalPages = 1; // Ensure at least one page even if empty
 
@@ -309,11 +443,13 @@ namespace WPFGrowerApp.ViewModels
             catch (Exception ex)
             {
                 Infrastructure.Logging.Logger.Error("Error loading grower report data", ex);
-                await _dialogService.ShowMessageBoxAsync($"Error loading report data: {ex.Message}", "Report Error");
+                await _dialogService.ShowMessageBoxAsync($"Error loading report data: {ex.Message}", "Report Error");                
+
             }
             finally
             {
                 IsBusy = false;
+                _isLoadReportDataAsyncBusy = false; 
                 // Raise CanExecuteChanged for all relevant commands
                 ((RelayCommand)LoadReportCommand)?.RaiseCanExecuteChanged();
                 ((RelayCommand)EmailReportCommand)?.RaiseCanExecuteChanged();
@@ -322,10 +458,13 @@ namespace WPFGrowerApp.ViewModels
                 ((RelayCommand)NextPageCommand)?.RaiseCanExecuteChanged();
                 ((RelayCommand)LastPageCommand)?.RaiseCanExecuteChanged();
                 ((RelayCommand)ExportAllPdfCommand)?.RaiseCanExecuteChanged();
-                ((RelayCommand)ExportAllExcelCommand)?.RaiseCanExecuteChanged(); // Added CanExecute update
-                ((RelayCommand)ExportAllCsvCommand)?.RaiseCanExecuteChanged(); // Added CanExecute update
+                    ((RelayCommand)ExportAllExcelCommand)?.RaiseCanExecuteChanged();
+                    ((RelayCommand)ExportAllCsvCommand)?.RaiseCanExecuteChanged();
+                    ((RelayCommand)SelectAllPayGroupsCommand)?.RaiseCanExecuteChanged(); // Update PayGroup commands
+                    ((RelayCommand)DeselectAllPayGroupsCommand)?.RaiseCanExecuteChanged(); // Update PayGroup commands
             }
         }
+
 
         private void UpdatePagedData()
         {
@@ -399,28 +538,118 @@ namespace WPFGrowerApp.ViewModels
             }
             catch (Exception ex)
             {
-                Infrastructure.Logging.Logger.Error("Error refreshing Bold Report Viewer", ex);
+                    Infrastructure.Logging.Logger.Error("Error refreshing Bold Report Viewer", ex);
+                    // Consider showing a user-friendly error via _dialogService
             }
         }
 
 
-        // Remove async as Export is likely synchronous
-        private async Task EmailReportAsync() // Keep async for DialogService calls
+        // --- Pay Group Filtering/Selection Logic ---
+
+        private void FilterPayGroups()
         {
-            if (_reportViewer == null)
+            FilteredPayGroups.Clear();
+            if (_allPayGroups == null) return;
+
+            IEnumerable<PayGroup> groupsToShow = _allPayGroups;
+
+            if (!string.IsNullOrWhiteSpace(PayGroupSearchText))
             {
-                await _dialogService.ShowMessageBoxAsync("Report viewer is not ready.", "Email Error");
-                return;
+                string lowerSearch = PayGroupSearchText.ToLower();
+                groupsToShow = groupsToShow.Where(pg =>
+                    (pg.Description != null && pg.Description.ToLower().Contains(lowerSearch)) ||
+                    (pg.PayGroupId != null && pg.PayGroupId.ToLower().Contains(lowerSearch)));
             }
 
-            // No longer need to store/restore originalDataSource for this method
+            foreach (var group in groupsToShow.OrderBy(pg => pg.Description))
+            {
+                FilteredPayGroups.Add(group);
+            }
+            // Update CanExecute for Select All after filtering
+            ((RelayCommand)SelectAllPayGroupsCommand)?.RaiseCanExecuteChanged();
+        }
+
+        private void SelectAllPayGroups()
+        {
+            if (_isUpdatingSelection) return; // Prevent re-entrancy
+            _isUpdatingSelection = true;
+
+            try
+            {
+                // Clear existing selections first to avoid duplicates and trigger change notification once
+                SelectedPayGroups.Clear();
+                // Add all items currently visible in the filtered list
+                foreach (var item in FilteredPayGroups)
+                {
+                    SelectedPayGroups.Add(item);
+                }
+                CurrentPage = 1;
+                _ = LoadReportDataAsync();
+            }
+            finally
+            {
+                _isUpdatingSelection = false;
+                ((RelayCommand)DeselectAllPayGroupsCommand)?.RaiseCanExecuteChanged(); // Update Deselect All state
+                ((RelayCommand)SelectAllPayGroupsCommand)?.RaiseCanExecuteChanged(); // Update Select All state (might be disabled if all selected)
+            }
+            // Data reload is triggered by CollectionChanged handler
+        }
+
+        private void DeselectAllPayGroups()
+        {
+            if (_isUpdatingSelection) return; // Prevent re-entrancy
+            _isUpdatingSelection = true;
+
+            try
+            {
+                SelectedPayGroups.Clear();
+                CurrentPage = 1;
+                _ = LoadReportDataAsync();
+            }
+            finally
+            {
+                _isUpdatingSelection = false;
+                ((RelayCommand)DeselectAllPayGroupsCommand)?.RaiseCanExecuteChanged(); // Update Deselect All state
+                ((RelayCommand)SelectAllPayGroupsCommand)?.RaiseCanExecuteChanged(); // Update Select All state
+            }
+            // Data reload is triggered by CollectionChanged handler
+        }
+
+        private void SelectedPayGroups_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            // Prevent reloading data if the change was triggered by SelectAll/DeselectAll methods
+            if (_isUpdatingSelection) return;
+
+            // Update CanExecute for Deselect All command
+            ((RelayCommand)DeselectAllPayGroupsCommand)?.RaiseCanExecuteChanged();
+            ((RelayCommand)SelectAllPayGroupsCommand)?.RaiseCanExecuteChanged(); // Also update Select All
+
+            // Reload data when user manually changes selection
+            CurrentPage = 1;
+            _ = LoadReportDataAsync();
+        }
+
+        // --- End Pay Group Logic ---
+
+
+        private async Task EmailReportAsync()
+        {
+            if (!CanExport()) // Use CanExport which checks _allGrowers
+            {
+                await _dialogService.ShowMessageBoxAsync("Report is not ready or no data available to email.", "Email Error");
+                return;
+            }
 
             try
             {
                 IsBusy = true;
                 ((RelayCommand)EmailReportCommand).RaiseCanExecuteChanged();
+                // Disable other buttons during export
+                ((RelayCommand)ExportAllPdfCommand).RaiseCanExecuteChanged();
+                ((RelayCommand)ExportAllExcelCommand).RaiseCanExecuteChanged();
+                ((RelayCommand)ExportAllCsvCommand).RaiseCanExecuteChanged();
 
-                Infrastructure.Logging.Logger.Info("Starting Email export using ReportWriter...");
+                Infrastructure.Logging.Logger.Info("Starting Email export using ReportWriter with current filters...");
 
                 // --- Get Report Definition Stream ---
                 Stream reportStream = GetReportDefinitionStream();
@@ -436,29 +665,27 @@ namespace WPFGrowerApp.ViewModels
                 ReportWriter reportWriter = new ReportWriter(reportStream);
                 reportWriter.ReportProcessingMode = BoldReports.Writer.ProcessingMode.Local; // Use Writer's enum
 
-                // --- Set full data source on ReportWriter ---
-                var fullDataSource = new BoldReports.Windows.ReportDataSource
+                // --- Set data source on ReportWriter (using the currently filtered _allGrowers) ---
+                var dataSourceForExport = new BoldReports.Windows.ReportDataSource
                 {
                     Name = "GrowerDataSet", // Ensure this matches the DataSet name in your RDLC
-                    Value = _allGrowers // Use the full list
+                    Value = _allGrowers // Use the currently filtered list
                 };
-                reportWriter.DataSources.Add(fullDataSource);
+                reportWriter.DataSources.Add(dataSourceForExport);
 
-                // --- Set parameters on ReportWriter (if needed) ---
-                // Assuming parameters defined in RDLC are sufficient for ReportWriter export.
-                // See ExportAllPdfAsync for example if dynamic parameters are needed via BoldReports.Web.ReportParameter.
-                // Commenting out parameter setting for ReportWriter - Assuming RDLC handles parameters.
-                // List<BoldReports.Windows.ReportParameter> writerParameters = new List<BoldReports.Windows.ReportParameter>
-                // {
-                //     new BoldReports.Windows.ReportParameter { Name = "ShowPhoneNumber", Values = new List<string> { ShowPhoneNumber ? "True" : "False" } },
-                //     new BoldReports.Windows.ReportParameter { Name = "ShowAddress", Values = new List<string> { ShowAddress ? "True" : "False" } },
-                //     new BoldReports.Windows.ReportParameter { Name = "ShowCity", Values = new List<string> { ShowCity ? "True" : "False" } }
-                //     // Add other parameters if needed
-                // };
-                // reportWriter.SetParameters(writerParameters); // ReportWriter might not support parameters this way in WPF
-
-                // 1. Choose format (e.g., PDF)
-                WriterFormat format = WriterFormat.PDF; // Or Excel, Word, etc.
+                // --- Set parameters on ReportWriter ---
+                // Use the current visibility settings for the exported report
+                List<BoldReports.Windows.ReportParameter> writerParameters = new List<BoldReports.Windows.ReportParameter>
+                {
+                    new BoldReports.Windows.ReportParameter { Name = "ShowPhoneNumber", Values = new List<string> { ShowPhoneNumber ? "True" : "False" } },
+                    new BoldReports.Windows.ReportParameter { Name = "ShowAddress", Values = new List<string> { ShowAddress ? "True" : "False" } },
+                    new BoldReports.Windows.ReportParameter { Name = "ShowCity", Values = new List<string> { ShowCity ? "True" : "False" } }
+                    // Add other parameters if the RDLC requires them
+                };
+                reportWriter.SetParameters(writerParameters);
+                Infrastructure.Logging.Logger.Info($"Parameters set for Email export using ReportWriter.");
+                // 1. Choose format (PDF for email)
+                WriterFormat format = WriterFormat.PDF;
                 string fileExtension = format.ToString().ToLower();
 
                 // 2. Define temporary file path
@@ -509,18 +736,19 @@ namespace WPFGrowerApp.ViewModels
             }
             finally
             {
-                // No need to restore data source as we didn't change the main _reportViewer
                 Infrastructure.Logging.Logger.Info("Email export process finished.");
                 IsBusy = false;
+                // Re-enable buttons
                 ((RelayCommand)EmailReportCommand).RaiseCanExecuteChanged();
                 ((RelayCommand)ExportAllPdfCommand).RaiseCanExecuteChanged();
-                ((RelayCommand)ExportAllExcelCommand).RaiseCanExecuteChanged(); // Added CanExecute update
-                ((RelayCommand)ExportAllCsvCommand).RaiseCanExecuteChanged(); // Added CanExecute update
+                ((RelayCommand)ExportAllExcelCommand).RaiseCanExecuteChanged();
+                ((RelayCommand)ExportAllCsvCommand).RaiseCanExecuteChanged();
             }
-        } // End of EmailReportAsync method
+        }
 
         // --- CanExecute Helper for Exports ---
-        private bool CanExport() => !IsBusy && _reportViewer != null && _allGrowers != null && _allGrowers.Any();
+        // Export should be possible if not busy and the filtered list (_allGrowers) has data
+        private bool CanExport() => !IsBusy && _allGrowers != null && _allGrowers.Any();
 
 
         // --- Pagination Command Implementations ---
@@ -549,11 +777,12 @@ namespace WPFGrowerApp.ViewModels
         // as they were intended for built-in export events which are not available in WPF.
 
         // Generic Export Method
+
         private async Task ExportAllAsync(WriterFormat format)
         {
-            if (!CanExport()) // Use helper method
+            if (!CanExport()) // Use updated CanExport
             {
-                await _dialogService.ShowMessageBoxAsync("Report viewer is not ready or no data available to export.", "Export Error");
+                await _dialogService.ShowMessageBoxAsync("No data available to export based on current filters.", "Export Error");
                 return;
             }
 
@@ -586,15 +815,16 @@ namespace WPFGrowerApp.ViewModels
             try
             {
                 IsBusy = true;
-                // Update all export command states
+                // Update all export command states and Email command
+                ((RelayCommand)EmailReportCommand).RaiseCanExecuteChanged();
                 ((RelayCommand)ExportAllPdfCommand).RaiseCanExecuteChanged();
                 ((RelayCommand)ExportAllExcelCommand).RaiseCanExecuteChanged();
                 ((RelayCommand)ExportAllCsvCommand).RaiseCanExecuteChanged();
 
-                Infrastructure.Logging.Logger.Info($"Starting {format} export to {savePath} using ReportWriter...");
+                Infrastructure.Logging.Logger.Info($"Starting {format} export to {savePath} using ReportWriter with current filters...");
 
                 // --- Get Report Definition Stream ---
-                Stream reportStream = GetReportDefinitionStream();
+                Stream reportStream = GetReportDefinitionStream(); // Ensure this method is robust
                 if (reportStream == null)
                 {
                     await _dialogService.ShowMessageBoxAsync("Could not load report definition.", "Export Error");
@@ -611,25 +841,26 @@ namespace WPFGrowerApp.ViewModels
                 // Explicitly qualify ProcessingMode for ReportWriter
                 reportWriter.ReportProcessingMode = BoldReports.Writer.ProcessingMode.Local;
 
-                // --- Set full data source on ReportWriter ---
-                var fullDataSource = new BoldReports.Windows.ReportDataSource
+                // --- Set data source on ReportWriter (using the currently filtered _allGrowers) ---
+                var dataSourceForExport = new BoldReports.Windows.ReportDataSource
                 {
                     Name = "GrowerDataSet", // Ensure this matches the DataSet name in your RDLC
-                    Value = _allGrowers // Use the full list
+                    Value = _allGrowers // Use the currently filtered list
                 };
+                reportWriter.DataSources.Add(dataSourceForExport); // Add data source first
 
+                // --- Set parameters on ReportWriter ---
                 List<BoldReports.Windows.ReportParameter> writerParameters = new List<BoldReports.Windows.ReportParameter>
-                   {
-                       new BoldReports.Windows.ReportParameter { Name = "ShowPhoneNumber", Values = new List<string> { ShowPhoneNumber ? "True" : "False" } },
-                       new BoldReports.Windows.ReportParameter { Name = "ShowAddress", Values = new List<string> { ShowAddress ? "True" : "False" } },
-                       new BoldReports.Windows.ReportParameter { Name = "ShowCity", Values = new List<string> { ShowCity ? "True" : "False" } }
-                       // Add other parameters if needed
-                   };
+                {
+                    new BoldReports.Windows.ReportParameter { Name = "ShowPhoneNumber", Values = new List<string> { ShowPhoneNumber ? "True" : "False" } },
+                    new BoldReports.Windows.ReportParameter { Name = "ShowAddress", Values = new List<string> { ShowAddress ? "True" : "False" } },
+                    new BoldReports.Windows.ReportParameter { Name = "ShowCity", Values = new List<string> { ShowCity ? "True" : "False" } }
+                    // Add other parameters if needed
+                };
                 reportWriter.SetParameters(writerParameters); // Set parameters AFTER data source
                 Infrastructure.Logging.Logger.Info($"Parameters set for {format} export using ReportWriter.");
 
-                reportWriter.DataSources.Add(fullDataSource);
-                
+
                 bool exportSuccess = false;
                 try
                 {
@@ -661,10 +892,10 @@ namespace WPFGrowerApp.ViewModels
             }
             finally
             {
-                // No need to restore data source as we didn't change the main _reportViewer
                 Infrastructure.Logging.Logger.Info($"{format} export process finished.");
                 IsBusy = false;
-                // Update all export command states
+                // Re-enable buttons
+                ((RelayCommand)EmailReportCommand).RaiseCanExecuteChanged();
                 ((RelayCommand)ExportAllPdfCommand).RaiseCanExecuteChanged();
                 ((RelayCommand)ExportAllExcelCommand).RaiseCanExecuteChanged();
                 ((RelayCommand)ExportAllCsvCommand).RaiseCanExecuteChanged();

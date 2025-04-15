@@ -14,9 +14,15 @@
     <UserControl.Resources>
         <DataTemplate x:Key="SettingsNavigationItemTemplate">
             <StackPanel Orientation="Horizontal">
-                <materialDesign:PackIcon Kind="{Binding IconKind}" VerticalAlignment="Center" Margin="0,0,10,0" Width="20" Height="20"/>
-                <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
+                <materialDesign:PackIcon x:Name="ItemIcon" Kind="{Binding IconKind}" VerticalAlignment="Center" Margin="0,0,10,0" Width="20" Height="20" Foreground="White"/>
+                <TextBlock x:Name="ItemText" Text="{Binding DisplayName}" VerticalAlignment="Center" Foreground="White"/>
             </StackPanel>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
+                    <Setter TargetName="ItemIcon" Property="Foreground" Value="Black"/>
+                    <Setter TargetName="ItemText" Property="Foreground" Value="Black"/>
+                </DataTrigger>
+            </DataTemplate.Triggers>
         </DataTemplate>
     </UserControl.Resources>
 
@@ -38,13 +44,12 @@
                 <ListBox.ItemContainerStyle>
                      <!-- Adjusted Style for dark background -->
                     <Style TargetType="ListBoxItem" BasedOn="{StaticResource MaterialDesignNavigationListBoxItem}">
-                        <!-- Default Foreground for non-selected items -->
-                        <Setter Property="Foreground" Value="White"/> 
+                        <!-- Foreground will be controlled by DataTemplate triggers -->
                         <Style.Triggers>
                             <Trigger Property="IsSelected" Value="True">
                                 <!-- Use a slightly different background for selection, e.g., main menu header color -->
                                 <Setter Property="Background" Value="#4A4A9E"/> 
-                                <Setter Property="Foreground" Value="White"/> <!-- Ensure selected text is white -->
+                                <!-- Foreground is now handled in DataTemplate -->
                                 <Setter Property="FontWeight" Value="Medium"/>
                             </Trigger>
                             <!-- Keep default hover from base style or customize if needed -->

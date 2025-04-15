@@ -515,9 +515,15 @@ namespace WPFGrowerApp.ViewModels
                     StatusMessage = $"Test run simulation completed successfully. {testResult.GrowerPayments.Count} growers processed.";
                     Report("Test run simulation finished successfully.");
 
-                    // Show the Report Dialog using the updated DialogService
+                    // Show the Report in a dedicated Window instead of a dialog
                     var reportViewModel = new PaymentTestRunReportViewModel(LatestTestRunResult);
-                    await _dialogService.ShowDialogAsync(reportViewModel);
+                    var reportWindow = new PaymentTestRunReportWindow
+                    {
+                        DataContext = reportViewModel,
+                        // Optional: Set owner if you want modal-like behavior relative to the main window
+                        // Owner = System.Windows.Application.Current.MainWindow 
+                    };
+                    reportWindow.Show(); // Show as a non-modal window
                 }
             }
             catch (Exception ex)

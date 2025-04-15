@@ -21,6 +21,7 @@ namespace WPFGrowerApp.DataAccess.Models
         private int _contractLimit;
         private string _payGroup = "1";
         private bool _onHold;
+        private string _phone2;
         private string _phoneAdditional1;
         private string _otherNames;
         private string _phoneAdditional2;
@@ -220,6 +221,18 @@ namespace WPFGrowerApp.DataAccess.Models
                 if (_onHold != value)
                 {
                     _onHold = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+        public string Phone2
+        {
+            get => _phone2;
+            set
+            {
+                if (_phone2 != value)
+                {
+                    _phone2 = value;
                     OnPropertyChanged();
                 }
             }

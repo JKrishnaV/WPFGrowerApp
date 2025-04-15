@@ -1,0 +1,15 @@
+<Window x:Class="WPFGrowerApp.Views.PaymentTestRunReportWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:WPFGrowerApp.Views"
+        xmlns:dialogs="clr-namespace:WPFGrowerApp.Views.Dialogs"
+        mc:Ignorable="d"
+        Title="Payment Test Run Report" Height="700" Width="1000"
+        WindowStartupLocation="CenterOwner">
+    <Grid>
+        <!-- Host the existing UserControl here -->
+        <dialogs:PaymentTestRunReportView DataContext="{Binding}"/>
+    </Grid>
+</Window>
