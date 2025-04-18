@@ -18,7 +18,8 @@ namespace WPFGrowerApp.DataAccess.Services
             "SITEID", "TICKETNO", "VOIDED", "BATCHNO", "PRODUCTID", 
             "GRADEID", "DATEIN", "TIMEIN", "GROWERID", "PRICE", 
             "DOCKPERCENT", "NET", "ADD DATE", "ADD BY", "EDIT DATE", 
-            "EDIT BY", "EDIT REASON", "FIELDID"
+            "EDIT BY", "EDIT REASON"
+            //, "FIELDID"
         };
 
         public FileImportService(IGrowerService growerService)

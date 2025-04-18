@@ -650,6 +650,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     sqlBuilder.Where($"(d.{postBatchCheckColumn} = 0 OR d.{postBatchCheckColumn} IS NULL)"); // Check for 0 or NULL
                     sqlBuilder.Where("d.ISVOID = 0"); // Not voided
                     sqlBuilder.Where("g.ONHOLD = 0"); // Grower not on hold
+                    sqlBuilder.Where("d.NET > 0"); // for payment , net should be >0
                     if (cropYear.HasValue) // Add Crop Year filter using YEAR() function
                     {
                          sqlBuilder.Where("YEAR(d.DATE) = @CropYear", new { CropYear = cropYear.Value });

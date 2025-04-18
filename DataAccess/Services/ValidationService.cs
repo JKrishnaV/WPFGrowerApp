@@ -63,7 +63,7 @@ namespace WPFGrowerApp.DataAccess.Services
             {
                 if (receipt.Net < MIN_WEIGHT || receipt.Net > MAX_WEIGHT)
                 {
-                    errors.Add($"Net weight {receipt.Net} is outside valid range ({MIN_WEIGHT}-{MAX_WEIGHT})");
+                    //errors.Add($"Net weight {receipt.Net} is outside valid range ({MIN_WEIGHT}-{MAX_WEIGHT})");
                 }
             }
             // Allow Net == 0 if ProductID is empty (container movement)

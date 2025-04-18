@@ -49,3 +49,4 @@ namespace WPFGrowerApp.ViewModels
         // Removed the other incomplete constructor
     }
 }
+ 
