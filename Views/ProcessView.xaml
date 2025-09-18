@@ -12,6 +12,13 @@
              d:DesignHeight="600" d:DesignWidth="700"
              Background="{DynamicResource MaterialDesignPaper}">
 
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <Style x:Key="ScaledMaterialDesignFloatingHintTextBox" TargetType="TextBox" BasedOn="{StaticResource MaterialDesignFloatingHintTextBox}">
+                <Setter Property="FontSize" Value="{DynamicResource ScaledFontSizeNormal}"/>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/> <!-- Title -->
@@ -63,24 +70,24 @@
                          materialDesign:HintAssist.Hint="Process ID (Max 2 Chars)"
                          Text="{Binding SelectedProcess.ProcessId, UpdateSourceTrigger=PropertyChanged}" 
                          MaxLength="2"
-                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                         Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"/>
 
                 <TextBox Grid.Row="0" Grid.Column="3" Margin="5"
                          materialDesign:HintAssist.Hint="Description (Max 19 Chars)"
                          Text="{Binding SelectedProcess.Description, UpdateSourceTrigger=PropertyChanged}"
                          MaxLength="19"
-                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                         Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"/>
                 
                 <TextBox Grid.Row="1" Grid.Column="1" Margin="5"
                          materialDesign:HintAssist.Hint="Default Grade (Number 1-3)"
                          Text="{Binding SelectedProcess.DefGrade, UpdateSourceTrigger=PropertyChanged}" 
-                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                         Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"/>
                          <!-- Add validation for 1-3 range if needed -->
 
                 <TextBox Grid.Row="1" Grid.Column="3" Margin="5"
                          materialDesign:HintAssist.Hint="Process Class (Number 1-4)"
                          Text="{Binding SelectedProcess.ProcClass, UpdateSourceTrigger=PropertyChanged}"
-                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                         Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"/>
                          <!-- Add validation for 1-4 range if needed -->
             </Grid>
         </materialDesign:Card>

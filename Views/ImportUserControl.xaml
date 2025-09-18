@@ -66,20 +66,20 @@
         <Border Grid.Row="0" Background="{StaticResource PrimaryBrush}" 
                 Padding="15,10" 
                 Margin="0,0,0,20"
-                CornerRadius="4">
-            <TextBlock Text="Import Receipts" 
-                       Foreground="White" 
-                       FontSize="18" 
-                       FontWeight="SemiBold" 
-                       HorizontalAlignment="Center"/>
+                 CornerRadius="4">
+             <TextBlock Text="Import Receipts" 
+                        Foreground="White" 
+                        FontSize="{DynamicResource ScaledFontSizeLarge}" 
+                        FontWeight="SemiBold" 
+                        HorizontalAlignment="Center"/>
         </Border>
 
-        <!-- File Selection Section -->
-        <StackPanel Grid.Row="1" Margin="0,0,0,20">
-            <TextBlock Text="Select Receipt Files" 
-                       FontSize="16" 
-                       FontWeight="SemiBold" 
-                       Margin="0,0,0,10"/>
+         <!-- File Selection Section -->
+         <StackPanel Grid.Row="1" Margin="0,0,0,20">
+             <TextBlock Text="Select Receipt Files" 
+                        FontSize="{DynamicResource ScaledFontSizeLarge}" 
+                        FontWeight="SemiBold" 
+                        Margin="0,0,0,10"/>
             
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -103,12 +103,12 @@
             </Grid>
         </StackPanel>
 
-        <!-- Depot Selection Section -->
-        <StackPanel Grid.Row="2" Margin="0,0,0,20">
-            <TextBlock Text="Depot" 
-                       FontSize="16" 
-                       FontWeight="SemiBold" 
-                        Margin="0,0,0,10"/>
+         <!-- Depot Selection Section -->
+         <StackPanel Grid.Row="2" Margin="0,0,0,20">
+             <TextBlock Text="Depot" 
+                        FontSize="{DynamicResource ScaledFontSizeLarge}" 
+                        FontWeight="SemiBold" 
+                         Margin="0,0,0,10"/>
 
             <!-- Replaced TextBox with ComboBox for Depot -->
             <ComboBox ItemsSource="{Binding Depots}"
@@ -128,12 +128,12 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- Overall Progress -->
-                <StackPanel Grid.Row="0" Margin="0,0,0,10">
-                    <TextBlock Text="Overall Progress" 
-                               FontSize="16" 
-                               FontWeight="SemiBold" 
-                               Margin="0,0,0,10"/>
+                 <!-- Overall Progress -->
+                 <StackPanel Grid.Row="0" Margin="0,0,0,10">
+                     <TextBlock Text="Overall Progress" 
+                                FontSize="{DynamicResource ScaledFontSizeLarge}" 
+                                FontWeight="SemiBold" 
+                                Margin="0,0,0,10"/>
                     
                     <ProgressBar Height="20" 
                                 Value="{Binding Progress}"
@@ -239,12 +239,12 @@
                         <TextBox Text="{Binding ErrorTextFilter, UpdateSourceTrigger=PropertyChanged}"
                                  materialDesign:HintAssist.Hint="Filter by text"
                                  MinWidth="200"/>
-                    </StackPanel>
+                     </StackPanel>
 
-                    <TextBlock Grid.Row="1" Text="Errors"
-                               FontSize="16"
-                               FontWeight="SemiBold"
-                               Margin="0,0,0,10"/>
+                     <TextBlock Grid.Row="1" Text="Errors"
+                                FontSize="{DynamicResource ScaledFontSizeLarge}"
+                                FontWeight="SemiBold"
+                                Margin="0,0,0,10"/>
 
                     <ListView Grid.Row="2"
                               ItemsSource="{Binding FilteredErrors}" 

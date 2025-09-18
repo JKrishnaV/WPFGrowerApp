@@ -66,6 +66,11 @@
         <views:PaymentGroupView />
     </DataTemplate>
 
+    <!-- Appearance Settings Mapping -->
+    <DataTemplate DataType="{x:Type viewmodels:AppearanceSettingsViewModel}">
+        <views:AppearanceSettingsView />
+    </DataTemplate>
+
     <DataTemplate DataType="{x:Type vm:UserManagementViewModel}">
         <views:UserManagementView/>
     </DataTemplate>

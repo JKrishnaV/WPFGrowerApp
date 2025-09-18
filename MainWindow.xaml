@@ -24,12 +24,12 @@
            <Style x:Key="WindowControlButtonStyle" TargetType="Button">
                <Setter Property="Width" Value="46"/>
                <Setter Property="Height" Value="30"/>
-               <Setter Property="Background" Value="Transparent"/>
-               <Setter Property="BorderThickness" Value="0"/>
-               <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
-               <Setter Property="FontSize" Value="12"/>
-               <Setter Property="Foreground" Value="#333333"/>
-               <Setter Property="Template">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+                <Setter Property="FontSize" Value="{DynamicResource ScaledFontSizeNormal}"/>
+                <Setter Property="Foreground" Value="#333333"/>
+                <Setter Property="Template">
                    <Setter.Value>
                        <ControlTemplate TargetType="Button">
                            <Border x:Name="border" Background="{TemplateBinding Background}">
@@ -73,13 +73,13 @@
            </Style>
 
            <!-- Style for the Menu Toggle Button -->
-           <Style x:Key="MenuToggleButtonStyle" TargetType="Button">
-               <Setter Property="Width" Value="30"/>
-               <Setter Property="Height" Value="30"/>
-               <Setter Property="Content" Value="☰"/>
-               <Setter Property="FontSize" Value="16"/>
-               <Setter Property="Background" Value="Transparent"/>
-               <Setter Property="Foreground" Value="Black"/>
+            <Style x:Key="MenuToggleButtonStyle" TargetType="Button">
+                <Setter Property="Width" Value="30"/>
+                <Setter Property="Height" Value="30"/>
+                <Setter Property="Content" Value="☰"/>
+                <Setter Property="FontSize" Value="{DynamicResource ScaledFontSizeLarge}"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Foreground" Value="Black"/>
                <Setter Property="BorderThickness" Value="0"/>
                <Setter Property="VerticalAlignment" Value="Center"/>
                <Setter Property="HorizontalAlignment" Value="Left"/>

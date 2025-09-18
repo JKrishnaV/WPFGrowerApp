@@ -35,6 +35,7 @@
                   CanUserAddRows="False"
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
+                  FontSize="{DynamicResource ScaledFontSizeNormal}"
                   materialDesign:DataGridAssist.CellPadding="13 8 8 8"
                   materialDesign:DataGridAssist.ColumnHeaderPadding="8">
             <DataGrid.Columns>

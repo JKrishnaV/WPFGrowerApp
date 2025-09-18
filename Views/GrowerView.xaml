@@ -14,12 +14,12 @@
 
     <StackPanel Margin="10"> <!-- Added margin to outer StackPanel -->
         <!-- Header -->
-        <materialDesign:ColorZone Mode="PrimaryMid" Padding="15,10" Margin="0,0,0,15" CornerRadius="4">
-            <TextBlock Text="Grower Information"
-                       Foreground="White"
-                       FontSize="22"
-                       FontWeight="SemiBold"
-                       HorizontalAlignment="Center"/>
+         <materialDesign:ColorZone Mode="PrimaryMid" Padding="15,10" Margin="0,0,0,15" CornerRadius="4">
+             <TextBlock Text="Grower Information"
+                        Foreground="White"
+                        FontSize="{DynamicResource ScaledFontSizeHeader}"
+                        FontWeight="SemiBold"
+                        HorizontalAlignment="Center"/>
         </materialDesign:ColorZone>
 
         <!-- Status Message -->

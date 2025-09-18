@@ -12,6 +12,13 @@
              d:DesignHeight="600" d:DesignWidth="700"
              Background="{DynamicResource MaterialDesignPaper}">
 
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <Style x:Key="ScaledMaterialDesignFloatingHintTextBox" TargetType="TextBox" BasedOn="{StaticResource MaterialDesignFloatingHintTextBox}">
+                <Setter Property="FontSize" Value="{DynamicResource ScaledFontSizeNormal}"/>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/> <!-- Title -->
@@ -69,36 +76,36 @@
                          materialDesign:HintAssist.Hint="Product ID (Max 2 Chars)"
                          Text="{Binding SelectedProduct.ProductId, UpdateSourceTrigger=PropertyChanged}" 
                          MaxLength="2"
-                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                         Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"/>
 
                 <TextBox Grid.Row="0" Grid.Column="3" Margin="5"
                          materialDesign:HintAssist.Hint="Description"
                          Text="{Binding SelectedProduct.Description, UpdateSourceTrigger=PropertyChanged}"
-                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                         Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"/>
                 
                 <TextBox Grid.Row="1" Grid.Column="1" Margin="5"
                          materialDesign:HintAssist.Hint="Short Description (Max 4 Chars)"
                          Text="{Binding SelectedProduct.ShortDescription, UpdateSourceTrigger=PropertyChanged}" 
                          MaxLength="4"
-                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                         Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"/>
 
                 <TextBox Grid.Row="1" Grid.Column="3" Margin="5"
                          materialDesign:HintAssist.Hint="Deduct (e.g., 0.000000)"
                          Text="{Binding SelectedProduct.Deduct, StringFormat=N6, UpdateSourceTrigger=PropertyChanged}"
-                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                         Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"/>
                          <!-- Add input validation for decimal if needed -->
 
                 <TextBox Grid.Row="2" Grid.Column="1" Margin="5"
                          materialDesign:HintAssist.Hint="Category (Number)"
                          Text="{Binding SelectedProduct.Category, UpdateSourceTrigger=PropertyChanged}"
-                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                         Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"/>
                          <!-- Add input validation for integer if needed -->
 
                 <TextBox Grid.Row="2" Grid.Column="3" Margin="5"
                          materialDesign:HintAssist.Hint="Variety (Max 8 Chars)"
                          Text="{Binding SelectedProduct.Variety, UpdateSourceTrigger=PropertyChanged}" 
                          MaxLength="8"
-                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                         Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"/>
 
                 <CheckBox Grid.Row="3" Grid.Column="1" Margin="5,15,5,5"
                           Content="Charge GST"

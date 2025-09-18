@@ -12,6 +12,13 @@
              d:DesignHeight="600" d:DesignWidth="700"
              Background="{DynamicResource MaterialDesignPaper}">
 
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <Style x:Key="ScaledMaterialDesignFloatingHintTextBox" TargetType="TextBox" BasedOn="{StaticResource MaterialDesignFloatingHintTextBox}">
+                <Setter Property="FontSize" Value="{DynamicResource ScaledFontSizeNormal}"/>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/> <!-- Title -->
@@ -58,13 +65,13 @@
                          Text="{Binding SelectedDepot.DepotId, UpdateSourceTrigger=PropertyChanged}" 
                          MaxLength="1"
                          Width="100"
-                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                         Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"/>
 
                 <TextBox Grid.Row="0" Grid.Column="1" Margin="5"
                          materialDesign:HintAssist.Hint="Depot Name (Max 12 Chars)"
                          Text="{Binding SelectedDepot.DepotName, UpdateSourceTrigger=PropertyChanged}"
                          MaxLength="12"
-                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                         Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"/>
             </Grid>
         </materialDesign:Card>
 

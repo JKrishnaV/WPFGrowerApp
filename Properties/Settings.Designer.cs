@@ -34,6 +34,17 @@ namespace WPFGrowerApp.Properties {
                 this["LastUsername"] = value;
             }
         }
+    [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1.0")]
+        public double FontScalingFactor {
+            get {
+                return ((double)(this["FontScalingFactor"]));
+            }
+            set {
+                this["FontScalingFactor"] = value;
+            }
+        }
     }
 }
 

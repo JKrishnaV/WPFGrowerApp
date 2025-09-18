@@ -9,7 +9,7 @@
     <!-- Text Styles -->
     <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="Segoe UI"/>
-        <Setter Property="FontSize" Value="20"/>
+        <Setter Property="FontSize" Value="{DynamicResource ScaledFontSizeHeader}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="Margin" Value="0,0,0,10"/>
@@ -17,7 +17,7 @@
     
     <Style x:Key="SubheaderTextStyle" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="Segoe UI"/>
-        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="FontSize" Value="{DynamicResource ScaledFontSizeLarge}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="Margin" Value="0,0,0,8"/>
@@ -25,14 +25,14 @@
     
     <Style x:Key="BodyTextStyle" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="Segoe UI"/>
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontSize" Value="{DynamicResource ScaledFontSizeNormal}"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
     
     <Style x:Key="LabelTextStyle" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="Segoe UI"/>
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontSize" Value="{DynamicResource ScaledFontSizeNormal}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
         <Setter Property="Margin" Value="0,0,0,4"/>
@@ -43,7 +43,7 @@
         <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
         <Setter Property="Foreground" Value="White"/>
         <Setter Property="FontFamily" Value="Segoe UI"/>
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontSize" Value="{DynamicResource ScaledFontSizeNormal}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Padding" Value="16,8"/>
         <Setter Property="BorderThickness" Value="0"/>
@@ -81,7 +81,7 @@
     <!-- TextBox Style -->
     <Style x:Key="ModernTextBoxStyle" TargetType="TextBox">
         <Setter Property="FontFamily" Value="Segoe UI"/>
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontSize" Value="{DynamicResource ScaledFontSizeNormal}"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="Background" Value="{StaticResource BackgroundBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource TextSecondaryBrush}"/>
@@ -99,7 +99,7 @@
     <!-- PasswordBox Style (Based on TextBox) -->
     <Style x:Key="ModernPasswordBoxStyle" TargetType="PasswordBox">
         <Setter Property="FontFamily" Value="Segoe UI"/>
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontSize" Value="{DynamicResource ScaledFontSizeNormal}"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="Background" Value="{StaticResource BackgroundBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource TextSecondaryBrush}"/>
@@ -118,7 +118,7 @@
     <!-- ComboBox Style -->
     <Style x:Key="ModernComboBoxStyle" TargetType="ComboBox">
         <Setter Property="FontFamily" Value="Segoe UI"/>
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontSize" Value="{DynamicResource ScaledFontSizeNormal}"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="Background" Value="{StaticResource BackgroundBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource TextSecondaryBrush}"/>
@@ -135,7 +135,7 @@
     <!-- CheckBox Style -->
     <Style x:Key="ModernCheckBoxStyle" TargetType="CheckBox">
         <Setter Property="FontFamily" Value="Segoe UI"/>
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontSize" Value="{DynamicResource ScaledFontSizeNormal}"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="Margin" Value="0,5"/>
     </Style>

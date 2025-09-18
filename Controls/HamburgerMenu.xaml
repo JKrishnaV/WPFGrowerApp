@@ -12,11 +12,11 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Height" Value="50"/>
-            <Setter Property="HorizontalContentAlignment" Value="Left"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Template">
-                <Setter.Value>
+             <Setter Property="Height" Value="50"/>
+             <Setter Property="HorizontalContentAlignment" Value="Left"/>
+             <Setter Property="FontSize" Value="{DynamicResource ScaledFontSizeMedium}"/>
+             <Setter Property="Template">
+                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Grid>
                             <Border x:Name="HighlightBorder" Background="Transparent" BorderThickness="4,0,0,0" BorderBrush="#3498db" Opacity="0"/>
@@ -27,18 +27,19 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <!-- Icon -->
-                                    <TextBlock x:Name="IconBlock" Grid.Column="0" 
-                                               Text="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}"
-                                               FontFamily="Segoe MDL2 Assets" FontSize="18"
-                                               VerticalAlignment="Center" HorizontalAlignment="Center"
-                                               Foreground="{TemplateBinding Foreground}"/>
+                                     <!-- Icon -->
+                                     <TextBlock x:Name="IconBlock" Grid.Column="0" 
+                                                Text="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}"
+                                                FontFamily="Segoe MDL2 Assets" FontSize="{DynamicResource ScaledFontSizeLarge}"
+                                                VerticalAlignment="Center" HorizontalAlignment="Center"
+                                                Foreground="{TemplateBinding Foreground}"/>
 
                                     <!-- Text -->
                                     <ContentPresenter Grid.Column="1" 
                                                       VerticalAlignment="Center" 
                                                       HorizontalAlignment="Left"
-                                                      Margin="10,0,0,0"/>
+                                                      Margin="10,0,0,0"
+                                                      TextBlock.FontSize="{DynamicResource ScaledFontSizeMedium}"/>
                                 </Grid>
                             </Border>
                         </Grid>
@@ -63,13 +64,13 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Menu Header -->
-        <Border Grid.Row="0" Background="#4A4A9E" Height="80">
-            <TextBlock Text="Berry Farm App" 
-                       Foreground="White" 
-                       FontSize="22" 
-                       FontWeight="SemiBold"
-                       VerticalAlignment="Center"
+         <!-- Menu Header -->
+         <Border Grid.Row="0" Background="#4A4A9E" Height="80">
+             <TextBlock Text="Berry Farm App" 
+                        Foreground="White" 
+                        FontSize="{DynamicResource ScaledFontSizeHeader}" 
+                        FontWeight="SemiBold"
+                        VerticalAlignment="Center"
                        HorizontalAlignment="Center"/>
         </Border>
 
@@ -78,44 +79,44 @@
             <Button x:Name="DashboardButton" 
                     Content="Dashboard" 
                     Tag="&#xE80F;"
-                    Style="{StaticResource MenuButtonStyle}"
+                    Style="{DynamicResource MenuButtonStyle}"
                     Command="{Binding DataContext.NavigateToDashboardCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/>
 
             <Button x:Name="GrowersButton" 
                     Content="Growers" 
                     Tag="&#xE716;"
-                    Style="{StaticResource MenuButtonStyle}"
+                    Style="{DynamicResource MenuButtonStyle}"
                     Command="{Binding DataContext.NavigateToGrowersCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/>
 
             <Button x:Name="ImportButton" 
                     Content="Import" 
                     Tag="&#xE8B5;"
-                    Style="{StaticResource MenuButtonStyle}"
+                    Style="{DynamicResource MenuButtonStyle}"
                     Command="{Binding DataContext.NavigateToImportCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/>
 
             <Button x:Name="PaymentRunButton"
                     Content="Payment Run"
                     Tag="&#xE8C1;" 
-                    Style="{StaticResource MenuButtonStyle}"
+                    Style="{DynamicResource MenuButtonStyle}"
                     Command="{Binding DataContext.NavigateToPaymentRunCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/>
 
             <Button x:Name="InventoryButton"
                     Content="Inventory"
                     Tag="&#xE7BF;"
-                    Style="{StaticResource MenuButtonStyle}"
+                    Style="{DynamicResource MenuButtonStyle}"
                     Command="{Binding DataContext.NavigateToInventoryCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/> 
                     <!-- Assuming NavigateToInventoryCommand exists or will be added -->
 
             <Button x:Name="ReportsButton" 
                     Content="Reports" 
                     Tag="&#xE9D9;"
-                    Style="{StaticResource MenuButtonStyle}"
+                    Style="{DynamicResource MenuButtonStyle}"
                     Command="{Binding DataContext.NavigateToReportsCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/>
 
             <Button x:Name="SettingsButton" 
                     Content="Settings" 
                     Tag="&#xE713;"
-                    Style="{StaticResource MenuButtonStyle}"
+                    Style="{DynamicResource MenuButtonStyle}"
                     Command="{Binding DataContext.NavigateToSettingsCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/>
                     <!-- Assuming NavigateToSettingsCommand exists or will be added -->
         </StackPanel>

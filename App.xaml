@@ -4,6 +4,7 @@
              xmlns:local="clr-namespace:WPFGrowerApp"
              xmlns:converters="clr-namespace:WPFGrowerApp.Converters"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
              ShutdownMode="OnMainWindowClose">
              <!-- Added ShutdownMode -->
              <!-- Removed Material Design namespace -->
@@ -28,6 +29,18 @@
                  <ResourceDictionary Source="/Styles/ButtonStyles.xaml"/>
                  <ResourceDictionary Source="/Styles/ListBoxStyles.xaml"/> <!-- Added ListBox Styles -->
              </ResourceDictionary.MergedDictionaries>
+
+             <!-- Base Font Size and Scaling Factor -->
+             <sys:Double x:Key="BaseFontSize">13</sys:Double>
+             <!-- This will be updated programmatically based on user settings -->
+             <sys:Double x:Key="CurrentFontScalingFactor">1.0</sys:Double>
+
+             <!-- Scaled Font Sizes (Values will be set programmatically) -->
+             <sys:Double x:Key="ScaledFontSizeSmall">11</sys:Double>
+             <sys:Double x:Key="ScaledFontSizeNormal">13</sys:Double>
+             <sys:Double x:Key="ScaledFontSizeMedium">15</sys:Double>
+             <sys:Double x:Key="ScaledFontSizeLarge">18</sys:Double>
+             <sys:Double x:Key="ScaledFontSizeHeader">20</sys:Double>
 
              <!-- Converters -->
              <converters:KnobSizeConverter x:Key="KnobSizeConverter"/>

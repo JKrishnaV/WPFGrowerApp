@@ -10,8 +10,9 @@ using WPFGrowerApp.Views;
 using WPFGrowerApp.Infrastructure.Security;
 using WPFGrowerApp.Infrastructure.Logging;
 using System.Threading.Tasks;
-using WPFGrowerApp.DataAccess.Models; 
-using WPFGrowerApp.Properties; 
+using WPFGrowerApp.DataAccess.Models;
+using WPFGrowerApp.Properties;
+using WPFGrowerApp.Services; // Added for UISettingsService
 
 namespace WPFGrowerApp
 {
@@ -53,6 +54,7 @@ namespace WPFGrowerApp
             // Register Other Services
             services.AddTransient<ReportExportService>();
             services.AddSingleton<IDialogService, DialogService>();
+            services.AddSingleton<IUISettingsService, UISettingsService>(); // Register UI Settings Service
 
             // Register ViewModels
             services.AddTransient<MainViewModel>();
@@ -74,6 +76,7 @@ namespace WPFGrowerApp
             services.AddTransient<LoginViewModel>();
             services.AddTransient<ChangePasswordViewModel>();
             services.AddTransient<UserManagementViewModel>();
+            services.AddTransient<AppearanceSettingsViewModel>(); // Register Appearance Settings VM
 
             // Register Views (Views are typically not registered unless needed for DI resolution like DialogService)
             services.AddTransient<GrowerSearchView>(); // Needed by DialogService
@@ -87,6 +90,24 @@ namespace WPFGrowerApp
             Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense("Ngo9BigBOggjHTQxAR8/V1NMaF5cXmBCf1FpRmJGdld5fUVHYVZUTXxaS00DNHVRdkdmWXteeXZXR2ZdVkByXUdWYUE=");
             Bold.Licensing.BoldLicenseProvider.RegisterLicense("thM9QOwjcTvfk9RnKaWmdI8poSCmqPFEvoqx7cPcCCs=");
             Logger.Info("Application starting up.");
+
+            // Apply initial font scaling from settings BEFORE calling base.OnStartup
+            // to ensure resources are ready before UI elements are created.
+            try
+            {
+                var uiSettingsService = ServiceProvider.GetRequiredService<IUISettingsService>();
+                double initialScalingFactor = uiSettingsService.GetFontScalingFactor();
+                UpdateScaledFontSizes(initialScalingFactor);
+                Logger.Info($"Initial font scaling factor applied: {initialScalingFactor}");
+            }
+            catch (Exception ex)
+            {
+                 Logger.Error("Failed to apply initial font scaling.", ex);
+                 // Apply default scaling if loading fails
+                 UpdateScaledFontSizes(1.0);
+            }
+
+
             base.OnStartup(e);
 
             // Check for password setting arguments
@@ -207,6 +228,41 @@ namespace WPFGrowerApp
                  Logger.Fatal("Unhandled non-UI thread exception occurred.", e.ExceptionObject as Exception);
             };
              Logger.Info("Global exception handlers configured.");
+        }
+
+        /// <summary>
+        /// Updates the application-wide font size resources based on the provided scaling factor.
+        /// </summary>
+        /// <param name="scalingFactor">The factor to scale the base font size by (e.g., 1.0, 1.5, 2.0).</param>
+        public static void UpdateScaledFontSizes(double scalingFactor)
+        {
+            if (scalingFactor <= 0) scalingFactor = 1.0; // Ensure valid factor
+
+            try
+            {
+                if (Current.Resources["BaseFontSize"] is double baseSize)
+                {
+                    // Update the scaling factor resource itself
+                    Current.Resources["CurrentFontScalingFactor"] = scalingFactor;
+
+                    // Update scaled resources (adjust keys and calculations as needed)
+                    Current.Resources["ScaledFontSizeSmall"] = Math.Round(baseSize * scalingFactor * 0.85); // Example: 85% of base scaled
+                    Current.Resources["ScaledFontSizeNormal"] = Math.Round(baseSize * scalingFactor);
+                    Current.Resources["ScaledFontSizeMedium"] = Math.Round(baseSize * scalingFactor * 1.15); // Example: 115%
+                    Current.Resources["ScaledFontSizeLarge"] = Math.Round(baseSize * scalingFactor * 1.4); // Example: 140%
+                    Current.Resources["ScaledFontSizeHeader"] = Math.Round(baseSize * scalingFactor * 1.6); // Example: 160%
+
+                    Logger.Info($"Updated font sizes with scaling factor: {scalingFactor}. Normal size: {Current.Resources["ScaledFontSizeNormal"]}");
+                }
+                else
+                {
+                    Logger.Warn("BaseFontSize resource not found or not a double. Cannot update scaled font sizes.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error updating scaled font sizes with factor {scalingFactor}.", ex);
+            }
         }
     }
 }

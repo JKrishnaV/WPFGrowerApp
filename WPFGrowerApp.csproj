@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <PackageReference Include="BoldReports.WPF" Version="8.1.8" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="Dapper.Contrib" Version="2.0.78" />
     <PackageReference Include="Dapper.SqlBuilder" Version="2.1.66" />
     <PackageReference Include="log4net" Version="3.0.4" />
