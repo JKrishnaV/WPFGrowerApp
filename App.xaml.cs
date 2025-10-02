@@ -48,6 +48,7 @@ namespace WPFGrowerApp
             services.AddTransient<IDepotService, DepotService>();
             services.AddTransient<IProductService, ProductService>(); 
             services.AddTransient<IProcessService, ProcessService>(); // Already added, confirming
+            services.AddTransient<ContainerTypeService>(); // Added Container Type Service
             services.AddTransient<ValidationService>();
             services.AddTransient<IUserService, UserService>();
 
@@ -78,6 +79,7 @@ namespace WPFGrowerApp
             services.AddTransient<UserManagementViewModel>();
             services.AddTransient<AppearanceSettingsViewModel>(); // Register Appearance Settings VM
             services.AddTransient<PriceViewModel>();
+            services.AddTransient<ContainerViewModel>(); // Added Container VM
 
             // Register Views (Views are typically not registered unless needed for DI resolution like DialogService)
             services.AddTransient<GrowerSearchView>(); // Needed by DialogService

@@ -45,4 +45,23 @@ namespace WPFGrowerApp.Converters
             return false;
         }
     }
+
+    /// <summary>
+    /// Converts a boolean value to a status color brush (true = Green, false = OrangeRed)
+    /// </summary>
+    public class BoolToStatusColorConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is bool boolValue)
+                return boolValue ? System.Windows.Media.Brushes.Green : System.Windows.Media.Brushes.OrangeRed;
+            
+            return System.Windows.Media.Brushes.Gray;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
 }

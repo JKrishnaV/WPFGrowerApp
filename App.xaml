@@ -54,6 +54,7 @@
               <converters:ActiveStatusConverter x:Key="ActiveStatusConverter"/>
               <converters:ActiveStatusBrushConverter x:Key="ActiveStatusBrushConverter"/>
               <converters:StringListConverter x:Key="StringListConverter"/> <!-- Added StringListConverter -->
+              <converters:BoolToStatusColorConverter x:Key="BoolToStatusColorConverter"/> <!-- Added for Container Status -->
          </ResourceDictionary>
      </Application.Resources>
  </Application>

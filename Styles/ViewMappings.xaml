@@ -66,6 +66,11 @@
         <views:PriceView />
     </DataTemplate>
 
+    <!-- Container Type Management Mapping -->
+    <DataTemplate DataType="{x:Type viewmodels:ContainerViewModel}">
+        <views:ContainerView />
+    </DataTemplate>
+
     <!-- Payment Group Management Mapping -->
     <DataTemplate DataType="{x:Type viewmodels:PaymentGroupViewModel}">
         <views:PaymentGroupView />

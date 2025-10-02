@@ -44,6 +44,7 @@ namespace WPFGrowerApp.ViewModels
             SettingsOptions.Add(new SettingsNavigationItem("Pricing", typeof(PriceViewModel), PackIconKind.Cash));
             SettingsOptions.Add(new SettingsNavigationItem("Depots", typeof(DepotViewModel), PackIconKind.Store));
             SettingsOptions.Add(new SettingsNavigationItem("Payment Groups", typeof(PaymentGroupViewModel), PackIconKind.AccountGroup)); // Added Payment Groups
+            SettingsOptions.Add(new SettingsNavigationItem("Container Types", typeof(ContainerViewModel), PackIconKind.Package)); // Added Container Types
             SettingsOptions.Add(new SettingsNavigationItem("Appearance", typeof(AppearanceSettingsViewModel), PackIconKind.Palette)); // Added Appearance Settings
 
             Logger.Info($"Created {SettingsOptions.Count} navigation items");
@@ -95,11 +96,15 @@ namespace WPFGrowerApp.ViewModels
             try
             {
                 Logger.Info($"Attempting to resolve ViewModel of type: {viewModelType.Name}");
+                Logger.Info($"Is {viewModelType.Name} a ViewModelBase? {typeof(ViewModelBase).IsAssignableFrom(viewModelType)}");
+                
                 var resolvedViewModel = _serviceProvider.GetRequiredService(viewModelType) as ViewModelBase;
                 
                 if (resolvedViewModel == null)
                 {
                     Logger.Error($"Failed to resolve ViewModel of type {viewModelType.Name} as ViewModelBase");
+                    Logger.Error($"Resolved object type: {_serviceProvider.GetRequiredService(viewModelType)?.GetType().Name ?? "null"}");
+                    await _dialogService.ShowMessageBoxAsync("Failed to load the selected feature. Check logs for details.", "Error");
                     return;
                 }
 
