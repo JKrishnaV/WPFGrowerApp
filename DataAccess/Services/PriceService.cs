@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Dapper;
 using Microsoft.Data.SqlClient;
@@ -147,7 +148,7 @@ namespace WPFGrowerApp.DataAccess.Services
              }
          }
 
-         public async Task<decimal> FindPriceRecordIdAsync(string productId, string processId, DateTime receiptDate)
+        public async Task<decimal> FindPriceRecordIdAsync(string productId, string processId, DateTime receiptDate)
          {
              try
              {
@@ -174,5 +175,50 @@ namespace WPFGrowerApp.DataAccess.Services
                  throw;
              }
          }
+
+        public async Task<IEnumerable<Price>> GetAllAsync()
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                return await connection.QueryAsync<Price>("SELECT * FROM Price");
+            }
+        }
+
+        public async Task<Price> GetByIdAsync(int id)
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                return await connection.QuerySingleOrDefaultAsync<Price>("SELECT * FROM Price WHERE Id = @Id", new { Id = id });
+            }
+        }
+
+        public async Task<int> CreateAsync(Price price)
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                var sql = "INSERT INTO Price (Product, Process, [From], TimePrem, Time, CPremium, UPremium, ADV1_USED, ADV2_USED, ADV3_USED, FIN_USED, CL1G1A1, CL1G1A2, CL1G1A3, CL1G1FN, CL1G2A1, CL1G2A2, CL1G2A3, CL1G2FN, CL1G3A1, CL1G3A2, CL1G3A3, CL1G3FN, CL2G1A1, CL2G1A2, CL2G1A3, CL2G1FN, CL2G2A1, CL2G2A2, CL2G2A3, CL2G2FN, CL2G3A1, CL2G3A2, CL2G3A3, CL2G3FN, CL3G1A1, CL3G1A2, CL3G1A3, CL3G1FN, CL3G2A1, CL3G2A2, CL3G2A3, CL3G2FN, CL3G3A1, CL3G3A2, CL3G3A3, CL3G3FN, UL1G1A1, UL1G1A2, UL1G1A3, UL1G1FN, UL1G2A1, UL1G2A2, UL1G2A3, UL1G2FN, UL1G3A1, UL1G3A2, UL1G3A3, UL1G3FN, UL2G1A1, UL2G1A2, UL2G1A3, UL2G1FN, UL2G2A1, UL2G2A2, UL2G2A3, UL2G2FN, UL2G3A1, UL2G3A2, UL2G3A3, UL2G3FN, UL3G1A1, UL3G1A2, UL3G1A3, UL3G1FN, UL3G2A1, UL3G2A2, UL3G2A3, UL3G2FN, UL3G3A1, UL3G3A2, UL3G3A3, UL3G3FN) VALUES (@Product, @Process, @From, @TimePrem, @Time, @CPremium, @UPremium, @Adv1Used, @Adv2Used, @Adv3Used, @FinUsed, @CL1G1A1, @CL1G1A2, @CL1G1A3, @CL1G1FN, @CL1G2A1, @CL1G2A2, @CL1G2A3, @CL1G2FN, @CL1G3A1, @CL1G3A2, @CL1G3A3, @CL1G3FN, @CL2G1A1, @CL2G1A2, @CL2G1A3, @CL2G1FN, @CL2G2A1, @CL2G2A2, @CL2G2A3, @CL2G2FN, @CL2G3A1, @CL2G3A2, @CL2G3A3, @CL2G3FN, @CL3G1A1, @CL3G1A2, @CL3G1A3, @CL3G1FN, @CL3G2A1, @CL3G2A2, @CL3G2A3, @CL3G2FN, @CL3G3A1, @CL3G3A2, @CL3G3A3, @CL3G3FN, @UL1G1A1, @UL1G1A2, @UL1G1A3, @UL1G1FN, @UL1G2A1, @UL1G2A2, @UL1G2A3, @UL1G2FN, @UL1G3A1, @UL1G3A2, @UL1G3A3, @UL1G3FN, @UL2G1A1, @UL2G1A2, @UL2G1A3, @UL2G1FN, @UL2G2A1, @UL2G2A2, @UL2G2A3, @UL2G2FN, @UL2G3A1, @UL2G3A2, @UL2G3A3, @UL2G3FN, @UL3G1A1, @UL3G1A2, @UL3G1A3, @UL3G1FN, @UL3G2A1, @UL3G2A2, @UL3G2A3, @UL3G2FN, @UL3G3A1, @UL3G3A2, @UL3G3A3, @UL3G3FN); SELECT CAST(SCOPE_IDENTITY() as int)";
+                return await connection.ExecuteScalarAsync<int>(sql, price);
+            }
+        }
+
+        public async Task<bool> UpdateAsync(Price price)
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                var sql = "UPDATE Price SET Product = @Product, Process = @Process, [From] = @From, TimePrem = @TimePrem, Time = @Time, CPremium = @CPremium, UPremium = @UPremium, ADV1_USED = @Adv1Used, ADV2_USED = @Adv2Used, ADV3_USED = @Adv3Used, FIN_USED = @FinUsed, CL1G1A1 = @CL1G1A1, CL1G1A2 = @CL1G1A2, CL1G1A3 = @CL1G1A3, CL1G1FN = @CL1G1FN, CL1G2A1 = @CL1G2A1, CL1G2A2 = @CL1G2A2, CL1G2A3 = @CL1G2A3, CL1G2FN = @CL1G2FN, CL1G3A1 = @CL1G3A1, CL1G3A2 = @CL1G3A2, CL1G3A3 = @CL1G3A3, CL1G3FN = @CL1G3FN, CL2G1A1 = @CL2G1A1, CL2G1A2 = @CL2G1A2, CL2G1A3 = @CL2G1A3, CL2G1FN = @CL2G1FN, CL2G2A1 = @CL2G2A1, CL2G2A2 = @CL2G2A2, CL2G2A3 = @CL2G2A3, CL2G2FN = @CL2G2FN, CL2G3A1 = @CL2G3A1, CL2G3A2 = @CL2G3A2, CL2G3A3 = @CL2G3A3, CL2G3FN = @CL2G3FN, CL3G1A1 = @CL3G1A1, CL3G1A2 = @CL3G1A2, CL3G1A3 = @CL3G1A3, CL3G1FN = @CL3G1FN, CL3G2A1 = @CL3G2A1, CL3G2A2 = @CL3G2A2, CL3G2A3 = @CL3G2A3, CL3G2FN = @CL3G2FN, CL3G3A1 = @CL3G3A1, CL3G3A2 = @CL3G3A2, CL3G3A3 = @CL3G3A3, CL3G3FN = @CL3G3FN, UL1G1A1 = @UL1G1A1, UL1G1A2 = @UL1G1A2, UL1G1A3 = @UL1G1A3, UL1G1FN = @UL1G1FN, UL1G2A1 = @UL1G2A1, UL1G2A2 = @UL1G2A2, UL1G2A3 = @UL1G2A3, UL1G2FN = @UL1G2FN, UL1G3A1 = @UL1G3A1, UL1G3A2 = @UL1G3A2, UL1G3A3 = @UL1G3A3, UL1G3FN = @UL1G3FN, UL2G1A1 = @UL2G1A1, UL2G1A2 = @UL2G1A2, UL2G1A3 = @UL2G1A3, UL2G1FN = @UL2G1FN, UL2G2A1 = @UL2G2A1, UL2G2A2 = @UL2G2A2, UL2G2A3 = @UL2G2A3, UL2G2FN = @UL2G2FN, UL2G3A1 = @UL2G3A1, UL2G3A2 = @UL2G3A2, UL2G3A3 = @UL2G3A3, UL2G3FN = @UL2G3FN, UL3G1A1 = @UL3G1A1, UL3G1A2 = @UL3G1A2, UL3G1A3 = @UL3G1A3, UL3G1FN = @UL3G1FN, UL3G2A1 = @UL3G2A1, UL3G2A2 = @UL3G2A2, UL3G2A3 = @UL3G2A3, UL3G2FN = @UL3G2FN, UL3G3A1 = @UL3G3A1, UL3G3A2 = @UL3G3A2, UL3G3A3 = @UL3G3A3, UL3G3FN = @UL3G3FN WHERE PriceID = @PriceID";
+                var rowsAffected = await connection.ExecuteAsync(sql, price);
+                return rowsAffected > 0;
+            }
+        }
+
+        public async Task<bool> DeleteAsync(int id)
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                var sql = "DELETE FROM Price WHERE PriceID = @PriceID";
+                var rowsAffected = await connection.ExecuteAsync(sql, new { PriceID = id });
+                return rowsAffected > 0;
+            }
+        }
     }
 }

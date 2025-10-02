@@ -61,6 +61,11 @@
         <views:DepotView />
     </DataTemplate>
 
+    <!-- Price Management Mapping -->
+    <DataTemplate DataType="{x:Type viewmodels:PriceViewModel}">
+        <views:PriceView />
+    </DataTemplate>
+
     <!-- Payment Group Management Mapping -->
     <DataTemplate DataType="{x:Type viewmodels:PaymentGroupViewModel}">
         <views:PaymentGroupView />

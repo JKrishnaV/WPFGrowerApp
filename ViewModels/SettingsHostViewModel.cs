@@ -41,6 +41,7 @@ namespace WPFGrowerApp.ViewModels
             // Add other options
             SettingsOptions.Add(new SettingsNavigationItem("Products", typeof(ProductViewModel), PackIconKind.PackageVariant));
             SettingsOptions.Add(new SettingsNavigationItem("Process Types", typeof(ProcessViewModel), PackIconKind.Cog));
+            SettingsOptions.Add(new SettingsNavigationItem("Pricing", typeof(PriceViewModel), PackIconKind.Cash));
             SettingsOptions.Add(new SettingsNavigationItem("Depots", typeof(DepotViewModel), PackIconKind.Store));
             SettingsOptions.Add(new SettingsNavigationItem("Payment Groups", typeof(PaymentGroupViewModel), PackIconKind.AccountGroup)); // Added Payment Groups
             SettingsOptions.Add(new SettingsNavigationItem("Appearance", typeof(AppearanceSettingsViewModel), PackIconKind.Palette)); // Added Appearance Settings

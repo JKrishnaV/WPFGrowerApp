@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using WPFGrowerApp.DataAccess.Models; // Assuming Receipt model might be needed
 
@@ -54,5 +55,10 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// <returns>The PriceID (PRICEID column) or 0 if not found.</returns>
         Task<decimal> FindPriceRecordIdAsync(string productId, string processId, DateTime receiptDate);
 
+        Task<IEnumerable<Price>> GetAllAsync();
+        Task<Price> GetByIdAsync(int id);
+        Task<int> CreateAsync(Price price);
+        Task<bool> UpdateAsync(Price price);
+        Task<bool> DeleteAsync(int id);
     }
 }
