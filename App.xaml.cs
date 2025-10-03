@@ -48,6 +48,7 @@ namespace WPFGrowerApp
             services.AddTransient<IDepotService, DepotService>();
             services.AddTransient<IProductService, ProductService>(); 
             services.AddTransient<IProcessService, ProcessService>(); // Already added, confirming
+            services.AddTransient<IProcessClassificationService, ProcessClassificationService>(); // Added for Fresh vs Non-Fresh classification
             services.AddTransient<ContainerTypeService>(); // Added Container Type Service
             services.AddTransient<ValidationService>();
             services.AddTransient<IUserService, UserService>();

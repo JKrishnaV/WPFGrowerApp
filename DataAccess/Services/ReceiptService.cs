@@ -106,6 +106,14 @@ namespace WPFGrowerApp.DataAccess.Services
                     receipt.ReceiptNumber = await GetNextReceiptNumberAsync();
                 }
 
+                // --- Apply Dockage if present (BEFORE saving) ---
+                // This preserves OriNet and calculates adjusted Net
+                if (receipt.DockPercent > 0)
+                {
+                    await ApplyDockageAsync(receipt);
+                    Logger.Info($"Dockage applied to Receipt {receipt.ReceiptNumber}: {receipt.DockPercent}% - OriNet={receipt.OriNet}, AdjustedNet={receipt.Net}");
+                }
+
                 // --- Derive fields based on CSV data ---
                 // Process (first 2 chars of GradeId)
                 string derivedProcess = (!string.IsNullOrEmpty(receipt.GradeId) && receipt.GradeId.Length >= 2)
@@ -179,8 +187,9 @@ namespace WPFGrowerApp.DataAccess.Services
                         "GRADE", "PROCESS", "DATE", "TIME", "DAY_UNIQ", "IMP_BAT", "FIN_BAT",
                         "DOCK_PCT", "ISVOID", "THEPRICE", "PRICESRC", "PR_NOTE1",
                         "NP_NOTE1", "FROM_FIELD", "IMPORTED", "CONT_ERRS",
+                        "ORI_NET",  // Added for dockage tracking
                         "ADD_DATE", "ADD_BY", "EDIT_DATE", "EDIT_BY", "EDIT_REAS"
-                        // Add other mapped columns if needed (OriNet, Certified, Variety, FinPrice, FinPrId, LastAdvpb)
+                        // Add other mapped columns if needed (Certified, Variety, FinPrice, FinPrId, LastAdvpb)
                     };
                     var values = new List<string>
                     {
@@ -188,6 +197,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         "@Grade", "@Process", "@Date", "@Time", "@DayUniq", "@ImpBatch", "@FinBatch",
                         "@DockPercent", "@IsVoid", "@ThePrice", "@PriceSource", "@PrNote1",
                         "@NpNote1", "@FromField", "@Imported", "@ContErrs",
+                        "@OriNet",  // Added for dockage tracking
                         "@AddDate", "@AddBy", "@EditDate", "@EditBy", "@EditReason"
                          // Add other mapped parameters if needed
                     };
@@ -229,6 +239,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         receipt.FromField,
                         receipt.Imported,
                         ContErrs = derivedContErrs, // Use derived
+                        receipt.OriNet,             // Added for dockage tracking
                         receipt.AddDate,            // Use mapped
                         receipt.AddBy,              // Use mapped
                         receipt.EditDate,           // Use mapped
@@ -514,6 +525,90 @@ namespace WPFGrowerApp.DataAccess.Services
                 Debug.WriteLine($"Error in GetPriceForReceiptAsync: {ex.Message}");
                  throw;
             }
+        }
+
+        /// <summary>
+        /// Applies dockage to a receipt. Stores original net weight in OriNet before applying dockage percentage.
+        /// Mirrors XBase logic: ori_net stores weight before dockage, net stores weight after dockage.
+        /// Dockage calculation: new_net = ori_net * (1 - dock_pct/100)
+        /// </summary>
+        public async Task<decimal> ApplyDockageAsync(Receipt receipt)
+        {
+            try
+            {
+                // If no dockage percentage, return net weight as-is
+                if (receipt.DockPercent <= 0)
+                {
+                    return receipt.Net;
+                }
+
+                // Store original net weight if not already stored
+                if (!receipt.OriNet.HasValue || receipt.OriNet.Value == 0)
+                {
+                    receipt.OriNet = receipt.Net;
+                }
+
+                // Calculate dockage: reduce net weight by dockage percentage
+                // Formula: adjusted_net = original_net * (1 - dockage_percent/100)
+                decimal adjustedNet = receipt.OriNet.Value * (1 - (receipt.DockPercent / 100m));
+                
+                // Round to 2 decimal places (consistent with legacy rounding)
+                adjustedNet = Math.Round(adjustedNet, 2);
+
+                // Update the receipt's net weight
+                receipt.Net = adjustedNet;
+
+                Logger.Info($"Applied dockage to Receipt {receipt.ReceiptNumber}: OriNet={receipt.OriNet}, DockPct={receipt.DockPercent}%, AdjustedNet={adjustedNet}, Dockage={receipt.OriNet - adjustedNet}");
+
+                // If receipt is already saved, update the database
+                if (receipt.ReceiptNumber > 0)
+                {
+                    using (var connection = new SqlConnection(_connectionString))
+                    {
+                        await connection.OpenAsync();
+                        var sql = @"
+                            UPDATE Daily 
+                            SET ORI_NET = @OriNet, 
+                                NET = @Net,
+                                DOCK_PCT = @DockPercent
+                            WHERE RECPT = @ReceiptNumber";
+
+                        await connection.ExecuteAsync(sql, new 
+                        { 
+                            receipt.OriNet, 
+                            receipt.Net, 
+                            receipt.DockPercent, 
+                            receipt.ReceiptNumber 
+                        });
+                    }
+                }
+
+                return adjustedNet;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error applying dockage to Receipt {receipt.ReceiptNumber}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Calculates the actual dockage amount (weight lost due to quality deduction).
+        /// Formula: dockage_amount = ori_net - net (if ori_net exists, else 0)
+        /// </summary>
+        public decimal CalculateDockageAmount(Receipt receipt)
+        {
+            // If no original net weight stored, there's no dockage
+            if (!receipt.OriNet.HasValue || receipt.OriNet.Value == 0)
+            {
+                return 0;
+            }
+
+            // Calculate the difference between original and adjusted net
+            // This matches the XBase formula: (Daily->Ori_net - Daily->net)
+            decimal dockageAmount = receipt.OriNet.Value - receipt.Net;
+            
+            return Math.Max(0, dockageAmount); // Ensure non-negative
         }
 
         public async Task<bool> UpdateReceiptAdvanceDetailsAsync(

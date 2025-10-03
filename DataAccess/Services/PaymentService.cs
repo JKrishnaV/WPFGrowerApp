@@ -18,6 +18,7 @@ namespace WPFGrowerApp.DataAccess.Services
         private readonly IAccountService _accountService;
         private readonly IPostBatchService _postBatchService;
         private readonly IGrowerService _growerService; // Needed for grower details like currency, GST status
+        private readonly IProcessClassificationService _processClassificationService; // For Fresh vs Non-Fresh tracking
 
         // Constants for Account Types (mirroring TT_ values from XBase++)
         private const string AccTypeAdvance1 = "ADV1"; // Placeholder - Use actual code
@@ -32,13 +33,15 @@ namespace WPFGrowerApp.DataAccess.Services
             IPriceService priceService,
             IAccountService accountService,
             IPostBatchService postBatchService,
-            IGrowerService growerService)
+            IGrowerService growerService,
+            IProcessClassificationService processClassificationService)
         {
             _receiptService = receiptService ?? throw new ArgumentNullException(nameof(receiptService));
             _priceService = priceService ?? throw new ArgumentNullException(nameof(priceService));
             _accountService = accountService ?? throw new ArgumentNullException(nameof(accountService));
             _postBatchService = postBatchService ?? throw new ArgumentNullException(nameof(postBatchService));
             _growerService = growerService ?? throw new ArgumentNullException(nameof(growerService));
+            _processClassificationService = processClassificationService ?? throw new ArgumentNullException(nameof(processClassificationService));
         }
 
         // --- Actual Payment Run ---
@@ -354,6 +357,11 @@ namespace WPFGrowerApp.DataAccess.Services
 
                         try
                         {
+                            // Fix #4: Determine if this is a Fresh process (PROC_CLASS = 1)
+                            // Mirrors legacy: aScan(aFresh, Daily->process) >= 1
+                            receiptDetail.IsFresh = await _processClassificationService.IsFreshProcessAsync(receipt.Process);
+                            receiptDetail.ProcessClass = await _processClassificationService.GetProcessClassAsync(receipt.Process);
+
                             decimal calculatedAdvancePrice = 0;
                             decimal premiumPrice = 0;
                             decimal marketingDeduction = 0;
@@ -369,29 +377,66 @@ namespace WPFGrowerApp.DataAccess.Services
                             }
                             receiptDetail.PriceRecordId = priceRecordId;
 
-                            // Calculate price for the current advance
-                            var currentAdvanceBasePrice = await _priceService.GetAdvancePriceAsync(receipt.Product, receipt.Process, receipt.Date, parameters.AdvanceNumber);
+                            // Fix #5: Calculate running cumulative price using max() logic
+                            // Get the running cumulative price up to current advance
+                            // Mirrors legacy: RunAdvPrice(n) which uses max() to prevent backward pricing
+                            var currentRunningPrice = await GetRunningAdvancePriceAsync(
+                                receipt.Product,
+                                receipt.Process,
+                                receipt.Date,
+                                parameters.AdvanceNumber,
+                                grower.Currency,
+                                grower.PriceLevel,
+                                receipt.Grade);
 
-                            // Adjust price based on previous advances paid
+                            // Calculate what has already been paid (cumulative with max logic)
+                            decimal alreadyPaid = 0;
+
                             if (parameters.AdvanceNumber == 1)
                             {
-                                calculatedAdvancePrice = currentAdvanceBasePrice;
-                                premiumPrice = await _priceService.GetTimePremiumAsync(receipt.Product, receipt.Process, receipt.Date, receipt.Date.TimeOfDay);
+                                // First advance - simple case
+                                calculatedAdvancePrice = currentRunningPrice;
+                                
+                                // Get time premium using grower currency
+                                premiumPrice = await _priceService.GetTimePremiumAsync(
+                                    receipt.Product, 
+                                    receipt.Process, 
+                                    receipt.Date, 
+                                    receipt.Date.TimeOfDay,
+                                    grower.Currency);
+                                    
                                 marketingDeduction = await _priceService.GetMarketingDeductionAsync(receipt.Product);
                             }
                             else if (parameters.AdvanceNumber == 2)
                             {
+                                // Advance 2: RunAdvPrice(2) - paid_adv1
                                 var prevAdv1Price = await GetPreviousAdvancePrice(receipt.ReceiptNumber, 1);
-                                calculatedAdvancePrice = currentAdvanceBasePrice - prevAdv1Price;
+                                alreadyPaid = prevAdv1Price;
+                                calculatedAdvancePrice = currentRunningPrice - alreadyPaid;
                             }
                             else if (parameters.AdvanceNumber == 3)
                             {
+                                // Advance 3: RunAdvPrice(3) - max(RunAdvPrice(2), paid_adv1)
+                                // This mirrors GROW_AP.PRG line 420:
+                                // nAdvance3 := Daily->(RunAdvPrice(3)) - max( Daily->(RunAdvPrice(2)), Daily->adv_pr1 )
                                 var prevAdv1Price = await GetPreviousAdvancePrice(receipt.ReceiptNumber, 1);
-                                var prevAdv2Price = await GetPreviousAdvancePrice(receipt.ReceiptNumber, 2);
-                                calculatedAdvancePrice = currentAdvanceBasePrice - prevAdv1Price - prevAdv2Price;
+                                
+                                // Get running price through advance 2
+                                var runningPriceAfterAdv2 = await GetRunningAdvancePriceAsync(
+                                    receipt.Product,
+                                    receipt.Process,
+                                    receipt.Date,
+                                    2,  // Up to advance 2
+                                    grower.Currency,
+                                    grower.PriceLevel,
+                                    receipt.Grade);
+                                
+                                // Use max to handle cases where advance 2 wasn't paid or was less than advance 1
+                                alreadyPaid = Math.Max(runningPriceAfterAdv2, prevAdv1Price);
+                                calculatedAdvancePrice = currentRunningPrice - alreadyPaid;
                             }
 
-                            // Ensure calculated price isn't negative
+                            // Ensure calculated price isn't negative (defensive programming)
                             calculatedAdvancePrice = Math.Max(0, calculatedAdvancePrice);
 
                             // Store calculated values in the receipt detail
@@ -399,9 +444,10 @@ namespace WPFGrowerApp.DataAccess.Services
                             receiptDetail.CalculatedPremiumPrice = (parameters.AdvanceNumber == 1) ? premiumPrice : 0; // Only on first advance
                             receiptDetail.CalculatedMarketingDeduction = (parameters.AdvanceNumber == 1) ? marketingDeduction : 0; // Only on first advance
 
-                            receiptDetail.CalculatedAdvanceAmount = Math.Round(receipt.Net * receiptDetail.CalculatedAdvancePrice, 2);
-                            receiptDetail.CalculatedPremiumAmount = Math.Round(receipt.Net * receiptDetail.CalculatedPremiumPrice, 2);
-                            receiptDetail.CalculatedDeductionAmount = Math.Round(receipt.Net * receiptDetail.CalculatedMarketingDeduction, 2); // Deduction rate might be negative
+                            // Fix #6: Use RoundMoney for AwayFromZero rounding (matches legacy XBase round())
+                            receiptDetail.CalculatedAdvanceAmount = RoundMoney(receipt.Net * receiptDetail.CalculatedAdvancePrice);
+                            receiptDetail.CalculatedPremiumAmount = RoundMoney(receipt.Net * receiptDetail.CalculatedPremiumPrice);
+                            receiptDetail.CalculatedDeductionAmount = RoundMoney(receipt.Net * receiptDetail.CalculatedMarketingDeduction);
 
                         }
                         catch (Exception ex)
@@ -440,7 +486,8 @@ namespace WPFGrowerApp.DataAccess.Services
         private Account CreateAccountEntry(Receipt receipt, string accountType, decimal unitPrice, string currency, int year, decimal batchId, DateTime entryDate)
         {
             // Calculate dollars and potentially GST
-            decimal dollars = Math.Round(receipt.Net * unitPrice, 2);
+            // Fix #6: Use RoundMoney for AwayFromZero rounding (matches legacy)
+            decimal dollars = RoundMoney(receipt.Net * unitPrice);
             decimal gstEst = 0; // TODO: Implement GST calculation based on grower.ChgGst and product settings
 
             return new Account
@@ -489,6 +536,61 @@ namespace WPFGrowerApp.DataAccess.Services
                 case 3: return AccTypeAdvance3;
                 default: throw new ArgumentOutOfRangeException(nameof(advanceNumber));
             }
+        }
+
+        /// <summary>
+        /// Calculates the cumulative running advance price up to the specified advance number.
+        /// Uses max() to ensure the price never goes backward (mirrors legacy RunAdvPrice).
+        /// This prevents negative advance payments when price table has decreasing values.
+        /// </summary>
+        /// <param name="product">Product code</param>
+        /// <param name="process">Process code</param>
+        /// <param name="receiptDate">Receipt date</param>
+        /// <param name="upToAdvanceNumber">Calculate cumulative price up to this advance (1, 2, or 3)</param>
+        /// <param name="currency">Grower currency (C/U)</param>
+        /// <param name="priceLevel">Grower price level (1-3)</param>
+        /// <param name="grade">Receipt grade</param>
+        /// <returns>Running cumulative maximum price</returns>
+        private async Task<decimal> GetRunningAdvancePriceAsync(
+            string product,
+            string process,
+            DateTime receiptDate,
+            int upToAdvanceNumber,
+            char currency,
+            int priceLevel,
+            decimal grade)
+        {
+            decimal runningMax = 0;
+
+            for (int advNum = 1; advNum <= upToAdvanceNumber; advNum++)
+            {
+                var advPrice = await _priceService.GetAdvancePriceAsync(
+                    product,
+                    process,
+                    receiptDate,
+                    advNum,
+                    currency,
+                    priceLevel,
+                    grade);
+
+                // Key: Use Math.Max to prevent backward pricing
+                // Mirrors legacy: nReturn := max( CurAdvPrice( n ), nReturn )
+                runningMax = Math.Max(advPrice, runningMax);
+            }
+
+            return runningMax;
+        }
+
+        /// <summary>
+        /// Rounds a monetary amount to 2 decimal places using AwayFromZero rounding.
+        /// This matches the legacy XBase round() function behavior.
+        /// Fix #6: Ensures consistent rounding between legacy and modern systems.
+        /// </summary>
+        /// <param name="amount">The amount to round</param>
+        /// <returns>Amount rounded to 2 decimal places</returns>
+        private static decimal RoundMoney(decimal amount)
+        {
+            return Math.Round(amount, 2, MidpointRounding.AwayFromZero);
         }
 
         // Helper to get previously paid advance price (needs implementation)

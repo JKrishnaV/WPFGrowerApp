@@ -20,6 +20,23 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         Task<decimal> GetPriceForReceiptAsync(Receipt receipt);
 
         /// <summary>
+        /// Applies dockage to a receipt. Stores original net weight in OriNet before applying dockage percentage.
+        /// Mirrors XBase logic: ori_net stores weight before dockage, net stores weight after dockage.
+        /// Dockage calculation: new_net = ori_net * (1 - dock_pct/100)
+        /// </summary>
+        /// <param name="receipt">The receipt to apply dockage to</param>
+        /// <returns>The adjusted net weight after dockage</returns>
+        Task<decimal> ApplyDockageAsync(Receipt receipt);
+
+        /// <summary>
+        /// Calculates the actual dockage amount (weight lost due to quality deduction).
+        /// Formula: dockage_amount = ori_net - net (if ori_net exists, else 0)
+        /// </summary>
+        /// <param name="receipt">The receipt to calculate dockage for</param>
+        /// <returns>The dockage amount in weight units</returns>
+        decimal CalculateDockageAmount(Receipt receipt);
+
+        /// <summary>
         /// Updates a Daily record with advance payment details after calculation during a payment run.
         /// </summary>
         /// <param name="receiptNumber">The unique receipt number (RECPT).</param>

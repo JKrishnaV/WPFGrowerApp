@@ -15,6 +15,10 @@ namespace WPFGrowerApp.Models
         public string Grade { get; set; } = string.Empty;
         public decimal NetWeight { get; set; } // Lbs
 
+        // Process Classification (Fix #4: Fresh vs Non-Fresh tracking)
+        public bool IsFresh { get; set; } // True if Process PROC_CLASS = 1 (Fresh)
+        public int ProcessClass { get; set; } // 1=Fresh, 2=Processed, 3=Juice, 4=Other
+
         // Calculated Values
         public decimal CalculatedAdvancePrice { get; set; }
         public decimal CalculatedPremiumPrice { get; set; }

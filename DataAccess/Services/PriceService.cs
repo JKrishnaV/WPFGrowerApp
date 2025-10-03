@@ -12,29 +12,91 @@ namespace WPFGrowerApp.DataAccess.Services
     public class PriceService : BaseDatabaseService, IPriceService
     {
         // Note: The Price table structure is complex with many columns (CL1G1A1, UL1G1A1 etc.)
-        // The exact logic to select the correct column based on grade/level might need refinement
-        // based on deeper analysis or specific business rules not fully captured yet.
-        // This initial implementation focuses on getting *a* price based on advance number.
+        // This implementation now dynamically builds the column name based on:
+        // - Currency: C (Canadian) or U (US)
+        // - Level: L1, L2, L3 (grower's price level/status)
+        // - Grade: G1, G2, G3
+        // - Advance: A1, A2, A3 (or FN for final)
 
-        public async Task<decimal> GetAdvancePriceAsync(string productId, string processId, DateTime receiptDate, int advanceNumber)
+        /// <summary>
+        /// Builds the dynamic price column name based on grower and receipt attributes.
+        /// Mirrors the XBase logic from PRICEFND.PRG - varAdvance() function.
+        /// </summary>
+        /// <param name="currency">Currency code: 'C' for Canadian, 'U' for US</param>
+        /// <param name="priceLevel">Price level (1-3), typically grower.status in legacy</param>
+        /// <param name="grade">Grade (1-3)</param>
+        /// <param name="advanceNumber">Advance number (1-3), or 0 for final</param>
+        /// <returns>Column name like "CL1G2A1" or "UL3G1FN"</returns>
+        private string BuildPriceColumnName(char currency, int priceLevel, decimal grade, int advanceNumber)
+        {
+            var columnName = string.Empty;
+
+            // 1. Currency prefix (C or U)
+            if (currency == 'C' || currency == 'c')
+            {
+                columnName = "C";
+            }
+            else if (currency == 'U' || currency == 'u')
+            {
+                columnName = "U";
+            }
+            else
+            {
+                Logger.Warn($"Invalid currency '{currency}', defaulting to 'C' (Canadian)");
+                columnName = "C"; // Default to Canadian
+            }
+
+            // 2. Price Level (L1, L2, L3)
+            if (priceLevel >= 1 && priceLevel <= 3)
+            {
+                columnName += $"L{priceLevel}";
+            }
+            else
+            {
+                Logger.Warn($"Invalid price level {priceLevel}, defaulting to L1");
+                columnName += "L1"; // Default to level 1
+            }
+
+            // 3. Grade (G1, G2, G3)
+            int gradeInt = (int)grade;
+            if (gradeInt >= 1 && gradeInt <= 3)
+            {
+                columnName += $"G{gradeInt}";
+            }
+            else
+            {
+                Logger.Warn($"Invalid grade {grade}, defaulting to G1");
+                columnName += "G1"; // Default to grade 1
+            }
+
+            // 4. Advance or Final (A1, A2, A3, or FN)
+            if (advanceNumber >= 1 && advanceNumber <= 3)
+            {
+                columnName += $"A{advanceNumber}";
+            }
+            else if (advanceNumber == 0)
+            {
+                columnName += "FN"; // Final payment
+            }
+            else
+            {
+                Logger.Warn($"Invalid advance number {advanceNumber}, defaulting to A1");
+                columnName += "A1"; // Default to advance 1
+            }
+
+            Logger.Info($"Built price column name: {columnName} (Currency={currency}, Level={priceLevel}, Grade={grade}, Advance={advanceNumber})");
+            return columnName;
+        }
+
+        public async Task<decimal> GetAdvancePriceAsync(string productId, string processId, DateTime receiptDate, int advanceNumber, char growerCurrency, int growerPriceLevel, decimal grade)
         {
             if (advanceNumber < 1 || advanceNumber > 3)
             {
                 throw new ArgumentOutOfRangeException(nameof(advanceNumber), "Advance number must be 1, 2, or 3.");
             }
 
-            // Simplified logic: Selects the first relevant price column for the advance.
-            // TODO: Refine column selection based on detailed business rules (Grade, Level etc.)
-            // This likely requires a more complex query or mapping logic.
-            // For now, we assume CL1G1A1 for Adv1, CL1G1A2 for Adv2, CL1G1A3 for Adv3 as placeholders.
-            string priceColumn;
-            switch (advanceNumber)
-            {
-                case 1: priceColumn = "CL1G1A1"; break; // Placeholder
-                case 2: priceColumn = "CL1G1A2"; break; // Placeholder
-                case 3: priceColumn = "CL1G1A3"; break; // Placeholder
-                default: return 0; // Should not happen due to check above
-            }
+            // Build the dynamic column name based on grower and receipt attributes
+            string priceColumn = BuildPriceColumnName(growerCurrency, growerPriceLevel, grade, advanceNumber);
 
             try
             {
@@ -51,12 +113,18 @@ namespace WPFGrowerApp.DataAccess.Services
                         ORDER BY [FROM] DESC, TIME DESC"; // Order by date then time
 
                     var price = await connection.ExecuteScalarAsync<decimal?>(sql, new { ProductId = productId, ProcessId = processId, ReceiptDate = receiptDate });
+                    
+                    if (price == null)
+                    {
+                        Logger.Warn($"No price found for Product={productId}, Process={processId}, Date={receiptDate:yyyy-MM-dd}, Column={priceColumn}");
+                    }
+                    
                     return price ?? 0; // Return 0 if no price found
                 }
             }
             catch (Exception ex)
             {
-                Logger.Error($"Error getting advance price {advanceNumber} for Product: {productId}, Process: {processId}, Date: {receiptDate}: {ex.Message}", ex);
+                Logger.Error($"Error getting advance price {advanceNumber} (Column: {priceColumn}) for Product: {productId}, Process: {processId}, Date: {receiptDate}: {ex.Message}", ex);
                 throw;
             }
         }
@@ -80,7 +148,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        public async Task<decimal> GetTimePremiumAsync(string productId, string processId, DateTime receiptDate, TimeSpan receiptTime)
+        public async Task<decimal> GetTimePremiumAsync(string productId, string processId, DateTime receiptDate, TimeSpan receiptTime, char growerCurrency)
         {
              // The XBase++ code checked Price->TIMEPREM and used Price->CPREMIUM or Price->UPREMIUM
              // This requires finding the correct Price record first.
@@ -90,20 +158,31 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                      var sql = @"
-                        SELECT TOP 1 TIMEPREM, CPREMIUM -- Assuming CPREMIUM for now, might need UPREMIUM logic
+                        SELECT TOP 1 TIMEPREM, CPREMIUM, UPREMIUM
                         FROM Price
                         WHERE PRODUCT = @ProductId
                           AND PROCESS = @ProcessId
                           AND [FROM] <= @ReceiptDate
                         ORDER BY [FROM] DESC, TIME DESC";
 
-                    var priceRecord = await connection.QueryFirstOrDefaultAsync(sql, new { ProductId = productId, ProcessId = processId, ReceiptDate = receiptDate });
+                    var priceRecord = await connection.QueryFirstOrDefaultAsync<dynamic>(sql, new { ProductId = productId, ProcessId = processId, ReceiptDate = receiptDate });
 
                     if (priceRecord != null && priceRecord.TIMEPREM == true)
                     {
-                        // Further logic might be needed to compare receiptTime with Price.TIME
-                        // For simplicity now, return CPREMIUM if TIMEPREM is true
-                        return priceRecord.CPREMIUM ?? 0;
+                        // Select premium based on grower currency
+                        if (growerCurrency == 'C' || growerCurrency == 'c')
+                        {
+                            return priceRecord.CPREMIUM ?? 0;
+                        }
+                        else if (growerCurrency == 'U' || growerCurrency == 'u')
+                        {
+                            return priceRecord.UPREMIUM ?? 0;
+                        }
+                        else
+                        {
+                            Logger.Warn($"Invalid currency '{growerCurrency}' for time premium, defaulting to Canadian premium");
+                            return priceRecord.CPREMIUM ?? 0;
+                        }
                     }
                     return 0; // No premium applicable
                 }

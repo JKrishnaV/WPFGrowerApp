@@ -17,8 +17,11 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// <param name="processId">The process ID.</param>
         /// <param name="receiptDate">The date of the receipt.</param>
         /// <param name="advanceNumber">The advance number (1, 2, or 3).</param>
+        /// <param name="growerCurrency">The grower's currency ('C' for Canadian, 'U' for US).</param>
+        /// <param name="growerPriceLevel">The grower's price level (1, 2, or 3).</param>
+        /// <param name="grade">The receipt grade (1, 2, or 3).</param>
         /// <returns>The price per unit for the specified advance, or 0 if not found.</returns>
-        Task<decimal> GetAdvancePriceAsync(string productId, string processId, DateTime receiptDate, int advanceNumber);
+        Task<decimal> GetAdvancePriceAsync(string productId, string processId, DateTime receiptDate, int advanceNumber, char growerCurrency, int growerPriceLevel, decimal grade);
 
         /// <summary>
         /// Gets the marketing deduction rate for a given product.
@@ -34,8 +37,9 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// <param name="processId">The process ID.</param>
         /// <param name="receiptDate">The date of the receipt.</param>
         /// <param name="receiptTime">The time of the receipt.</param>
+        /// <param name="growerCurrency">The grower's currency ('C' for Canadian, 'U' for US).</param>
         /// <returns>The premium amount per unit, or 0 if not applicable.</returns>
-        Task<decimal> GetTimePremiumAsync(string productId, string processId, DateTime receiptDate, TimeSpan receiptTime);
+        Task<decimal> GetTimePremiumAsync(string productId, string processId, DateTime receiptDate, TimeSpan receiptTime, char growerCurrency);
 
         /// <summary>
         /// Marks a specific advance price record as used for a given batch.
