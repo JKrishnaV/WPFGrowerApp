@@ -30,8 +30,8 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = @"
                         SELECT UserId, Username, FullName, Email, PasswordHash, PasswordSalt, 
-                               RoleId, IsActive, DateCreated, LastLoginDate, 
-                               FailedLoginAttempts, IsLockedOut, LastLockoutDate
+                               IsActive, CreatedAt as DateCreated, LastLoginAt as LastLoginDate, 
+                               FailedLoginAttempts, IsLocked as IsLockedOut
                         FROM AppUsers 
                         WHERE Username = @Username";
                     
@@ -99,8 +99,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         SET PasswordHash = @PasswordHash, 
                             PasswordSalt = @PasswordSalt,
                             FailedLoginAttempts = 0, -- Reset failed attempts on password change
-                            IsLockedOut = 0,         -- Unlock account on password change
-                            LastLockoutDate = NULL
+                            IsLocked = 0             -- Unlock account on password change
                         WHERE Username = @Username";
                     
                     int rowsAffected = await connection.ExecuteAsync(sql, new 
@@ -139,8 +138,7 @@ namespace WPFGrowerApp.DataAccess.Services
             var sql = @"
                 UPDATE AppUsers 
                 SET FailedLoginAttempts = @NewAttemptCount, 
-                    IsLockedOut = @LockAccount,
-                    LastLockoutDate = CASE WHEN @LockAccount = 1 THEN GETUTCDATE() ELSE LastLockoutDate END
+                    IsLocked = @LockAccount
                 WHERE UserId = @UserId";
             
             try
@@ -169,9 +167,8 @@ namespace WPFGrowerApp.DataAccess.Services
              var sql = @"
                 UPDATE AppUsers 
                 SET FailedLoginAttempts = 0, 
-                    LastLoginDate = GETUTCDATE(),
-                    IsLockedOut = 0, -- Ensure account is unlocked on successful login
-                    LastLockoutDate = NULL 
+                    LastLoginAt = GETUTCDATE(),
+                    IsLocked = 0 -- Ensure account is unlocked on successful login
                 WHERE UserId = @UserId";
             
             try
@@ -229,9 +226,9 @@ namespace WPFGrowerApp.DataAccess.Services
                     Logger.Info("Database connection opened successfully");
                     
                     var sql = @"
-                        SELECT UserId, Username, FullName, Email, RoleId, 
-                               IsActive, DateCreated, LastLoginDate, 
-                               FailedLoginAttempts, IsLockedOut, LastLockoutDate
+                        SELECT UserId, Username, FullName, Email, 
+                               IsActive, CreatedAt as DateCreated, LastLoginAt as LastLoginDate, 
+                               FailedLoginAttempts, IsLocked as IsLockedOut
                         FROM AppUsers";
 
                     Logger.Info("Executing SQL query to get all users");
@@ -256,9 +253,9 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     var sql = @"
-                        SELECT UserId, Username, FullName, Email, RoleId, 
-                               IsActive, DateCreated, LastLoginDate, 
-                               FailedLoginAttempts, IsLockedOut, LastLockoutDate
+                        SELECT UserId, Username, FullName, Email, 
+                               IsActive, CreatedAt as DateCreated, LastLoginAt as LastLoginDate, 
+                               FailedLoginAttempts, IsLocked as IsLockedOut
                         FROM AppUsers 
                         WHERE UserId = @UserId";
 
@@ -280,9 +277,9 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     var sql = @"
-                        SELECT UserId, Username, FullName, Email, RoleId, 
-                               IsActive, DateCreated, LastLoginDate, 
-                               FailedLoginAttempts, IsLockedOut, LastLockoutDate
+                        SELECT UserId, Username, FullName, Email, 
+                               IsActive, CreatedAt as DateCreated, LastLoginAt as LastLoginDate, 
+                               FailedLoginAttempts, IsLocked as IsLockedOut
                         FROM AppUsers 
                         WHERE Username = @Username";
 
@@ -314,10 +311,10 @@ namespace WPFGrowerApp.DataAccess.Services
                     var sql = @"
                         INSERT INTO AppUsers (
                             Username, FullName, Email, PasswordHash, PasswordSalt,
-                            RoleId, IsActive, DateCreated, FailedLoginAttempts, IsLockedOut
+                            IsActive, CreatedAt, FailedLoginAttempts, IsLocked
                         ) VALUES (
                             @Username, @FullName, @Email, @PasswordHash, @PasswordSalt,
-                            @RoleId, @IsActive, @DateCreated, 0, 0
+                            @IsActive, GETUTCDATE(), 0, 0
                         )";
 
                     int rowsAffected = await connection.ExecuteAsync(sql, user);

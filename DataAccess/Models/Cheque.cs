@@ -287,6 +287,18 @@ namespace WPFGrowerApp.DataAccess.Models
             }
         }
 
+        /// <summary>Modern audit fields</summary>
+        public DateTime? CreatedAt { get; set; }
+        public string? CreatedBy { get; set; }
+        public DateTime? ModifiedAt { get; set; }
+        public string? ModifiedBy { get; set; }
+        
+        /// <summary>Timestamp when the cheque was soft-deleted</summary>
+        public DateTime? DeletedAt { get; set; }
+        
+        /// <summary>Username who deleted the cheque</summary>
+        public string? DeletedBy { get; set; }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)

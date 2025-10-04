@@ -96,7 +96,7 @@ namespace WPFGrowerApp.ViewModels
             SelectedPrice != null && !SelectedPrice.IsAnyLocked;
 
         [RelayCommand(CanExecute = nameof(CanViewPrice))]
-        private void ViewPrice()
+        private async Task ViewPrice()
         {
             if (SelectedPrice == null)
             {
@@ -106,13 +106,22 @@ namespace WPFGrowerApp.ViewModels
 
             try
             {
+                // Load the full price data with all 72 price values
+                var fullPrice = await _priceService.GetByIdAsync(SelectedPrice.Price.PriceID);
+                
+                if (fullPrice == null)
+                {
+                    _ = _dialogService.ShowMessageBoxAsync("Unable to load price data.", "Error");
+                    return;
+                }
+                
                 // Create the PriceEntryViewModel in read-only mode
                 var viewModel = new PriceEntryViewModel(
                     _priceService,
                     _productService,
                     _processService,
                     _dialogService,
-                    SelectedPrice.Price,
+                    fullPrice,
                     isReadOnly: true);
 
                 var window = new PriceEntryWindow
@@ -133,7 +142,7 @@ namespace WPFGrowerApp.ViewModels
         private bool CanViewPrice() => SelectedPrice != null;
 
         [RelayCommand(CanExecute = nameof(CanEditPrice))]
-        private void EditPrice()
+        private async Task EditPrice()
         {
             if (SelectedPrice == null)
             {
@@ -152,13 +161,22 @@ namespace WPFGrowerApp.ViewModels
 
             try
             {
+                // Load the full price data with all 72 price values
+                var fullPrice = await _priceService.GetByIdAsync(SelectedPrice.Price.PriceID);
+                
+                if (fullPrice == null)
+                {
+                    _ = _dialogService.ShowMessageBoxAsync("Unable to load price data.", "Error");
+                    return;
+                }
+                
                 // Create the PriceEntryViewModel with the selected price
                 var viewModel = new PriceEntryViewModel(
                     _priceService,
                     _productService,
                     _processService,
                     _dialogService,
-                    SelectedPrice.Price);
+                    fullPrice);
 
                 var window = new PriceEntryWindow
                 {

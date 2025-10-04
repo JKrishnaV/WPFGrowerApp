@@ -26,16 +26,22 @@ namespace WPFGrowerApp.DataAccess.Services
                     // Ensure QDEL_DATE is NULL for active records
                     var sql = @"
                         SELECT
-                            PROCESS as ProcessId,
-                            Description,
-                            DEF_GRADE as DefGrade,
-                            PROC_CLASS as ProcClass,
-                            QADD_DATE, QADD_TIME, QADD_OP,
-                            QED_DATE, QED_TIME, QED_OP,
-                            QDEL_DATE, QDEL_TIME, QDEL_OP
-                        FROM Process
-                        WHERE QDEL_DATE IS NULL 
-                        ORDER BY Description"; // Order alphabetically for display
+                            ProcessCode as ProcessId,
+                            ProcessName as Description,
+                            DefaultGrade,
+                            ProcessClass,
+                            GradeName1,
+                            GradeName2,
+                            GradeName3,
+                            CreatedAt,
+                            CreatedBy,
+                            ModifiedAt,
+                            ModifiedBy,
+                            DeletedAt,
+                            DeletedBy
+                        FROM Processes
+                        WHERE IsActive = 1
+                        ORDER BY ProcessName"; // Order alphabetically for display
                     return await connection.QueryAsync<Process>(sql); // Return IEnumerable
                 }
             }
@@ -55,15 +61,21 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = @"
                         SELECT
-                            PROCESS as ProcessId,
-                            Description,
-                            DEF_GRADE as DefGrade,
-                            PROC_CLASS as ProcClass,
-                            QADD_DATE, QADD_TIME, QADD_OP,
-                            QED_DATE, QED_TIME, QED_OP,
-                            QDEL_DATE, QDEL_TIME, QDEL_OP
-                        FROM Process
-                        WHERE PROCESS = @ProcessId AND QDEL_DATE IS NULL";
+                            ProcessCode as ProcessId,
+                            ProcessName as Description,
+                            DefaultGrade,
+                            ProcessClass,
+                            GradeName1,
+                            GradeName2,
+                            GradeName3,
+                            CreatedAt,
+                            CreatedBy,
+                            ModifiedAt,
+                            ModifiedBy,
+                            DeletedAt,
+                            DeletedBy
+                        FROM Processes
+                        WHERE ProcessCode = @ProcessId AND IsActive = 1";
                     return await connection.QueryFirstOrDefaultAsync<Process>(sql, new { ProcessId = processId });
                 }
             }
@@ -80,24 +92,39 @@ namespace WPFGrowerApp.DataAccess.Services
 
             try
             {
+                var currentUser = GetCurrentUserInitials();
+
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
                     var sql = @"
-                        INSERT INTO Process (
-                            PROCESS, Description, DEF_GRADE, PROC_CLASS,
-                            QADD_DATE, QADD_TIME, QADD_OP, QED_DATE, QED_TIME, QED_OP, QDEL_DATE, QDEL_TIME, QDEL_OP
+                        INSERT INTO Processes (
+                            ProcessCode, ProcessName, Description, 
+                            DefaultGrade, ProcessClass, 
+                            GradeName1, GradeName2, GradeName3,
+                            IsActive, DisplayOrder,
+                            CreatedAt, CreatedBy
                         ) VALUES (
-                            @ProcessId, @Description, @DefGrade, @ProcClass,
-                            @QADD_DATE, @QADD_TIME, @QADD_OP, NULL, NULL, NULL, NULL, NULL, NULL
+                            @ProcessId, @Description, @Description, 
+                            @DefaultGrade, @ProcessClass,
+                            @GradeName1, @GradeName2, @GradeName3,
+                            1, 0,
+                            GETDATE(), @CreatedBy
                         )";
 
-                    // Set audit fields for add
-                    process.QADD_DATE = DateTime.Today;
-                    process.QADD_TIME = DateTime.Now.ToString("HH:mm:ss"); // Or appropriate format
-                    process.QADD_OP = GetCurrentUserInitials(); 
+                    var parameters = new
+                    {
+                        ProcessId = process.ProcessId,
+                        Description = process.Description,
+                        DefaultGrade = process.DefaultGrade,
+                        ProcessClass = process.ProcessClass,
+                        GradeName1 = process.GradeName1,
+                        GradeName2 = process.GradeName2,
+                        GradeName3 = process.GradeName3,
+                        CreatedBy = currentUser
+                    };
 
-                    int affectedRows = await connection.ExecuteAsync(sql, process);
+                    int affectedRows = await connection.ExecuteAsync(sql, parameters);
                     return affectedRows > 0;
                 }
             }
@@ -114,25 +141,37 @@ namespace WPFGrowerApp.DataAccess.Services
 
             try
             {
+                var currentUser = GetCurrentUserInitials();
+
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
                     var sql = @"
-                        UPDATE Process SET
+                        UPDATE Processes SET
+                            ProcessName = @Description,
                             Description = @Description,
-                            DEF_GRADE = @DefGrade,
-                            PROC_CLASS = @ProcClass,
-                            QED_DATE = @QED_DATE,
-                            QED_TIME = @QED_TIME,
-                            QED_OP = @QED_OP
-                        WHERE PROCESS = @ProcessId AND QDEL_DATE IS NULL"; 
+                            DefaultGrade = @DefaultGrade,
+                            ProcessClass = @ProcessClass,
+                            GradeName1 = @GradeName1,
+                            GradeName2 = @GradeName2,
+                            GradeName3 = @GradeName3,
+                            ModifiedAt = GETDATE(),
+                            ModifiedBy = @ModifiedBy
+                        WHERE ProcessCode = @ProcessId AND IsActive = 1";
 
-                    // Set audit fields for edit
-                    process.QED_DATE = DateTime.Today;
-                    process.QED_TIME = DateTime.Now.ToString("HH:mm:ss"); // Or appropriate format
-                    process.QED_OP = GetCurrentUserInitials();
+                    var parameters = new
+                    {
+                        ProcessId = process.ProcessId,
+                        Description = process.Description,
+                        DefaultGrade = process.DefaultGrade,
+                        ProcessClass = process.ProcessClass,
+                        GradeName1 = process.GradeName1,
+                        GradeName2 = process.GradeName2,
+                        GradeName3 = process.GradeName3,
+                        ModifiedBy = currentUser
+                    };
 
-                    int affectedRows = await connection.ExecuteAsync(sql, process);
+                    int affectedRows = await connection.ExecuteAsync(sql, parameters);
                     return affectedRows > 0;
                 }
             }
@@ -154,18 +193,19 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     var sql = @"
-                        UPDATE Process SET
-                            QDEL_DATE = @QDEL_DATE,
-                            QDEL_TIME = @QDEL_TIME,
-                            QDEL_OP = @QDEL_OP
-                        WHERE PROCESS = @ProcessId AND QDEL_DATE IS NULL"; 
+                        UPDATE Processes SET
+                            IsActive = 0,
+                            DeletedAt = GETDATE(),
+                            DeletedBy = @DeletedBy,
+                            ModifiedAt = GETDATE(),
+                            ModifiedBy = @ModifiedBy
+                        WHERE ProcessCode = @ProcessId AND IsActive = 1"; 
 
-                    var parameters = new 
+                    var parameters = new
                     {
                         ProcessId = processId,
-                        QDEL_DATE = DateTime.Today,
-                        QDEL_TIME = DateTime.Now.ToString("HH:mm:ss"), // Or appropriate format
-                        QDEL_OP = operatorInitials
+                        DeletedBy = operatorInitials,
+                        ModifiedBy = operatorInitials
                     };
 
                     int affectedRows = await connection.ExecuteAsync(sql, parameters);

@@ -14,5 +14,11 @@ namespace WPFGrowerApp.DataAccess.Models
         public string DepotName { get; set; } // Corresponds to DEPOTNAME (NVARCHAR(12))
         
         // Audit fields are inherited from AuditableEntity
+        
+        /// <summary>Timestamp when the depot was soft-deleted</summary>
+        public DateTime? DeletedAt { get; set; }
+        
+        /// <summary>Username who deleted the depot</summary>
+        public string? DeletedBy { get; set; }
     }
 }

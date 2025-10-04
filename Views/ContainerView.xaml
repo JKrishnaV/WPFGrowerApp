@@ -102,7 +102,7 @@
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
                 <DataGridTextColumn Header="Description" Binding="{Binding Description}"/>
-                <DataGridTextColumn Header="Tare" Binding="{Binding TareWeight, StringFormat=N0}" Width="Auto">
+                <DataGridTextColumn Header="Tare" Binding="{Binding TareWeight, StringFormat=N2}" Width="Auto">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="HorizontalAlignment" Value="Right"/>

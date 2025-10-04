@@ -262,13 +262,29 @@ namespace WPFGrowerApp.DataAccess.Services
 
         public async Task<bool> DeleteReceiptAsync(decimal receiptNumber)
         {
+            var currentUser = "SYSTEM"; // TODO: Get from authenticated user context
+            
             try
             {
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    var sql = "DELETE FROM Daily WHERE RECPT = @ReceiptNumber";
-                    var parameters = new { ReceiptNumber = receiptNumber };
+                    var sql = @"
+                        UPDATE Receipts SET
+                            IsActive = 0,
+                            DeletedAt = GETDATE(),
+                            DeletedBy = @DeletedBy,
+                            ModifiedAt = GETDATE(),
+                            ModifiedBy = @ModifiedBy
+                        WHERE ReceiptNumber = @ReceiptNumber AND IsActive = 1";
+                    
+                    var parameters = new
+                    {
+                        ReceiptNumber = receiptNumber,
+                        DeletedBy = currentUser,
+                        ModifiedBy = currentUser
+                    };
+                    
                     var result = await connection.ExecuteAsync(sql, parameters);
                     return result > 0;
                 }

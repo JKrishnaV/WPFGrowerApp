@@ -46,12 +46,12 @@ namespace WPFGrowerApp.ViewModels
         [ObservableProperty]
         [NotifyDataErrorInfo]
         [Range(0, 999, ErrorMessage = "Tare weight must be between 0 and 999")]
-        private int _tareWeight;
+        private decimal? _tareWeight;
 
         [ObservableProperty]
         [NotifyDataErrorInfo]
         [Range(0, 9999.99, ErrorMessage = "Value must be between 0 and 9999.99")]
-        private decimal _value;
+        private decimal? _value;
 
         [ObservableProperty]
         private bool _inUse;

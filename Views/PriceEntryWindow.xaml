@@ -244,11 +244,11 @@
 
                                 <!-- Grade 1 -->
                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="Grade 1" Style="{StaticResource GradeTextStyle}"/>
-                                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding CL1G1A1, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
-                                <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding CL1G1A2, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
-                                <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding CL1G1A3, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
+                                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding CL1G1A1, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource PriceTextBoxStyle}"/>
+                                <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding CL1G1A2, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource PriceTextBoxStyle}"/>
+                                <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding CL1G1A3, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource PriceTextBoxStyle}"/>
                                 <TextBox Grid.Row="1" Grid.Column="4" 
-                                         Text="{Binding CL1G1FN, StringFormat=F2}" 
+                                         Text="{Binding CL1G1FN, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                                          Style="{StaticResource FinalPriceTextBoxStyle}"
                                          BorderBrush="{Binding HasL1G1FNError, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
                                          BorderThickness="2"/>

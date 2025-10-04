@@ -112,6 +112,18 @@ namespace WPFGrowerApp.DataAccess.Models
             set => SetProperty(ref _receipts, value);
         }
 
+        /// <summary>Modern audit fields</summary>
+        public DateTime? CreatedAt { get; set; }
+        public string? CreatedBy { get; set; }
+        public DateTime? ModifiedAt { get; set; }
+        public string? ModifiedBy { get; set; }
+        
+        /// <summary>Timestamp when the import batch was soft-deleted</summary>
+        public DateTime? DeletedAt { get; set; }
+        
+        /// <summary>Username who deleted the import batch</summary>
+        public string? DeletedBy { get; set; }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)

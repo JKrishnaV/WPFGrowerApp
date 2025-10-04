@@ -39,9 +39,10 @@
                   materialDesign:DataGridAssist.CellPadding="13 8 8 8"
                   materialDesign:DataGridAssist.ColumnHeaderPadding="8">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="ID" Binding="{Binding PayGroupId}" Width="Auto"/>
+                <DataGridTextColumn Header="ID" Binding="{Binding GroupCode}" Width="Auto"/>
+                <DataGridTextColumn Header="Name" Binding="{Binding GroupName}" Width="Auto"/>
                 <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="Auto"/>
-                <DataGridTextColumn Header="Default Pay Level" Binding="{Binding DefaultPayLevel}" Width="Auto"/>
+                <DataGridTextColumn Header="Default Pay Level" Binding="{Binding DefaultPriceLevel}" Width="Auto"/>
 
                 <DataGridTemplateColumn Width="Auto">
                     <DataGridTemplateColumn.CellTemplate>

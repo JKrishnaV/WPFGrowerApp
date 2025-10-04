@@ -23,18 +23,18 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = @"
                         SELECT
-                            NUMBER as GrowerNumber,
-                            NAME as GrowerName,
-                            CHEQNAME as ChequeName,
-                            CITY as City,
-                            PHONE as Phone
-                        FROM GROWER
-                        WHERE NAME LIKE @SearchTerm
-                           OR CHEQNAME LIKE @SearchTerm
-                           OR CITY LIKE @SearchTerm
-                           OR PHONE LIKE @SearchTerm
-                           OR CONVERT(VARCHAR, NUMBER) LIKE @SearchTerm -- Search by Grower Number (converted to string)
-                        ORDER BY NAME";
+                            GrowerNumber,
+                            FullName as GrowerName,
+                            CheckPayeeName as ChequeName,
+                            City,
+                            PhoneNumber as Phone
+                        FROM Growers
+                        WHERE FullName LIKE @SearchTerm
+                           OR CheckPayeeName LIKE @SearchTerm
+                           OR City LIKE @SearchTerm
+                           OR PhoneNumber LIKE @SearchTerm
+                           OR GrowerNumber LIKE @SearchTerm -- Search by Grower Number
+                        ORDER BY FullName";
 
                     var parameters = new { SearchTerm = $"%{searchTerm}%" };
                     return (await connection.QueryAsync<GrowerSearchResult>(sql, parameters)).ToList();
@@ -56,30 +56,31 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = @"
                         SELECT
-                            NUMBER as GrowerNumber,
-                            CHEQNAME as ChequeName,
-                            NAME as GrowerName,
-                            STREET as Address,
-                            CITY as City,
-                            PROV as Prov,
-                            PCODE as Postal,
-                            PHONE as Phone,
-                            ACRES as Acres,
-                            NOTES as Notes,
-                            CONTRACT as Contract,
-                            CURRENCY as Currency,
-                            CONTLIM as ContractLimit,
-                            PAYGRP as PayGroup,
-                            ONHOLD as OnHold,
-                            PHONE2 as PhoneAdditional1,
-                            STREET2 as OtherNames,
-                            ALT_PHONE1 as PhoneAdditional2,
-                            LY_FRESH as LYFresh,
-                            LY_OTHER as LYOther,
-                            CERTIFIED as Certified,
-                            CHG_GST as ChargeGST
-                        FROM GROWER
-                        WHERE NUMBER = @GrowerNumber";
+                            g.GrowerNumber,
+                            g.CheckPayeeName as ChequeName,
+                            g.FullName as GrowerName,
+                            g.Address,
+                            g.City,
+                            g.Province as Prov,
+                            g.PostalCode as Postal,
+                            g.PhoneNumber as Phone,
+                            0 as Acres,
+                            g.Notes,
+                            '' as Contract,
+                            LEFT(g.CurrencyCode, 1) as Currency,
+                            0 as ContractLimit,
+                            ISNULL(pg.GroupCode, 'STD') as PayGroup,
+                            g.IsOnHold as OnHold,
+                            g.MobileNumber as PhoneAdditional1,
+                            '' as OtherNames,
+                            '' as PhoneAdditional2,
+                            0 as LYFresh,
+                            0 as LYOther,
+                            '' as Certified,
+                            g.ChargeGST
+                        FROM Growers g
+                        LEFT JOIN PaymentGroups pg ON g.PaymentGroupId = pg.PaymentGroupId
+                        WHERE g.GrowerNumber = @GrowerNumber";
 
                     var parameters = new { GrowerNumber = growerNumber };
                     var grower = await connection.QueryFirstOrDefaultAsync<Grower>(sql, parameters);
@@ -118,49 +119,39 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     var sql = @"
-                        MERGE INTO GROWER AS target
-                        USING (SELECT @GrowerNumber AS NUMBER) AS source
-                        ON (target.NUMBER = source.NUMBER)
+                        MERGE INTO Growers AS target
+                        USING (SELECT @GrowerNumber AS GrowerNumber) AS source
+                        ON (target.GrowerNumber = source.GrowerNumber)
                         WHEN MATCHED THEN
                             UPDATE SET
-                                CHEQNAME = @ChequeName,
-                                NAME = @GrowerName,
-                                STREET = @Address,
-                                CITY = @City,
-                                PROV = @Prov,
-                                PCODE = @Postal,
-                                PHONE = @Phone,
-                                ACRES = @Acres,
-                                NOTES = @Notes,
-                                CONTRACT = @Contract,
-                                CURRENCY = @Currency,
-                                CONTLIM = @ContractLimit,
-                                PAYGRP = @PayGroup,
-                                ONHOLD = @OnHold,
-                                PHONE2 = @PhoneAdditional1,
-                                STREET2 = @OtherNames,
-                                ALT_PHONE1 = @PhoneAdditional2,
-                                LY_FRESH = @LYFresh,
-                                LY_OTHER = @LYOther,
-                                CERTIFIED = @Certified,
-                                CHG_GST = @ChargeGST,
-                                QED_DATE = GETDATE(),
-                                QED_TIME = CONVERT(varchar(8), GETDATE(), 108),
-                                QED_OP = SYSTEM_USER
+                                CheckPayeeName = @ChequeName,
+                                FullName = @GrowerName,
+                                Address = @Address,
+                                City = @City,
+                                Province = @Prov,
+                                PostalCode = @Postal,
+                                PhoneNumber = @Phone,
+                                Notes = @Notes,
+                                CurrencyCode = CASE WHEN @Currency = 'C' THEN 'CAD' WHEN @Currency = 'U' THEN 'USD' ELSE 'CAD' END,
+                                PaymentGroupId = (SELECT PaymentGroupId FROM PaymentGroups WHERE GroupCode = @PayGroup),
+                                IsOnHold = @OnHold,
+                                MobileNumber = @PhoneAdditional1,
+                                ChargeGST = @ChargeGST,
+                                ModifiedAt = GETDATE(),
+                                ModifiedBy = SYSTEM_USER
                         WHEN NOT MATCHED THEN
                             INSERT (
-                                NUMBER, CHEQNAME, NAME, STREET, CITY, PROV, PCODE, PHONE,
-                                ACRES, NOTES, CONTRACT, CURRENCY, CONTLIM, PAYGRP, ONHOLD,
-                                PHONE2, STREET2, ALT_PHONE1, LY_FRESH, LY_OTHER, CERTIFIED,
-                                CHG_GST, QADD_DATE, QADD_TIME, QADD_OP
+                                GrowerNumber, CheckPayeeName, FullName, Address, City, Province, PostalCode, PhoneNumber,
+                                Notes, CurrencyCode, PaymentGroupId, IsOnHold, MobileNumber, ChargeGST,
+                                IsActive, CreatedAt, CreatedBy, DefaultDepotId
                             )
                             VALUES (
                                 @GrowerNumber, @ChequeName, @GrowerName, @Address, @City,
-                                @Prov, @Postal, @Phone, @Acres, @Notes, @Contract, @Currency,
-                                @ContractLimit, @PayGroup, @OnHold, @PhoneAdditional1,
-                                @OtherNames, @PhoneAdditional2, @LYFresh, @LYOther,
-                                @Certified, @ChargeGST, GETDATE(),
-                                CONVERT(varchar(8), GETDATE(), 108), SYSTEM_USER
+                                @Prov, @Postal, @Phone, @Notes,
+                                CASE WHEN @Currency = 'C' THEN 'CAD' WHEN @Currency = 'U' THEN 'USD' ELSE 'CAD' END,
+                                (SELECT PaymentGroupId FROM PaymentGroups WHERE GroupCode = @PayGroup),
+                                @OnHold, @PhoneAdditional1, @ChargeGST,
+                                1, GETDATE(), SYSTEM_USER, 1
                             );";
 
                     var parameters = new
@@ -210,19 +201,20 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = @"
                         SELECT
-                            NUMBER as GrowerNumber,
-                            NAME as GrowerName,
-                            CHEQNAME as ChequeName,
-                            CITY as City,
-                            PHONE as Phone,
-                            PROV as Province,
-                            ACRES as Acres,
-                            NOTES as Notes,
-                            PAYGRP as PayGroup,
-                            PHONE2 as Phone2,
-                            ONHOLD as IsOnHold
-                        FROM GROWER
-                        ORDER BY NAME";
+                            g.GrowerNumber,
+                            g.FullName as GrowerName,
+                            g.CheckPayeeName as ChequeName,
+                            g.City,
+                            g.PhoneNumber as Phone,
+                            g.Province,
+                            0 as Acres,
+                            g.Notes,
+                            ISNULL(pg.GroupCode, 'STD') as PayGroup,
+                            g.MobileNumber as Phone2,
+                            g.IsOnHold
+                        FROM Growers g
+                        LEFT JOIN PaymentGroups pg ON g.PaymentGroupId = pg.PaymentGroupId
+                        ORDER BY g.FullName";
 
                     return (await connection.QueryAsync<GrowerSearchResult>(sql)).ToList();
                 }
@@ -242,11 +234,11 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     var sql = @"
-                        SELECT DISTINCT PROV
-                        FROM GROWER
-                        WHERE PROV IS NOT NULL
-                        AND PROV <> ''
-                        ORDER BY PROV";
+                        SELECT DISTINCT Province
+                        FROM Growers
+                        WHERE Province IS NOT NULL
+                        AND Province <> ''
+                        ORDER BY Province";
 
                     var provinces = await connection.QueryAsync<string>(sql);
                     return provinces.ToList();
@@ -269,10 +261,10 @@ namespace WPFGrowerApp.DataAccess.Services
                     // Select only Number and Name for the basic info model
                     var sql = @"
                         SELECT
-                            NUMBER as GrowerNumber, 
-                            NAME as Name
-                        FROM GROWER
-                        ORDER BY NUMBER"; // Or order by Number if preferred
+                            GrowerNumber, 
+                            FullName as Name
+                        FROM Growers
+                        ORDER BY GrowerNumber"; // Or order by Number if preferred
 
                     var growers = await connection.QueryAsync<GrowerInfo>(sql);
                     // Trim names after loading, checking for null
@@ -303,11 +295,11 @@ namespace WPFGrowerApp.DataAccess.Services
                     // Select Number and Name for growers where OnHold is true (1)
                     var sql = @"
                         SELECT
-                            NUMBER as GrowerNumber, 
-                            NAME as Name
-                        FROM GROWER
-                        WHERE ONHOLD = 1
-                        ORDER BY NAME"; // Or order by Number
+                            GrowerNumber, 
+                            FullName as Name
+                        FROM Growers
+                        WHERE IsOnHold = 1
+                        ORDER BY FullName"; // Or order by Number
 
                     var growers = await connection.QueryAsync<GrowerInfo>(sql);
                     // Trim names after loading, checking for null

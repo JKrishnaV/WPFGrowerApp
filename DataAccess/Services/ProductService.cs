@@ -26,19 +26,22 @@ namespace WPFGrowerApp.DataAccess.Services
                     // Ensure QDEL_DATE is NULL for active records
                     var sql = @"
                         SELECT
-                            PRODUCT as ProductId,
-                            Description as Description, -- Explicit alias
-                            SHORTDesc as ShortDescription,
-                            DEDUCT as Deduct,
-                            CATEGORY as Category,
-                            CHG_GST as ChargeGst, 
-                            VARIETY as Variety,
-                            QADD_DATE, QADD_TIME, QADD_OP,
-                            QED_DATE, QED_TIME, QED_OP,
-                            QDEL_DATE, QDEL_TIME, QDEL_OP
-                        FROM Product
-                        WHERE QDEL_DATE IS NULL 
-                        ORDER BY Description"; // Order alphabetically for display
+                            ProductCode as ProductId,
+                            ProductName as Description,
+                            ISNULL(ShortDescription, '') as ShortDescription,
+                            ISNULL(MarketingDeduction, 0) as Deduct,
+                            ISNULL(ReportCategory, 0) as Category,
+                            ChargeGST as ChargeGst,
+                            ISNULL(VarietyCode, '') as Variety,
+                            CreatedAt,
+                            CreatedBy,
+                            ModifiedAt,
+                            ModifiedBy,
+                            DeletedAt,
+                            DeletedBy
+                        FROM Products
+                        WHERE IsActive = 1
+                        ORDER BY ProductName"; // Order alphabetically for display
                     return await connection.QueryAsync<Product>(sql);
                 }
             }
@@ -58,18 +61,21 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = @"
                         SELECT
-                            PRODUCT as ProductId,
-                            Description as Description, -- Explicit alias
-                            SHORTDesc as ShortDescription,
-                            DEDUCT as Deduct,
-                            CATEGORY as Category,
-                            CHG_GST as ChargeGst,
-                            VARIETY as Variety,
-                            QADD_DATE, QADD_TIME, QADD_OP,
-                            QED_DATE, QED_TIME, QED_OP,
-                            QDEL_DATE, QDEL_TIME, QDEL_OP
-                        FROM Product
-                        WHERE PRODUCT = @ProductId AND QDEL_DATE IS NULL";
+                            ProductCode as ProductId,
+                            ProductName as Description,
+                            ISNULL(ShortDescription, '') as ShortDescription,
+                            ISNULL(MarketingDeduction, 0) as Deduct,
+                            ISNULL(ReportCategory, 0) as Category,
+                            ChargeGST as ChargeGst,
+                            ISNULL(VarietyCode, '') as Variety,
+                            CreatedAt,
+                            CreatedBy,
+                            ModifiedAt,
+                            ModifiedBy,
+                            DeletedAt,
+                            DeletedBy
+                        FROM Products
+                        WHERE ProductCode = @ProductId AND IsActive = 1";
                     return await connection.QueryFirstOrDefaultAsync<Product>(sql, new { ProductId = productId });
                 }
             }
@@ -89,21 +95,31 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
+                    
+                    // Get current user for audit trail
+                    string currentUser = GetCurrentUserInitials();
+                    
                     var sql = @"
-                        INSERT INTO Product (
-                            PRODUCT, Description, SHORTDesc, DEDUCT, CATEGORY, CHG_GST, VARIETY, -- Changed column name
-                            QADD_DATE, QADD_TIME, QADD_OP, QED_DATE, QED_TIME, QED_OP, QDEL_DATE, QDEL_TIME, QDEL_OP
+                        INSERT INTO Products (
+                            ProductCode, ProductName, Description, ChargeGST, UnitOfMeasure, IsActive, DisplayOrder,
+                            ShortDescription, VarietyCode, MarketingDeduction, ReportCategory,
+                            CreatedAt, CreatedBy
                         ) VALUES (
-                            @ProductId, @Description, @ShortDescription, @Deduct, @Category, @ChargeGst, @Variety, -- Model property name is correct here
-                            @QADD_DATE, @QADD_TIME, @QADD_OP, NULL, NULL, NULL, NULL, NULL, NULL
+                            @ProductId, @Description, @Description, @ChargeGst, 'LBS', 1, 0,
+                            @ShortDescription, @Variety, @Deduct, @Category,
+                            GETDATE(), @CreatedBy
                         )";
 
-                    // Set audit fields for add
-                    product.QADD_DATE = DateTime.Today;
-                    product.QADD_TIME = DateTime.Now.ToString("HH:mm:ss"); // Or appropriate format
-                    product.QADD_OP = GetCurrentUserInitials(); 
-
-                    int affectedRows = await connection.ExecuteAsync(sql, product);
+                    int affectedRows = await connection.ExecuteAsync(sql, new {
+                        product.ProductId,
+                        product.Description,
+                        product.ChargeGst,
+                        product.ShortDescription,
+                        product.Variety,
+                        product.Deduct,
+                        product.Category,
+                        CreatedBy = currentUser
+                    });
                     return affectedRows > 0;
                 }
             }
@@ -123,25 +139,33 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
+                    
+                    // Get current user for audit trail
+                    string currentUser = GetCurrentUserInitials();
+                    
                     var sql = @"
-                        UPDATE Product SET
+                        UPDATE Products SET
+                            ProductName = @Description,
                             Description = @Description,
-                            SHORTDesc = @ShortDescription, -- Changed column name, model property name is correct here
-                            DEDUCT = @Deduct,
-                            CATEGORY = @Category,
-                            CHG_GST = @ChargeGst,
-                            VARIETY = @Variety,
-                            QED_DATE = @QED_DATE,
-                            QED_TIME = @QED_TIME,
-                            QED_OP = @QED_OP
-                        WHERE PRODUCT = @ProductId AND QDEL_DATE IS NULL"; 
+                            ChargeGST = @ChargeGst,
+                            ShortDescription = @ShortDescription,
+                            VarietyCode = @Variety,
+                            MarketingDeduction = @Deduct,
+                            ReportCategory = @Category,
+                            ModifiedAt = GETDATE(),
+                            ModifiedBy = @ModifiedBy
+                        WHERE ProductCode = @ProductId AND IsActive = 1";
 
-                    // Set audit fields for edit
-                    product.QED_DATE = DateTime.Today;
-                    product.QED_TIME = DateTime.Now.ToString("HH:mm:ss"); // Or appropriate format
-                    product.QED_OP = GetCurrentUserInitials();
-
-                    int affectedRows = await connection.ExecuteAsync(sql, product);
+                    int affectedRows = await connection.ExecuteAsync(sql, new {
+                        product.ProductId,
+                        product.Description,
+                        product.ChargeGst,
+                        product.ShortDescription,
+                        product.Variety,
+                        product.Deduct,
+                        product.Category,
+                        ModifiedBy = currentUser
+                    });
                     return affectedRows > 0;
                 }
             }
@@ -163,21 +187,19 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     var sql = @"
-                        UPDATE Product SET
-                            QDEL_DATE = @QDEL_DATE,
-                            QDEL_TIME = @QDEL_TIME,
-                            QDEL_OP = @QDEL_OP
-                        WHERE PRODUCT = @ProductId AND QDEL_DATE IS NULL"; 
+                        UPDATE Products SET
+                            IsActive = 0,
+                            DeletedAt = GETDATE(),
+                            DeletedBy = @DeletedBy,
+                            ModifiedAt = GETDATE(),
+                            ModifiedBy = @ModifiedBy
+                        WHERE ProductCode = @ProductId AND IsActive = 1"; 
 
-                    var parameters = new 
-                    {
-                        ProductId = productId,
-                        QDEL_DATE = DateTime.Today,
-                        QDEL_TIME = DateTime.Now.ToString("HH:mm:ss"), // Or appropriate format
-                        QDEL_OP = operatorInitials
-                    };
-
-                    int affectedRows = await connection.ExecuteAsync(sql, parameters);
+                    int affectedRows = await connection.ExecuteAsync(sql, new { 
+                        ProductId = productId, 
+                        DeletedBy = operatorInitials,
+                        ModifiedBy = operatorInitials 
+                    });
                     return affectedRows > 0;
                 }
             }

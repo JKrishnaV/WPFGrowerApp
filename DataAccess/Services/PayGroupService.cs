@@ -31,8 +31,24 @@ namespace WPFGrowerApp.DataAccess.Services
         /// </summary>
         public async Task<IEnumerable<PayGroup>> GetAllPayGroupsAsync()
         {
-            // Dapper maps PayGroupId property to PAYGRP column automatically
-            const string sql = "SELECT PAYGRP AS PayGroupId, Description, DEF_PRLVL AS DefaultPayLevel, QADD_DATE, QADD_TIME, QADD_OP, QED_DATE, QED_TIME, QED_OP FROM PayGrp WHERE QDEL_DATE IS NULL ORDER BY PAYGRP;";
+            const string sql = @"
+                SELECT 
+                    PaymentGroupId,
+                    GroupCode,
+                    GroupName,
+                    Description,
+                    DefaultPriceLevel,
+                    IsActive,
+                    CreatedAt,
+                    CreatedBy,
+                    ModifiedAt,
+                    ModifiedBy,
+                    DeletedAt,
+                    DeletedBy
+                FROM PaymentGroups 
+                WHERE DeletedAt IS NULL 
+                ORDER BY GroupCode";
+                
             using (var connection = CreateConnection())
             {
                 return await connection.QueryAsync<PayGroup>(sql);
@@ -40,13 +56,28 @@ namespace WPFGrowerApp.DataAccess.Services
         }
 
         /// <summary>
-        /// Retrieves a specific PayGroup record by its ID asynchronously.
+        /// Retrieves a specific PayGroup record by its code asynchronously.
         /// </summary>
         public async Task<PayGroup> GetPayGroupByIdAsync(string payGroupId)
         {
-            // Dapper maps PayGroupId property to PAYGRP column automatically
-            // Parameter name @PayGroupId matches the C# property name
-            const string sql = "SELECT PAYGRP AS PayGroupId, Description, DEF_PRLVL AS DefaultPayLevel, QADD_DATE, QADD_TIME, QADD_OP, QED_DATE, QED_TIME, QED_OP FROM PayGrp WHERE PAYGRP = @PayGroupId AND QDEL_DATE IS NULL;";
+            const string sql = @"
+                SELECT 
+                    PaymentGroupId,
+                    GroupCode,
+                    GroupName,
+                    Description,
+                    DefaultPriceLevel,
+                    IsActive,
+                    CreatedAt,
+                    CreatedBy,
+                    ModifiedAt,
+                    ModifiedBy,
+                    DeletedAt,
+                    DeletedBy
+                FROM PaymentGroups 
+                WHERE GroupCode = @PayGroupId 
+                  AND DeletedAt IS NULL";
+                  
             using (var connection = CreateConnection())
             {
                 return await connection.QuerySingleOrDefaultAsync<PayGroup>(sql, new { PayGroupId = payGroupId });
@@ -58,22 +89,14 @@ namespace WPFGrowerApp.DataAccess.Services
         /// </summary>
         public async Task<bool> AddPayGroupAsync(PayGroup payGroup)
         {
-            // var currentUser = _userService.GetCurrentUser()?.Username ?? "SYSTEM"; // TODO: Implement getting current user
             var currentUser = "SYSTEM"; // Temporary placeholder
-            payGroup.QADD_DATE = DateTime.Now.Date;
-            payGroup.QADD_TIME = DateTime.Now.ToString("HH:mm:ss");
-            payGroup.QADD_OP = currentUser; // Use placeholder
-            payGroup.QED_DATE = null;
-            payGroup.QED_TIME = null;
-            payGroup.QED_OP = null;
-            payGroup.QDEL_DATE = null; // Ensure not marked as deleted
-            payGroup.QDEL_TIME = null;
-            payGroup.QDEL_OP = null;
-
+            payGroup.CreatedAt = DateTime.Now;
+            payGroup.CreatedBy = currentUser;
+            payGroup.IsActive = true;
 
             const string sql = @"
-                INSERT INTO PayGrp (PAYGRP, Description, DEF_PRLVL, QADD_DATE, QADD_TIME, QADD_OP)
-                VALUES (@PayGroupId, @Description, @DefaultPayLevel, @QADD_DATE, @QADD_TIME, @QADD_OP);";
+                INSERT INTO PaymentGroups (GroupCode, GroupName, Description, DefaultPriceLevel, IsActive, CreatedAt, CreatedBy)
+                VALUES (@GroupCode, @GroupName, @Description, @DefaultPriceLevel, @IsActive, @CreatedAt, @CreatedBy)";
 
             using (var connection = CreateConnection())
             {
@@ -87,20 +110,20 @@ namespace WPFGrowerApp.DataAccess.Services
         /// </summary>
         public async Task<bool> UpdatePayGroupAsync(PayGroup payGroup)
         {
-            // var currentUser = _userService.GetCurrentUser()?.Username ?? "SYSTEM"; // TODO: Implement getting current user
             var currentUser = "SYSTEM"; // Temporary placeholder
-            payGroup.QED_DATE = DateTime.Now.Date;
-            payGroup.QED_TIME = DateTime.Now.ToString("HH:mm:ss");
-            payGroup.QED_OP = currentUser; // Use placeholder
+            payGroup.ModifiedAt = DateTime.Now;
+            payGroup.ModifiedBy = currentUser;
 
             const string sql = @"
-                UPDATE PayGrp
-                SET Description = @Description,
-                    DEF_PRLVL = @DefaultPayLevel,
-                    QED_DATE = @QED_DATE,
-                    QED_TIME = @QED_TIME,
-                    QED_OP = @QED_OP
-                WHERE PAYGRP = @PayGroupId AND QDEL_DATE IS NULL;";
+                UPDATE PaymentGroups
+                SET GroupName = @GroupName,
+                    Description = @Description,
+                    DefaultPriceLevel = @DefaultPriceLevel,
+                    IsActive = @IsActive,
+                    ModifiedAt = @ModifiedAt,
+                    ModifiedBy = @ModifiedBy
+                WHERE PaymentGroupId = @PaymentGroupId 
+                  AND DeletedAt IS NULL";
 
             using (var connection = CreateConnection())
             {
@@ -110,25 +133,23 @@ namespace WPFGrowerApp.DataAccess.Services
         }
 
         /// <summary>
-        /// Deletes a PayGroup record by its ID asynchronously (soft delete).
+        /// Deletes a PayGroup record by its code asynchronously (soft delete).
         /// </summary>
         public async Task<bool> DeletePayGroupAsync(string payGroupId)
         {
-            // var currentUser = _userService.GetCurrentUser()?.Username ?? "SYSTEM"; // TODO: Implement getting current user
             var currentUser = "SYSTEM"; // Temporary placeholder
-            var deleteDate = DateTime.Now.Date;
-            var deleteTime = DateTime.Now.ToString("HH:mm:ss");
+            var deleteTime = DateTime.Now;
 
             const string sql = @"
-                UPDATE PayGrp
-                SET QDEL_DATE = @DeleteDate,
-                    QDEL_TIME = @DeleteTime,
-                    QDEL_OP = @CurrentUser
-                WHERE PAYGRP = @PayGroupId AND QDEL_DATE IS NULL;";
+                UPDATE PaymentGroups
+                SET DeletedAt = @DeleteTime,
+                    DeletedBy = @CurrentUser
+                WHERE GroupCode = @PayGroupId 
+                  AND DeletedAt IS NULL";
 
             using (var connection = CreateConnection())
             {
-                var affectedRows = await connection.ExecuteAsync(sql, new { PayGroupId = payGroupId, DeleteDate = deleteDate, DeleteTime = deleteTime, CurrentUser = currentUser });
+                var affectedRows = await connection.ExecuteAsync(sql, new { PayGroupId = payGroupId, DeleteTime = deleteTime, CurrentUser = currentUser });
                 return affectedRows > 0;
             }
         }

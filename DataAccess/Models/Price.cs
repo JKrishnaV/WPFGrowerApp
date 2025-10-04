@@ -26,6 +26,11 @@ namespace WPFGrowerApp.DataAccess.Models
         [Column("FIN_USED")]
         public bool FinUsed { get; set; }
 
+        // Summary fields from vw_ActivePriceSchedules
+        public int? PricePointsCount { get; set; }
+        public decimal? MinPrice { get; set; }
+        public decimal? MaxPrice { get; set; }
+
         // Canadian Prices
         public decimal CL1G1A1 { get; set; }
         public decimal CL1G1A2 { get; set; }

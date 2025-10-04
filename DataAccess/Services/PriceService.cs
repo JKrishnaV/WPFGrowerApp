@@ -1,134 +1,240 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using WPFGrowerApp.DataAccess.Interfaces;
-using WPFGrowerApp.DataAccess.Models; // May need Price model if created
+using WPFGrowerApp.DataAccess.Models;
 using WPFGrowerApp.Infrastructure.Logging;
 
 namespace WPFGrowerApp.DataAccess.Services
 {
+    /// <summary>
+    /// Modern pricing service that works with the normalized pricing matrix structure:
+    /// PriceSchedules (header) -> PriceDetails (matrix) -> PriceClasses, PriceGrades, PriceAreas, ProcessTypes
+    /// </summary>
     public class PriceService : BaseDatabaseService, IPriceService
     {
-        // Note: The Price table structure is complex with many columns (CL1G1A1, UL1G1A1 etc.)
-        // This implementation now dynamically builds the column name based on:
-        // - Currency: C (Canadian) or U (US)
-        // - Level: L1, L2, L3 (grower's price level/status)
-        // - Grade: G1, G2, G3
-        // - Advance: A1, A2, A3 (or FN for final)
+        #region Helper Methods - Column Name Mapping
 
         /// <summary>
-        /// Builds the dynamic price column name based on grower and receipt attributes.
-        /// Mirrors the XBase logic from PRICEFND.PRG - varAdvance() function.
+        /// Maps legacy column naming convention to modern dimension lookups
+        /// Example: "CL2G3A1" = Canadian (C) Level 2 (L2) Grade 3 (G3) Advance 1 (A1)
+        /// Returns: (ClassCode: "CL2", GradeNumber: 3, AreaCode: "A1")
         /// </summary>
-        /// <param name="currency">Currency code: 'C' for Canadian, 'U' for US</param>
-        /// <param name="priceLevel">Price level (1-3), typically grower.status in legacy</param>
-        /// <param name="grade">Grade (1-3)</param>
-        /// <param name="advanceNumber">Advance number (1-3), or 0 for final</param>
-        /// <returns>Column name like "CL1G2A1" or "UL3G1FN"</returns>
-        private string BuildPriceColumnName(char currency, int priceLevel, decimal grade, int advanceNumber)
+        private (string ClassCode, int GradeNumber, string AreaCode) ParseLegacyColumnName(
+            char currency, int priceLevel, decimal grade, int advanceNumber)
         {
-            var columnName = string.Empty;
-
-            // 1. Currency prefix (C or U)
-            if (currency == 'C' || currency == 'c')
+            // Build class code (e.g., "CL1", "CL2", "CL3", "UL1", "UL2", "UL3")
+            string currencyPrefix = (currency == 'C' || currency == 'c') ? "C" : "U";
+            string classCode = $"{currencyPrefix}L{priceLevel}";
+            
+            // Grade number (1, 2, or 3)
+            int gradeNumber = (int)grade;
+            if (gradeNumber < 1 || gradeNumber > 3)
             {
-                columnName = "C";
+                Logger.Warn($"Invalid grade {grade}, defaulting to 1");
+                gradeNumber = 1;
             }
-            else if (currency == 'U' || currency == 'u')
-            {
-                columnName = "U";
-            }
-            else
-            {
-                Logger.Warn($"Invalid currency '{currency}', defaulting to 'C' (Canadian)");
-                columnName = "C"; // Default to Canadian
-            }
-
-            // 2. Price Level (L1, L2, L3)
-            if (priceLevel >= 1 && priceLevel <= 3)
-            {
-                columnName += $"L{priceLevel}";
-            }
-            else
-            {
-                Logger.Warn($"Invalid price level {priceLevel}, defaulting to L1");
-                columnName += "L1"; // Default to level 1
-            }
-
-            // 3. Grade (G1, G2, G3)
-            int gradeInt = (int)grade;
-            if (gradeInt >= 1 && gradeInt <= 3)
-            {
-                columnName += $"G{gradeInt}";
-            }
-            else
-            {
-                Logger.Warn($"Invalid grade {grade}, defaulting to G1");
-                columnName += "G1"; // Default to grade 1
-            }
-
-            // 4. Advance or Final (A1, A2, A3, or FN)
+            
+            // Area code (A1, A2, A3, or FN)
+            string areaCode;
             if (advanceNumber >= 1 && advanceNumber <= 3)
             {
-                columnName += $"A{advanceNumber}";
+                areaCode = $"A{advanceNumber}";
             }
             else if (advanceNumber == 0)
             {
-                columnName += "FN"; // Final payment
+                areaCode = "FN"; // Final payment
             }
             else
             {
                 Logger.Warn($"Invalid advance number {advanceNumber}, defaulting to A1");
-                columnName += "A1"; // Default to advance 1
+                areaCode = "A1";
             }
-
-            Logger.Info($"Built price column name: {columnName} (Currency={currency}, Level={priceLevel}, Grade={grade}, Advance={advanceNumber})");
-            return columnName;
+            
+            return (classCode, gradeNumber, areaCode);
         }
 
-        public async Task<decimal> GetAdvancePriceAsync(string productId, string processId, DateTime receiptDate, int advanceNumber, char growerCurrency, int growerPriceLevel, decimal grade)
+        /// <summary>
+        /// Gets dimension IDs from codes/numbers
+        /// </summary>
+        private async Task<(int? ClassId, int? GradeId, int? AreaId)> GetDimensionIdsAsync(
+            string classCode, int gradeNumber, string areaCode)
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                
+                var sql = @"
+                    SELECT 
+                        pc.PriceClassId AS ClassId,
+                        pg.PriceGradeId AS GradeId,
+                        pa.PriceAreaId AS AreaId
+                    FROM 
+                        (SELECT 1 AS Dummy) d
+                    LEFT JOIN PriceClasses pc ON pc.ClassCode = @ClassCode AND pc.IsActive = 1
+                    LEFT JOIN PriceGrades pg ON pg.GradeNumber = @GradeNumber AND pg.IsActive = 1
+                    LEFT JOIN PriceAreas pa ON pa.AreaCode = @AreaCode AND pa.IsActive = 1";
+                
+                var result = await connection.QuerySingleOrDefaultAsync<dynamic>(
+                    sql, 
+                    new { ClassCode = classCode, GradeNumber = gradeNumber, AreaCode = areaCode });
+                
+                return (result?.ClassId, result?.GradeId, result?.AreaId);
+            }
+        }
+
+        #endregion
+
+        #region Payment Calculation Methods
+
+        public async Task<decimal> GetAdvancePriceAsync(
+            string productId, 
+            string processId, 
+            DateTime receiptDate, 
+            int advanceNumber, 
+            char growerCurrency, 
+            int growerPriceLevel, 
+            decimal grade)
         {
             if (advanceNumber < 1 || advanceNumber > 3)
             {
                 throw new ArgumentOutOfRangeException(nameof(advanceNumber), "Advance number must be 1, 2, or 3.");
             }
 
-            // Build the dynamic column name based on grower and receipt attributes
-            string priceColumn = BuildPriceColumnName(growerCurrency, growerPriceLevel, grade, advanceNumber);
+            try
+            {
+                // Parse legacy naming to dimension codes
+                var (classCode, gradeNumber, areaCode) = ParseLegacyColumnName(
+                    growerCurrency, growerPriceLevel, grade, advanceNumber);
+                
+                Logger.Info($"GetAdvancePriceAsync: Product={productId}, Process={processId}, " +
+                           $"Date={receiptDate:d}, Advance={advanceNumber}, " +
+                           $"Dimensions: Class={classCode}, Grade={gradeNumber}, Area={areaCode}");
 
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    
+                    // Query the modern pricing matrix
+                    var sql = @"
+                        SELECT TOP 1 pd.PricePerPound
+                        FROM PriceSchedules ps
+                        INNER JOIN Products p ON ps.ProductId = p.ProductId
+                        INNER JOIN Processes pr ON ps.ProcessId = pr.ProcessId
+                        INNER JOIN PriceDetails pd ON ps.PriceScheduleId = pd.PriceScheduleId
+                        INNER JOIN PriceClasses pc ON pd.PriceClassId = pc.PriceClassId
+                        INNER JOIN PriceGrades pg ON pd.PriceGradeId = pg.PriceGradeId
+                        INNER JOIN PriceAreas pa ON pd.PriceAreaId = pa.PriceAreaId
+                        WHERE p.ProductCode = @ProductId
+                          AND pr.ProcessCode = @ProcessId
+                          AND ps.EffectiveFrom <= @ReceiptDate
+                          AND (ps.EffectiveTo IS NULL OR ps.EffectiveTo >= @ReceiptDate)
+                          AND ps.IsActive = 1
+                          AND pc.ClassCode = @ClassCode
+                          AND pg.GradeNumber = @GradeNumber
+                          AND pa.AreaCode = @AreaCode
+                          AND pd.ProcessTypeId IS NULL  -- Generic pricing (fallback)
+                        ORDER BY ps.EffectiveFrom DESC";
+
+                    var price = await connection.ExecuteScalarAsync<decimal?>(sql, new
+                    {
+                        ProductId = productId,
+                        ProcessId = processId,
+                        ReceiptDate = receiptDate,
+                        ClassCode = classCode,
+                        GradeNumber = gradeNumber,
+                        AreaCode = areaCode
+                    });
+
+                    if (price.HasValue)
+                    {
+                        Logger.Info($"Found price: ${price.Value:F4}/lb");
+                        return price.Value;
+                    }
+                    else
+                    {
+                        Logger.Warn($"No price found for the specified criteria. Returning 0.");
+                        return 0m;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting advance price: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        public async Task<decimal> GetTimePremiumAsync(
+            string productId, 
+            string processId, 
+            DateTime receiptDate, 
+            TimeSpan receiptTime, 
+            char growerCurrency)
+        {
             try
             {
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    // Find the most recent price record effective on or before the receipt date
-                    var sql = $@"
-                        SELECT TOP 1 {priceColumn}
-                        FROM Price
-                        WHERE PRODUCT = @ProductId
-                          AND PROCESS = @ProcessId
-                          AND [FROM] <= @ReceiptDate
-                        ORDER BY [FROM] DESC, TIME DESC"; // Order by date then time
+                    
+                    var sql = @"
+                        SELECT TOP 1 
+                            ps.TimePremiumEnabled,
+                            ISNULL(ps.TimePremiumAmount, 0) AS PremiumAmount,
+                            ps.PremiumCutoffTime
+                        FROM PriceSchedules ps
+                        INNER JOIN Products p ON ps.ProductId = p.ProductId
+                        INNER JOIN Processes pr ON ps.ProcessId = pr.ProcessId
+                        WHERE p.ProductCode = @ProductId
+                          AND pr.ProcessCode = @ProcessId
+                          AND ps.EffectiveFrom <= @ReceiptDate
+                          AND (ps.EffectiveTo IS NULL OR ps.EffectiveTo >= @ReceiptDate)
+                          AND ps.IsActive = 1
+                        ORDER BY ps.EffectiveFrom DESC";
 
-                    var price = await connection.ExecuteScalarAsync<decimal?>(sql, new { ProductId = productId, ProcessId = processId, ReceiptDate = receiptDate });
-                    
-                    if (price == null)
+                    var result = await connection.QuerySingleOrDefaultAsync<dynamic>(sql, new
                     {
-                        Logger.Warn($"No price found for Product={productId}, Process={processId}, Date={receiptDate:yyyy-MM-dd}, Column={priceColumn}");
+                        ProductId = productId,
+                        ProcessId = processId,
+                        ReceiptDate = receiptDate
+                    });
+
+                    if (result != null)
+                    {
+                        bool enabled = result.TimePremiumEnabled;
+                        decimal amount = result.PremiumAmount;
+                        TimeSpan? cutoffTime = result.PremiumCutoffTime;
+                        
+                        // Check if receipt qualifies for premium (before cutoff time)
+                        if (enabled && cutoffTime.HasValue && receiptTime <= cutoffTime.Value)
+                        {
+                            Logger.Info($"Time premium applied: ${amount:F4} (Receipt at {receiptTime}, cutoff {cutoffTime.Value})");
+                            return amount;
+                        }
+                        else
+                        {
+                            Logger.Info($"No time premium: enabled={enabled}, receipt time={receiptTime}, cutoff={cutoffTime}");
+                            return 0m;
+                        }
                     }
-                    
-                    return price ?? 0; // Return 0 if no price found
+                    else
+                    {
+                        Logger.Warn("No price schedule found for time premium lookup");
+                        return 0m;
+                    }
                 }
             }
             catch (Exception ex)
             {
-                Logger.Error($"Error getting advance price {advanceNumber} (Column: {priceColumn}) for Product: {productId}, Process: {processId}, Date: {receiptDate}: {ex.Message}", ex);
+                Logger.Error($"Error getting time premium: {ex.Message}", ex);
                 throw;
             }
         }
-
+        
         public async Task<decimal> GetMarketingDeductionAsync(string productId)
         {
             try
@@ -136,130 +242,225 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    var sql = "SELECT DEDUCT FROM Product WHERE PRODUCT = @ProductId";
+                    
+                    // Query product for marketing deduction
+                    var sql = @"
+                        SELECT ISNULL(MarketingDeduction, 0) AS Deduction
+                        FROM Products
+                        WHERE ProductCode = @ProductId";
+                    
                     var deduction = await connection.ExecuteScalarAsync<decimal?>(sql, new { ProductId = productId });
-                    return deduction ?? 0;
+                    
+                    if (deduction.HasValue)
+                    {
+                        Logger.Info($"Marketing deduction for {productId}: {deduction.Value:F4}");
+                        return deduction.Value;
+                    }
+                    else
+                    {
+                        Logger.Warn($"No marketing deduction found for product {productId}");
+                        return 0m;
+                    }
                 }
             }
             catch (Exception ex)
             {
-                Logger.Error($"Error getting marketing deduction for Product: {productId}: {ex.Message}", ex);
+                Logger.Error($"Error getting marketing deduction: {ex.Message}", ex);
                 throw;
             }
         }
 
-        public async Task<decimal> GetTimePremiumAsync(string productId, string processId, DateTime receiptDate, TimeSpan receiptTime, char growerCurrency)
+        public async Task<bool> MarkAdvancePriceAsUsedAsync(decimal priceId, int advanceNumber)
         {
-             // The XBase++ code checked Price->TIMEPREM and used Price->CPREMIUM or Price->UPREMIUM
-             // This requires finding the correct Price record first.
+            // NOTE: In the modern structure, we track usage via PriceScheduleLocks table
+            // This method may need to be redesigned based on your locking strategy
+            
+            if (advanceNumber < 1 || advanceNumber > 3)
+            {
+                Logger.Warn($"Invalid advance number: {advanceNumber}");
+                return false;
+            }
+
             try
             {
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                     var sql = @"
-                        SELECT TOP 1 TIMEPREM, CPREMIUM, UPREMIUM
-                        FROM Price
-                        WHERE PRODUCT = @ProductId
-                          AND PROCESS = @ProcessId
-                          AND [FROM] <= @ReceiptDate
-                        ORDER BY [FROM] DESC, TIME DESC";
-
-                    var priceRecord = await connection.QueryFirstOrDefaultAsync<dynamic>(sql, new { ProductId = productId, ProcessId = processId, ReceiptDate = receiptDate });
-
-                    if (priceRecord != null && priceRecord.TIMEPREM == true)
+                    
+                    // Check if PriceScheduleLocks table exists and use it
+                    var sql = @"
+                        IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'PriceScheduleLocks')
+                        BEGIN
+                            IF NOT EXISTS (
+                                SELECT 1 FROM PriceScheduleLocks 
+                                WHERE PriceScheduleId = @PriceId 
+                                  AND AdvanceNumber = @AdvanceNumber
+                            )
+                            BEGIN
+                                INSERT INTO PriceScheduleLocks (PriceScheduleId, AdvanceNumber, LockedAt, LockedBy)
+                                VALUES (@PriceId, @AdvanceNumber, GETDATE(), SYSTEM_USER);
+                                SELECT 1;
+                            END
+                            ELSE
+                                SELECT 0;  -- Already locked
+                        END
+                        ELSE
+                        BEGIN
+                            -- Fallback: Just log the attempt
+                            SELECT 1;
+                        END";
+                    
+                    var result = await connection.ExecuteScalarAsync<int>(sql, new
                     {
-                        // Select premium based on grower currency
-                        if (growerCurrency == 'C' || growerCurrency == 'c')
-                        {
-                            return priceRecord.CPREMIUM ?? 0;
-                        }
-                        else if (growerCurrency == 'U' || growerCurrency == 'u')
-                        {
-                            return priceRecord.UPREMIUM ?? 0;
-                        }
-                        else
-                        {
-                            Logger.Warn($"Invalid currency '{growerCurrency}' for time premium, defaulting to Canadian premium");
-                            return priceRecord.CPREMIUM ?? 0;
-                        }
+                        PriceId = priceId,
+                        AdvanceNumber = advanceNumber
+                    });
+                    
+                    if (result > 0)
+                    {
+                        Logger.Info($"Marked advance {advanceNumber} as used for PriceScheduleId {priceId}");
                     }
-                    return 0; // No premium applicable
+                    else
+                    {
+                        Logger.Warn($"Advance {advanceNumber} already marked as used for PriceScheduleId {priceId}");
+                    }
+                    
+                    return result > 0;
                 }
             }
             catch (Exception ex)
             {
-                 Logger.Error($"Error getting time premium for Product: {productId}, Process: {processId}, Date: {receiptDate}: {ex.Message}", ex);
-                 throw;
+                Logger.Error($"Error marking advance as used: {ex.Message}", ex);
+                throw;
             }
         }
 
-         public async Task<bool> MarkAdvancePriceAsUsedAsync(decimal priceId, int advanceNumber)
-         {
-             if (advanceNumber < 1 || advanceNumber > 3 || priceId <= 0)
-             {
-                 return false; // Invalid input
-             }
-
-             string usedColumn;
-             switch (advanceNumber)
-             {
-                 case 1: usedColumn = "ADV1_USED"; break;
-                 case 2: usedColumn = "ADV2_USED"; break;
-                 case 3: usedColumn = "ADV3_USED"; break;
-                 default: return false;
-             }
-
-             try
-             {
-                 using (var connection = new SqlConnection(_connectionString))
-                 {
-                     await connection.OpenAsync();
-                     var sql = $"UPDATE Price SET {usedColumn} = 1 WHERE PRICEID = @PriceId AND {usedColumn} = 0"; // Only update if not already used
-                     int rowsAffected = await connection.ExecuteAsync(sql, new { PriceId = priceId });
-                     return rowsAffected > 0; // Return true if the record was updated
-                 }
-             }
-             catch (Exception ex)
-             {
-                 Logger.Error($"Error marking advance {advanceNumber} as used for PriceID: {priceId}: {ex.Message}", ex);
-                 throw;
-             }
-         }
-
         public async Task<decimal> FindPriceRecordIdAsync(string productId, string processId, DateTime receiptDate)
-         {
-             try
-             {
-                 using (var connection = new SqlConnection(_connectionString))
-                 {
-                     await connection.OpenAsync();
-                     var sql = @"
-                        SELECT TOP 1 PRICEID
-                        FROM Price
-                        WHERE PRODUCT = @ProductId
-                          AND PROCESS = @ProcessId
-                          AND [FROM] <= @ReceiptDate
-                        ORDER BY [FROM] DESC, TIME DESC";
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    
+                    var sql = @"
+                        SELECT TOP 1 ps.PriceScheduleId
+                        FROM PriceSchedules ps
+                        INNER JOIN Products p ON ps.ProductId = p.ProductId
+                        INNER JOIN Processes pr ON ps.ProcessId = pr.ProcessId
+                        WHERE p.ProductCode = @ProductId
+                          AND pr.ProcessCode = @ProcessId
+                          AND ps.EffectiveFrom <= @ReceiptDate
+                          AND (ps.EffectiveTo IS NULL OR ps.EffectiveTo >= @ReceiptDate)
+                          AND ps.IsActive = 1
+                        ORDER BY ps.EffectiveFrom DESC";
 
-                     var priceId = await connection.ExecuteScalarAsync<decimal?>(sql, new { ProductId = productId, ProcessId = processId, ReceiptDate = receiptDate });
-                    if(priceId == null)
-                        Logger.Warn($"No PriceRecordId found for Product: {productId}, Process: {processId}, Date: {receiptDate}");
-                    return priceId ?? 0;
-                 }
-             }
-             catch (Exception ex)
-             {
-                 Logger.Error($"Error finding PriceRecordId for Product: {productId}, Process: {processId}, Date: {receiptDate}: {ex.Message}", ex);
-                 throw;
-             }
-         }
+                    var priceId = await connection.ExecuteScalarAsync<int?>(sql, new
+                    {
+                        ProductId = productId,
+                        ProcessId = processId,
+                        ReceiptDate = receiptDate
+                    });
+
+                    if (priceId.HasValue)
+                    {
+                        Logger.Info($"Found PriceScheduleId: {priceId.Value}");
+                        return priceId.Value;
+                    }
+                    else
+                    {
+                        Logger.Warn($"No PriceScheduleId found for Product={productId}, Process={processId}, Date={receiptDate:d}");
+                        return 0;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error finding price record ID: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        #endregion
+
+        #region CRUD Operations
 
         public async Task<IEnumerable<Price>> GetAllAsync()
         {
             using (var connection = new SqlConnection(_connectionString))
             {
-                return await connection.QueryAsync<Price>("SELECT * FROM Price");
+                await connection.OpenAsync();
+                
+                // Query the price schedules
+                var schedulesSql = @"
+                    SELECT 
+                        ps.PriceScheduleId AS PriceID,
+                        p.ProductCode AS Product,
+                        pr.ProcessCode AS Process,
+                        ps.EffectiveFrom AS [From],
+                        ISNULL(ps.TimePremiumEnabled, 0) AS TimePrem,
+                        ISNULL(CONVERT(VARCHAR(8), ps.PremiumCutoffTime, 108), '') AS Time,
+                        ISNULL(ps.CanadianPremiumAmount, 0) AS CPremium,
+                        ISNULL(ps.USPremiumAmount, 0) AS UPremium,
+                        ps.CreatedAt AS QADD_TIME,
+                        ps.CreatedBy AS QADD_OP,
+                        ps.ModifiedAt AS QED_TIME,
+                        ps.ModifiedBy AS QED_OP,
+                        NULL AS QDEL_TIME,
+                        NULL AS QDEL_OP
+                    FROM PriceSchedules ps
+                    INNER JOIN Products p ON ps.ProductId = p.ProductId
+                    INNER JOIN Processes pr ON ps.ProcessId = pr.ProcessId
+                    WHERE (ps.EffectiveTo IS NULL OR ps.EffectiveTo >= CAST(GETDATE() AS DATE))
+                    ORDER BY ps.EffectiveFrom DESC";
+                
+                var prices = (await connection.QueryAsync<Price>(schedulesSql)).ToList();
+                
+                // For each price schedule, load the key display price points (CL1 G1 - all areas)
+                var detailsSql = @"
+                    SELECT 
+                        pd.PriceScheduleId,
+                        pd.PricePerPound,
+                        RTRIM(pc.ClassCode) AS ClassCode,
+                        pg.GradeNumber,
+                        RTRIM(pa.AreaCode) AS AreaCode
+                    FROM PriceDetails pd
+                    INNER JOIN PriceClasses pc ON pd.PriceClassId = pc.PriceClassId
+                    INNER JOIN PriceGrades pg ON pd.PriceGradeId = pg.PriceGradeId
+                    INNER JOIN PriceAreas pa ON pd.PriceAreaId = pa.PriceAreaId
+                    WHERE pd.PriceScheduleId IN @ScheduleIds
+                      AND pd.ProcessTypeId IS NULL
+                      AND pc.ClassCode = 'CL1'
+                      AND pg.GradeNumber = 1";
+                
+                var scheduleIds = prices.Select(p => p.PriceID).ToList();
+                var details = await connection.QueryAsync<dynamic>(detailsSql, new { ScheduleIds = scheduleIds });
+                
+                // Map the details to each price
+                foreach (var price in prices)
+                {
+                    var priceDetails = details.Where(d => d.PriceScheduleId == price.PriceID);
+                    
+                    foreach (var detail in priceDetails)
+                    {
+                        string classCode = detail.ClassCode;
+                        int gradeNum = detail.GradeNumber;
+                        string areaCode = detail.AreaCode;
+                        decimal priceValue = detail.PricePerPound;
+                        
+                        // Build the property name (e.g., "CL1G1A1")
+                        string propertyName = $"{classCode}G{gradeNum}{areaCode}";
+                        
+                        // Set the property value using reflection
+                        var property = typeof(Price).GetProperty(propertyName);
+                        if (property != null && property.CanWrite)
+                        {
+                            property.SetValue(price, priceValue);
+                        }
+                    }
+                }
+                
+                return prices;
             }
         }
 
@@ -267,7 +468,90 @@ namespace WPFGrowerApp.DataAccess.Services
         {
             using (var connection = new SqlConnection(_connectionString))
             {
-                return await connection.QuerySingleOrDefaultAsync<Price>("SELECT * FROM Price WHERE Id = @Id", new { Id = id });
+                await connection.OpenAsync();
+                
+                // Get the price schedule header
+                var scheduleSql = @"
+                    SELECT 
+                        ps.PriceScheduleId AS PriceID,
+                        p.ProductCode AS Product,
+                        pr.ProcessCode AS Process,
+                        ps.EffectiveFrom AS [From],
+                        ISNULL(ps.TimePremiumEnabled, 0) AS TimePrem,
+                        ISNULL(CONVERT(VARCHAR(8), ps.PremiumCutoffTime, 108), '') AS Time,
+                        ISNULL(ps.CanadianPremiumAmount, 0) AS CPremium,
+                        ISNULL(ps.USPremiumAmount, 0) AS UPremium,
+                        ps.CreatedAt AS QADD_TIME,
+                        ps.CreatedBy AS QADD_OP,
+                        ps.ModifiedAt AS QED_TIME,
+                        ps.ModifiedBy AS QED_OP,
+                        NULL AS QDEL_TIME,
+                        NULL AS QDEL_OP,
+                        CAST(0 AS BIT) AS Adv1Used,
+                        CAST(0 AS BIT) AS Adv2Used,
+                        CAST(0 AS BIT) AS Adv3Used,
+                        CAST(0 AS BIT) AS FinUsed
+                    FROM PriceSchedules ps
+                    INNER JOIN Products p ON ps.ProductId = p.ProductId
+                    INNER JOIN Processes pr ON ps.ProcessId = pr.ProcessId
+                    WHERE ps.PriceScheduleId = @Id";
+                
+                var price = await connection.QuerySingleOrDefaultAsync<Price>(scheduleSql, new { Id = id });
+                
+                if (price == null)
+                {
+                    return null;
+                }
+                
+                // Get all price details for this schedule
+                var detailsSql = @"
+                    SELECT 
+                        pd.PriceDetailId,
+                        pd.PricePerPound,
+                        RTRIM(pc.ClassCode) AS ClassCode,
+                        pg.GradeNumber,
+                        RTRIM(pa.AreaCode) AS AreaCode
+                    FROM PriceDetails pd
+                    INNER JOIN PriceClasses pc ON pd.PriceClassId = pc.PriceClassId
+                    INNER JOIN PriceGrades pg ON pd.PriceGradeId = pg.PriceGradeId
+                    INNER JOIN PriceAreas pa ON pd.PriceAreaId = pa.PriceAreaId
+                    WHERE pd.PriceScheduleId = @Id
+                      AND pd.ProcessTypeId IS NULL";  // Only generic prices for now
+                
+                var details = await connection.QueryAsync<dynamic>(detailsSql, new { Id = id });
+                
+                Logger.Info($"Retrieved {details.Count()} price details for schedule {id}");
+                
+                // Map the details back to the legacy 72-column structure
+                int mappedCount = 0;
+                foreach (var detail in details)
+                {
+                    string classCode = detail.ClassCode;
+                    int gradeNum = detail.GradeNumber;
+                    string areaCode = detail.AreaCode;
+                    decimal priceValue = detail.PricePerPound;
+                    
+                    // Build the property name (e.g., "CL1G2A3")
+                    string propertyName = $"{classCode}G{gradeNum}{areaCode}";
+                    
+                    Logger.Info($"Attempting to map: ClassCode='{classCode}', GradeNum={gradeNum}, AreaCode='{areaCode}' -> Property='{propertyName}', Value={priceValue}");
+                    
+                    // Set the property value using reflection
+                    var property = typeof(Price).GetProperty(propertyName);
+                    if (property != null && property.CanWrite)
+                    {
+                        property.SetValue(price, priceValue);
+                        mappedCount++;
+                        Logger.Info($"✓ Successfully mapped {propertyName} = {priceValue}");
+                    }
+                    else
+                    {
+                        Logger.Warn($"✗ Property not found or not writable: {propertyName}");
+                    }
+                }
+                
+                Logger.Info($"Mapped {mappedCount} of {details.Count()} properties for schedule {id}");
+                return price;
             }
         }
 
@@ -275,8 +559,83 @@ namespace WPFGrowerApp.DataAccess.Services
         {
             using (var connection = new SqlConnection(_connectionString))
             {
-                var sql = "INSERT INTO Price (Product, Process, [From], TimePrem, Time, CPremium, UPremium, ADV1_USED, ADV2_USED, ADV3_USED, FIN_USED, CL1G1A1, CL1G1A2, CL1G1A3, CL1G1FN, CL1G2A1, CL1G2A2, CL1G2A3, CL1G2FN, CL1G3A1, CL1G3A2, CL1G3A3, CL1G3FN, CL2G1A1, CL2G1A2, CL2G1A3, CL2G1FN, CL2G2A1, CL2G2A2, CL2G2A3, CL2G2FN, CL2G3A1, CL2G3A2, CL2G3A3, CL2G3FN, CL3G1A1, CL3G1A2, CL3G1A3, CL3G1FN, CL3G2A1, CL3G2A2, CL3G2A3, CL3G2FN, CL3G3A1, CL3G3A2, CL3G3A3, CL3G3FN, UL1G1A1, UL1G1A2, UL1G1A3, UL1G1FN, UL1G2A1, UL1G2A2, UL1G2A3, UL1G2FN, UL1G3A1, UL1G3A2, UL1G3A3, UL1G3FN, UL2G1A1, UL2G1A2, UL2G1A3, UL2G1FN, UL2G2A1, UL2G2A2, UL2G2A3, UL2G2FN, UL2G3A1, UL2G3A2, UL2G3A3, UL2G3FN, UL3G1A1, UL3G1A2, UL3G1A3, UL3G1FN, UL3G2A1, UL3G2A2, UL3G2A3, UL3G2FN, UL3G3A1, UL3G3A2, UL3G3A3, UL3G3FN) VALUES (@Product, @Process, @From, @TimePrem, @Time, @CPremium, @UPremium, @Adv1Used, @Adv2Used, @Adv3Used, @FinUsed, @CL1G1A1, @CL1G1A2, @CL1G1A3, @CL1G1FN, @CL1G2A1, @CL1G2A2, @CL1G2A3, @CL1G2FN, @CL1G3A1, @CL1G3A2, @CL1G3A3, @CL1G3FN, @CL2G1A1, @CL2G1A2, @CL2G1A3, @CL2G1FN, @CL2G2A1, @CL2G2A2, @CL2G2A3, @CL2G2FN, @CL2G3A1, @CL2G3A2, @CL2G3A3, @CL2G3FN, @CL3G1A1, @CL3G1A2, @CL3G1A3, @CL3G1FN, @CL3G2A1, @CL3G2A2, @CL3G2A3, @CL3G2FN, @CL3G3A1, @CL3G3A2, @CL3G3A3, @CL3G3FN, @UL1G1A1, @UL1G1A2, @UL1G1A3, @UL1G1FN, @UL1G2A1, @UL1G2A2, @UL1G2A3, @UL1G2FN, @UL1G3A1, @UL1G3A2, @UL1G3A3, @UL1G3FN, @UL2G1A1, @UL2G1A2, @UL2G1A3, @UL2G1FN, @UL2G2A1, @UL2G2A2, @UL2G2A3, @UL2G2FN, @UL2G3A1, @UL2G3A2, @UL2G3A3, @UL2G3FN, @UL3G1A1, @UL3G1A2, @UL3G1A3, @UL3G1FN, @UL3G2A1, @UL3G2A2, @UL3G2A3, @UL3G2FN, @UL3G3A1, @UL3G3A2, @UL3G3A3, @UL3G3FN); SELECT CAST(SCOPE_IDENTITY() as int)";
-                return await connection.ExecuteScalarAsync<int>(sql, price);
+                await connection.OpenAsync();
+                using (var transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        // Get Product and Process IDs
+                        var idsSql = @"
+                            SELECT 
+                                p.ProductId,
+                                pr.ProcessId
+                            FROM 
+                                (SELECT 1 AS Dummy) d
+                            LEFT JOIN Products p ON p.ProductCode = @ProductCode
+                            LEFT JOIN Processes pr ON pr.ProcessCode = @ProcessCode";
+                        
+                        var ids = await connection.QuerySingleOrDefaultAsync<dynamic>(
+                            idsSql, 
+                            new { ProductCode = price.Product, ProcessCode = price.Process },
+                            transaction);
+                        
+                        if (ids?.ProductId == null || ids?.ProcessId == null)
+                        {
+                            throw new Exception($"Invalid Product ({price.Product}) or Process ({price.Process})");
+                        }
+                        
+                        // Create the price schedule header
+                        var scheduleSql = @"
+                            INSERT INTO PriceSchedules (
+                                ProductId, ProcessId, EffectiveFrom, 
+                                TimePremiumEnabled, PremiumCutoffTime, 
+                                CanadianPremiumAmount, USPremiumAmount,
+                                CreatedBy
+                            )
+                            VALUES (
+                                @ProductId, @ProcessId, @EffectiveFrom,
+                                @TimePremiumEnabled, @PremiumCutoffTime,
+                                @CanadianPremiumAmount, @USPremiumAmount,
+                                @CreatedBy
+                            );
+                            SELECT CAST(SCOPE_IDENTITY() AS INT);";
+                        
+                        // Parse time string (e.g., "10:10" or "10:10:00")
+                        TimeSpan? cutoffTime = null;
+                        if (price.TimePrem && !string.IsNullOrWhiteSpace(price.Time))
+                        {
+                            if (TimeSpan.TryParse(price.Time, out TimeSpan parsedTime))
+                            {
+                                cutoffTime = parsedTime;
+                            }
+                        }
+                        
+                        int scheduleId = await connection.ExecuteScalarAsync<int>(scheduleSql, new
+                        {
+                            ProductId = (int)ids.ProductId,
+                            ProcessId = (int)ids.ProcessId,
+                            EffectiveFrom = price.From,
+                            TimePremiumEnabled = price.TimePrem,
+                            PremiumCutoffTime = cutoffTime,
+                            CanadianPremiumAmount = price.TimePrem ? price.CPremium : (decimal?)null,
+                            USPremiumAmount = price.TimePrem ? price.UPremium : (decimal?)null,
+                            CreatedBy = System.Environment.UserName
+                        }, transaction);
+                        
+                        // Now insert all 72 price details (only non-zero values)
+                        await InsertPriceDetailsAsync(connection, transaction, scheduleId, price);
+                        
+                        transaction.Commit();
+                        Logger.Info($"Created new price schedule with ID: {scheduleId}");
+                        return scheduleId;
+                    }
+                    catch (Exception ex)
+                    {
+                        transaction.Rollback();
+                        Logger.Error($"Error creating price schedule: {ex.Message}", ex);
+                        throw;
+                    }
+                }
             }
         }
 
@@ -284,9 +643,88 @@ namespace WPFGrowerApp.DataAccess.Services
         {
             using (var connection = new SqlConnection(_connectionString))
             {
-                var sql = "UPDATE Price SET Product = @Product, Process = @Process, [From] = @From, TimePrem = @TimePrem, Time = @Time, CPremium = @CPremium, UPremium = @UPremium, ADV1_USED = @Adv1Used, ADV2_USED = @Adv2Used, ADV3_USED = @Adv3Used, FIN_USED = @FinUsed, CL1G1A1 = @CL1G1A1, CL1G1A2 = @CL1G1A2, CL1G1A3 = @CL1G1A3, CL1G1FN = @CL1G1FN, CL1G2A1 = @CL1G2A1, CL1G2A2 = @CL1G2A2, CL1G2A3 = @CL1G2A3, CL1G2FN = @CL1G2FN, CL1G3A1 = @CL1G3A1, CL1G3A2 = @CL1G3A2, CL1G3A3 = @CL1G3A3, CL1G3FN = @CL1G3FN, CL2G1A1 = @CL2G1A1, CL2G1A2 = @CL2G1A2, CL2G1A3 = @CL2G1A3, CL2G1FN = @CL2G1FN, CL2G2A1 = @CL2G2A1, CL2G2A2 = @CL2G2A2, CL2G2A3 = @CL2G2A3, CL2G2FN = @CL2G2FN, CL2G3A1 = @CL2G3A1, CL2G3A2 = @CL2G3A2, CL2G3A3 = @CL2G3A3, CL2G3FN = @CL2G3FN, CL3G1A1 = @CL3G1A1, CL3G1A2 = @CL3G1A2, CL3G1A3 = @CL3G1A3, CL3G1FN = @CL3G1FN, CL3G2A1 = @CL3G2A1, CL3G2A2 = @CL3G2A2, CL3G2A3 = @CL3G2A3, CL3G2FN = @CL3G2FN, CL3G3A1 = @CL3G3A1, CL3G3A2 = @CL3G3A2, CL3G3A3 = @CL3G3A3, CL3G3FN = @CL3G3FN, UL1G1A1 = @UL1G1A1, UL1G1A2 = @UL1G1A2, UL1G1A3 = @UL1G1A3, UL1G1FN = @UL1G1FN, UL1G2A1 = @UL1G2A1, UL1G2A2 = @UL1G2A2, UL1G2A3 = @UL1G2A3, UL1G2FN = @UL1G2FN, UL1G3A1 = @UL1G3A1, UL1G3A2 = @UL1G3A2, UL1G3A3 = @UL1G3A3, UL1G3FN = @UL1G3FN, UL2G1A1 = @UL2G1A1, UL2G1A2 = @UL2G1A2, UL2G1A3 = @UL2G1A3, UL2G1FN = @UL2G1FN, UL2G2A1 = @UL2G2A1, UL2G2A2 = @UL2G2A2, UL2G2A3 = @UL2G2A3, UL2G2FN = @UL2G2FN, UL2G3A1 = @UL2G3A1, UL2G3A2 = @UL2G3A2, UL2G3A3 = @UL2G3A3, UL2G3FN = @UL2G3FN, UL3G1A1 = @UL3G1A1, UL3G1A2 = @UL3G1A2, UL3G1A3 = @UL3G1A3, UL3G1FN = @UL3G1FN, UL3G2A1 = @UL3G2A1, UL3G2A2 = @UL3G2A2, UL3G2A3 = @UL3G2A3, UL3G2FN = @UL3G2FN, UL3G3A1 = @UL3G3A1, UL3G3A2 = @UL3G3A2, UL3G3A3 = @UL3G3A3, UL3G3FN = @UL3G3FN WHERE PriceID = @PriceID";
-                var rowsAffected = await connection.ExecuteAsync(sql, price);
-                return rowsAffected > 0;
+                await connection.OpenAsync();
+                using (var transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        // Get Product and Process IDs
+                        var idsSql = @"
+                            SELECT 
+                                p.ProductId,
+                                pr.ProcessId
+                            FROM 
+                                (SELECT 1 AS Dummy) d
+                            LEFT JOIN Products p ON p.ProductCode = @ProductCode
+                            LEFT JOIN Processes pr ON pr.ProcessCode = @ProcessCode";
+                        
+                        var ids = await connection.QuerySingleOrDefaultAsync<dynamic>(
+                            idsSql,
+                            new { ProductCode = price.Product, ProcessCode = price.Process },
+                            transaction);
+                        
+                        if (ids?.ProductId == null || ids?.ProcessId == null)
+                        {
+                            throw new Exception($"Invalid Product ({price.Product}) or Process ({price.Process})");
+                        }
+                        
+                        // Update the price schedule header
+                        var scheduleSql = @"
+                            UPDATE PriceSchedules
+                            SET ProductId = @ProductId,
+                                ProcessId = @ProcessId,
+                                EffectiveFrom = @EffectiveFrom,
+                                TimePremiumEnabled = @TimePremiumEnabled,
+                                PremiumCutoffTime = @PremiumCutoffTime,
+                                CanadianPremiumAmount = @CanadianPremiumAmount,
+                                USPremiumAmount = @USPremiumAmount,
+                                ModifiedBy = @ModifiedBy,
+                                ModifiedAt = GETDATE()
+                            WHERE PriceScheduleId = @PriceScheduleId";
+                        
+                        // Parse time string (e.g., "10:10" or "10:10:00")
+                        TimeSpan? cutoffTime = null;
+                        if (price.TimePrem && !string.IsNullOrWhiteSpace(price.Time))
+                        {
+                            if (TimeSpan.TryParse(price.Time, out TimeSpan parsedTime))
+                            {
+                                cutoffTime = parsedTime;
+                            }
+                        }
+                        
+                        await connection.ExecuteAsync(scheduleSql, new
+                        {
+                            PriceScheduleId = price.PriceID,
+                            ProductId = (int)ids.ProductId,
+                            ProcessId = (int)ids.ProcessId,
+                            EffectiveFrom = price.From,
+                            TimePremiumEnabled = price.TimePrem,
+                            PremiumCutoffTime = cutoffTime,
+                            CanadianPremiumAmount = price.TimePrem ? price.CPremium : (decimal?)null,
+                            USPremiumAmount = price.TimePrem ? price.UPremium : (decimal?)null,
+                            ModifiedBy = System.Environment.UserName
+                        }, transaction);
+                        
+                        // Delete existing price details
+                        await connection.ExecuteAsync(
+                            "DELETE FROM PriceDetails WHERE PriceScheduleId = @PriceScheduleId AND ProcessTypeId IS NULL",
+                            new { PriceScheduleId = price.PriceID },
+                            transaction);
+                        
+                        // Insert updated price details
+                        await InsertPriceDetailsAsync(connection, transaction, price.PriceID, price);
+                        
+                        transaction.Commit();
+                        Logger.Info($"Updated price schedule ID: {price.PriceID}");
+                        return true;
+                    }
+                    catch (Exception ex)
+                    {
+                        transaction.Rollback();
+                        Logger.Error($"Error updating price schedule: {ex.Message}", ex);
+                        throw;
+                    }
+                }
             }
         }
 
@@ -294,10 +732,101 @@ namespace WPFGrowerApp.DataAccess.Services
         {
             using (var connection = new SqlConnection(_connectionString))
             {
-                var sql = "DELETE FROM Price WHERE PriceID = @PriceID";
-                var rowsAffected = await connection.ExecuteAsync(sql, new { PriceID = id });
+                await connection.OpenAsync();
+                
+                // Soft delete by setting EffectiveTo to today
+                var sql = @"
+                    UPDATE PriceSchedules
+                    SET EffectiveTo = CAST(GETDATE() AS DATE),
+                        ModifiedBy = @ModifiedBy,
+                        ModifiedAt = GETDATE()
+                    WHERE PriceScheduleId = @PriceScheduleId";
+                
+                var rowsAffected = await connection.ExecuteAsync(sql, new
+                {
+                    PriceScheduleId = id,
+                    ModifiedBy = System.Environment.UserName
+                });
+                
+                if (rowsAffected > 0)
+                {
+                    Logger.Info($"Soft deleted price schedule ID: {id}");
+                }
+                
                 return rowsAffected > 0;
             }
         }
+
+        #endregion
+
+        #region Private Helper Methods
+
+        /// <summary>
+        /// Inserts all 72 price details from the Price model into PriceDetails table
+        /// </summary>
+        private async Task InsertPriceDetailsAsync(
+            SqlConnection connection, 
+            SqlTransaction transaction, 
+            int scheduleId, 
+            Price price)
+        {
+            // Get all dimension IDs first
+            var dimensionsSql = @"
+                SELECT 
+                    pc.ClassCode, pc.PriceClassId,
+                    pg.GradeNumber, pg.PriceGradeId,
+                    pa.AreaCode, pa.PriceAreaId
+                FROM PriceClasses pc, PriceGrades pg, PriceAreas pa
+                WHERE pc.IsActive = 1 AND pg.IsActive = 1 AND pa.IsActive = 1";
+            
+            var dimensions = await connection.QueryAsync<dynamic>(dimensionsSql, transaction: transaction);
+            var dimensionDict = dimensions.ToDictionary(
+                d => $"{d.ClassCode}G{d.GradeNumber}{d.AreaCode}",
+                d => new { ClassId = (int)d.PriceClassId, GradeId = (int)d.PriceGradeId, AreaId = (int)d.PriceAreaId }
+            );
+            
+            // Use reflection to iterate through all 72 price properties
+            var priceType = typeof(Price);
+            var detailInsertSql = @"
+                INSERT INTO PriceDetails (PriceScheduleId, PriceClassId, PriceGradeId, PriceAreaId, ProcessTypeId, PricePerPound)
+                VALUES (@ScheduleId, @ClassId, @GradeId, @AreaId, NULL, @PricePerPound)";
+            
+            int insertedCount = 0;
+            foreach (var property in priceType.GetProperties())
+            {
+                // Check if this is a price column (e.g., CL1G1A1, UL2G3FN, etc.)
+                if (property.Name.Length >= 6 && 
+                    (property.Name.StartsWith("CL") || property.Name.StartsWith("UL")) &&
+                    property.PropertyType == typeof(decimal))
+                {
+                    var value = (decimal)property.GetValue(price);
+                    
+                    // Log non-zero values for debugging
+                    if (value > 0)
+                    {
+                        Logger.Info($"Property {property.Name} has value {value}, dict contains key: {dimensionDict.ContainsKey(property.Name)}");
+                    }
+                    
+                    // Only insert non-zero prices
+                    if (value > 0 && dimensionDict.TryGetValue(property.Name, out var dims))
+                    {
+                        await connection.ExecuteAsync(detailInsertSql, new
+                        {
+                            ScheduleId = scheduleId,
+                            ClassId = dims.ClassId,
+                            GradeId = dims.GradeId,
+                            AreaId = dims.AreaId,
+                            PricePerPound = value
+                        }, transaction);
+                        
+                        insertedCount++;
+                    }
+                }
+            }
+            
+            Logger.Info($"Inserted {insertedCount} price detail records for schedule {scheduleId}");
+        }
+
+        #endregion
     }
 }

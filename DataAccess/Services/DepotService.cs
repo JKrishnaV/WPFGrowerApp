@@ -26,14 +26,17 @@ namespace WPFGrowerApp.DataAccess.Services
                     // Include audit fields and filter by QDEL_DATE
                     var sql = @"
                         SELECT 
-                            DEPOT as DepotId, 
-                            DEPOTNAME as DepotName,
-                            QADD_DATE, QADD_TIME, QADD_OP,
-                            QED_DATE, QED_TIME, QED_OP,
-                            QDEL_DATE, QDEL_TIME, QDEL_OP
-                        FROM Depot 
-                        WHERE QDEL_DATE IS NULL
-                        ORDER BY DEPOT";
+                            DepotCode as DepotId, 
+                            DepotName,
+                            CreatedAt,
+                            CreatedBy,
+                            ModifiedAt,
+                            ModifiedBy,
+                            DeletedAt,
+                            DeletedBy
+                        FROM Depots 
+                        WHERE IsActive = 1
+                        ORDER BY DepotCode";
                     return await connection.QueryAsync<Depot>(sql); // Return IEnumerable
                 }
             }
@@ -53,13 +56,16 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = @"
                         SELECT 
-                            DEPOT as DepotId, 
-                            DEPOTNAME as DepotName,
-                            QADD_DATE, QADD_TIME, QADD_OP,
-                            QED_DATE, QED_TIME, QED_OP,
-                            QDEL_DATE, QDEL_TIME, QDEL_OP
-                        FROM Depot 
-                        WHERE DEPOT = @DepotId AND QDEL_DATE IS NULL";
+                            DepotCode as DepotId, 
+                            DepotName,
+                            CreatedAt,
+                            CreatedBy,
+                            ModifiedAt,
+                            ModifiedBy,
+                            DeletedAt,
+                            DeletedBy
+                        FROM Depots 
+                        WHERE DepotCode = @DepotId AND IsActive = 1";
                     return await connection.QueryFirstOrDefaultAsync<Depot>(sql, new { DepotId = depotId });
                 }
             }
@@ -148,18 +154,19 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     var sql = @"
-                        UPDATE Depot SET
-                            QDEL_DATE = @QDEL_DATE,
-                            QDEL_TIME = @QDEL_TIME,
-                            QDEL_OP = @QDEL_OP
-                        WHERE DEPOT = @DepotId AND QDEL_DATE IS NULL"; 
+                        UPDATE Depots SET
+                            IsActive = 0,
+                            DeletedAt = GETDATE(),
+                            DeletedBy = @DeletedBy,
+                            ModifiedAt = GETDATE(),
+                            ModifiedBy = @ModifiedBy
+                        WHERE DepotCode = @DepotId AND IsActive = 1"; 
 
                     var parameters = new 
                     {
                         DepotId = depotId,
-                        QDEL_DATE = DateTime.Today,
-                        QDEL_TIME = DateTime.Now.ToString("HH:mm:ss"), // Or appropriate format
-                        QDEL_OP = operatorInitials
+                        DeletedBy = operatorInitials,
+                        ModifiedBy = operatorInitials
                     };
 
                     int affectedRows = await connection.ExecuteAsync(sql, parameters);

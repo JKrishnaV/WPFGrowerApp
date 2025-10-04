@@ -20,28 +20,34 @@
         <TextBlock Grid.Row="0" Text="{Binding Title}" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,16"/>
 
         <StackPanel Grid.Row="1">
-            <TextBox materialDesign:HintAssist.Hint="Payment Group ID"
-                     Text="{Binding PayGroupData.PayGroupId, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True}"
+            <TextBox materialDesign:HintAssist.Hint="Group Code (e.g., STD, PREM)"
+                     Text="{Binding PayGroupData.GroupCode, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True}"
                      IsEnabled="{Binding IsEditMode, Converter={StaticResource InverseBooleanConverter}}"
                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
                      Margin="0,8,0,8"
-                     MaxLength="1"/> 
+                     MaxLength="10"/> 
                      
-            <TextBox materialDesign:HintAssist.Hint="Description"
+            <TextBox materialDesign:HintAssist.Hint="Group Name"
+                     Text="{Binding PayGroupData.GroupName, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True}"
+                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                     Margin="0,8,0,8"
+                     MaxLength="100"/>
+
+            <TextBox materialDesign:HintAssist.Hint="Description (Optional)"
                      Text="{Binding PayGroupData.Description, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True}"
                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
                      Margin="0,8,0,8"
-                     MaxLength="30"/>
-
-            <TextBox materialDesign:HintAssist.Hint="Default Pay Level (0-9)"
-                     Text="{Binding PayGroupData.DefaultPayLevel, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, TargetNullValue=''}"
-                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                     Margin="0,8,0,8">
-                <!-- Optional: Add input validation for numbers only if needed -->
-                 <materialDesign:TextFieldAssist.CharacterCounterStyle>
+                     MaxLength="500">
+                <materialDesign:TextFieldAssist.CharacterCounterStyle>
                     <Style TargetType="TextBlock" BasedOn="{StaticResource MaterialDesignHelperTextBlock}"/>
                 </materialDesign:TextFieldAssist.CharacterCounterStyle>
             </TextBox>
+
+            <TextBox materialDesign:HintAssist.Hint="Default Price Level (1-3)"
+                     Text="{Binding PayGroupData.DefaultPriceLevel, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, TargetNullValue=''}"
+                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                     Margin="0,8,0,8"
+                     MaxLength="1"/>
 
         </StackPanel>
 

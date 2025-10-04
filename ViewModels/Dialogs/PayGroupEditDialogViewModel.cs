@@ -42,7 +42,16 @@ namespace WPFGrowerApp.ViewModels.Dialogs
             if (payGroup == null)
             {
                 // Add Mode
-                PayGroupData = new PayGroup();
+                PayGroupData = new PayGroup
+                {
+                    GroupCode = "",
+                    GroupName = "",
+                    Description = "",
+                    DefaultPriceLevel = 1, // Default to Level 1
+                    IsActive = true,
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = "SYSTEM"
+                };
                 IsEditMode = false;
                 Title = "Add New Payment Group";
             }
@@ -51,10 +60,14 @@ namespace WPFGrowerApp.ViewModels.Dialogs
                 // Edit Mode - Create a copy to avoid modifying the original until save
                 PayGroupData = new PayGroup
                 {
-                    PayGroupId = payGroup.PayGroupId,
+                    PaymentGroupId = payGroup.PaymentGroupId,
+                    GroupCode = payGroup.GroupCode,
+                    GroupName = payGroup.GroupName,
                     Description = payGroup.Description,
-                    DefaultPayLevel = payGroup.DefaultPayLevel
-                    // Copy other relevant properties if needed, but not audit fields
+                    DefaultPriceLevel = payGroup.DefaultPriceLevel,
+                    IsActive = payGroup.IsActive,
+                    CreatedAt = payGroup.CreatedAt,
+                    CreatedBy = payGroup.CreatedBy
                 };
                 IsEditMode = true;
                 Title = "Edit Payment Group";
@@ -109,22 +122,28 @@ namespace WPFGrowerApp.ViewModels.Dialogs
 
                 switch (columnName)
                 {
-                    case nameof(PayGroupData.PayGroupId):
-                        if (string.IsNullOrWhiteSpace(PayGroupData.PayGroupId))
-                            result = "Payment Group ID cannot be empty.";
-                        else if (PayGroupData.PayGroupId.Length > 1 && !IsEditMode) // Example: Check length (adjust as needed)
-                             result = "Payment Group ID cannot exceed 1 character."; // Assuming NVARCHAR(1)
+                    case nameof(PayGroupData.GroupCode):
+                        if (string.IsNullOrWhiteSpace(PayGroupData.GroupCode))
+                            result = "Group Code cannot be empty.";
+                        else if (PayGroupData.GroupCode.Length > 10 && !IsEditMode)
+                             result = "Group Code cannot exceed 10 characters.";
+                        break;
+                    case nameof(PayGroupData.GroupName):
+                        if (string.IsNullOrWhiteSpace(PayGroupData.GroupName))
+                            result = "Group Name cannot be empty.";
+                        else if (PayGroupData.GroupName.Length > 100) 
+                             result = "Group Name cannot exceed 100 characters.";
                         break;
                     case nameof(PayGroupData.Description):
-                        if (string.IsNullOrWhiteSpace(PayGroupData.Description))
-                            result = "Description cannot be empty.";
-                         else if (PayGroupData.Description.Length > 30) 
-                             result = "Description cannot exceed 30 characters.";
+                        if (PayGroupData.Description != null && PayGroupData.Description.Length > 500) 
+                             result = "Description cannot exceed 500 characters.";
                         break;
-                    case nameof(PayGroupData.DefaultPayLevel):
-                        // Add validation if needed (e.g., range check)
-                        // if (PayGroupData.DefaultPayLevel < 0 || PayGroupData.DefaultPayLevel > 9)
-                        //     result = "Default Pay Level must be between 0 and 9.";
+                    case nameof(PayGroupData.DefaultPriceLevel):
+                        if (PayGroupData.DefaultPriceLevel.HasValue)
+                        {
+                            if (PayGroupData.DefaultPriceLevel < 1 || PayGroupData.DefaultPriceLevel > 3)
+                                result = "Default Price Level must be between 1 and 3.";
+                        }
                         break;
                 }
                 // Update CanSave when validation state changes
