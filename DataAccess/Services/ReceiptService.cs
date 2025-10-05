@@ -8,6 +8,7 @@ using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
 using System.Linq;
 using WPFGrowerApp.Infrastructure.Logging; // Added for Logger
+using WPFGrowerApp.DataAccess.Exceptions; // Added for MissingReferenceDataException
 
 namespace WPFGrowerApp.DataAccess.Services
 {
@@ -22,35 +23,55 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
+                    
+                    // Query modern Receipts table
                     var sql = @"
-                        SELECT * FROM Daily
-                        WHERE 1=1
-                        @StartDateFilter
-                        @EndDateFilter
-                        ORDER BY Date DESC, ReceiptNumber DESC";
+                        SELECT 
+                            ReceiptId, ReceiptNumber, ReceiptDate, ReceiptTime,
+                            GrowerId, ProductId, ProcessId, ProcessTypeId,
+                            DepotId, ContainerId, VarietyId,
+                            GrossWeight, TareWeight, NetWeight, DockPercentage, 
+                            DockWeight, FinalWeight,
+                            Grade, PriceClassId, PriceAreaId,
+                            IsVoided, VoidedReason, VoidedAt, VoidedBy,
+                            ImportBatchId,
+                            CreatedAt, CreatedBy, ModifiedAt, ModifiedBy,
+                            QualityCheckedAt, QualityCheckedBy,
+                            DeletedAt, DeletedBy
+                        FROM Receipts
+                        WHERE DeletedAt IS NULL";
 
                     var parameters = new DynamicParameters();
+                    
                     if (startDate.HasValue)
                     {
-                        sql = sql.Replace("@StartDateFilter", "AND Date >= @StartDate");
+                        sql += " AND ReceiptDate >= @StartDate";
                         parameters.Add("@StartDate", startDate.Value);
-                    }
-                    else
-                    {
-                        sql = sql.Replace("@StartDateFilter", "");
                     }
 
                     if (endDate.HasValue)
                     {
-                        sql = sql.Replace("@EndDateFilter", "AND Date <= @EndDate");
+                        sql += " AND ReceiptDate <= @EndDate";
                         parameters.Add("@EndDate", endDate.Value);
                     }
-                    else
-                    {
-                        sql = sql.Replace("@EndDateFilter", "");
-                    }
+                    
+                    sql += " ORDER BY ReceiptDate DESC, ReceiptNumber DESC";
 
-                    return (await connection.QueryAsync<Receipt>(sql, parameters)).ToList();
+                    var receipts = (await connection.QueryAsync<Receipt>(sql, parameters)).ToList();
+                    
+                    // Map modern properties to legacy properties for backward compatibility
+                    foreach (var receipt in receipts)
+                    {
+                        receipt.ReceiptNumber = decimal.Parse(receipt.ReceiptNumberModern ?? "0");
+                        receipt.Gross = receipt.GrossWeight;
+                        receipt.Tare = receipt.TareWeight;
+                        receipt.Net = receipt.NetWeight;
+                        receipt.DockPercent = receipt.DockPercentage;
+                        receipt.IsVoid = receipt.IsVoidedModern;
+                        receipt.Date = receipt.ReceiptDate;
+                    }
+                    
+                    return receipts;
                 }
             }
             catch (Exception ex)
@@ -67,25 +88,47 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    // Explicitly select columns and use aliases
+                    
+                    // Query modern Receipts table
                     var sql = @"
-                        SELECT
-                            DEPOT as Depot, PRODUCT as Product, RECPT as ReceiptNumber, NUMBER as GrowerNumber,
-                            GROSS as Gross, TARE as Tare, NET as Net, GRADE as Grade, PROCESS as Process,
-                            DATE as Date, DAY_UNIQ as DayUniq, IMP_BAT as ImpBatch, FIN_BAT as FinBatch,
-                            DOCK_PCT as DockPercent, ISVOID as IsVoid, THEPRICE as ThePrice, PRICESRC as PriceSource,
-                            PR_NOTE1 as PrNote1, NP_NOTE1 as NpNote1, FROM_FIELD as FromField, IMPORTED as Imported,
-                            CONT_ERRS as ContainerErrors, ADV_PR1 as AdvPr1, ADV_PRID1 as AdvPrid1, POST_BAT1 as PostBat1,
-                            ADV_PR2 as AdvPr2, ADV_PRID2 as AdvPrid2, POST_BAT2 as PostBat2, ADV_PR3 as AdvPr3,
-                            ADV_PRID3 as AdvPrid3, POST_BAT3 as PostBat3, PREM_PRICE as PremPrice, LAST_ADVPB as LastAdvpb,
-                            ORI_NET as OriNet, CERTIFIED as Certified, VARIETY as Variety, TIME as Time,
-                            FIN_PRICE as FinPrice, FIN_PR_ID as FinPrId, ADD_DATE as AddDate, ADD_BY as AddBy,
-                            EDIT_DATE as EditDate, EDIT_BY as EditBy, EDIT_REAS as EditReason
-                            -- Exclude IN1-20, OUT1-20 as they are not directly mapped
-                        FROM Daily
-                        WHERE RECPT = @ReceiptNumber";
-                    var parameters = new { ReceiptNumber = receiptNumber };
-                    return await connection.QueryFirstOrDefaultAsync<Receipt>(sql, parameters);
+                        SELECT 
+                            ReceiptId, ReceiptNumber, ReceiptDate, ReceiptTime,
+                            GrowerId, ProductId, ProcessId, ProcessTypeId,
+                            DepotId, ContainerId, VarietyId,
+                            GrossWeight, TareWeight, NetWeight, DockPercentage, 
+                            DockWeight, FinalWeight,
+                            Grade, PriceClassId, PriceAreaId,
+                            IsVoided, VoidedReason, VoidedAt, VoidedBy,
+                            ImportBatchId,
+                            CreatedAt, CreatedBy, ModifiedAt, ModifiedBy,
+                            QualityCheckedAt, QualityCheckedBy,
+                            DeletedAt, DeletedBy
+                        FROM Receipts
+                        WHERE ReceiptNumber = @ReceiptNumber
+                          AND DeletedAt IS NULL";
+                    
+                    var parameters = new { ReceiptNumber = receiptNumber.ToString() };
+                    var receipt = await connection.QueryFirstOrDefaultAsync<Receipt>(sql, parameters);
+                    
+                    if (receipt != null)
+                    {
+                        // Map modern properties to legacy properties for backward compatibility
+                        receipt.ReceiptNumber = receiptNumber;
+                        receipt.GrossWeight = receipt.GrossWeight;
+                        receipt.Gross = receipt.GrossWeight;
+                        receipt.TareWeight = receipt.TareWeight;
+                        receipt.Tare = receipt.TareWeight;
+                        receipt.NetWeight = receipt.NetWeight;
+                        receipt.Net = receipt.NetWeight;
+                        receipt.DockPercentage = receipt.DockPercentage;
+                        receipt.DockPercent = receipt.DockPercentage;
+                        receipt.IsVoidedModern = receipt.IsVoidedModern;
+                        receipt.IsVoid = receipt.IsVoidedModern;
+                        receipt.ReceiptDate = receipt.ReceiptDate;
+                        receipt.Date = receipt.ReceiptDate;
+                    }
+                    
+                    return receipt;
                 }
             }
             catch (Exception ex)
@@ -101,197 +144,177 @@ namespace WPFGrowerApp.DataAccess.Services
             {
                 if (receipt == null) throw new ArgumentNullException(nameof(receipt));
 
-                if (receipt.ReceiptNumber == 0)
+                // Generate receipt number if not set
+                if (string.IsNullOrEmpty(receipt.ReceiptNumberModern))
                 {
-                    receipt.ReceiptNumber = await GetNextReceiptNumberAsync();
+                    var nextNumber = await GetNextReceiptNumberAsync();
+                    receipt.ReceiptNumberModern = nextNumber.ToString();
+                    receipt.ReceiptNumber = nextNumber;
                 }
 
-                // --- Apply Dockage if present (BEFORE saving) ---
-                // This preserves OriNet and calculates adjusted Net
-                if (receipt.DockPercent > 0)
+                // Calculate computed fields
+                receipt.NetWeight = receipt.GrossWeight - receipt.TareWeight;
+                receipt.DockWeight = receipt.NetWeight * (receipt.DockPercentage / 100);
+                receipt.FinalWeight = receipt.NetWeight - receipt.DockWeight;
+
+                // Check if this is a container-only receipt (no product movement)
+                bool isContainerOnly = receipt.ProductId <= 0 && receipt.NetWeight == 0;
+
+                // Validate required fields
+                if (receipt.GrowerId <= 0) throw new ArgumentException("GrowerId is required.");
+                if (receipt.DepotId <= 0) throw new ArgumentException("DepotId is required.");
+                
+                // For non-container-only receipts, ProductId and ProcessId are required
+                if (!isContainerOnly)
                 {
-                    await ApplyDockageAsync(receipt);
-                    Logger.Info($"Dockage applied to Receipt {receipt.ReceiptNumber}: {receipt.DockPercent}% - OriNet={receipt.OriNet}, AdjustedNet={receipt.Net}");
+                    if (receipt.ProductId <= 0) throw new ArgumentException("ProductId is required for receipts with product movement.");
+                    if (receipt.ProcessId <= 0) throw new ArgumentException("ProcessId is required for receipts with product movement.");
                 }
-
-                // --- Derive fields based on CSV data ---
-                // Process (first 2 chars of GradeId)
-                string derivedProcess = (!string.IsNullOrEmpty(receipt.GradeId) && receipt.GradeId.Length >= 2)
-                                        ? receipt.GradeId.Substring(0, 2)
-                                        : string.Empty; // Or handle error/default
-
-                // Grade (last char of GradeId)
-                decimal derivedGrade = 0;
-                if (!string.IsNullOrEmpty(receipt.GradeId) && receipt.GradeId.Length > 2)
+                
+                // Validate ContainerId, PriceClassId, PriceAreaId - throw exception if missing
+                // This allows the import process to skip receipts with missing reference data
+                // and log detailed information about what's missing for user review
+                var missingItems = new List<string>();
+                
+                if (!receipt.ContainerId.HasValue || receipt.ContainerId <= 0)
                 {
-                    if (decimal.TryParse(receipt.GradeId.Substring(receipt.GradeId.Length - 1), out var parsedGrade))
+                    missingItems.Add("ContainerId");
+                }
+                
+                // For non-container-only receipts, PriceClassId and PriceAreaId are required
+                if (!isContainerOnly)
+                {
+                    if (receipt.PriceClassId <= 0)
                     {
-                        derivedGrade = parsedGrade;
+                        missingItems.Add("PriceClassId");
                     }
-                    // Else: handle error or default to 0
-                }
-
-                // IsVoid (based on Voided string)
-                bool derivedIsVoid = !string.IsNullOrEmpty(receipt.Voided); // Assuming any non-empty string means voided
-
-                // Time (first 5 chars of TimeIn)
-                string derivedTime = (!string.IsNullOrEmpty(receipt.TimeIn) && receipt.TimeIn.Length >= 5)
-                                     ? receipt.TimeIn.Substring(0, 5)
-                                     : "00:00"; // Or handle error/default
-
-                // Container Errors string
-                string derivedContErrs = string.Join(",", receipt.ContainerData?.Select(c => c.Type).Distinct() ?? Enumerable.Empty<string>());
-                if (derivedContErrs.Length > 10) derivedContErrs = derivedContErrs.Substring(0, 10); // Truncate if needed
-
-                // Gross and Tare (set to 0 as per sample)
-                decimal derivedGross = 0;
-                decimal derivedTare = 0;
-
-                // --- Prepare Container Parameters ---
-                var containerParams = new DynamicParameters();
-                for (int i = 0; i < 20; i++)
-                {
-                    if (i < receipt.ContainerData?.Count)
+                    
+                    if (receipt.PriceAreaId <= 0)
                     {
-                        containerParams.Add($"@IN{i + 1}", receipt.ContainerData[i].InCount);
-                        containerParams.Add($"@OUT{i + 1}", receipt.ContainerData[i].OutCount);
-                    }
-                    else
-                    {
-                        containerParams.Add($"@IN{i + 1}", 0); // Default to 0 if no data
-                        containerParams.Add($"@OUT{i + 1}", 0);
+                        missingItems.Add("PriceAreaId");
                     }
                 }
-
-                // --- Validate string lengths (using derived/mapped values) ---
-                if (receipt.Depot?.Length > 1) throw new ArgumentException("Depot exceeds maximum length of 1.");
-                if (receipt.Product?.Length > 2) throw new ArgumentException("Product exceeds maximum length of 2.");
-                if (derivedProcess?.Length > 2) throw new ArgumentException("Derived Process exceeds maximum length of 2."); // Validate derived
-                if (receipt.PrNote1?.Length > 50) throw new ArgumentException("PrNote1 exceeds maximum length of 50.");
-                if (receipt.NpNote1?.Length > 50) throw new ArgumentException("NpNote1 exceeds maximum length of 50.");
-                if (receipt.FromField?.Length > 10) throw new ArgumentException("FromField exceeds maximum length of 10.");
-                if (derivedContErrs?.Length > 10) throw new ArgumentException("Derived ContainerErrors exceeds maximum length of 10."); // Validate derived
-                if (receipt.AddBy?.Length > 10) throw new ArgumentException("AddBy exceeds maximum length of 10."); // Added validation
-                if (receipt.EditBy?.Length > 10) throw new ArgumentException("EditBy exceeds maximum length of 10."); // Added validation
-                if (receipt.EditReason?.Length > 20) throw new ArgumentException("EditReason exceeds maximum length of 20."); // Added validation
-
+                
+                if (missingItems.Any())
+                {
+                    var receiptId = receipt.ReceiptNumberModern ?? receipt.ReceiptNumber.ToString();
+                    throw new MissingReferenceDataException(receiptId, missingItems);
+                }
 
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
 
-                    // Build dynamic SQL for INSERT
-                    var columns = new List<string>
+                    // Get current user from App.CurrentUser
+                    string currentUser = App.CurrentUser?.Username ?? "SYSTEM";
+
+                    // INSERT into modern Receipts table
+                    // Note: NetWeight, DockWeight, FinalWeight are computed columns and should NOT be in INSERT
+                    var sql = @"
+                        INSERT INTO Receipts (
+                            ReceiptNumber, ReceiptDate, ReceiptTime,
+                            GrowerId, ProductId, ProcessId, ProcessTypeId,
+                            DepotId, ContainerId, VarietyId,
+                            GrossWeight, TareWeight, DockPercentage,
+                            Grade, PriceClassId, PriceAreaId,
+                            IsVoided, VoidedReason,
+                            ImportBatchId,
+                            CreatedAt, CreatedBy
+                        ) VALUES (
+                            @ReceiptNumber, @ReceiptDate, @ReceiptTime,
+                            @GrowerId, @ProductId, @ProcessId, @ProcessTypeId,
+                            @DepotId, @ContainerId, @VarietyId,
+                            @GrossWeight, @TareWeight, @DockPercentage,
+                            @Grade, @PriceClassId, @PriceAreaId,
+                            @IsVoided, @VoidedReason,
+                            @ImportBatchId,
+                            GETDATE(), @CreatedBy
+                        );
+                        SELECT CAST(SCOPE_IDENTITY() as int);";
+
+                    var parameters = new
                     {
-                        "DEPOT", "PRODUCT", "RECPT", "NUMBER", "GROSS", "TARE", "NET",
-                        "GRADE", "PROCESS", "DATE", "TIME", "DAY_UNIQ", "IMP_BAT", "FIN_BAT",
-                        "DOCK_PCT", "ISVOID", "THEPRICE", "PRICESRC", "PR_NOTE1",
-                        "NP_NOTE1", "FROM_FIELD", "IMPORTED", "CONT_ERRS",
-                        "ORI_NET",  // Added for dockage tracking
-                        "ADD_DATE", "ADD_BY", "EDIT_DATE", "EDIT_BY", "EDIT_REAS"
-                        // Add other mapped columns if needed (Certified, Variety, FinPrice, FinPrId, LastAdvpb)
+                        ReceiptNumber = receipt.ReceiptNumberModern,
+                        ReceiptDate = receipt.ReceiptDate,
+                        ReceiptTime = receipt.ReceiptTime,
+                        GrowerId = receipt.GrowerId,
+                        ProductId = receipt.ProductId,
+                        ProcessId = receipt.ProcessId,
+                        ProcessTypeId = receipt.ProcessTypeId,
+                        DepotId = receipt.DepotId,
+                        ContainerId = receipt.ContainerId,
+                        VarietyId = receipt.VarietyId,
+                        GrossWeight = receipt.GrossWeight,
+                        TareWeight = receipt.TareWeight,
+                        DockPercentage = receipt.DockPercentage,
+                        // NetWeight, DockWeight, FinalWeight are computed - do not include
+                        Grade = receipt.GradeModern,
+                        PriceClassId = receipt.PriceClassId,
+                        PriceAreaId = receipt.PriceAreaId,
+                        IsVoided = receipt.IsVoidedModern,
+                        VoidedReason = receipt.VoidedReason,
+                        ImportBatchId = receipt.ImportBatchId,
+                        CreatedBy = currentUser
                     };
-                    var values = new List<string>
-                    {
-                        "@Depot", "@Product", "@ReceiptNumber", "@GrowerNumber", "@Gross", "@Tare", "@Net",
-                        "@Grade", "@Process", "@Date", "@Time", "@DayUniq", "@ImpBatch", "@FinBatch",
-                        "@DockPercent", "@IsVoid", "@ThePrice", "@PriceSource", "@PrNote1",
-                        "@NpNote1", "@FromField", "@Imported", "@ContErrs",
-                        "@OriNet",  // Added for dockage tracking
-                        "@AddDate", "@AddBy", "@EditDate", "@EditBy", "@EditReason"
-                         // Add other mapped parameters if needed
-                    };
 
-                    // Add container columns dynamically
-                    for (int i = 1; i <= 20; i++)
-                    {
-                        columns.Add($"IN{i}");
-                        values.Add($"@IN{i}");
-                        columns.Add($"OUT{i}");
-                        values.Add($"@OUT{i}");
-                    }
+                    var receiptId = await connection.QuerySingleAsync<int>(sql, parameters);
+                    receipt.ReceiptId = receiptId;
+                    receipt.CreatedAt = DateTime.Now;
+                    receipt.CreatedBy = currentUser;
 
-                    var sql = $"INSERT INTO Daily ({string.Join(", ", columns)}) VALUES ({string.Join(", ", values)})";
-
-                    // Combine parameters
-                    var parameters = new DynamicParameters(new
-                    {
-                        receipt.Depot,
-                        receipt.Product,
-                        receipt.ReceiptNumber,
-                        receipt.GrowerNumber,
-                        Gross = derivedGross, // Use derived
-                        Tare = derivedTare,   // Use derived
-                        receipt.Net,
-                        Grade = derivedGrade, // Use derived
-                        Process = derivedProcess, // Use derived
-                        receipt.Date,
-                        Time = derivedTime,     // Use derived
-                        receipt.DayUniq,
-                        receipt.ImpBatch,
-                        receipt.FinBatch,
-                        receipt.DockPercent,
-                        IsVoid = derivedIsVoid, // Use derived
-                        receipt.ThePrice,
-                        receipt.PriceSource,
-                        receipt.PrNote1,
-                        receipt.NpNote1,
-                        receipt.FromField,
-                        receipt.Imported,
-                        ContErrs = derivedContErrs, // Use derived
-                        receipt.OriNet,             // Added for dockage tracking
-                        receipt.AddDate,            // Use mapped
-                        receipt.AddBy,              // Use mapped
-                        receipt.EditDate,           // Use mapped
-                        receipt.EditBy,             // Use mapped
-                        receipt.EditReason          // Use mapped
-                        // Add other mapped properties if needed
-                    });
-                    parameters.AddDynamicParams(containerParams); // Add container parameters
-
-                    await connection.ExecuteAsync(sql, parameters);
+                    Logger.Info($"Receipt {receipt.ReceiptNumberModern} saved successfully with ID {receiptId}");
+                    
                     return receipt;
                 }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error in SaveReceiptAsync: {ex.Message}");
+                // Enhanced logging with receipt details for troubleshooting
+                var receiptInfo = $"Receipt#{receipt.ReceiptNumberModern ?? "NULL"}, Date={receipt.ReceiptDate:yyyy-MM-dd}, " +
+                                 $"GrowerId={receipt.GrowerId}, ProductId={receipt.ProductId}, ProcessId={receipt.ProcessId}, " +
+                                 $"PriceClassId={receipt.PriceClassId}, Grade={receipt.GradeModern}, " +
+                                 $"ContainerId={receipt.ContainerId}";
+                Logger.Error($"Error saving receipt [{receiptInfo}]: {ex.Message}", ex);
                 throw;
             }
         }
 
         public async Task<bool> DeleteReceiptAsync(decimal receiptNumber)
         {
-            var currentUser = "SYSTEM"; // TODO: Get from authenticated user context
-            
             try
             {
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
+                    
+                    // Get current user
+                    string currentUser = "SYSTEM"; // TODO: Get from current session/user context
+                    
+                    // Soft delete in modern Receipts table
                     var sql = @"
-                        UPDATE Receipts SET
-                            IsActive = 0,
-                            DeletedAt = GETDATE(),
+                        UPDATE Receipts
+                        SET DeletedAt = GETDATE(),
                             DeletedBy = @DeletedBy,
-                            ModifiedAt = GETDATE(),
-                            ModifiedBy = @ModifiedBy
-                        WHERE ReceiptNumber = @ReceiptNumber AND IsActive = 1";
-                    
-                    var parameters = new
-                    {
-                        ReceiptNumber = receiptNumber,
-                        DeletedBy = currentUser,
-                        ModifiedBy = currentUser
-                    };
-                    
+                            IsVoided = 1
+                        WHERE ReceiptNumber = @ReceiptNumber
+                          AND DeletedAt IS NULL";
+                          
+                    var parameters = new { ReceiptNumber = receiptNumber.ToString(), DeletedBy = currentUser };
                     var result = await connection.ExecuteAsync(sql, parameters);
+                    
+                    if (result > 0)
+                    {
+                        Logger.Info($"Receipt {receiptNumber} soft deleted by {currentUser}");
+                    }
+                    
                     return result > 0;
                 }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error in DeleteReceiptAsync: {ex.Message}");
+                Logger.Error($"Error deleting receipt {receiptNumber}: {ex.Message}", ex);
                 throw;
             }
         }
@@ -303,21 +326,42 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
+                    
+                    // Get current user
+                    string currentUser = "SYSTEM"; // TODO: Get from current session/user context
+                    
+                    // Void receipt in modern Receipts table
                     var sql = @"
-                        UPDATE Daily
-                        SET ISVOID = 1,
-                            EDIT_DATE = GETDATE(),
-                            EDIT_REAS = @Reason
-                        WHERE RECPT = @ReceiptNumber";
+                        UPDATE Receipts
+                        SET IsVoided = 1,
+                            VoidedReason = @VoidedReason,
+                            VoidedAt = GETDATE(),
+                            VoidedBy = @VoidedBy,
+                            ModifiedAt = GETDATE(),
+                            ModifiedBy = @ModifiedBy
+                        WHERE ReceiptNumber = @ReceiptNumber
+                          AND DeletedAt IS NULL";
 
-                    var parameters = new { ReceiptNumber = receiptNumber, Reason = reason };
+                    var parameters = new { 
+                        ReceiptNumber = receiptNumber.ToString(), 
+                        VoidedReason = reason,
+                        VoidedBy = currentUser,
+                        ModifiedBy = currentUser
+                    };
                     var result = await connection.ExecuteAsync(sql, parameters);
+                    
+                    if (result > 0)
+                    {
+                        Logger.Info($"Receipt {receiptNumber} voided by {currentUser}. Reason: {reason}");
+                    }
+                    
                     return result > 0;
                 }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error in VoidReceiptAsync: {ex.Message}");
+                Logger.Error($"Error voiding receipt {receiptNumber}: {ex.Message}", ex);
                 throw;
             }
         }
@@ -329,50 +373,59 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    // Explicitly select columns and use aliases
+                    
+                    // Query modern Receipts table with Growers join
                     var sql = @"
-                        SELECT
-                            DEPOT as Depot, PRODUCT as Product, RECPT as ReceiptNumber, NUMBER as GrowerNumber,
-                            GROSS as Gross, TARE as Tare, NET as Net, GRADE as Grade, PROCESS as Process,
-                            DATE as Date, DAY_UNIQ as DayUniq, IMP_BAT as ImpBatch, FIN_BAT as FinBatch,
-                            DOCK_PCT as DockPercent, ISVOID as IsVoid, THEPRICE as ThePrice, PRICESRC as PriceSource,
-                            PR_NOTE1 as PrNote1, NP_NOTE1 as NpNote1, FROM_FIELD as FromField, IMPORTED as Imported,
-                            CONT_ERRS as ContainerErrors, ADV_PR1 as AdvPr1, ADV_PRID1 as AdvPrid1, POST_BAT1 as PostBat1,
-                            ADV_PR2 as AdvPr2, ADV_PRID2 as AdvPrid2, POST_BAT2 as PostBat2, ADV_PR3 as AdvPr3,
-                            ADV_PRID3 as AdvPrid3, POST_BAT3 as PostBat3, PREM_PRICE as PremPrice, LAST_ADVPB as LastAdvpb,
-                            ORI_NET as OriNet, CERTIFIED as Certified, VARIETY as Variety, TIME as Time,
-                            FIN_PRICE as FinPrice, FIN_PR_ID as FinPrId, ADD_DATE as AddDate, ADD_BY as AddBy,
-                            EDIT_DATE as EditDate, EDIT_BY as EditBy, EDIT_REAS as EditReason
-                        FROM Daily
-                        WHERE NUMBER = @GrowerNumber
-                        @StartDateFilter
-                        @EndDateFilter
-                        ORDER BY Date DESC, ReceiptNumber DESC";
+                        SELECT 
+                            r.ReceiptId, r.ReceiptNumber, r.ReceiptDate, r.ReceiptTime,
+                            r.GrowerId, r.ProductId, r.ProcessId, r.ProcessTypeId,
+                            r.DepotId, r.ContainerId, r.VarietyId,
+                            r.GrossWeight, r.TareWeight, r.NetWeight, r.DockPercentage, 
+                            r.DockWeight, r.FinalWeight,
+                            r.Grade, r.PriceClassId, r.PriceAreaId,
+                            r.IsVoided, r.VoidedReason, r.VoidedAt, r.VoidedBy,
+                            r.ImportBatchId,
+                            r.CreatedAt, r.CreatedBy, r.ModifiedAt, r.ModifiedBy,
+                            r.QualityCheckedAt, r.QualityCheckedBy,
+                            r.DeletedAt, r.DeletedBy
+                        FROM Receipts r
+                        INNER JOIN Growers g ON r.GrowerId = g.GrowerId
+                        WHERE g.GrowerNumber = @GrowerNumber
+                          AND r.DeletedAt IS NULL";
 
                     var parameters = new DynamicParameters();
                     parameters.Add("@GrowerNumber", growerNumber);
 
                     if (startDate.HasValue)
                     {
-                        sql = sql.Replace("@StartDateFilter", "AND Date >= @StartDate");
+                        sql += " AND r.ReceiptDate >= @StartDate";
                         parameters.Add("@StartDate", startDate.Value);
-                    }
-                    else
-                    {
-                        sql = sql.Replace("@StartDateFilter", "");
                     }
 
                     if (endDate.HasValue)
                     {
-                        sql = sql.Replace("@EndDateFilter", "AND Date <= @EndDate");
+                        sql += " AND r.ReceiptDate <= @EndDate";
                         parameters.Add("@EndDate", endDate.Value);
                     }
-                    else
-                    {
-                        sql = sql.Replace("@EndDateFilter", "");
-                    }
+                    
+                    sql += " ORDER BY r.ReceiptDate DESC, r.ReceiptNumber DESC";
 
-                    return (await connection.QueryAsync<Receipt>(sql, parameters)).ToList();
+                    var receipts = (await connection.QueryAsync<Receipt>(sql, parameters)).ToList();
+                    
+                    // Map modern properties to legacy properties for backward compatibility
+                    foreach (var receipt in receipts)
+                    {
+                        receipt.ReceiptNumber = decimal.Parse(receipt.ReceiptNumberModern ?? "0");
+                        receipt.GrowerNumber = growerNumber;
+                        receipt.Gross = receipt.GrossWeight;
+                        receipt.Tare = receipt.TareWeight;
+                        receipt.Net = receipt.NetWeight;
+                        receipt.DockPercent = receipt.DockPercentage;
+                        receipt.IsVoid = receipt.IsVoidedModern;
+                        receipt.Date = receipt.ReceiptDate;
+                    }
+                    
+                    return receipts;
                 }
             }
             catch (Exception ex)
@@ -389,25 +442,40 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                     // Explicitly select columns and use aliases
+                    // Query modern Receipts table by ImportBatchId
                     var sql = @"
-                        SELECT
-                            DEPOT as Depot, PRODUCT as Product, RECPT as ReceiptNumber, NUMBER as GrowerNumber,
-                            GROSS as Gross, TARE as Tare, NET as Net, GRADE as Grade, PROCESS as Process,
-                            DATE as Date, DAY_UNIQ as DayUniq, IMP_BAT as ImpBatch, FIN_BAT as FinBatch,
-                            DOCK_PCT as DockPercent, ISVOID as IsVoid, THEPRICE as ThePrice, PRICESRC as PriceSource,
-                            PR_NOTE1 as PrNote1, NP_NOTE1 as NpNote1, FROM_FIELD as FromField, IMPORTED as Imported,
-                            CONT_ERRS as ContainerErrors, ADV_PR1 as AdvPr1, ADV_PRID1 as AdvPrid1, POST_BAT1 as PostBat1,
-                            ADV_PR2 as AdvPr2, ADV_PRID2 as AdvPrid2, POST_BAT2 as PostBat2, ADV_PR3 as AdvPr3,
-                            ADV_PRID3 as AdvPrid3, POST_BAT3 as PostBat3, PREM_PRICE as PremPrice, LAST_ADVPB as LastAdvpb,
-                            ORI_NET as OriNet, CERTIFIED as Certified, VARIETY as Variety, TIME as Time,
-                            FIN_PRICE as FinPrice, FIN_PR_ID as FinPrId, ADD_DATE as AddDate, ADD_BY as AddBy,
-                            EDIT_DATE as EditDate, EDIT_BY as EditBy, EDIT_REAS as EditReason
-                        FROM Daily
-                        WHERE IMP_BAT = @ImpBatch
-                        ORDER BY Date DESC, RECPT DESC";
-                    var parameters = new { ImpBatch = impBatch };
-                    return (await connection.QueryAsync<Receipt>(sql, parameters)).ToList();
+                        SELECT 
+                            r.ReceiptId, r.ReceiptNumber, r.ReceiptDate, r.ReceiptTime,
+                            r.GrowerId, r.ProductId, r.ProcessId, r.ProcessTypeId,
+                            r.DepotId, r.ContainerId, r.VarietyId,
+                            r.GrossWeight, r.TareWeight, r.NetWeight, r.DockPercentage, 
+                            r.DockWeight, r.FinalWeight,
+                            r.Grade, r.PriceClassId, r.PriceAreaId,
+                            r.IsVoided, r.VoidedReason, r.VoidedAt, r.VoidedBy,
+                            r.ImportBatchId,
+                            r.CreatedAt, r.CreatedBy, r.ModifiedAt, r.ModifiedBy,
+                            r.QualityCheckedAt, r.QualityCheckedBy,
+                            r.DeletedAt, r.DeletedBy
+                        FROM Receipts r
+                        WHERE r.ImportBatchId = (SELECT ImportBatchId FROM ImportBatches WHERE BatchNumber = @ImpBatch)
+                          AND r.DeletedAt IS NULL
+                        ORDER BY r.ReceiptDate DESC, r.ReceiptNumber DESC";
+                    var parameters = new { ImpBatch = impBatch.ToString() };
+                    var receipts = (await connection.QueryAsync<Receipt>(sql, parameters)).ToList();
+                    
+                    // Map modern properties to legacy properties for backward compatibility
+                    foreach (var receipt in receipts)
+                    {
+                        receipt.ReceiptNumber = decimal.Parse(receipt.ReceiptNumberModern ?? "0");
+                        receipt.Gross = receipt.GrossWeight;
+                        receipt.Tare = receipt.TareWeight;
+                        receipt.Net = receipt.NetWeight;
+                        receipt.DockPercent = receipt.DockPercentage;
+                        receipt.IsVoid = receipt.IsVoidedModern;
+                        receipt.Date = receipt.ReceiptDate;
+                    }
+                    
+                    return receipts;
                 }
             }
             catch (Exception ex)

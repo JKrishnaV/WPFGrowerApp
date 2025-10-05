@@ -55,6 +55,7 @@ namespace WPFGrowerApp.DataAccess.Services
                 cancellationToken.ThrowIfCancellationRequested();
 
                 receipt.ImpBatch = importBatch.ImpBatch;
+                receipt.ImportBatchId = importBatch.ImportBatchId; // Set modern ImportBatchId from the batch
 
                 // Validate receipt (already done in ViewModel, but keep for robustness?)
                 // Consider if validation should solely live here or in ViewModel loop.
@@ -91,6 +92,12 @@ namespace WPFGrowerApp.DataAccess.Services
                 // Log success for this specific receipt
                 Logger.Info($"Successfully processed and saved receipt {receipt.ReceiptNumber} for batch {importBatch.ImpBatch}.");
                 return true; // Indicate success for this receipt
+            }
+            catch (MissingReferenceDataException)
+            {
+                // Let MissingReferenceDataException propagate to ImportViewModel
+                // so it can display proper "Skipped... Missing:" messages
+                throw;
             }
             catch (Exception ex)
             {

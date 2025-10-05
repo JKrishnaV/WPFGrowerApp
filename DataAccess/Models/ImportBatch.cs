@@ -6,6 +6,7 @@ namespace WPFGrowerApp.DataAccess.Models
 {
     public class ImportBatch : INotifyPropertyChanged
     {
+        private int _importBatchId; // Modern primary key
         private decimal _impBatch;
         private DateTime _date;
         private DateTime _dataDate;
@@ -21,6 +22,13 @@ namespace WPFGrowerApp.DataAccess.Models
         private string _impFile;
         private decimal _uniqImbat;
         private decimal _receipts;
+
+        // Modern property - ImportBatchId (primary key in ImportBatches table)
+        public int ImportBatchId
+        {
+            get => _importBatchId;
+            set => SetProperty(ref _importBatchId, value);
+        }
 
         public decimal ImpBatch
         {
@@ -111,18 +119,6 @@ namespace WPFGrowerApp.DataAccess.Models
             get => _receipts;
             set => SetProperty(ref _receipts, value);
         }
-
-        /// <summary>Modern audit fields</summary>
-        public DateTime? CreatedAt { get; set; }
-        public string? CreatedBy { get; set; }
-        public DateTime? ModifiedAt { get; set; }
-        public string? ModifiedBy { get; set; }
-        
-        /// <summary>Timestamp when the import batch was soft-deleted</summary>
-        public DateTime? DeletedAt { get; set; }
-        
-        /// <summary>Username who deleted the import batch</summary>
-        public string? DeletedBy { get; set; }
 
         public event PropertyChangedEventHandler PropertyChanged;
 

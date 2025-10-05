@@ -1,16 +1,19 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Dapper;
+using Microsoft.Data.SqlClient;
 using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
 using WPFGrowerApp.Infrastructure.Logging;
 
 namespace WPFGrowerApp.DataAccess.Services
 {
-    public class FileImportService : IFileImportService
+    public class FileImportService : BaseDatabaseService, IFileImportService
     {
         private readonly IGrowerService _growerService;
         private readonly string[] _expectedHeaders = new[]
@@ -22,9 +25,19 @@ namespace WPFGrowerApp.DataAccess.Services
             //, "FIELDID"
         };
 
+        // Cache for lookups to improve performance during bulk import
+        private Dictionary<string, int> _productLookupCache;
+        private Dictionary<string, int> _processLookupCache;
+        private Dictionary<string, int> _depotLookupCache;
+        private Dictionary<string, int> _growerLookupCache;
+
         public FileImportService(IGrowerService growerService)
         {
             _growerService = growerService ?? throw new ArgumentNullException(nameof(growerService));
+            _productLookupCache = new Dictionary<string, int>();
+            _processLookupCache = new Dictionary<string, int>();
+            _depotLookupCache = new Dictionary<string, int>();
+            _growerLookupCache = new Dictionary<string, int>();
         }
 
         public async Task<bool> ValidateFileFormatAsync(string filePath)
@@ -81,7 +94,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        public async Task<IEnumerable<Receipt>> ReadReceiptsFromFileAsync(
+        public async Task<(IEnumerable<Receipt> receipts, List<string> errors)> ReadReceiptsFromFileAsync(
             string filePath,
             IProgress<int> progress = null,
             CancellationToken cancellationToken = default)
@@ -90,6 +103,7 @@ namespace WPFGrowerApp.DataAccess.Services
             {
                 Logger.Info($"Reading receipts from file: {filePath}");
                 var receipts = new List<Receipt>();
+                var errors = new List<string>();
                 var lines = await File.ReadAllLinesAsync(filePath, cancellationToken);
                 
                 // Remove quotes and split by comma for headers
@@ -175,31 +189,77 @@ namespace WPFGrowerApp.DataAccess.Services
                     DateTime? editDate = string.IsNullOrWhiteSpace(editDateStr) ? null : editDateParsed;
 
 
+                    // Parse grade and process from GradeId (e.g., "EL1" → Process="EL", Grade=1)
+                    var (grade, processCode) = ExtractGradeAndProcessID(gradeId);
+
+                    // Lookup foreign keys (with caching for performance)
+                    int? growerId = null;
+                    int? productIdFk = null;
+                    int? processIdFk = null;
+                    int? depotIdFk = null;
+
+                    try
+                    {
+                        growerId = await GetGrowerIdByNumberAsync(growerNumber);
+                        productIdFk = string.IsNullOrEmpty(productId) ? null : await GetProductIdByCodeAsync(productId);
+                        processIdFk = string.IsNullOrEmpty(processCode) ? null : await GetProcessIdByCodeAsync(processCode);
+                        depotIdFk = string.IsNullOrEmpty(depot) ? null : await GetDepotIdByCodeAsync(depot);
+                    }
+                    catch (Exception ex)
+                    {
+                        var errorMsg = $"Line {i + 1}: {ex.Message}";
+                        errors.Add(errorMsg);
+                        Logger.Warn($"Skipping line {i + 1} due to lookup error: {ex.Message}");
+                        continue;
+                    }
+
                     var receipt = new Receipt
                     {
+                        // Legacy properties (for backward compatibility)
                         Depot = depot,
-                        ReceiptNumber = ticketNumber, // Use parsed TICKETNO
+                        ReceiptNumber = ticketNumber,
                         Product = productId,
                         GrowerNumber = growerNumber,
+                        Gross = net, // CSV only has NET, no separate GROSS/TARE
+                        Tare = 0,
                         Net = net,
                         ThePrice = price,
-                        DockPercent = dockPercent, // Parse DOCKPERCENT
-                        // Grade and Process are derived later in ReceiptService
-                        Date = parsedReceiptDateTime, // Use renamed variable
+                        DockPercent = dockPercent,
+                        // Grade = gradeId, // Removed - type conflict
+                        Process = processCode,
+                        Date = parsedReceiptDateTime,
                         FromField = fieldId,
                         Imported = true,
-                        DayUniq = await GenerateDayUniqAsync(receiptDateTime), // Consider if DayUniq needs adjustment
-
-                        // Add new fields
-                        TimeIn = timeInStr, // Store raw TimeIn string
-                        GradeId = gradeId, // Store raw GradeId string
-                        Voided = voidedStr, // Store raw Voided string
+                        DayUniq = await GenerateDayUniqAsync(parsedReceiptDateTime),
+                        TimeIn = timeInStr,
+                        GradeId = gradeId,
+                        Voided = voidedStr,
                         AddDate = addDate,
                         AddBy = addBy,
                         EditDate = editDate,
                         EditBy = editBy,
                         EditReason = editReason,
-                        ContainerData = new List<ContainerInfo>() // Initialize container list
+
+                        // MODERN PROPERTIES (for new Receipts table)
+                        ReceiptNumberModern = ticketNumber.ToString(),
+                        ReceiptDate = parsedDateIn.Date,
+                        ReceiptTime = timeInSpan,
+                        GrowerId = growerId ?? 0,
+                        ProductId = productIdFk ?? 0,
+                        ProcessId = processIdFk ?? 0,
+                        DepotId = depotIdFk ?? 0,
+                        GrossWeight = net, // CSV only has NET
+                        TareWeight = 0,
+                        DockPercentage = dockPercent,
+                        GradeModern = (byte)grade,
+                        IsVoidedModern = !string.IsNullOrEmpty(voidedStr) && voidedStr.ToUpper() == "VOID",
+                        VoidedReason = string.IsNullOrEmpty(voidedStr) || string.IsNullOrEmpty(editReason) ? string.Empty : editReason,
+
+                        // ImportBatchId will be set in ImportBatchProcessor.ProcessSingleReceiptAsync
+                        ImportBatchId = null,
+
+                        // Container data
+                        ContainerData = new List<ContainerInfo>()
                     };
 
                     // Parse Container Data (CONT1, IN1, OUT1, CONT2, IN2, OUT2...)
@@ -235,7 +295,11 @@ namespace WPFGrowerApp.DataAccess.Services
 
                 progress?.Report(100);
                 Logger.Info($"Successfully read {receipts.Count} receipts from file");
-                return receipts;
+                if (errors.Any())
+                {
+                    Logger.Warn($"Skipped {errors.Count} receipts due to validation errors");
+                }
+                return (receipts, errors);
             }
             catch (Exception ex)
             {
@@ -246,31 +310,27 @@ namespace WPFGrowerApp.DataAccess.Services
         //how to use this method?   
         private (int Grade, string ProcessID) ExtractGradeAndProcessID(string gradeId)
         {
-            if (string.IsNullOrEmpty(gradeId) || gradeId.Length < 2)
+            // Handle empty or null gradeId - return default values
+            if (string.IsNullOrEmpty(gradeId))
             {
-                throw new ArgumentException("Invalid gradeId format", nameof(gradeId));
+                return (0, string.Empty);
             }
+            
+            // Handle short gradeId (less than 2 characters)
+            if (gradeId.Length < 2)
+            {
+                return (0, gradeId);
+            }
+            
+            // Try to parse grade number from characters after position 2
+            // Example: "EL1" → Process="EL", Grade=1
             if (int.TryParse(gradeId.Substring(2), out int grade))
             {
                 return (grade, gradeId.Substring(0, 2));
             }
 
-            // Keep original logic, but ensure it handles potential null/empty gradeId gracefully if needed
-            if (string.IsNullOrEmpty(gradeId) || gradeId.Length < 2)
-            {
-                 // Return default or handle as needed, maybe log a warning
-                 return (0, string.Empty);
-                // Or throw: throw new ArgumentException("Invalid gradeId format", nameof(gradeId));
-            }
-            // Use TryParse for robustness
-            if (int.TryParse(gradeId.Substring(gradeId.Length - 1), out int parsedGrade)) // Renamed grade
-            {
-                return (parsedGrade, gradeId.Substring(0, 2)); // First two chars for process
-            }
-
-            // Return default or handle as needed if parsing fails
-            return (0, gradeId.Substring(0, 2)); // Keep original return structure for default
-            // Or throw: throw new ArgumentException("Invalid gradeId format", nameof(gradeId));
+            // If parsing fails, return process code with default grade
+            return (0, gradeId.Substring(0, 2));
         }
 
         public async Task<(bool IsValid, List<string> Errors)> ValidateReceiptsAsync(
@@ -290,28 +350,27 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    // Validate grower exists
-                    var grower = await _growerService.GetGrowerByNumberAsync(receipt.GrowerNumber);
-                    if (grower == null)
+                    // Validate foreign keys are set
+                    if (receipt.GrowerId <= 0)
                     {
-                        errors.Add($"Invalid grower number: {receipt.GrowerNumber}");
+                        errors.Add($"Invalid or missing grower for receipt {receipt.ReceiptNumberModern}: {receipt.GrowerNumber}");
                     }
 
-                    // Validate weights
-                    if (receipt.Gross <= 0)
+                    if (receipt.ProductId <= 0 && !string.IsNullOrEmpty(receipt.Product))
                     {
-                        errors.Add($"Invalid gross weight for receipt: {receipt.GrowerNumber}");
+                        errors.Add($"Invalid or missing product for receipt {receipt.ReceiptNumberModern}: {receipt.Product}");
                     }
 
-                    if (receipt.Net <= 0 || receipt.Net > receipt.Gross)
+                    // Validate weights (using modern properties)
+                    if (receipt.GrossWeight <= 0)
                     {
-                        errors.Add($"Invalid net weight for receipt: {receipt.GrowerNumber}");
+                        errors.Add($"Invalid gross weight for receipt {receipt.ReceiptNumberModern}: {receipt.GrossWeight}");
                     }
 
                     // Validate dates
-                    if (receipt.Date > DateTime.Now)
+                    if (receipt.ReceiptDate > DateTime.Now.Date)
                     {
-                        errors.Add($"Future date not allowed: {receipt.Date} for receipt: {receipt.GrowerNumber}");
+                        errors.Add($"Future date not allowed: {receipt.ReceiptDate} for receipt: {receipt.ReceiptNumberModern}");
                     }
 
                     processedCount++;
@@ -371,5 +430,110 @@ namespace WPFGrowerApp.DataAccess.Services
             // For now, returning a timestamp-based value
             return decimal.Parse(date.ToString("yyyyMMdd"));
         }
+
+        #region Foreign Key Lookup Methods with Caching
+
+        private async Task<int?> GetGrowerIdByNumberAsync(decimal growerNumber)
+        {
+            var key = growerNumber.ToString();
+            if (_growerLookupCache.TryGetValue(key, out var cachedId))
+                return cachedId;
+
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                const string sql = "SELECT GrowerId FROM Growers WHERE GrowerNumber = @Number AND DeletedAt IS NULL";
+                var result = await connection.ExecuteScalarAsync<int?>(sql, new { Number = key });
+
+                if (!result.HasValue)
+                {
+                    Logger.Warn($"Grower not found: {growerNumber}");
+                    throw new InvalidOperationException($"Grower not found: {growerNumber}");
+                }
+
+                _growerLookupCache[key] = result.Value;
+                return result.Value;
+            }
+        }
+
+        private async Task<int?> GetProductIdByCodeAsync(string productCode)
+        {
+            if (string.IsNullOrEmpty(productCode))
+                return null;
+
+            var key = productCode.ToUpper();
+            if (_productLookupCache.TryGetValue(key, out var cachedId))
+                return cachedId;
+
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                const string sql = "SELECT ProductId FROM Products WHERE ProductCode = @Code AND IsActive = 1";
+                var result = await connection.ExecuteScalarAsync<int?>(sql, new { Code = key });
+
+                if (!result.HasValue)
+                {
+                    Logger.Warn($"Product not found: {productCode}");
+                    throw new InvalidOperationException($"Product not found: {productCode}");
+                }
+
+                _productLookupCache[key] = result.Value;
+                return result.Value;
+            }
+        }
+
+        private async Task<int?> GetProcessIdByCodeAsync(string processCode)
+        {
+            if (string.IsNullOrEmpty(processCode))
+                return null;
+
+            var key = processCode.ToUpper();
+            if (_processLookupCache.TryGetValue(key, out var cachedId))
+                return cachedId;
+
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                const string sql = "SELECT ProcessId FROM Processes WHERE ProcessCode = @Code AND DeletedAt IS NULL";
+                var result = await connection.ExecuteScalarAsync<int?>(sql, new { Code = key });
+
+                if (!result.HasValue)
+                {
+                    Logger.Warn($"Process not found: {processCode}");
+                    throw new InvalidOperationException($"Process not found: {processCode}");
+                }
+
+                _processLookupCache[key] = result.Value;
+                return result.Value;
+            }
+        }
+
+        private async Task<int?> GetDepotIdByCodeAsync(string depotCode)
+        {
+            if (string.IsNullOrEmpty(depotCode))
+                return null;
+
+            var key = depotCode.ToUpper();
+            if (_depotLookupCache.TryGetValue(key, out var cachedId))
+                return cachedId;
+
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                const string sql = "SELECT DepotId FROM Depots WHERE DepotCode = @Code AND IsActive = 1";
+                var result = await connection.ExecuteScalarAsync<int?>(sql, new { Code = key });
+
+                if (!result.HasValue)
+                {
+                    Logger.Warn($"Depot not found: {depotCode}");
+                    throw new InvalidOperationException($"Depot not found: {depotCode}");
+                }
+
+                _depotLookupCache[key] = result.Value;
+                return result.Value;
+            }
+        }
+
+        #endregion
     }
 }

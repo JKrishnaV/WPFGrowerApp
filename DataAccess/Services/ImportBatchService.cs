@@ -32,16 +32,35 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
+                    
+                    // TODO: Lookup DepotId from depot code
+                    var depotId = await connection.ExecuteScalarAsync<int>(
+                        "SELECT DepotId FROM Depots WHERE DepotCode = @Depot AND IsActive = 1",
+                        new { importBatch.Depot });
+                    
                     var sql = @"
-                        INSERT INTO ImpBat (
-                            IMP_BAT, DATE, DATA_DATE, DEPOT, IMP_FILE,
-                            NO_TRANS, VOIDS, RECEIPTS
+                        INSERT INTO ImportBatches (
+                            BatchNumber, ImportDate, DepotId, TotalReceipts,
+                            TotalGrossWeight, TotalNetWeight, Status, ImportedAt, ImportedBy, Notes
                         ) VALUES (
-                            @ImpBatch, @Date, @DataDate, @Depot, @ImpFile,
-                            @NoTrans, @Voids, @Receipts
-                        )";
+                            @ImpBatch, @Date, @DepotId, @Receipts,
+                            0, 0, 'Draft', GETDATE(), 'SYSTEM', @ImpFile
+                        );
+                        SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
-                    await connection.ExecuteAsync(sql, importBatch);
+                    var importBatchId = await connection.ExecuteScalarAsync<int>(sql, new 
+                    { 
+                        importBatch.ImpBatch,
+                        importBatch.Date,
+                        DepotId = depotId,
+                        importBatch.Receipts,
+                        importBatch.ImpFile
+                    });
+                    
+                    // Set the ImportBatchId on the object
+                    importBatch.ImportBatchId = importBatchId;
+                    
+                    // Return with ImportBatchId
                     return importBatch;
                 }
             }
@@ -59,8 +78,8 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    var sql = "SELECT * FROM ImpBat WHERE IMP_BAT = @ImpBatch";
-                    var parameters = new { ImpBatch = impBatch };
+                    var sql = "SELECT * FROM ImportBatches WHERE BatchNumber = @ImpBatch";
+                    var parameters = new { ImpBatch = impBatch.ToString() };
                     return await connection.QueryFirstOrDefaultAsync<ImportBatch>(sql, parameters);
                 }
             }
@@ -79,16 +98,16 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     var sql = @"
-                        SELECT * FROM ImpBat 
+                        SELECT * FROM ImportBatches 
                         WHERE 1=1
                         @StartDateFilter
                         @EndDateFilter
-                        ORDER BY DATE DESC";
+                        ORDER BY ImportDate DESC";
 
                     var parameters = new DynamicParameters();
                     if (startDate.HasValue)
                     {
-                        sql = sql.Replace("@StartDateFilter", "AND DATE >= @StartDate");
+                        sql = sql.Replace("@StartDateFilter", "AND ImportDate >= @StartDate");
                         parameters.Add("@StartDate", startDate.Value);
                     }
                     else
@@ -98,7 +117,7 @@ namespace WPFGrowerApp.DataAccess.Services
 
                     if (endDate.HasValue)
                     {
-                        sql = sql.Replace("@EndDateFilter", "AND DATE <= @EndDate");
+                        sql = sql.Replace("@EndDateFilter", "AND ImportDate <= @EndDate");
                         parameters.Add("@EndDate", endDate.Value);
                     }
                     else
@@ -124,19 +143,16 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     var sql = @"
-                        UPDATE ImpBat 
-                        SET NO_TRANS = @NoTrans,
-                            LOW_ID = @LowId,
-                            HIGH_ID = @HighId,
-                            LOW_RECPT = @LowReceipt,
-                            HI_RECPT = @HighReceipt,
-                            LOW_DATE = @LowDate,
-                            HIGH_DATE = @HighDate,
-                            VOIDS = @Voids,
-                            RECEIPTS = @Receipts
-                        WHERE IMP_BAT = @ImpBatch";
+                        UPDATE ImportBatches 
+                        SET TotalReceipts = @Receipts,
+                            Status = 'Posted'
+                        WHERE BatchNumber = @ImpBatch";
 
-                    var result = await connection.ExecuteAsync(sql, importBatch);
+                    var result = await connection.ExecuteAsync(sql, new 
+                    { 
+                        importBatch.ImpBatch,
+                        importBatch.Receipts
+                    });
                     return result > 0;
                 }
             }
@@ -154,7 +170,13 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    var sql = "SELECT MAX(IMP_BAT) + 1 FROM ImpBat";
+                    // Get max numeric BatchNumber and increment
+                    var sql = @"
+                        SELECT ISNULL(
+                            MAX(CAST(BatchNumber AS INT)), 0
+                        ) + 1 
+                        FROM ImportBatches 
+                        WHERE BatchNumber NOT LIKE '%[^0-9]%'";
                     var result = await connection.ExecuteScalarAsync<decimal?>(sql);
                     return result ?? 1;
                 }
@@ -183,7 +205,7 @@ namespace WPFGrowerApp.DataAccess.Services
 
                     // Validate depot exists
                     var depotCount = await connection.ExecuteScalarAsync<int>(
-                        "SELECT COUNT(*) FROM Depot WHERE DEPOT = @Depot",
+                        "SELECT COUNT(*) FROM Depots WHERE DepotCode = @Depot AND IsActive = 1",
                         new { importBatch.Depot });
                     if (depotCount == 0)
                     {
@@ -208,13 +230,15 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     var sql = @"
-                        UPDATE ImpBat 
-                        SET RECEIPTS = (SELECT COUNT(*) FROM Daily WHERE IMP_BAT = @ImpBatch),
-                            NO_TRANS = (SELECT COUNT(*) FROM Daily WHERE IMP_BAT = @ImpBatch),
-                            VOIDS = (SELECT COUNT(*) FROM Daily WHERE IMP_BAT = @ImpBatch AND ISVOID = 1)
-                        WHERE IMP_BAT = @ImpBatch";
+                        UPDATE ImportBatches 
+                        SET TotalReceipts = (SELECT COUNT(*) FROM Receipts WHERE ImportBatchId = ib.ImportBatchId),
+                            TotalGrossWeight = (SELECT ISNULL(SUM(GrossWeight), 0) FROM Receipts WHERE ImportBatchId = ib.ImportBatchId),
+                            TotalNetWeight = (SELECT ISNULL(SUM(NetWeight), 0) FROM Receipts WHERE ImportBatchId = ib.ImportBatchId),
+                            Status = 'Posted'
+                        FROM ImportBatches ib
+                        WHERE ib.BatchNumber = @ImpBatch";
 
-                    var parameters = new { ImpBatch = impBatch };
+                    var parameters = new { ImpBatch = impBatch.ToString() };
                     var result = await connection.ExecuteAsync(sql, parameters);
                     return result > 0;
                 }
@@ -234,13 +258,14 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     var sql = @"
-                        UPDATE ImpBat 
-                        SET RECEIPTS = 0,
-                            NO_TRANS = 0,
-                            VOIDS = 0
-                        WHERE IMP_BAT = @ImpBatch";
+                        UPDATE ImportBatches 
+                        SET TotalReceipts = 0,
+                            TotalGrossWeight = 0,
+                            TotalNetWeight = 0,
+                            Status = 'Draft'
+                        WHERE BatchNumber = @ImpBatch";
 
-                    var parameters = new { ImpBatch = impBatch };
+                    var parameters = new { ImpBatch = impBatch.ToString() };
                     var result = await connection.ExecuteAsync(sql, parameters);
                     return result > 0;
                 }

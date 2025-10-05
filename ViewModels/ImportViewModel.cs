@@ -169,6 +169,9 @@ namespace WPFGrowerApp.ViewModels
             // set => SetProperty(ref _errors, value);
         }
 
+        // Property to hold selected errors for copying
+        public List<string> SelectedErrors { get; set; } = new List<string>();
+
         // Commands
         public ICommand LoadDepotsCommand => new RelayCommand(async o => await LoadDepotsAsync()); // Command to load depots
         public ICommand BrowseFilesCommand => new RelayCommand(o => BrowseFiles());
@@ -176,6 +179,8 @@ namespace WPFGrowerApp.ViewModels
         public ICommand StartImportCommand => new RelayCommand(async o => await StartImportAsync(), o => !IsImporting && SelectedFiles.Any() && SelectedDepot != null); // Depend on SelectedDepot
         public ICommand CancelImportCommand => new RelayCommand(o => CancelImport(), o => IsImporting);
         public ICommand RevertImportCommand => new RelayCommand(async o => await RevertLastImportAsync(), o => !IsImporting && _currentBatch != null);
+        public ICommand SelectAllErrorsCommand => new RelayCommand(o => SelectAllErrors());
+        public ICommand CopyErrorsCommand => new RelayCommand(o => CopyErrors());
 
 
         // Method to load depots
@@ -203,7 +208,8 @@ namespace WPFGrowerApp.ViewModels
         {
             var dialog = new OpenFileDialog
             {
-                Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*",
+                Filter = "All files (*.*)|*.*|CSV files (*.csv)|*.csv",
+                FilterIndex = 1,
                 Title = "Select Receipt Import Files",
                 Multiselect = true
             };
@@ -276,13 +282,26 @@ namespace WPFGrowerApp.ViewModels
 
                         await _validationService.ValidateImportBatchAsync(batchForThisFile);
 
-                        var receipts = await _fileImportService.ReadReceiptsFromFileAsync(file.FilePath, null, CancellationToken.None);
+                        var (receipts, fileErrors) = await _fileImportService.ReadReceiptsFromFileAsync(file.FilePath, null, CancellationToken.None);
                         var receiptList = receipts.ToList();
                         var totalReceiptsInFile = receiptList.Count;
                         var processedReceiptsInFile = 0; // Initialize counter
                         var fileHadErrors = false;
 
-                        file.TotalReceiptCount = totalReceiptsInFile; // Set total count for UI
+                        // Get total receipts including Stage 1 parsing errors
+                        var stage1ErrorCount = fileErrors?.Count ?? 0;
+                        var totalReceiptsIncludingErrors = totalReceiptsInFile + stage1ErrorCount;
+                        file.TotalReceiptCount = totalReceiptsIncludingErrors; // Store total for display
+
+                        // Display file reading errors in UI
+                        if (fileErrors != null && fileErrors.Any())
+                        {
+                            foreach (var error in fileErrors)
+                            {
+                                Errors.Add($"{System.IO.Path.GetFileName(file.FilePath)}: {error}");
+                            }
+                            fileHadErrors = true;
+                        }
 
                         for (int idx = 0; idx < totalReceiptsInFile; idx++)
                         {
@@ -304,6 +323,12 @@ namespace WPFGrowerApp.ViewModels
                                 } else {
                                     processedReceiptsInFile++; // Increment counter on success
                                 }
+                            }
+                            catch (MissingReferenceDataException ex) {
+                                // Skip receipt with missing reference data and log detailed information
+                                fileHadErrors = true;
+                                Errors.Add($"{System.IO.Path.GetFileName(file.FilePath)}: Skipped {receiptIdentifier} - Missing: {string.Join(", ", ex.MissingItems)}");
+                                Logger.Warn($"Skipped {receiptIdentifier} due to missing reference data: {string.Join(", ", ex.MissingItems)}");
                             }
                             catch (ImportValidationException ex) {
                                 fileHadErrors = true;
@@ -423,6 +448,30 @@ namespace WPFGrowerApp.ViewModels
                 finally
                 {
                     IsImporting = false;
+                }
+            }
+        }
+
+        private void SelectAllErrors()
+        {
+            // This is handled by the ListView's SelectionMode="Extended" and Ctrl+A keyboard input
+            // The actual selection is done in the UI, this is just a placeholder for the command binding
+        }
+
+        private void CopyErrors()
+        {
+            if (SelectedErrors != null && SelectedErrors.Any())
+            {
+                try
+                {
+                    var errorText = string.Join(Environment.NewLine, SelectedErrors);
+                    System.Windows.Clipboard.SetText(errorText);
+                    StatusMessage = $"Copied {SelectedErrors.Count} error(s) to clipboard.";
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Failed to copy errors to clipboard", ex);
+                    StatusMessage = "Failed to copy errors to clipboard.";
                 }
             }
         }

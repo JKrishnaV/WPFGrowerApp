@@ -15,8 +15,9 @@ namespace WPFGrowerApp.DataAccess.Interfaces
 
         /// <summary>
         /// Reads receipts from the specified file
+        /// Returns tuple with valid receipts and list of error messages for skipped lines
         /// </summary>
-        Task<IEnumerable<Receipt>> ReadReceiptsFromFileAsync(
+        Task<(IEnumerable<Receipt> receipts, List<string> errors)> ReadReceiptsFromFileAsync(
             string filePath,
             IProgress<int> progress = null,
             CancellationToken cancellationToken = default);

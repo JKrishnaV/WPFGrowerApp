@@ -34,12 +34,18 @@ namespace WPFGrowerApp.DataAccess.Services
                 }
             }
 
-            // Validate process
-            //commented by Jay 
-            //if (!await ValidateProcessAsync(receipt.Process, receipt.Grade))
-            //{
-            //    errors.Add($"Invalid process code: {receipt.Process}, grade: {receipt.Grade}"); 
-            //}
+            // Validate process - must have a process if product is present or if net weight > 0
+            if (!string.IsNullOrEmpty(receipt.Product) || receipt.Net > 0)
+            {
+                if (string.IsNullOrEmpty(receipt.Process))
+                {
+                    errors.Add($"Process code is required when product is specified or net weight is greater than 0");
+                }
+                else if (!await ValidateProcessAsync(receipt.Process, receipt.Grade))
+                {
+                    errors.Add($"Invalid process code: {receipt.Process}");
+                }
+            }
 
             // Validate grade (1-3 are valid grades based on the database schema)
             //if (receipt.Grade < 1 || receipt.Grade > 3)
@@ -96,7 +102,7 @@ namespace WPFGrowerApp.DataAccess.Services
             {
                 await connection.OpenAsync();
                 var count = await connection.ExecuteScalarAsync<int>(
-                    "SELECT COUNT(*) FROM Grower WHERE NUMBER = @GrowerNumber",
+                    "SELECT COUNT(*) FROM Growers WHERE GrowerNumber = @GrowerNumber AND IsActive = 1",
                     new { GrowerNumber = growerNumber });
                 return count > 0;
             }
@@ -108,7 +114,7 @@ namespace WPFGrowerApp.DataAccess.Services
             {
                 await connection.OpenAsync();
                 var count = await connection.ExecuteScalarAsync<int>(
-                    "SELECT COUNT(*) FROM Product WHERE PRODUCT = @Product",
+                    "SELECT COUNT(*) FROM Products WHERE ProductCode = @Product AND IsActive = 1",
                     new { Product = product });
                 return count > 0;
             }
@@ -121,8 +127,8 @@ namespace WPFGrowerApp.DataAccess.Services
             {
                 await connection.OpenAsync();
                 var count = await connection.ExecuteScalarAsync<int>(
-                    "SELECT COUNT(*) FROM Process WHERE PROCESS = @Process AND PROC_CLASS = @ProcClass",
-                    new { Process = process, ProcClass = procClass });
+                    "SELECT COUNT(*) FROM Processes WHERE ProcessCode = @Process AND IsActive = 1",
+                    new { Process = process });
                 return count > 0;
             }
         }
@@ -173,7 +179,7 @@ namespace WPFGrowerApp.DataAccess.Services
             {
                 await connection.OpenAsync();
                 var count = await connection.ExecuteScalarAsync<int>(
-                    "SELECT COUNT(*) FROM Depot WHERE DEPOT = @Depot",
+                    "SELECT COUNT(*) FROM Depots WHERE DepotCode = @Depot AND IsActive = 1",
                     new { Depot = depot });
                 return count > 0;
             }

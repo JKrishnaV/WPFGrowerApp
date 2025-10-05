@@ -28,17 +28,8 @@ namespace WPFGrowerApp.DataAccess.Services
                         SELECT
                             ProcessCode as ProcessId,
                             ProcessName as Description,
-                            DefaultGrade,
-                            ProcessClass,
-                            GradeName1,
-                            GradeName2,
-                            GradeName3,
-                            CreatedAt,
-                            CreatedBy,
-                            ModifiedAt,
-                            ModifiedBy,
-                            DeletedAt,
-                            DeletedBy
+                            0 as DefGrade,
+                            '' as ProcClass
                         FROM Processes
                         WHERE IsActive = 1
                         ORDER BY ProcessName"; // Order alphabetically for display
@@ -63,17 +54,8 @@ namespace WPFGrowerApp.DataAccess.Services
                         SELECT
                             ProcessCode as ProcessId,
                             ProcessName as Description,
-                            DefaultGrade,
-                            ProcessClass,
-                            GradeName1,
-                            GradeName2,
-                            GradeName3,
-                            CreatedAt,
-                            CreatedBy,
-                            ModifiedAt,
-                            ModifiedBy,
-                            DeletedAt,
-                            DeletedBy
+                            0 as DefGrade,
+                            '' as ProcClass
                         FROM Processes
                         WHERE ProcessCode = @ProcessId AND IsActive = 1";
                     return await connection.QueryFirstOrDefaultAsync<Process>(sql, new { ProcessId = processId });
@@ -92,36 +74,23 @@ namespace WPFGrowerApp.DataAccess.Services
 
             try
             {
-                var currentUser = GetCurrentUserInitials();
-
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
                     var sql = @"
                         INSERT INTO Processes (
-                            ProcessCode, ProcessName, Description, 
-                            DefaultGrade, ProcessClass, 
-                            GradeName1, GradeName2, GradeName3,
-                            IsActive, DisplayOrder,
+                            ProcessCode, ProcessName, Description, IsActive, DisplayOrder,
                             CreatedAt, CreatedBy
                         ) VALUES (
-                            @ProcessId, @Description, @Description, 
-                            @DefaultGrade, @ProcessClass,
-                            @GradeName1, @GradeName2, @GradeName3,
-                            1, 0,
-                            GETDATE(), @CreatedBy
+                            @ProcessId, @Description, @Description, 1, 0,
+                            GETDATE(), @OperatorInitials
                         )";
 
                     var parameters = new
                     {
                         ProcessId = process.ProcessId,
                         Description = process.Description,
-                        DefaultGrade = process.DefaultGrade,
-                        ProcessClass = process.ProcessClass,
-                        GradeName1 = process.GradeName1,
-                        GradeName2 = process.GradeName2,
-                        GradeName3 = process.GradeName3,
-                        CreatedBy = currentUser
+                        OperatorInitials = GetCurrentUserInitials()
                     };
 
                     int affectedRows = await connection.ExecuteAsync(sql, parameters);
@@ -141,8 +110,6 @@ namespace WPFGrowerApp.DataAccess.Services
 
             try
             {
-                var currentUser = GetCurrentUserInitials();
-
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
@@ -150,25 +117,15 @@ namespace WPFGrowerApp.DataAccess.Services
                         UPDATE Processes SET
                             ProcessName = @Description,
                             Description = @Description,
-                            DefaultGrade = @DefaultGrade,
-                            ProcessClass = @ProcessClass,
-                            GradeName1 = @GradeName1,
-                            GradeName2 = @GradeName2,
-                            GradeName3 = @GradeName3,
                             ModifiedAt = GETDATE(),
-                            ModifiedBy = @ModifiedBy
+                            ModifiedBy = @OperatorInitials
                         WHERE ProcessCode = @ProcessId AND IsActive = 1";
 
                     var parameters = new
                     {
                         ProcessId = process.ProcessId,
                         Description = process.Description,
-                        DefaultGrade = process.DefaultGrade,
-                        ProcessClass = process.ProcessClass,
-                        GradeName1 = process.GradeName1,
-                        GradeName2 = process.GradeName2,
-                        GradeName3 = process.GradeName3,
-                        ModifiedBy = currentUser
+                        OperatorInitials = GetCurrentUserInitials()
                     };
 
                     int affectedRows = await connection.ExecuteAsync(sql, parameters);
@@ -194,21 +151,12 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = @"
                         UPDATE Processes SET
-                            IsActive = 0,
                             DeletedAt = GETDATE(),
-                            DeletedBy = @DeletedBy,
-                            ModifiedAt = GETDATE(),
-                            ModifiedBy = @ModifiedBy
+                            DeletedBy = @OperatorInitials,
+                            IsActive = 0
                         WHERE ProcessCode = @ProcessId AND IsActive = 1"; 
 
-                    var parameters = new
-                    {
-                        ProcessId = processId,
-                        DeletedBy = operatorInitials,
-                        ModifiedBy = operatorInitials
-                    };
-
-                    int affectedRows = await connection.ExecuteAsync(sql, parameters);
+                    int affectedRows = await connection.ExecuteAsync(sql, new { ProcessId = processId, OperatorInitials = operatorInitials });
                     return affectedRows > 0;
                 }
             }

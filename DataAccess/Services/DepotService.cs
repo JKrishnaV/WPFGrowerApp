@@ -27,13 +27,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     var sql = @"
                         SELECT 
                             DepotCode as DepotId, 
-                            DepotName,
-                            CreatedAt,
-                            CreatedBy,
-                            ModifiedAt,
-                            ModifiedBy,
-                            DeletedAt,
-                            DeletedBy
+                            DepotName
                         FROM Depots 
                         WHERE IsActive = 1
                         ORDER BY DepotCode";
@@ -57,13 +51,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     var sql = @"
                         SELECT 
                             DepotCode as DepotId, 
-                            DepotName,
-                            CreatedAt,
-                            CreatedBy,
-                            ModifiedAt,
-                            ModifiedBy,
-                            DeletedAt,
-                            DeletedBy
+                            DepotName
                         FROM Depots 
                         WHERE DepotCode = @DepotId AND IsActive = 1";
                     return await connection.QueryFirstOrDefaultAsync<Depot>(sql, new { DepotId = depotId });
@@ -86,20 +74,22 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     var sql = @"
-                        INSERT INTO Depot (
-                            DEPOT, DEPOTNAME,
-                            QADD_DATE, QADD_TIME, QADD_OP, QED_DATE, QED_TIME, QED_OP, QDEL_DATE, QDEL_TIME, QDEL_OP
+                        INSERT INTO Depots (
+                            DepotCode, DepotName, IsActive, DisplayOrder,
+                            CreatedAt, CreatedBy
                         ) VALUES (
-                            @DepotId, @DepotName,
-                            @QADD_DATE, @QADD_TIME, @QADD_OP, NULL, NULL, NULL, NULL, NULL, NULL
+                            @DepotId, @DepotName, 1, 0,
+                            GETDATE(), @OperatorInitials
                         )";
 
-                    // Set audit fields for add
-                    depot.QADD_DATE = DateTime.Today;
-                    depot.QADD_TIME = DateTime.Now.ToString("HH:mm:ss"); // Or appropriate format
-                    depot.QADD_OP = GetCurrentUserInitials(); 
+                    var parameters = new
+                    {
+                        DepotId = depot.DepotId,
+                        DepotName = depot.DepotName,
+                        OperatorInitials = GetCurrentUserInitials()
+                    };
 
-                    int affectedRows = await connection.ExecuteAsync(sql, depot);
+                    int affectedRows = await connection.ExecuteAsync(sql, parameters);
                     return affectedRows > 0;
                 }
             }
@@ -120,19 +110,20 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     var sql = @"
-                        UPDATE Depot SET
-                            DEPOTNAME = @DepotName,
-                            QED_DATE = @QED_DATE,
-                            QED_TIME = @QED_TIME,
-                            QED_OP = @QED_OP
-                        WHERE DEPOT = @DepotId AND QDEL_DATE IS NULL"; 
+                        UPDATE Depots SET
+                            DepotName = @DepotName,
+                            ModifiedAt = GETDATE(),
+                            ModifiedBy = @OperatorInitials
+                        WHERE DepotCode = @DepotId AND IsActive = 1"; 
 
-                    // Set audit fields for edit
-                    depot.QED_DATE = DateTime.Today;
-                    depot.QED_TIME = DateTime.Now.ToString("HH:mm:ss"); // Or appropriate format
-                    depot.QED_OP = GetCurrentUserInitials();
+                    var parameters = new
+                    {
+                        DepotId = depot.DepotId,
+                        DepotName = depot.DepotName,
+                        OperatorInitials = GetCurrentUserInitials()
+                    };
 
-                    int affectedRows = await connection.ExecuteAsync(sql, depot);
+                    int affectedRows = await connection.ExecuteAsync(sql, parameters);
                     return affectedRows > 0;
                 }
             }
@@ -155,18 +146,15 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = @"
                         UPDATE Depots SET
-                            IsActive = 0,
                             DeletedAt = GETDATE(),
-                            DeletedBy = @DeletedBy,
-                            ModifiedAt = GETDATE(),
-                            ModifiedBy = @ModifiedBy
-                        WHERE DepotCode = @DepotId AND IsActive = 1"; 
+                            DeletedBy = @OperatorInitials,
+                            IsActive = 0
+                        WHERE DepotCode = @DepotId AND DeletedAt IS NULL"; 
 
                     var parameters = new 
                     {
                         DepotId = depotId,
-                        DeletedBy = operatorInitials,
-                        ModifiedBy = operatorInitials
+                        OperatorInitials = operatorInitials
                     };
 
                     int affectedRows = await connection.ExecuteAsync(sql, parameters);
