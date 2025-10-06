@@ -88,6 +88,12 @@
                     Style="{DynamicResource MenuButtonStyle}"
                     Command="{Binding DataContext.NavigateToGrowersCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/>
 
+            <Button x:Name="ReceiptsButton" 
+                    Content="Receipts" 
+                    Tag="&#xE8A1;"
+                    Style="{DynamicResource MenuButtonStyle}"
+                    Command="{Binding DataContext.NavigateToReceiptsCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/>
+
             <Button x:Name="ImportButton" 
                     Content="Import" 
                     Tag="&#xE8B5;"

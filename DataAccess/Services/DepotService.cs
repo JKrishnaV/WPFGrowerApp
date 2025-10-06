@@ -25,12 +25,12 @@ namespace WPFGrowerApp.DataAccess.Services
                     // Map database columns to model properties
                     // Include audit fields and filter by QDEL_DATE
                     var sql = @"
-                        SELECT 
-                            DepotCode as DepotId, 
+                        SELECT
+                            DepotId,
                             DepotName
-                        FROM Depots 
+                        FROM Depots
                         WHERE IsActive = 1
-                        ORDER BY DepotCode";
+                        ORDER BY DepotName";
                     return await connection.QueryAsync<Depot>(sql); // Return IEnumerable
                 }
             }

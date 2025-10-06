@@ -26,19 +26,13 @@ namespace WPFGrowerApp.DataAccess.Services
                     // Ensure QDEL_DATE is NULL for active records
                     var sql = @"
                         SELECT
-                            ProductCode as ProductId,
+                            ProductId,
                             ProductName as Description,
-                            ISNULL(ShortDescription, '') as ShortDescription,
-                            ISNULL(MarketingDeduction, 0) as Deduct,
-                            ISNULL(ReportCategory, 0) as Category,
+                            '' as ShortDescription,
+                            0 as Deduct,
+                            NULL as Category,
                             ChargeGST as ChargeGst,
-                            ISNULL(VarietyCode, '') as Variety,
-                            CreatedAt,
-                            CreatedBy,
-                            ModifiedAt,
-                            ModifiedBy,
-                            DeletedAt,
-                            DeletedBy
+                            '' as Variety
                         FROM Products
                         WHERE IsActive = 1
                         ORDER BY ProductName"; // Order alphabetically for display
@@ -63,17 +57,11 @@ namespace WPFGrowerApp.DataAccess.Services
                         SELECT
                             ProductCode as ProductId,
                             ProductName as Description,
-                            ISNULL(ShortDescription, '') as ShortDescription,
-                            ISNULL(MarketingDeduction, 0) as Deduct,
-                            ISNULL(ReportCategory, 0) as Category,
+                            '' as ShortDescription,
+                            0 as Deduct,
+                            '' as Category,
                             ChargeGST as ChargeGst,
-                            ISNULL(VarietyCode, '') as Variety,
-                            CreatedAt,
-                            CreatedBy,
-                            ModifiedAt,
-                            ModifiedBy,
-                            DeletedAt,
-                            DeletedBy
+                            '' as Variety
                         FROM Products
                         WHERE ProductCode = @ProductId AND IsActive = 1";
                     return await connection.QueryFirstOrDefaultAsync<Product>(sql, new { ProductId = productId });
@@ -95,31 +83,14 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    
-                    // Get current user for audit trail
-                    string currentUser = GetCurrentUserInitials();
-                    
                     var sql = @"
                         INSERT INTO Products (
-                            ProductCode, ProductName, Description, ChargeGST, UnitOfMeasure, IsActive, DisplayOrder,
-                            ShortDescription, VarietyCode, MarketingDeduction, ReportCategory,
-                            CreatedAt, CreatedBy
+                            ProductCode, ProductName, Description, ChargeGST, UnitOfMeasure, IsActive, DisplayOrder, CreatedAt, CreatedBy
                         ) VALUES (
-                            @ProductId, @Description, @Description, @ChargeGst, 'LBS', 1, 0,
-                            @ShortDescription, @Variety, @Deduct, @Category,
-                            GETDATE(), @CreatedBy
+                            @ProductId, @Description, @Description, @ChargeGst, 'LBS', 1, 0, GETDATE(), @OperatorInitials
                         )";
 
-                    int affectedRows = await connection.ExecuteAsync(sql, new {
-                        product.ProductId,
-                        product.Description,
-                        product.ChargeGst,
-                        product.ShortDescription,
-                        product.Variety,
-                        product.Deduct,
-                        product.Category,
-                        CreatedBy = currentUser
-                    });
+                    int affectedRows = await connection.ExecuteAsync(sql, product);
                     return affectedRows > 0;
                 }
             }
@@ -139,33 +110,16 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    
-                    // Get current user for audit trail
-                    string currentUser = GetCurrentUserInitials();
-                    
                     var sql = @"
                         UPDATE Products SET
                             ProductName = @Description,
                             Description = @Description,
                             ChargeGST = @ChargeGst,
-                            ShortDescription = @ShortDescription,
-                            VarietyCode = @Variety,
-                            MarketingDeduction = @Deduct,
-                            ReportCategory = @Category,
                             ModifiedAt = GETDATE(),
-                            ModifiedBy = @ModifiedBy
+                            ModifiedBy = @OperatorInitials
                         WHERE ProductCode = @ProductId AND IsActive = 1";
 
-                    int affectedRows = await connection.ExecuteAsync(sql, new {
-                        product.ProductId,
-                        product.Description,
-                        product.ChargeGst,
-                        product.ShortDescription,
-                        product.Variety,
-                        product.Deduct,
-                        product.Category,
-                        ModifiedBy = currentUser
-                    });
+                    int affectedRows = await connection.ExecuteAsync(sql, product);
                     return affectedRows > 0;
                 }
             }
@@ -188,18 +142,12 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = @"
                         UPDATE Products SET
-                            IsActive = 0,
                             DeletedAt = GETDATE(),
-                            DeletedBy = @DeletedBy,
-                            ModifiedAt = GETDATE(),
-                            ModifiedBy = @ModifiedBy
-                        WHERE ProductCode = @ProductId AND IsActive = 1"; 
+                            DeletedBy = @OperatorInitials,
+                            IsActive = 0
+                        WHERE ProductCode = @ProductId AND IsActive = 1";
 
-                    int affectedRows = await connection.ExecuteAsync(sql, new { 
-                        ProductId = productId, 
-                        DeletedBy = operatorInitials,
-                        ModifiedBy = operatorInitials 
-                    });
+                    int affectedRows = await connection.ExecuteAsync(sql, new { ProductId = productId, OperatorInitials = operatorInitials });
                     return affectedRows > 0;
                 }
             }

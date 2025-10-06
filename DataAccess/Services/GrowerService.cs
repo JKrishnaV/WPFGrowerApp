@@ -23,6 +23,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = @"
                         SELECT
+                            GrowerId,
                             GrowerNumber,
                             FullName as GrowerName,
                             CheckPayeeName as ChequeName,
@@ -201,6 +202,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = @"
                         SELECT
+                            g.GrowerId,
                             g.GrowerNumber,
                             g.FullName as GrowerName,
                             g.CheckPayeeName as ChequeName,

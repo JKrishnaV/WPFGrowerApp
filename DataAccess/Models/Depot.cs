@@ -10,15 +10,9 @@ namespace WPFGrowerApp.DataAccess.Models
     public class Depot : AuditableEntity // Inherit from AuditableEntity
     {
         // Use auto-properties for simplicity
-        public string DepotId { get; set; } // Corresponds to DEPOT (NVARCHAR(1))
+        public string DepotId { get; set; } // String to match existing code patterns  
         public string DepotName { get; set; } // Corresponds to DEPOTNAME (NVARCHAR(12))
         
         // Audit fields are inherited from AuditableEntity
-        
-        /// <summary>Timestamp when the depot was soft-deleted</summary>
-        public DateTime? DeletedAt { get; set; }
-        
-        /// <summary>Username who deleted the depot</summary>
-        public string? DeletedBy { get; set; }
     }
 }

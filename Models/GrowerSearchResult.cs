@@ -5,7 +5,8 @@ namespace WPFGrowerApp.Models
 {
     public class GrowerSearchResult
     {
-        public decimal GrowerNumber { get; set; }
+        public int GrowerId { get; set; }  // Primary key from database
+        public decimal GrowerNumber { get; set; }  // Legacy grower number
         public string GrowerName { get; set; }
         public string ChequeName { get; set; }
         public string City { get; set; }

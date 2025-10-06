@@ -49,6 +49,7 @@
              <converters:NotNullConverter x:Key="NotNullConverter"/>
              <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/> 
              <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+             <converters:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter"/>
              <converters:NotNullOrEmptyToVisibilityConverter x:Key="NotNullOrEmptyToVisibilityConverter"/> 
              <converters:SecureStringArrayConverter x:Key="SecureStringArrayConverter"/>
               <converters:ActiveStatusConverter x:Key="ActiveStatusConverter"/>

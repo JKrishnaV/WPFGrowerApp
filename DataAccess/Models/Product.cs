@@ -2,76 +2,31 @@ using System;
 
 namespace WPFGrowerApp.DataAccess.Models
 {
-    /// <summary>
-    /// Product entity - represents berry products (Blueberries, Raspberries, etc.)
-    /// </summary>
-    public class Product
+    public class Product : AuditableEntity // Assuming AuditableEntity exists for QADD/QED/QDEL fields
     {
-        // ========================================
-        // Primary Key & Identity
-        // ========================================
-        
-        /// <summary>Product code (e.g., "BB" for Blueberries)</summary>
-        public string ProductId { get; set; } = string.Empty;
+        // From SQL Script: ProductId INT (but kept as string for compatibility with existing ViewModels)
+        public string ProductId { get; set; } // String to match existing code patterns
 
-        // ========================================
-        // Core Business Fields
-        // ========================================
-        
-        /// <summary>Full product name (e.g., "BLUEBERRIES")</summary>
-        public string Description { get; set; } = string.Empty;
+        // From SQL Script: Description NVARCHAR(15)
+        public string Description { get; set; }
 
-        /// <summary>Short description (4 chars, e.g., "BLUE")</summary>
-        public string? ShortDescription { get; set; }
+        // From SQL Script: SHORTDescription NVARCHAR(4)
+        public string ShortDescription { get; set; }
 
-        /// <summary>Marketing deduction amount per unit (e.g., -0.008000 per pound)</summary>
+        // From SQL Script: DEDUCT DECIMAL(9, 6)
         public decimal Deduct { get; set; }
 
-        /// <summary>Report category for grouping (1=Blueberry, 2=Raspberry, etc.)</summary>
-        public int Category { get; set; }
+        // From SQL Script: CATEGORY DECIMAL(1, 0) - nullable because some products don't have category
+        public int? Category { get; set; } // Nullable to handle empty/NULL values from database
 
-        /// <summary>Whether to charge GST on this product</summary>
-        public bool ChargeGst { get; set; }
+        // From SQL Script: CHG_GST BIT
+        public bool ChargeGst { get; set; } // Renamed from CHG_GST
 
-        /// <summary>Default variety code for this product (e.g., "Blueberry")</summary>
-        public string? Variety { get; set; }
+        // From SQL Script: VARIETY NVARCHAR(8)
+        public string Variety { get; set; }
 
-        // ========================================
-        // Audit Fields (Modern Schema)
-        // ========================================
-        
-        /// <summary>Timestamp when the product was created</summary>
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
-
-        /// <summary>Username who created the product</summary>
-        public string CreatedBy { get; set; } = "SYSTEM";
-
-        /// <summary>Timestamp when the product was last modified</summary>
-        public DateTime? ModifiedAt { get; set; }
-
-        /// <summary>Username who last modified the product</summary>
-        public string? ModifiedBy { get; set; }
-
-        /// <summary>Timestamp when the product was soft-deleted</summary>
-        public DateTime? DeletedAt { get; set; }
-
-        /// <summary>Username who deleted the product</summary>
-        public string? DeletedBy { get; set; }
-
-        // ========================================
-        // Legacy Audit Fields (for backward compatibility with old views)
-        // ========================================
-        
-        // These are only used when querying old compatibility views
-        // They map to the QADD_DATE/TIME/OP, QED_DATE/TIME/OP, QDEL_DATE/TIME/OP columns
-        public DateTime? QADD_DATE { get; set; }
-        public string? QADD_TIME { get; set; }
-        public string? QADD_OP { get; set; }
-        public DateTime? QED_DATE { get; set; }
-        public string? QED_TIME { get; set; }
-        public string? QED_OP { get; set; }
-        public DateTime? QDEL_DATE { get; set; }
-        public string? QDEL_TIME { get; set; }
-        public string? QDEL_OP { get; set; }
+        // Note: Audit fields (QADD_DATE, QADD_TIME, QADD_OP, etc.)
+        // are assumed to be handled by the AuditableEntity base class
+        // or will be managed directly in the service layer during DB operations.
     }
 }

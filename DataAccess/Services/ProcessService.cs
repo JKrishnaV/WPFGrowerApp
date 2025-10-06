@@ -26,13 +26,13 @@ namespace WPFGrowerApp.DataAccess.Services
                     // Ensure QDEL_DATE is NULL for active records
                     var sql = @"
                         SELECT
-                            ProcessCode as ProcessId,
+                            ProcessId,
                             ProcessName as Description,
                             0 as DefGrade,
-                            '' as ProcClass
+                            0 as ProcClass
                         FROM Processes
                         WHERE IsActive = 1
-                        ORDER BY ProcessName"; // Order alphabetically for display
+                        ORDER BY ProcessName"; // Order alphabetically
                     return await connection.QueryAsync<Process>(sql); // Return IEnumerable
                 }
             }

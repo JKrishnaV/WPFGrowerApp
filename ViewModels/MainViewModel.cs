@@ -27,6 +27,7 @@ namespace WPFGrowerApp.ViewModels
             // Initialize commands using the NavigateToAsync helper
             NavigateToDashboardCommand = new RelayCommand(async p => await NavigateToAsync<DashboardViewModel>("Dashboard", p), CanNavigate); // Use async lambda
             NavigateToGrowersCommand = new RelayCommand(NavigateToGrowersExecuteAsync, CanNavigate); // Keep separate async logic
+            NavigateToReceiptsCommand = new RelayCommand(NavigateToReceiptsExecuteAsync, CanNavigate); // Added Receipts navigation
             NavigateToImportCommand = new RelayCommand(async p => await NavigateToAsync<ImportViewModel>("Import", p), CanNavigate); // Use async lambda
             // Update Reports command to navigate to the new ReportsHostViewModel
             NavigateToReportsCommand = new RelayCommand(async p => await NavigateToAsync<ReportsHostViewModel>("Reports", p), CanNavigate); // Use async lambda
@@ -81,6 +82,7 @@ namespace WPFGrowerApp.ViewModels
         // --- Navigation Commands ---
         public ICommand NavigateToDashboardCommand { get; }
         public ICommand NavigateToGrowersCommand { get; }
+        public ICommand NavigateToReceiptsCommand { get; } // Added Receipts
         public ICommand NavigateToImportCommand { get; }
         public ICommand NavigateToReportsCommand { get; }
         public ICommand NavigateToInventoryCommand { get; }
@@ -130,6 +132,47 @@ namespace WPFGrowerApp.ViewModels
             {
                 _isNavigating = false;
                  ((RelayCommand)NavigateToGrowersCommand).RaiseCanExecuteChanged();
+            }
+        }
+
+        private async Task NavigateToReceiptsExecuteAsync(object? parameter) // Added Receipts navigation
+        {
+            Infrastructure.Logging.Logger.Info("NavigateToReceiptsExecuteAsync - Starting receipt navigation");
+            
+            if (!CanNavigate(parameter))
+            {
+                Infrastructure.Logging.Logger.Warn("NavigateToReceiptsExecuteAsync - Cannot navigate (already navigating)");
+                return;
+            }
+
+            _isNavigating = true;
+            ((RelayCommand)NavigateToReceiptsCommand).RaiseCanExecuteChanged();
+
+            try
+            {
+                Infrastructure.Logging.Logger.Info("NavigateToReceiptsExecuteAsync - Resolving ReceiptViewModel from DI container");
+                // Resolve ViewModel from DI container
+                var receiptViewModel = _serviceProvider.GetRequiredService<ReceiptViewModel>();
+
+                Infrastructure.Logging.Logger.Info("NavigateToReceiptsExecuteAsync - Calling ReceiptViewModel.InitializeAsync");
+                // Call InitializeAsync to load receipts
+                await receiptViewModel.InitializeAsync();
+
+                Infrastructure.Logging.Logger.Info("NavigateToReceiptsExecuteAsync - Setting CurrentViewModel to ReceiptViewModel");
+                CurrentViewModel = receiptViewModel;
+                IsMenuOpen = false; // Close menu after navigation
+                
+                Infrastructure.Logging.Logger.Info("NavigateToReceiptsExecuteAsync - Receipt navigation completed successfully");
+            }
+            catch (System.Exception ex)
+            {
+                Infrastructure.Logging.Logger.Error("Error during receipt navigation", ex);
+                await _dialogService.ShowMessageBoxAsync($"Error navigating to receipts: {ex.Message}", "Navigation Error");
+            }
+            finally
+            {
+                _isNavigating = false;
+                ((RelayCommand)NavigateToReceiptsCommand).RaiseCanExecuteChanged();
             }
         }
 

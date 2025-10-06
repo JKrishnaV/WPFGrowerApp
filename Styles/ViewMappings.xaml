@@ -61,6 +61,11 @@
         <views:DepotView />
     </DataTemplate>
 
+    <!-- Receipt Management Mapping -->
+    <DataTemplate DataType="{x:Type viewmodels:ReceiptViewModel}">
+        <views:ReceiptView />
+    </DataTemplate>
+
     <!-- Price Management Mapping -->
     <DataTemplate DataType="{x:Type viewmodels:PriceViewModel}">
         <views:PriceView />

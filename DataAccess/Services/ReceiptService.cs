@@ -24,22 +24,27 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     
-                    // Query modern Receipts table
+                    // Query modern Receipts table with grower information
                     var sql = @"
                         SELECT 
-                            ReceiptId, ReceiptNumber, ReceiptDate, ReceiptTime,
-                            GrowerId, ProductId, ProcessId, ProcessTypeId,
-                            DepotId, ContainerId, VarietyId,
-                            GrossWeight, TareWeight, NetWeight, DockPercentage, 
-                            DockWeight, FinalWeight,
-                            Grade, PriceClassId, PriceAreaId,
-                            IsVoided, VoidedReason, VoidedAt, VoidedBy,
-                            ImportBatchId,
-                            CreatedAt, CreatedBy, ModifiedAt, ModifiedBy,
-                            QualityCheckedAt, QualityCheckedBy,
-                            DeletedAt, DeletedBy
-                        FROM Receipts
-                        WHERE DeletedAt IS NULL";
+                            r.ReceiptId, 
+                            r.ReceiptNumber as ReceiptNumberModern, 
+                            r.ReceiptDate, 
+                            r.ReceiptTime,
+                            r.GrowerId, r.ProductId, r.ProcessId, r.ProcessTypeId,
+                            r.DepotId, r.ContainerId, r.VarietyId,
+                            r.GrossWeight, r.TareWeight, r.NetWeight, r.DockPercentage, 
+                            r.DockWeight, r.FinalWeight,
+                            r.Grade as GradeModern, r.PriceClassId, r.PriceAreaId,
+                            r.IsVoided, r.VoidedReason, r.VoidedAt, r.VoidedBy,
+                            r.ImportBatchId,
+                            r.CreatedAt, r.CreatedBy, r.ModifiedAt, r.ModifiedBy,
+                            r.QualityCheckedAt, r.QualityCheckedBy,
+                            r.DeletedAt, r.DeletedBy,
+                            g.FullName as GrowerName
+                        FROM Receipts r
+                        LEFT JOIN Growers g ON r.GrowerId = g.GrowerId
+                        WHERE r.DeletedAt IS NULL";
 
                     var parameters = new DynamicParameters();
                     
@@ -69,6 +74,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         receipt.DockPercent = receipt.DockPercentage;
                         receipt.IsVoid = receipt.IsVoidedModern;
                         receipt.Date = receipt.ReceiptDate;
+                        receipt.Grade = receipt.GradeModern; // Map GradeModern to legacy Grade
                     }
                     
                     return receipts;
@@ -89,23 +95,28 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     
-                    // Query modern Receipts table
+                    // Query modern Receipts table with grower information
                     var sql = @"
                         SELECT 
-                            ReceiptId, ReceiptNumber, ReceiptDate, ReceiptTime,
-                            GrowerId, ProductId, ProcessId, ProcessTypeId,
-                            DepotId, ContainerId, VarietyId,
-                            GrossWeight, TareWeight, NetWeight, DockPercentage, 
-                            DockWeight, FinalWeight,
-                            Grade, PriceClassId, PriceAreaId,
-                            IsVoided, VoidedReason, VoidedAt, VoidedBy,
-                            ImportBatchId,
-                            CreatedAt, CreatedBy, ModifiedAt, ModifiedBy,
-                            QualityCheckedAt, QualityCheckedBy,
-                            DeletedAt, DeletedBy
-                        FROM Receipts
-                        WHERE ReceiptNumber = @ReceiptNumber
-                          AND DeletedAt IS NULL";
+                            r.ReceiptId, 
+                            r.ReceiptNumber as ReceiptNumberModern, 
+                            r.ReceiptDate, 
+                            r.ReceiptTime,
+                            r.GrowerId, r.ProductId, r.ProcessId, r.ProcessTypeId,
+                            r.DepotId, r.ContainerId, r.VarietyId,
+                            r.GrossWeight, r.TareWeight, r.NetWeight, r.DockPercentage, 
+                            r.DockWeight, r.FinalWeight,
+                            r.Grade as GradeModern, r.PriceClassId, r.PriceAreaId,
+                            r.IsVoided, r.VoidedReason, r.VoidedAt, r.VoidedBy,
+                            r.ImportBatchId,
+                            r.CreatedAt, r.CreatedBy, r.ModifiedAt, r.ModifiedBy,
+                            r.QualityCheckedAt, r.QualityCheckedBy,
+                            r.DeletedAt, r.DeletedBy,
+                            g.FullName as GrowerName
+                        FROM Receipts r
+                        LEFT JOIN Growers g ON r.GrowerId = g.GrowerId
+                        WHERE r.ReceiptNumber = @ReceiptNumber
+                          AND r.DeletedAt IS NULL";
                     
                     var parameters = new { ReceiptNumber = receiptNumber.ToString() };
                     var receipt = await connection.QueryFirstOrDefaultAsync<Receipt>(sql, parameters);
@@ -114,18 +125,13 @@ namespace WPFGrowerApp.DataAccess.Services
                     {
                         // Map modern properties to legacy properties for backward compatibility
                         receipt.ReceiptNumber = receiptNumber;
-                        receipt.GrossWeight = receipt.GrossWeight;
                         receipt.Gross = receipt.GrossWeight;
-                        receipt.TareWeight = receipt.TareWeight;
                         receipt.Tare = receipt.TareWeight;
-                        receipt.NetWeight = receipt.NetWeight;
                         receipt.Net = receipt.NetWeight;
-                        receipt.DockPercentage = receipt.DockPercentage;
                         receipt.DockPercent = receipt.DockPercentage;
-                        receipt.IsVoidedModern = receipt.IsVoidedModern;
                         receipt.IsVoid = receipt.IsVoidedModern;
-                        receipt.ReceiptDate = receipt.ReceiptDate;
                         receipt.Date = receipt.ReceiptDate;
+                        receipt.Grade = receipt.GradeModern; // Map GradeModern to legacy Grade
                     }
                     
                     return receipt;

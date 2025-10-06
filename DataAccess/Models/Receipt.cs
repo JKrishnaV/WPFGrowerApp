@@ -25,7 +25,7 @@ namespace WPFGrowerApp.DataAccess.Models
         private int _receiptIdModern;
         private string _receiptNumberModern;
         private DateTime _receiptDateModern;
-        private TimeSpan? _receiptTimeModern;
+        private TimeSpan _receiptTimeModern;
         
         private int _growerIdModern;
         private int _productIdModern;
@@ -66,7 +66,7 @@ namespace WPFGrowerApp.DataAccess.Models
         public int ReceiptId { get => _receiptIdModern; set => SetProperty(ref _receiptIdModern, value); }
         public string ReceiptNumberModern { get => _receiptNumberModern; set => SetProperty(ref _receiptNumberModern, value); }
         public DateTime ReceiptDate { get => _receiptDateModern; set => SetProperty(ref _receiptDateModern, value); }
-        public TimeSpan? ReceiptTime { get => _receiptTimeModern; set => SetProperty(ref _receiptTimeModern, value); }
+        public TimeSpan ReceiptTime { get => _receiptTimeModern; set => SetProperty(ref _receiptTimeModern, value); }
         
         public int GrowerId { get => _growerIdModern; set => SetProperty(ref _growerIdModern, value); }
         public int ProductId { get => _productIdModern; set => SetProperty(ref _productIdModern, value); }
@@ -102,6 +102,11 @@ namespace WPFGrowerApp.DataAccess.Models
         public string QualityCheckedBy { get => _qualityCheckedByModern; set => SetProperty(ref _qualityCheckedByModern, value); }
         public DateTime? DeletedAt { get => _deletedAtModern; set => SetProperty(ref _deletedAtModern, value); }
         public string DeletedBy { get => _deletedByModern; set => SetProperty(ref _deletedByModern, value); }
+
+        // Navigation property for display purposes
+        private string _growerName;
+        [NotMapped]
+        public string GrowerName { get => _growerName; set => SetProperty(ref _growerName, value); }
 
         // ======================================================================
         // LEGACY PROPERTIES - For backward compatibility with Daily table

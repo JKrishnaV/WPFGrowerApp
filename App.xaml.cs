@@ -63,6 +63,8 @@ namespace WPFGrowerApp
             services.AddTransient<DashboardViewModel>();
             services.AddTransient<GrowerViewModel>();
             services.AddTransient<GrowerSearchViewModel>();
+            services.AddTransient<ReceiptViewModel>(); // Added Receipt VM
+            services.AddTransient<ReceiptEntryViewModel>(); // Added Receipt Entry VM
             services.AddTransient<ImportViewModel>();
             services.AddTransient<ReportsViewModel>();
             services.AddTransient<InventoryViewModel>();
@@ -85,6 +87,7 @@ namespace WPFGrowerApp
             // Register Views (Views are typically not registered unless needed for DI resolution like DialogService)
             services.AddTransient<GrowerSearchView>(); // Needed by DialogService
             services.AddTransient<LoginView>();
+            services.AddTransient<ReceiptEntryView>(); // Added Receipt Entry View for dialogs
             // SettingsHostView and ProductView don't need registration if only resolved via DataTemplates
             services.AddSingleton<MainWindow>();
         }

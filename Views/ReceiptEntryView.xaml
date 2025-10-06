@@ -1,0 +1,270 @@
+<Window x:Class="WPFGrowerApp.Views.ReceiptEntryView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Height="700" Width="600"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+    
+    <!-- Add rounded border with shadow -->
+    <Border Background="White" 
+            CornerRadius="8" 
+            BorderBrush="#CCCCCC" 
+            BorderThickness="1"
+            Effect="{StaticResource MaterialDesignShadowDepth3}">
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <materialDesign:ColorZone Grid.Row="0" Mode="PrimaryMid" Padding="15,10" Margin="0,0,0,20" CornerRadius="4">
+                <TextBlock Text="{Binding WindowTitle}"
+                          Foreground="White"
+                          FontSize="18"
+                          FontWeight="SemiBold"
+                          HorizontalAlignment="Center"/>
+            </materialDesign:ColorZone>
+
+        <!-- Form ScrollViewer -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <!-- Grower Selection -->
+                <materialDesign:Card Padding="15" Margin="0,0,0,15">
+                    <StackPanel>
+                        <TextBlock Text="Grower Information" 
+                                  Style="{StaticResource MaterialDesignSubtitle1TextBlock}" 
+                                  Margin="0,0,0,10"/>
+                        
+                        <ComboBox ItemsSource="{Binding Growers}"
+                                 SelectedItem="{Binding SelectedGrower, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 materialDesign:HintAssist.Hint="Select Grower *"
+                                 Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                 IsEnabled="True">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding GrowerNumber}" FontWeight="Bold" Margin="0,0,10,0"/>
+                                        <TextBlock Text="-" Margin="0,0,10,0"/>
+                                        <TextBlock Text="{Binding GrowerName}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <!-- Date and Time -->
+                <materialDesign:Card Padding="15" Margin="0,0,0,15">
+                    <StackPanel>
+                        <TextBlock Text="Date and Time" 
+                                  Style="{StaticResource MaterialDesignSubtitle1TextBlock}" 
+                                  Margin="0,0,0,10"/>
+                        
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <DatePicker Grid.Column="0"
+                                       SelectedDate="{Binding ReceiptDateTime, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                       materialDesign:HintAssist.Hint="Receipt Date *"
+                                       Style="{StaticResource MaterialDesignOutlinedDatePicker}"
+                                       Margin="0,0,10,0"/>
+
+                            <materialDesign:TimePicker Grid.Column="1"
+                                                      SelectedTime="{Binding ReceiptDateTime, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                      materialDesign:HintAssist.Hint="Receipt Time"
+                                                      Style="{StaticResource MaterialDesignOutlinedTimePicker}"
+                                                      Is24Hours="True"
+                                                      WithSeconds="True"/>
+                        </Grid>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <!-- Product, Process, Depot -->
+                <materialDesign:Card Padding="15" Margin="0,0,0,15">
+                    <StackPanel>
+                        <TextBlock Text="Product Information" 
+                                  Style="{StaticResource MaterialDesignSubtitle1TextBlock}" 
+                                  Margin="0,0,0,10"/>
+                        
+                        <ComboBox ItemsSource="{Binding Products}"
+                                 SelectedItem="{Binding SelectedProduct}"
+                                 DisplayMemberPath="Description"
+                                 materialDesign:HintAssist.Hint="Product *"
+                                 Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                 Margin="0,0,0,10"/>
+
+                        <ComboBox ItemsSource="{Binding Processes}"
+                                 SelectedItem="{Binding SelectedProcess}"
+                                 DisplayMemberPath="Description"
+                                 materialDesign:HintAssist.Hint="Process *"
+                                 Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                 Margin="0,0,0,10"/>
+
+                        <ComboBox ItemsSource="{Binding Depots}"
+                                 SelectedItem="{Binding SelectedDepot}"
+                                 DisplayMemberPath="DepotName"
+                                 materialDesign:HintAssist.Hint="Depot *"
+                                 Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <!-- Weights -->
+                <materialDesign:Card Padding="15" Margin="0,0,0,15">
+                    <StackPanel>
+                        <TextBlock Text="Weights (lbs)" 
+                                  Style="{StaticResource MaterialDesignSubtitle1TextBlock}" 
+                                  Margin="0,0,0,10"/>
+                        
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Gross Weight -->
+                            <TextBox Grid.Row="0" Grid.Column="0"
+                                    Text="{Binding CurrentReceipt.GrossWeight, UpdateSourceTrigger=PropertyChanged}"
+                                    materialDesign:HintAssist.Hint="Gross Weight *"
+                                    Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                    Margin="0,0,10,10"/>
+
+                            <!-- Tare Weight -->
+                            <TextBox Grid.Row="0" Grid.Column="1"
+                                    Text="{Binding CurrentReceipt.TareWeight, UpdateSourceTrigger=PropertyChanged}"
+                                    materialDesign:HintAssist.Hint="Tare Weight"
+                                    Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                    Margin="0,0,0,10"/>
+
+                            <!-- Net Weight (Calculated) -->
+                            <TextBox Grid.Row="1" Grid.Column="0"
+                                    Text="{Binding CurrentReceipt.NetWeight, Mode=OneWay, StringFormat='{}{0:N2}'}"
+                                    materialDesign:HintAssist.Hint="Net Weight (Calculated)"
+                                    Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                    IsReadOnly="True"
+                                    Margin="0,0,10,10"
+                                    Background="#F5F5F5"/>
+
+                            <!-- Dock Percentage -->
+                            <TextBox Grid.Row="1" Grid.Column="1"
+                                    Text="{Binding CurrentReceipt.DockPercentage, UpdateSourceTrigger=PropertyChanged}"
+                                    materialDesign:HintAssist.Hint="Dock %"
+                                    Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                    Margin="0,0,0,10"/>
+
+                            <!-- Dock Weight (Calculated) -->
+                            <TextBox Grid.Row="2" Grid.Column="0"
+                                    Text="{Binding CurrentReceipt.DockWeight, Mode=OneWay, StringFormat='{}{0:N2}'}"
+                                    materialDesign:HintAssist.Hint="Dock Weight (Calculated)"
+                                    Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                    IsReadOnly="True"
+                                    Margin="0,0,10,0"
+                                    Background="#F5F5F5"/>
+
+                            <!-- Final Weight (Calculated) -->
+                            <TextBox Grid.Row="2" Grid.Column="1"
+                                    Text="{Binding CurrentReceipt.FinalWeight, Mode=OneWay, StringFormat='{}{0:N2}'}"
+                                    materialDesign:HintAssist.Hint="Final Weight (Calculated)"
+                                    Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                    IsReadOnly="True"
+                                    Background="#F5F5F5"/>
+                        </Grid>
+
+                        <Button Command="{Binding CalculateWeightsCommand}"
+                               Style="{StaticResource MaterialDesignOutlinedButton}"
+                               Margin="0,10,0,0"
+                               HorizontalAlignment="Right">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Calculator" 
+                                                        VerticalAlignment="Center"
+                                                        Margin="0,0,5,0"/>
+                                <TextBlock Text="Recalculate Weights"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <!-- Grade -->
+                <materialDesign:Card Padding="15" Margin="0,0,0,15">
+                    <StackPanel>
+                        <TextBlock Text="Quality" 
+                                  Style="{StaticResource MaterialDesignSubtitle1TextBlock}" 
+                                  Margin="0,0,0,10"/>
+                        
+                        <TextBox Text="{Binding CurrentReceipt.GradeModern}"
+                                materialDesign:HintAssist.Hint="Grade (1-10)"
+                                Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <!-- Status Message -->
+                <TextBlock Text="{Binding StatusMessage}"
+                          Foreground="{DynamicResource MaterialDesignValidationErrorBrush}"
+                          Margin="0,0,0,10"
+                          HorizontalAlignment="Center"
+                          Visibility="{Binding StatusMessage, Converter={StaticResource NotNullOrEmptyToVisibilityConverter}}"/>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Action Buttons -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <Button Command="{Binding SaveCommand}"
+                   Style="{StaticResource MaterialDesignRaisedButton}"
+                   Width="100"
+                   Margin="0,0,10,0"
+                   IsDefault="True">
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="ContentSave" 
+                                            VerticalAlignment="Center"
+                                            Margin="0,0,5,0"/>
+                    <TextBlock Text="Save"/>
+                </StackPanel>
+            </Button>
+
+            <Button Command="{Binding CancelCommand}"
+                   Style="{StaticResource MaterialDesignOutlinedButton}"
+                   Width="100"
+                   IsCancel="True">
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="Cancel" 
+                                            VerticalAlignment="Center"
+                                            Margin="0,0,5,0"/>
+                    <TextBlock Text="Cancel"/>
+                </StackPanel>
+            </Button>
+        </StackPanel>
+
+        <!-- Loading Overlay -->
+        <Grid Grid.RowSpan="3" 
+             Background="#CC000000" 
+             Visibility="{Binding IsSaving, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}"
+                            Value="0"
+                            IsIndeterminate="True"
+                            Width="60"
+                            Height="60"
+                            Foreground="White"/>
+                <TextBlock Text="Saving..." 
+                          Margin="0,15,0,0"
+                          FontSize="18"
+                          Foreground="White"
+                          HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+        </Grid>
+    </Border>
+</Window>
