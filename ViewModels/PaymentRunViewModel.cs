@@ -510,7 +510,8 @@ namespace WPFGrowerApp.ViewModels
                     }
                     await _dialogService.ShowMessageBoxAsync("The test run simulation encountered errors during calculation. Please review the run log.", "Test Run Errors");
                 }
-                else if (!testResult.GrowerPayments.Any())
+
+                if (!testResult.GrowerPayments.Any())
                 {
                      StatusMessage = "Test run simulation completed. No eligible growers/receipts found.";
                      Report("Test run simulation finished: No eligible growers/receipts found.");
