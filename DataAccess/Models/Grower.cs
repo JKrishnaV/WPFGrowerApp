@@ -6,7 +6,7 @@ namespace WPFGrowerApp.DataAccess.Models
 {
     public class Grower : INotifyPropertyChanged
     {
-        private decimal _growerNumber;
+    private string _growerNumber;
         private string _chequeName;
         private string _growerName;
         private string _address;
@@ -29,9 +29,9 @@ namespace WPFGrowerApp.DataAccess.Models
         private int _lyOther;
         private string _certified;
         private bool _chargeGST;
-        private int _priceLevel = 1;
+        private int _defaultPriceClassId = 1;
 
-        public decimal GrowerNumber
+        public string GrowerNumber
         {
             get => _growerNumber;
             set
@@ -329,30 +329,35 @@ namespace WPFGrowerApp.DataAccess.Models
             }
         }
 
-        public int PriceLevel
+        /// <summary>
+        /// Default Price Class for this grower (formerly STATUS field, Price Level 1-4).
+        /// Links to PriceClasses.PriceClassId. Can be overridden on individual receipts.
+        /// Required field - all growers must have a valid price class.
+        /// </summary>
+        public int DefaultPriceClassId
         {
-            get => _priceLevel;
+            get => _defaultPriceClassId;
             set
             {
-                if (_priceLevel != value)
+                if (_defaultPriceClassId != value)
                 {
-                    _priceLevel = value;
+                    _defaultPriceClassId = value;
                     OnPropertyChanged();
                 }
             }
         }
 
-        /// <summary>Modern audit fields</summary>
-        public DateTime? CreatedAt { get; set; }
-        public string? CreatedBy { get; set; }
-        public DateTime? ModifiedAt { get; set; }
-        public string? ModifiedBy { get; set; }
-        
-        /// <summary>Timestamp when the grower was soft-deleted</summary>
-        public DateTime? DeletedAt { get; set; }
-        
-        /// <summary>Username who deleted the grower</summary>
-        public string? DeletedBy { get; set; }
+        /// <summary>
+        /// Legacy property for backward compatibility. Maps to DefaultPriceClassId.
+        /// </summary>
+        public int PriceLevel
+        {
+            get => _defaultPriceClassId;
+            set
+            {
+                DefaultPriceClassId = value > 0 ? value : 1;
+            }
+        }
 
         public event PropertyChangedEventHandler PropertyChanged;
 

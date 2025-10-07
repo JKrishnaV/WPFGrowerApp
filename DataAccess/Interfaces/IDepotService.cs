@@ -14,7 +14,8 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// </summary>
         /// <param name="depotId">The unique identifier for the depot (DEPOT column).</param>
         /// <returns>The Depot object or null if not found.</returns>
-        Task<Depot> GetDepotByIdAsync(string depotId);
+    Task<Depot?> GetDepotByIdAsync(int depotId);
+    Task<Depot?> GetDepotByCodeAsync(string depotCode);
 
         /// <summary>
         /// Gets all depots.
@@ -42,6 +43,7 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// <param name="depotId">The ID of the depot to delete.</param>
         /// <param name="operatorInitials">The initials of the operator performing the deletion.</param>
         /// <returns>True if the operation was successful, otherwise false.</returns>
-        Task<bool> DeleteDepotAsync(string depotId, string operatorInitials); 
+    Task<bool> DeleteDepotAsync(int depotId, string operatorInitials); 
+    Task<bool> DeleteDepotByCodeAsync(string depotCode, string operatorInitials); 
     }
 }

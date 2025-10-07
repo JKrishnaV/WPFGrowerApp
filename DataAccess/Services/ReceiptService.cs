@@ -12,8 +12,21 @@ using WPFGrowerApp.DataAccess.Exceptions; // Added for MissingReferenceDataExcep
 
 namespace WPFGrowerApp.DataAccess.Services
 {
-    public class ReceiptService : BaseDatabaseService, IReceiptService
-    {
+        public class ReceiptService : BaseDatabaseService, IReceiptService
+        {
+            public async Task<decimal> GetPriceForReceiptAsync(Receipt receipt)
+            {
+                // TODO: Implement price calculation logic
+                await Task.CompletedTask;
+                return 0m;
+            }
+
+            public async Task<decimal> ApplyDockageAsync(Receipt receipt)
+            {
+                // TODO: Implement dockage application logic
+                await Task.CompletedTask;
+                return 0m;
+            }
 
 
         public async Task<List<Receipt>> GetReceiptsAsync(DateTime? startDate = null, DateTime? endDate = null)
@@ -28,14 +41,14 @@ namespace WPFGrowerApp.DataAccess.Services
                     var sql = @"
                         SELECT 
                             r.ReceiptId, 
-                            r.ReceiptNumber as ReceiptNumberModern, 
+                            r.ReceiptNumber, 
                             r.ReceiptDate, 
                             r.ReceiptTime,
                             r.GrowerId, r.ProductId, r.ProcessId, r.ProcessTypeId,
-                            r.DepotId, r.ContainerId, r.VarietyId,
+                            r.DepotId, r.VarietyId,
                             r.GrossWeight, r.TareWeight, r.NetWeight, r.DockPercentage, 
                             r.DockWeight, r.FinalWeight,
-                            r.Grade as GradeModern, r.PriceClassId, r.PriceAreaId,
+                            r.Grade, r.PriceClassId,
                             r.IsVoided, r.VoidedReason, r.VoidedAt, r.VoidedBy,
                             r.ImportBatchId,
                             r.CreatedAt, r.CreatedBy, r.ModifiedAt, r.ModifiedBy,
@@ -64,17 +77,16 @@ namespace WPFGrowerApp.DataAccess.Services
 
                     var receipts = (await connection.QueryAsync<Receipt>(sql, parameters)).ToList();
                     
-                    // Map modern properties to legacy properties for backward compatibility
+                    // Map modern properties
                     foreach (var receipt in receipts)
                     {
-                        receipt.ReceiptNumber = decimal.Parse(receipt.ReceiptNumberModern ?? "0");
                         receipt.Gross = receipt.GrossWeight;
                         receipt.Tare = receipt.TareWeight;
                         receipt.Net = receipt.NetWeight;
                         receipt.DockPercent = receipt.DockPercentage;
-                        receipt.IsVoid = receipt.IsVoidedModern;
-                        receipt.Date = receipt.ReceiptDate;
-                        receipt.Grade = receipt.GradeModern; // Map GradeModern to legacy Grade
+                        receipt.IsVoid = receipt.IsVoided;
+                        // Removed legacy Date property; use ReceiptDate only
+                        // Grade is already mapped
                     }
                     
                     return receipts;
@@ -99,14 +111,14 @@ namespace WPFGrowerApp.DataAccess.Services
                     var sql = @"
                         SELECT 
                             r.ReceiptId, 
-                            r.ReceiptNumber as ReceiptNumberModern, 
+                            r.ReceiptNumber, 
                             r.ReceiptDate, 
                             r.ReceiptTime,
                             r.GrowerId, r.ProductId, r.ProcessId, r.ProcessTypeId,
-                            r.DepotId, r.ContainerId, r.VarietyId,
+                            r.DepotId, r.VarietyId,
                             r.GrossWeight, r.TareWeight, r.NetWeight, r.DockPercentage, 
                             r.DockWeight, r.FinalWeight,
-                            r.Grade as GradeModern, r.PriceClassId, r.PriceAreaId,
+                            r.Grade, r.PriceClassId,
                             r.IsVoided, r.VoidedReason, r.VoidedAt, r.VoidedBy,
                             r.ImportBatchId,
                             r.CreatedAt, r.CreatedBy, r.ModifiedAt, r.ModifiedBy,
@@ -117,21 +129,17 @@ namespace WPFGrowerApp.DataAccess.Services
                         LEFT JOIN Growers g ON r.GrowerId = g.GrowerId
                         WHERE r.ReceiptNumber = @ReceiptNumber
                           AND r.DeletedAt IS NULL";
-                    
                     var parameters = new { ReceiptNumber = receiptNumber.ToString() };
                     var receipt = await connection.QueryFirstOrDefaultAsync<Receipt>(sql, parameters);
-                    
                     if (receipt != null)
                     {
-                        // Map modern properties to legacy properties for backward compatibility
-                        receipt.ReceiptNumber = receiptNumber;
                         receipt.Gross = receipt.GrossWeight;
                         receipt.Tare = receipt.TareWeight;
                         receipt.Net = receipt.NetWeight;
                         receipt.DockPercent = receipt.DockPercentage;
-                        receipt.IsVoid = receipt.IsVoidedModern;
-                        receipt.Date = receipt.ReceiptDate;
-                        receipt.Grade = receipt.GradeModern; // Map GradeModern to legacy Grade
+                        receipt.IsVoid = receipt.IsVoided;
+                        receipt.ReceiptDate = receipt.ReceiptDate;
+                        // Grade is already mapped
                     }
                     
                     return receipt;
@@ -151,11 +159,10 @@ namespace WPFGrowerApp.DataAccess.Services
                 if (receipt == null) throw new ArgumentNullException(nameof(receipt));
 
                 // Generate receipt number if not set
-                if (string.IsNullOrEmpty(receipt.ReceiptNumberModern))
+                if (string.IsNullOrEmpty(receipt.ReceiptNumber))
                 {
                     var nextNumber = await GetNextReceiptNumberAsync();
-                    receipt.ReceiptNumberModern = nextNumber.ToString();
-                    receipt.ReceiptNumber = nextNumber;
+                    receipt.ReceiptNumber = nextNumber.ToString();
                 }
 
                 // Calculate computed fields
@@ -177,33 +184,21 @@ namespace WPFGrowerApp.DataAccess.Services
                     if (receipt.ProcessId <= 0) throw new ArgumentException("ProcessId is required for receipts with product movement.");
                 }
                 
-                // Validate ContainerId, PriceClassId, PriceAreaId - throw exception if missing
-                // This allows the import process to skip receipts with missing reference data
-                // and log detailed information about what's missing for user review
+                // Validate container data - EVERY receipt must have at least one container
+                // ContainerData is parsed from CSV (CONT1-12, IN1-12, OUT1-12 columns)
                 var missingItems = new List<string>();
                 
-                if (!receipt.ContainerId.HasValue || receipt.ContainerId <= 0)
+                if (receipt.ContainerData == null || !receipt.ContainerData.Any())
                 {
-                    missingItems.Add("ContainerId");
+                    missingItems.Add("ContainerData (no containers specified)");
                 }
                 
-                // For non-container-only receipts, PriceClassId and PriceAreaId are required
-                if (!isContainerOnly)
-                {
-                    if (receipt.PriceClassId <= 0)
-                    {
-                        missingItems.Add("PriceClassId");
-                    }
-                    
-                    if (receipt.PriceAreaId <= 0)
-                    {
-                        missingItems.Add("PriceAreaId");
-                    }
-                }
+                // PriceClassId will be populated from Grower.DefaultPriceClassId
+                // PriceAreaId is not needed for receipts (only for Advance Payment Run)
                 
                 if (missingItems.Any())
                 {
-                    var receiptId = receipt.ReceiptNumberModern ?? receipt.ReceiptNumber.ToString();
+                    var receiptId = receipt.ReceiptNumber ?? "NULL";
                     throw new MissingReferenceDataException(receiptId, missingItems);
                 }
 
@@ -214,24 +209,43 @@ namespace WPFGrowerApp.DataAccess.Services
                     // Get current user from App.CurrentUser
                     string currentUser = App.CurrentUser?.Username ?? "SYSTEM";
 
-                    // INSERT into modern Receipts table
+                    // Get grower's DefaultPriceClassId (if not already set from import)
+                    int priceClassId = receipt.PriceClassId; // Use value from Receipt if already set
+                    if (priceClassId <= 0 && !isContainerOnly && receipt.GrowerId > 0)
+                    {
+                        var growerSql = "SELECT DefaultPriceClassId FROM Growers WHERE GrowerId = @GrowerId";
+                        var growerPriceClass = await connection.QueryFirstOrDefaultAsync<int?>(growerSql, new { receipt.GrowerId });
+                        priceClassId = growerPriceClass ?? 1;
+                        Logger.Info($"Receipt #{receipt.ReceiptNumber} - Using PriceClassId={priceClassId} from Grower #{receipt.GrowerId}");
+                    }
+                    else if (priceClassId > 0)
+                    {
+                        Logger.Info($"Receipt #{receipt.ReceiptNumber} - Using PriceClassId={priceClassId} from Receipt (already set)");
+                    }
+                    else
+                    {
+                        priceClassId = 1; // Default fallback for container-only receipts
+                    }
+
+                    // INSERT into modern Receipts table (ContainerId removed - now in ContainerTransactions)
                     // Note: NetWeight, DockWeight, FinalWeight are computed columns and should NOT be in INSERT
+                    // Note: PriceAreaId removed - only needed for Advance Payment Run, not for receipts
                     var sql = @"
                         INSERT INTO Receipts (
                             ReceiptNumber, ReceiptDate, ReceiptTime,
                             GrowerId, ProductId, ProcessId, ProcessTypeId,
-                            DepotId, ContainerId, VarietyId,
+                            DepotId, VarietyId,
                             GrossWeight, TareWeight, DockPercentage,
-                            Grade, PriceClassId, PriceAreaId,
+                            Grade, PriceClassId,
                             IsVoided, VoidedReason,
                             ImportBatchId,
                             CreatedAt, CreatedBy
                         ) VALUES (
                             @ReceiptNumber, @ReceiptDate, @ReceiptTime,
                             @GrowerId, @ProductId, @ProcessId, @ProcessTypeId,
-                            @DepotId, @ContainerId, @VarietyId,
+                            @DepotId, @VarietyId,
                             @GrossWeight, @TareWeight, @DockPercentage,
-                            @Grade, @PriceClassId, @PriceAreaId,
+                            @Grade, @PriceClassId,
                             @IsVoided, @VoidedReason,
                             @ImportBatchId,
                             GETDATE(), @CreatedBy
@@ -240,7 +254,7 @@ namespace WPFGrowerApp.DataAccess.Services
 
                     var parameters = new
                     {
-                        ReceiptNumber = receipt.ReceiptNumberModern,
+                        ReceiptNumber = receipt.ReceiptNumber,
                         ReceiptDate = receipt.ReceiptDate,
                         ReceiptTime = receipt.ReceiptTime,
                         GrowerId = receipt.GrowerId,
@@ -248,16 +262,16 @@ namespace WPFGrowerApp.DataAccess.Services
                         ProcessId = receipt.ProcessId,
                         ProcessTypeId = receipt.ProcessTypeId,
                         DepotId = receipt.DepotId,
-                        ContainerId = receipt.ContainerId,
+                        // ContainerId removed - stored in ContainerTransactions instead
                         VarietyId = receipt.VarietyId,
                         GrossWeight = receipt.GrossWeight,
                         TareWeight = receipt.TareWeight,
                         DockPercentage = receipt.DockPercentage,
                         // NetWeight, DockWeight, FinalWeight are computed - do not include
-                        Grade = receipt.GradeModern,
-                        PriceClassId = receipt.PriceClassId,
-                        PriceAreaId = receipt.PriceAreaId,
-                        IsVoided = receipt.IsVoidedModern,
+                        Grade = receipt.Grade,
+                        PriceClassId = priceClassId, // From Grower.DefaultPriceClassId
+                        // PriceAreaId removed - only for Advance Payment Run
+                        IsVoided = receipt.IsVoided,
                         VoidedReason = receipt.VoidedReason,
                         ImportBatchId = receipt.ImportBatchId,
                         CreatedBy = currentUser
@@ -268,7 +282,13 @@ namespace WPFGrowerApp.DataAccess.Services
                     receipt.CreatedAt = DateTime.Now;
                     receipt.CreatedBy = currentUser;
 
-                    Logger.Info($"Receipt {receipt.ReceiptNumberModern} saved successfully with ID {receiptId}");
+                    Logger.Info($"Receipt {receipt.ReceiptNumber} saved successfully with ID {receiptId}");
+                    
+                    // Save container transactions
+                    if (receipt.ContainerData != null && receipt.ContainerData.Any())
+                    {
+                        await SaveContainerTransactionsAsync(connection, receiptId, receipt.ContainerData, currentUser);
+                    }
                     
                     return receipt;
                 }
@@ -277,16 +297,16 @@ namespace WPFGrowerApp.DataAccess.Services
             {
                 Debug.WriteLine($"Error in SaveReceiptAsync: {ex.Message}");
                 // Enhanced logging with receipt details for troubleshooting
-                var receiptInfo = $"Receipt#{receipt.ReceiptNumberModern ?? "NULL"}, Date={receipt.ReceiptDate:yyyy-MM-dd}, " +
+                var containerCount = receipt.ContainerData?.Count ?? 0;
+                var receiptInfo = $"Receipt#{receipt.ReceiptNumber ?? "NULL"}, Date={receipt.ReceiptDate:yyyy-MM-dd}, " +
                                  $"GrowerId={receipt.GrowerId}, ProductId={receipt.ProductId}, ProcessId={receipt.ProcessId}, " +
-                                 $"PriceClassId={receipt.PriceClassId}, Grade={receipt.GradeModern}, " +
-                                 $"ContainerId={receipt.ContainerId}";
+                                 $"Grade={receipt.Grade}, Containers={containerCount}";
                 Logger.Error($"Error saving receipt [{receiptInfo}]: {ex.Message}", ex);
                 throw;
             }
         }
 
-        public async Task<bool> DeleteReceiptAsync(decimal receiptNumber)
+        public async Task<bool> DeleteReceiptAsync(string receiptNumber)
         {
             try
             {
@@ -306,7 +326,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         WHERE ReceiptNumber = @ReceiptNumber
                           AND DeletedAt IS NULL";
                           
-                    var parameters = new { ReceiptNumber = receiptNumber.ToString(), DeletedBy = currentUser };
+                    var parameters = new { ReceiptNumber = receiptNumber, DeletedBy = currentUser };
                     var result = await connection.ExecuteAsync(sql, parameters);
                     
                     if (result > 0)
@@ -325,7 +345,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        public async Task<bool> VoidReceiptAsync(decimal receiptNumber, string reason)
+        public async Task<bool> VoidReceiptAsync(string receiptNumber, string reason)
         {
             try
             {
@@ -349,9 +369,9 @@ namespace WPFGrowerApp.DataAccess.Services
                           AND DeletedAt IS NULL";
 
                     var parameters = new { 
-                        ReceiptNumber = receiptNumber.ToString(), 
+                        ReceiptNumber = receiptNumber, 
                         VoidedReason = reason,
-                        VoidedBy = currentUser,
+                                        // Removed legacy Date property; use ReceiptDate only
                         ModifiedBy = currentUser
                     };
                     var result = await connection.ExecuteAsync(sql, parameters);
@@ -372,7 +392,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        public async Task<List<Receipt>> GetReceiptsByGrowerAsync(decimal growerNumber, DateTime? startDate = null, DateTime? endDate = null)
+    public async Task<List<Receipt>> GetReceiptsByGrowerAsync(string growerNumber, DateTime? startDate = null, DateTime? endDate = null)
         {
             try
             {
@@ -385,10 +405,10 @@ namespace WPFGrowerApp.DataAccess.Services
                         SELECT 
                             r.ReceiptId, r.ReceiptNumber, r.ReceiptDate, r.ReceiptTime,
                             r.GrowerId, r.ProductId, r.ProcessId, r.ProcessTypeId,
-                            r.DepotId, r.ContainerId, r.VarietyId,
+                            r.DepotId, r.VarietyId,
                             r.GrossWeight, r.TareWeight, r.NetWeight, r.DockPercentage, 
                             r.DockWeight, r.FinalWeight,
-                            r.Grade, r.PriceClassId, r.PriceAreaId,
+                            r.Grade, r.PriceClassId,
                             r.IsVoided, r.VoidedReason, r.VoidedAt, r.VoidedBy,
                             r.ImportBatchId,
                             r.CreatedAt, r.CreatedBy, r.ModifiedAt, r.ModifiedBy,
@@ -421,14 +441,13 @@ namespace WPFGrowerApp.DataAccess.Services
                     // Map modern properties to legacy properties for backward compatibility
                     foreach (var receipt in receipts)
                     {
-                        receipt.ReceiptNumber = decimal.Parse(receipt.ReceiptNumberModern ?? "0");
                         receipt.GrowerNumber = growerNumber;
                         receipt.Gross = receipt.GrossWeight;
                         receipt.Tare = receipt.TareWeight;
                         receipt.Net = receipt.NetWeight;
                         receipt.DockPercent = receipt.DockPercentage;
-                        receipt.IsVoid = receipt.IsVoidedModern;
-                        receipt.Date = receipt.ReceiptDate;
+                        receipt.IsVoid = receipt.IsVoided;
+                        receipt.ReceiptDate = receipt.ReceiptDate;
                     }
                     
                     return receipts;
@@ -453,10 +472,10 @@ namespace WPFGrowerApp.DataAccess.Services
                         SELECT 
                             r.ReceiptId, r.ReceiptNumber, r.ReceiptDate, r.ReceiptTime,
                             r.GrowerId, r.ProductId, r.ProcessId, r.ProcessTypeId,
-                            r.DepotId, r.ContainerId, r.VarietyId,
+                            r.DepotId, r.VarietyId,
                             r.GrossWeight, r.TareWeight, r.NetWeight, r.DockPercentage, 
                             r.DockWeight, r.FinalWeight,
-                            r.Grade, r.PriceClassId, r.PriceAreaId,
+                            r.Grade, r.PriceClassId,
                             r.IsVoided, r.VoidedReason, r.VoidedAt, r.VoidedBy,
                             r.ImportBatchId,
                             r.CreatedAt, r.CreatedBy, r.ModifiedAt, r.ModifiedBy,
@@ -472,13 +491,12 @@ namespace WPFGrowerApp.DataAccess.Services
                     // Map modern properties to legacy properties for backward compatibility
                     foreach (var receipt in receipts)
                     {
-                        receipt.ReceiptNumber = decimal.Parse(receipt.ReceiptNumberModern ?? "0");
                         receipt.Gross = receipt.GrossWeight;
                         receipt.Tare = receipt.TareWeight;
                         receipt.Net = receipt.NetWeight;
                         receipt.DockPercent = receipt.DockPercentage;
-                        receipt.IsVoid = receipt.IsVoidedModern;
-                        receipt.Date = receipt.ReceiptDate;
+                        receipt.IsVoid = receipt.IsVoided;
+                        receipt.ReceiptDate = receipt.ReceiptDate;
                     }
                     
                     return receipts;
@@ -519,7 +537,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
 
                     // Check if receipt number exists
-                    var existingReceipt = await GetReceiptByNumberAsync(receipt.ReceiptNumber);
+                    var existingReceipt = await GetReceiptByNumberAsync(decimal.TryParse(receipt.ReceiptNumber, out var num) ? num : 0);
                     if (existingReceipt != null)
                     {
                         return false;
@@ -527,7 +545,7 @@ namespace WPFGrowerApp.DataAccess.Services
 
                     // Validate grower exists
                     var growerCount = await connection.ExecuteScalarAsync<int>(
-                        "SELECT COUNT(*) FROM Grower WHERE NUMBER = @GrowerNumber",
+                        "SELECT COUNT(*) FROM Growers WHERE NUMBER = @GrowerNumber",
                         new { receipt.GrowerNumber });
                     if (growerCount == 0)
                     {
@@ -536,7 +554,7 @@ namespace WPFGrowerApp.DataAccess.Services
 
                     // Validate product exists
                     var productCount = await connection.ExecuteScalarAsync<int>(
-                        "SELECT COUNT(*) FROM Product WHERE PRODUCT = @Product",
+                        "SELECT COUNT(*) FROM Products WHERE ProductCode = @Product",
                         new { receipt.Product });
                     if (productCount == 0)
                     {
@@ -545,7 +563,7 @@ namespace WPFGrowerApp.DataAccess.Services
 
                     // Validate process exists
                     var processCount = await connection.ExecuteScalarAsync<int>(
-                        "SELECT COUNT(*) FROM Process WHERE PROCESS = @Process",
+                        "SELECT COUNT(*) FROM Processes WHERE ProcessCode = @Process",
                         new { receipt.Process });
                     if (processCount == 0)
                     {
@@ -589,98 +607,6 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        public async Task<decimal> GetPriceForReceiptAsync(Receipt receipt)
-        {
-            try
-            {
-                using (var connection = new SqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
-                    // Select a default price column (e.g., CL1G1A1) instead of THEPRICE
-                    // TODO: Determine the correct default price column based on business rules if needed.
-                    var sql = @"
-                        SELECT TOP 1 CL1G1A1
-                        FROM Price
-                        WHERE PRODUCT = @Product
-                        AND PROCESS = @Process
-                        AND [FROM] <= @Date -- Escaped column name
-                        ORDER BY [FROM] DESC"; // Removed SQL comment
-
-                    var price = await connection.ExecuteScalarAsync<decimal?>(sql, new { receipt.Product, receipt.Process, receipt.Date }); // Pass parameters explicitly
-                    return price ?? 0;
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error in GetPriceForReceiptAsync: {ex.Message}");
-                 throw;
-            }
-        }
-
-        /// <summary>
-        /// Applies dockage to a receipt. Stores original net weight in OriNet before applying dockage percentage.
-        /// Mirrors XBase logic: ori_net stores weight before dockage, net stores weight after dockage.
-        /// Dockage calculation: new_net = ori_net * (1 - dock_pct/100)
-        /// </summary>
-        public async Task<decimal> ApplyDockageAsync(Receipt receipt)
-        {
-            try
-            {
-                // If no dockage percentage, return net weight as-is
-                if (receipt.DockPercent <= 0)
-                {
-                    return receipt.Net;
-                }
-
-                // Store original net weight if not already stored
-                if (!receipt.OriNet.HasValue || receipt.OriNet.Value == 0)
-                {
-                    receipt.OriNet = receipt.Net;
-                }
-
-                // Calculate dockage: reduce net weight by dockage percentage
-                // Formula: adjusted_net = original_net * (1 - dockage_percent/100)
-                decimal adjustedNet = receipt.OriNet.Value * (1 - (receipt.DockPercent / 100m));
-                
-                // Round to 2 decimal places (consistent with legacy rounding)
-                adjustedNet = Math.Round(adjustedNet, 2);
-
-                // Update the receipt's net weight
-                receipt.Net = adjustedNet;
-
-                Logger.Info($"Applied dockage to Receipt {receipt.ReceiptNumber}: OriNet={receipt.OriNet}, DockPct={receipt.DockPercent}%, AdjustedNet={adjustedNet}, Dockage={receipt.OriNet - adjustedNet}");
-
-                // If receipt is already saved, update the database
-                if (receipt.ReceiptNumber > 0)
-                {
-                    using (var connection = new SqlConnection(_connectionString))
-                    {
-                        await connection.OpenAsync();
-                        var sql = @"
-                            UPDATE Daily 
-                            SET ORI_NET = @OriNet, 
-                                NET = @Net,
-                                DOCK_PCT = @DockPercent
-                            WHERE RECPT = @ReceiptNumber";
-
-                        await connection.ExecuteAsync(sql, new 
-                        { 
-                            receipt.OriNet, 
-                            receipt.Net, 
-                            receipt.DockPercent, 
-                            receipt.ReceiptNumber 
-                        });
-                    }
-                }
-
-                return adjustedNet;
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Error applying dockage to Receipt {receipt.ReceiptNumber}: {ex.Message}", ex);
-                throw;
-            }
-        }
 
         /// <summary>
         /// Calculates the actual dockage amount (weight lost due to quality deduction).
@@ -780,12 +706,12 @@ namespace WPFGrowerApp.DataAccess.Services
             int advanceNumber,
             DateTime cutoffDate,
             // Updated signature to accept lists
-            List<decimal> includeGrowerIds = null,
-            List<string> includePayGroupIds = null,
-            List<decimal> excludeGrowerIds = null,
-            List<string> excludePayGroupIds = null,
-            List<string> productIds = null,
-            List<string> processIds = null,
+            List<int>? includeGrowerIds = null,
+            List<string>? includePayGroupIds = null,
+            List<int>? excludeGrowerIds = null,
+            List<string>? excludePayGroupIds = null,
+            List<int>? productIds = null,
+            List<int>? processIds = null,
             int? cropYear = null) // Added cropYear parameter
         {
              if (advanceNumber < 1 || advanceNumber > 3)
@@ -809,37 +735,65 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     // Base query selects from Daily and joins Grower
                     var sqlBuilder = new SqlBuilder();
-                    // Updated SELECT to explicitly list columns with aliases
+                    // Updated SELECT to use only columns present in Receipts and Growers tables
                     var selector = sqlBuilder.AddTemplate(@"
                         SELECT
-                            d.DEPOT as Depot, d.PRODUCT as Product, d.RECPT as ReceiptNumber, d.NUMBER as GrowerNumber,
-                            d.GROSS as Gross, d.TARE as Tare, d.NET as Net, d.GRADE as Grade, d.PROCESS as Process,
-                            d.DATE as Date, d.DAY_UNIQ as DayUniq, d.IMP_BAT as ImpBatch, d.FIN_BAT as FinBatch,
-                            d.DOCK_PCT as DockPercent, d.ISVOID as IsVoid, d.THEPRICE as ThePrice, d.PRICESRC as PriceSource,
-                            d.PR_NOTE1 as PrNote1, d.NP_NOTE1 as NpNote1, d.FROM_FIELD as FromField, d.IMPORTED as Imported,
-                            d.CONT_ERRS as ContainerErrors, d.ADV_PR1 as AdvPr1, d.ADV_PRID1 as AdvPrid1, d.POST_BAT1 as PostBat1,
-                            d.ADV_PR2 as AdvPr2, d.ADV_PRID2 as AdvPrid2, d.POST_BAT2 as PostBat2, d.ADV_PR3 as AdvPr3,
-                            d.ADV_PRID3 as AdvPrid3, d.POST_BAT3 as PostBat3, d.PREM_PRICE as PremPrice, d.LAST_ADVPB as LastAdvpb,
-                            d.ORI_NET as OriNet, d.CERTIFIED as Certified, d.VARIETY as Variety, d.TIME as Time,
-                            d.FIN_PRICE as FinPrice, d.FIN_PR_ID as FinPrId, d.ADD_DATE as AddDate, d.ADD_BY as AddBy,
-                            d.EDIT_DATE as EditDate, d.EDIT_BY as EditBy, d.EDIT_REAS as EditReason
-                        FROM Daily d
-                        INNER JOIN Grower g ON d.NUMBER = g.NUMBER
+                            r.ReceiptId,
+                            r.ReceiptNumber,
+                            r.ReceiptDate,
+                            r.ReceiptTime,
+                            r.GrowerId,
+                            r.ProductId,
+                            p.ProductCode as Product,
+                            r.ProcessId,
+                            pr.ProcessCode as Process,
+                            r.ProcessTypeId,
+                            r.VarietyId,
+                            r.DepotId,
+                            r.GrossWeight,
+                            r.TareWeight,
+                            r.NetWeight,
+                            r.DockPercentage,
+                            r.DockWeight,
+                            r.FinalWeight,
+                            r.Grade,
+                            r.PriceClassId,
+                            r.IsVoided,
+                            r.VoidedReason,
+                            r.VoidedAt,
+                            r.VoidedBy,
+                            r.ImportBatchId,
+                            r.CreatedAt,
+                            r.CreatedBy,
+                            r.ModifiedAt,
+                            r.ModifiedBy,
+                            r.QualityCheckedAt,
+                            r.QualityCheckedBy,
+                            r.DeletedAt,
+                            r.DeletedBy,
+                            g.FullName as GrowerName
+                        FROM Receipts r
+                        LEFT JOIN Growers g ON r.GrowerId = g.GrowerId
+                        LEFT JOIN Products p ON r.ProductId = p.ProductId
+                        LEFT JOIN Processes pr ON r.ProcessId = pr.ProcessId
+                        LEFT JOIN ReceiptPaymentAllocations rpa 
+                            ON r.ReceiptId = rpa.ReceiptId 
+                            AND rpa.PaymentTypeId = @PaymentTypeId
                         /**where**/
-                        ORDER BY d.NUMBER, d.DATE, d.RECPT"
+                        ORDER BY r.GrowerId, r.ReceiptDate, r.ReceiptNumber"
                     );
 
                     // Add mandatory conditions
-                    sqlBuilder.Where("d.DATE <= @CutoffDate", new { CutoffDate = cutoffDate });
-                    sqlBuilder.Where("d.FIN_BAT = 0"); // Not finalized
-                    sqlBuilder.Where($"(d.{postBatchCheckColumn} = 0 OR d.{postBatchCheckColumn} IS NULL)"); // Check for 0 or NULL
-                    sqlBuilder.Where("d.ISVOID = 0"); // Not voided
-                    sqlBuilder.Where("g.ONHOLD = 0"); // Grower not on hold
-                    sqlBuilder.Where("d.NET > 0"); // for payment , net should be >0
-                    if (cropYear.HasValue) // Add Crop Year filter using YEAR() function
-                    {
-                         sqlBuilder.Where("YEAR(d.DATE) = @CropYear", new { CropYear = cropYear.Value });
-                    }
+                sqlBuilder.Where("r.ReceiptDate <= @CutoffDate", new { CutoffDate = cutoffDate });
+                sqlBuilder.Where("r.IsVoided = 0"); // Not voided
+                sqlBuilder.Where("r.NetWeight > 0"); // for payment , net should be >0
+                sqlBuilder.Where("rpa.AllocationId IS NULL"); // Exclude receipts already paid for this advance
+                // Add PaymentTypeId parameter for the LEFT JOIN
+                sqlBuilder.AddParameters(new { PaymentTypeId = advanceNumber });
+                if (cropYear.HasValue) // Add Crop Year filter using YEAR() function
+                {
+                    sqlBuilder.Where("YEAR(r.ReceiptDate) = @CropYear", new { CropYear = cropYear.Value });
+                }
 
 
                     // Add optional list filters using WHERE IN / NOT IN
@@ -858,6 +812,13 @@ namespace WPFGrowerApp.DataAccess.Services
 
                     // Execute query
                     var results = await connection.QueryAsync<Receipt>(selector.RawSql, selector.Parameters);
+                    
+                    // Fix: Set Net property from NetWeight for payment calculations
+                    foreach (var receipt in results)
+                    {
+                        receipt.Net = receipt.NetWeight;
+                    }
+                    
                     return results.ToList();
                 }
             }
@@ -867,5 +828,250 @@ namespace WPFGrowerApp.DataAccess.Services
                 throw;
             }
         }
+
+        /// <summary>
+        /// Creates a payment allocation record linking a receipt to a payment batch.
+        /// This replaces the old method of updating Daily table columns (ADV_PR1, ADV_PR2, ADV_PR3).
+        /// </summary>
+        public async Task CreateReceiptPaymentAllocationAsync(ReceiptPaymentAllocation allocation)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = @"
+                        INSERT INTO ReceiptPaymentAllocations 
+                            (ReceiptId, PaymentBatchId, PaymentTypeId, PriceScheduleId, 
+                             PricePerPound, QuantityPaid, AmountPaid, AllocatedAt)
+                        VALUES 
+                            (@ReceiptId, @PaymentBatchId, @PaymentTypeId, @PriceScheduleId,
+                             @PricePerPound, @QuantityPaid, @AmountPaid, @AllocatedAt);";
+                    
+                    await connection.ExecuteAsync(sql, allocation);
+                    Logger.Info($"Created payment allocation for Receipt {allocation.ReceiptId}, Batch {allocation.PaymentBatchId}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error creating payment allocation for Receipt {allocation.ReceiptId}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets all payment allocations for a specific receipt.
+        /// Used to check previous payments and prevent duplicate payments.
+        /// </summary>
+        public async Task<List<ReceiptPaymentAllocation>> GetReceiptPaymentAllocationsAsync(int receiptId)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = @"
+                        SELECT 
+                            AllocationId,
+                            ReceiptId,
+                            PaymentBatchId,
+                            PaymentTypeId,
+                            PriceScheduleId,
+                            PricePerPound,
+                            QuantityPaid,
+                            AmountPaid,
+                            AllocatedAt
+                        FROM ReceiptPaymentAllocations
+                        WHERE ReceiptId = @ReceiptId
+                        ORDER BY PaymentTypeId;";
+                    
+                    var result = await connection.QueryAsync<ReceiptPaymentAllocation>(sql, new { ReceiptId = receiptId });
+                    return result.ToList();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting payment allocations for Receipt {receiptId}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets a payment summary for a receipt showing total paid and breakdown by advance.
+        /// Useful for displaying payment history on receipt forms.
+        /// </summary>
+        public async Task<ReceiptPaymentSummary?> GetReceiptPaymentSummaryAsync(int receiptId)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = @"
+                        SELECT 
+                            ISNULL(SUM(AmountPaid), 0) as TotalAmountPaid,
+                            ISNULL(SUM(CASE WHEN PaymentTypeId = 1 THEN AmountPaid ELSE 0 END), 0) as Advance1Amount,
+                            ISNULL(SUM(CASE WHEN PaymentTypeId = 2 THEN AmountPaid ELSE 0 END), 0) as Advance2Amount,
+                            ISNULL(SUM(CASE WHEN PaymentTypeId = 3 THEN AmountPaid ELSE 0 END), 0) as Advance3Amount,
+                            CAST(MAX(CASE WHEN PaymentTypeId = 1 THEN 1 ELSE 0 END) AS BIT) as HasAdvance1,
+                            CAST(MAX(CASE WHEN PaymentTypeId = 2 THEN 1 ELSE 0 END) AS BIT) as HasAdvance2,
+                            CAST(MAX(CASE WHEN PaymentTypeId = 3 THEN 1 ELSE 0 END) AS BIT) as HasAdvance3,
+                            MAX(AllocatedAt) as LastPaymentDate
+                        FROM ReceiptPaymentAllocations
+                        WHERE ReceiptId = @ReceiptId;";
+                    
+                    return await connection.QueryFirstOrDefaultAsync<ReceiptPaymentSummary>(sql, new { ReceiptId = receiptId });
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting payment summary for Receipt {receiptId}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        #region Container Transaction Methods
+
+        /// <summary>
+        /// Saves container transactions for a receipt.
+        /// Converts ContainerData (from CSV parsing) into ContainerTransactions table records.
+        /// </summary>
+        private async Task SaveContainerTransactionsAsync(
+            SqlConnection connection, 
+            int receiptId, 
+            List<ContainerInfo> containerData, 
+            string createdBy)
+        {
+            try
+            {
+                foreach (var container in containerData)
+                {
+                    // Lookup ContainerId by container type code
+                    var containerId = await GetContainerIdByCodeAsync(connection, container.Type);
+                    
+                    if (!containerId.HasValue)
+                    {
+                        Logger.Warn($"Container type '{container.Type}' not found in Containers table. Skipping.");
+                        continue;
+                    }
+
+                    // Insert IN transaction
+                    if (container.InCount > 0)
+                    {
+                        await InsertContainerTransactionAsync(
+                            connection, 
+                            receiptId, 
+                            containerId.Value, 
+                            "IN", 
+                            container.InCount, 
+                            createdBy);
+                    }
+
+                    // Insert OUT transaction
+                    if (container.OutCount > 0)
+                    {
+                        await InsertContainerTransactionAsync(
+                            connection, 
+                            receiptId, 
+                            containerId.Value, 
+                            "OUT", 
+                            container.OutCount, 
+                            createdBy);
+                    }
+                }
+
+                Logger.Info($"Saved {containerData.Count} container transaction(s) for Receipt {receiptId}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error saving container transactions for Receipt {receiptId}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Inserts a single container transaction record.
+        /// </summary>
+        private async Task InsertContainerTransactionAsync(
+            SqlConnection connection,
+            int receiptId,
+            int containerId,
+            string direction,
+            int quantity,
+            string createdBy)
+        {
+            const string sql = @"
+                INSERT INTO ContainerTransactions (
+                    ReceiptId, ContainerId, Direction, Quantity, CreatedAt, CreatedBy
+                ) VALUES (
+                    @ReceiptId, @ContainerId, @Direction, @Quantity, GETDATE(), @CreatedBy
+                )";
+
+            await connection.ExecuteAsync(sql, new
+            {
+                ReceiptId = receiptId,
+                ContainerId = containerId,
+                Direction = direction,
+                Quantity = quantity,
+                CreatedBy = createdBy
+            });
+        }
+
+        /// <summary>
+        /// Gets ContainerId by container code (e.g., "FP", "PINT", "FLAT").
+        /// </summary>
+        private async Task<int?> GetContainerIdByCodeAsync(SqlConnection connection, string? containerCode)
+        {
+            if (string.IsNullOrEmpty(containerCode)) return null;
+
+            const string sql = @"
+                SELECT ContainerId 
+                FROM Containers 
+                WHERE ContainerCode = @ContainerCode 
+                  AND DeletedAt IS NULL";
+
+            return await connection.QueryFirstOrDefaultAsync<int?>(sql, new { ContainerCode = containerCode });
+        }
+
+        /// <summary>
+        /// Gets all container transactions for a specific receipt.
+        /// </summary>
+        public async Task<List<ContainerTransaction>> GetContainerTransactionsByReceiptAsync(int receiptId)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    
+                    const string sql = @"
+                        SELECT 
+                            ct.ContainerTransactionId,
+                            ct.ReceiptId,
+                            ct.ContainerId,
+                            ct.Direction,
+                            ct.Quantity,
+                            ct.CreatedAt,
+                            ct.CreatedBy,
+                            c.ContainerCode,
+                            c.ContainerName,
+                            c.TareWeight
+                        FROM ContainerTransactions ct
+                        INNER JOIN Containers c ON ct.ContainerId = c.ContainerId
+                        WHERE ct.ReceiptId = @ReceiptId
+                        ORDER BY ct.Direction DESC, c.ContainerName";
+                    
+                    var transactions = await connection.QueryAsync<ContainerTransaction>(sql, new { ReceiptId = receiptId });
+                    return transactions.ToList();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting container transactions for Receipt {receiptId}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        #endregion
     }
 }

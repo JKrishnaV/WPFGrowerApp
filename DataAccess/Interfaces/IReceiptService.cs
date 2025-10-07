@@ -10,9 +10,9 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         Task<List<Receipt>> GetReceiptsAsync(DateTime? startDate = null, DateTime? endDate = null);
         Task<Receipt> GetReceiptByNumberAsync(decimal receiptNumber);
         Task<Receipt> SaveReceiptAsync(Receipt receipt);
-        Task<bool> DeleteReceiptAsync(decimal receiptNumber);
-        Task<bool> VoidReceiptAsync(decimal receiptNumber, string reason);
-        Task<List<Receipt>> GetReceiptsByGrowerAsync(decimal growerNumber, DateTime? startDate = null, DateTime? endDate = null);
+    Task<bool> DeleteReceiptAsync(string receiptNumber);
+    Task<bool> VoidReceiptAsync(string receiptNumber, string reason);
+    Task<List<Receipt>> GetReceiptsByGrowerAsync(string growerNumber, DateTime? startDate = null, DateTime? endDate = null);
         Task<List<Receipt>> GetReceiptsByImportBatchAsync(decimal impBatch);
         Task<decimal> GetNextReceiptNumberAsync();
         Task<bool> ValidateReceiptAsync(Receipt receipt);
@@ -69,12 +69,27 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         Task<List<Receipt>> GetReceiptsForAdvancePaymentAsync(
             int advanceNumber,
             DateTime cutoffDate,
-            List<decimal> includeGrowerIds = null, // Changed to List
-            List<string> includePayGroupIds = null, // Changed to List
-            List<decimal> excludeGrowerIds = null, // Changed to List
-            List<string> excludePayGroupIds = null, // Changed to List
-            List<string> productIds = null, // Changed to List
-            List<string> processIds = null, // Changed to List
+            List<int>? includeGrowerIds = null, // Changed to List<int>
+            List<string>? includePayGroupIds = null, // Changed to List
+            List<int>? excludeGrowerIds = null, // Changed to List<int>
+            List<string>? excludePayGroupIds = null, // Changed to List
+            List<int>? productIds = null, // Changed to List
+            List<int>? processIds = null, // Changed to List
             int? cropYear = null); // Added cropYear parameter
+
+        /// <summary>
+        /// Creates a payment allocation record linking a receipt to a payment batch.
+        /// </summary>
+        Task CreateReceiptPaymentAllocationAsync(ReceiptPaymentAllocation allocation);
+
+        /// <summary>
+        /// Gets all payment allocations for a specific receipt.
+        /// </summary>
+        Task<List<ReceiptPaymentAllocation>> GetReceiptPaymentAllocationsAsync(int receiptId);
+
+        /// <summary>
+        /// Gets a payment summary for a receipt showing total paid and breakdown by advance.
+        /// </summary>
+        Task<ReceiptPaymentSummary?> GetReceiptPaymentSummaryAsync(int receiptId);
     }
 }

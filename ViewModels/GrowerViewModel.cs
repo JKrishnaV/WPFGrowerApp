@@ -9,18 +9,10 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using WPFGrowerApp.Services; // Added for IDialogService
-using System; // Ensure System is included
-using System; // Ensure System is included
 using System.Collections; // For IEnumerable
-using System.Collections.Generic;
 using System.ComponentModel; // For INotifyDataErrorInfo
 using System.Linq; // For Linq extensions
 using System.Runtime.CompilerServices; // For CallerMemberName
-using System.Threading.Tasks;
-using WPFGrowerApp.Commands;
-using WPFGrowerApp.DataAccess.Interfaces;
-using WPFGrowerApp.DataAccess.Models;
-using WPFGrowerApp.Services; // Added for IDialogService
 
 namespace WPFGrowerApp.ViewModels
 {
@@ -36,6 +28,7 @@ namespace WPFGrowerApp.ViewModels
         private string _statusMessage;
         private List<PayGroup> _payGroups;
         private List<string> _provinces;
+        private List<PriceClass> _priceClasses;
         private readonly Dictionary<string, List<string>> _errorsByPropertyName = new Dictionary<string, List<string>>(); // For INotifyDataErrorInfo
 
         // Inject services including IDialogService
@@ -66,6 +59,7 @@ namespace WPFGrowerApp.ViewModels
             {
                 await LoadPayGroupsAsync();
                 await LoadProvincesAsync();
+                await LoadPriceClassesAsync();
                 StatusMessage = "Ready.";
             }
             catch (Exception ex)
@@ -107,6 +101,19 @@ namespace WPFGrowerApp.ViewModels
             }
         }
 
+        public List<PriceClass> PriceClasses
+        {
+            get => _priceClasses;
+            set
+            {
+                if (_priceClasses != value)
+                {
+                    _priceClasses = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         private async Task LoadPayGroupsAsync()
         {
             PayGroups = (await _payGroupService.GetAllPayGroupsAsync()).ToList();
@@ -124,6 +131,34 @@ namespace WPFGrowerApp.ViewModels
                 StatusMessage = $"Error loading provinces: {ex.Message}"; // Keep status for now
                 Infrastructure.Logging.Logger.Error("Error loading provinces in GrowerViewModel", ex);
                 throw; 
+            }
+        }
+
+        private async Task LoadPriceClassesAsync()
+        {
+            try
+            {
+                // Load price classes from database using connection string
+                var connectionString = System.Configuration.ConfigurationManager.ConnectionStrings["DefaultConnection"]?.ConnectionString;
+                
+                if (string.IsNullOrEmpty(connectionString))
+                {
+                    Infrastructure.Logging.Logger.Error("Connection string 'DefaultConnection' not found");
+                    PriceClasses = new List<PriceClass>();
+                    return;
+                }
+                
+                using (var connection = new Microsoft.Data.SqlClient.SqlConnection(connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = "SELECT PriceClassId, ClassCode, ClassName, Description, IsActive FROM PriceClasses WHERE IsActive = 1 ORDER BY PriceClassId";
+                    PriceClasses = (await Dapper.SqlMapper.QueryAsync<PriceClass>(connection, sql)).ToList();
+                }
+            }
+            catch (Exception ex)
+            {
+                Infrastructure.Logging.Logger.Error("Error loading price classes", ex);
+                PriceClasses = new List<PriceClass>();
             }
         }
 
@@ -187,7 +222,7 @@ namespace WPFGrowerApp.ViewModels
              // Ensure not loading/saving before cancelling
             if (IsLoading || IsSaving) return;
 
-            if (CurrentGrower != null && CurrentGrower.GrowerNumber > 0)
+            if (CurrentGrower != null && !string.IsNullOrEmpty(CurrentGrower.GrowerNumber))
             {
                 // If we're editing an existing grower, reload it to discard changes
                 await LoadGrowerAsync(CurrentGrower.GrowerNumber); // Await the reload
@@ -263,7 +298,7 @@ namespace WPFGrowerApp.ViewModels
         public RelayCommand CancelCommand { get; }
 
         // Changed return type from async void to async Task
-        public async Task LoadGrowerAsync(decimal growerNumber)
+    public async Task LoadGrowerAsync(string growerNumber)
         {
             // Prevent concurrent loads
             if (IsLoading) return; 
@@ -340,7 +375,7 @@ namespace WPFGrowerApp.ViewModels
         {
             CurrentGrower = new Grower
             {
-                GrowerNumber = 0, // This will be set by the database
+                GrowerNumber = string.Empty, // This will be set by the database
                 Currency = 'C', // Default to CAD
                 PayGroup = "1", // Default pay group
                 PriceLevel = 1, // Default price level
@@ -357,13 +392,13 @@ namespace WPFGrowerApp.ViewModels
 
         #region INotifyDataErrorInfo Implementation
 
-        public event EventHandler<DataErrorsChangedEventArgs> ErrorsChanged;
+    public event EventHandler<DataErrorsChangedEventArgs>? ErrorsChanged;
 
         public bool HasErrors => _errorsByPropertyName.Any();
 
-        public IEnumerable GetErrors(string propertyName)
+    public IEnumerable GetErrors(string? propertyName)
         {
-            return _errorsByPropertyName.ContainsKey(propertyName) ? _errorsByPropertyName[propertyName] : null;
+            return _errorsByPropertyName.ContainsKey(propertyName ?? string.Empty) ? _errorsByPropertyName[propertyName ?? string.Empty] : Enumerable.Empty<string>();
         }
 
         private void OnErrorsChanged(string propertyName)

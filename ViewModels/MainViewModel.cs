@@ -104,20 +104,18 @@ namespace WPFGrowerApp.ViewModels
             try
             {
                 // Use Dialog Service
-                var (dialogResult, selectedGrowerNumber) = _dialogService.ShowGrowerSearchDialog();
+                var result = _dialogService.ShowGrowerSearchDialog();
 
-                if (dialogResult == true && selectedGrowerNumber.HasValue)
+                if (result.DialogResult == true && !string.IsNullOrEmpty(result.SelectedGrowerNumber))
                 {
                     // Resolve ViewModel from DI container
-                    var growerViewModel = _serviceProvider.GetRequiredService<GrowerViewModel>(); 
-                    
-                    // Call InitializeAsync after getting the instance
-                    await growerViewModel.InitializeAsync(); 
+                    var growerViewModel = _serviceProvider.GetRequiredService<GrowerViewModel>();
 
-                    if (selectedGrowerNumber.Value != 0) // Load only if not creating new
-                    {
-                       await growerViewModel.LoadGrowerAsync(selectedGrowerNumber.Value);
-                    }
+                    // Call InitializeAsync after getting the instance
+                    await growerViewModel.InitializeAsync();
+
+                    if (result.SelectedGrowerNumber != "0") // Load only if not creating new
+                        await growerViewModel.LoadGrowerAsync(result.SelectedGrowerNumber);
                     CurrentViewModel = growerViewModel;
                     IsMenuOpen = false; // Close menu after navigation
                 }

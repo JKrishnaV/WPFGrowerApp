@@ -84,10 +84,13 @@ namespace WPFGrowerApp.DataAccess.Services
             //    errors.Add($"Price {receipt.ThePrice} is outside valid range ({MIN_PRICE}-{MAX_PRICE})");
             //}
 
-            // Check for duplicate receipt number
-            if (await IsDuplicateReceiptAsync(receipt.ReceiptNumber))
+            // Check for duplicate receipt number (modern: string)
+            if (!string.IsNullOrEmpty(receipt.ReceiptNumber))
             {
-                errors.Add($"Duplicate receipt number: {receipt.ReceiptNumber}");
+                if (await IsDuplicateReceiptAsync(receipt.ReceiptNumber))
+                {
+                    errors.Add($"Duplicate receipt number: {receipt.ReceiptNumber}");
+                }
             }
 
             if (errors.Count > 0)
@@ -96,7 +99,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        private async Task<bool> ValidateGrowerAsync(decimal growerNumber)
+        private async Task<bool> ValidateGrowerAsync(string growerNumber)
         {
             using (var connection = new SqlConnection(_connectionString))
             {
@@ -133,13 +136,13 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        private async Task<bool> IsDuplicateReceiptAsync(decimal receiptNumber)
+        private async Task<bool> IsDuplicateReceiptAsync(string receiptNumber)
         {
             using (var connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync();
                 var count = await connection.ExecuteScalarAsync<int>(
-                    "SELECT COUNT(*) FROM Daily WHERE RECPT = @ReceiptNumber",
+                    "SELECT COUNT(*) FROM Receipts WHERE ReceiptNumber = @ReceiptNumber",
                     new { ReceiptNumber = receiptNumber });
                 return count > 0;
             }

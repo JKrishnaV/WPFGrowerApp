@@ -23,18 +23,18 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// <param name="productIds">Optional: List of product IDs to include (if empty, include all).</param>
         /// <param name="processIds">Optional: List of process IDs to include (if empty, include all).</param>
         /// <param name="progress">Optional: Progress reporting.</param>
-        /// <returns>A tuple indicating success, a list of any errors encountered, and the created PostBatch.</returns>
-        Task<(bool Success, List<string> Errors, PostBatch CreatedBatch)> ProcessAdvancePaymentRunAsync(
+        /// <returns>A tuple indicating success, a list of any errors encountered, and the created PaymentBatch.</returns>
+        Task<(bool Success, List<string> Errors, PaymentBatch CreatedBatch)> ProcessAdvancePaymentRunAsync(
             int advanceNumber,
             DateTime paymentDate,
             DateTime cutoffDate,
             int cropYear,
             // Removed includeGrowerId and includePayGroup
-            List<decimal> excludeGrowerIds = null,
-            List<string> excludePayGroupIds = null,
-            List<string> productIds = null,
-            List<string> processIds = null,
-            IProgress<string> progress = null);
+            List<int>? excludeGrowerIds = null,
+            List<string>? excludePayGroupIds = null,
+            List<int>? productIds = null,
+            List<int>? processIds = null,
+            IProgress<string>? progress = null);
 
         /// <summary>
         /// Performs a test run simulation of an advance payment run without committing changes.
@@ -54,11 +54,11 @@ namespace WPFGrowerApp.DataAccess.Interfaces
             DateTime paymentDate,
             DateTime cutoffDate,
             int cropYear,
-            List<decimal> excludeGrowerIds = null,
-            List<string> excludePayGroupIds = null,
-            List<string> productIds = null,
-            List<string> processIds = null,
-            IProgress<string> progress = null);
+            List<int>? excludeGrowerIds = null,
+            List<string>? excludePayGroupIds = null,
+            List<int>? productIds = null,
+            List<int>? processIds = null,
+            IProgress<string>? progress = null);
 
         // Add other payment-related methods as needed, e.g.:
         // Task<List<PaymentDetail>> GetPaymentDetailsForChequeAsync(decimal chequeNumber, string series);

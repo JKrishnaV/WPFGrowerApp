@@ -36,8 +36,8 @@ namespace WPFGrowerApp.ViewModels
 
         // New properties for Depot ComboBox
         private ObservableCollection<Depot> _depots;
-        private Depot _selectedDepot;
-        private string _selectedDepotId; // To hold the ID for processing
+    private Depot _selectedDepot;
+    private int? _selectedDepotId; // To hold the ID for processing
 
         // Properties for Error Filtering
         private string _selectedFileNameFilter;
@@ -103,7 +103,7 @@ namespace WPFGrowerApp.ViewModels
         }
 
         // Hidden property to store the selected DepotId for processing logic
-        public string SelectedDepotId
+        public int? SelectedDepotId
         {
             get => _selectedDepotId;
             private set => SetProperty(ref _selectedDepotId, value); // Keep private set if only updated internally
@@ -277,7 +277,7 @@ namespace WPFGrowerApp.ViewModels
                         }
 
                         // Use SelectedDepotId which is updated when SelectedDepot changes
-                        batchForThisFile = await _importBatchProcessor.StartImportBatchAsync(SelectedDepotId, System.IO.Path.GetFileName(file.FilePath));
+                        batchForThisFile = await _importBatchProcessor.StartImportBatchAsync(SelectedDepotId ?? 0, System.IO.Path.GetFileName(file.FilePath));
                         _currentBatch = batchForThisFile; // Track the latest batch attempted
 
                         await _validationService.ValidateImportBatchAsync(batchForThisFile);

@@ -69,11 +69,11 @@ namespace WPFGrowerApp.ViewModels
             _isEditMode = existingReceipt != null;
             if (_isEditMode && existingReceipt != null)
             {
-                Infrastructure.Logging.Logger.Info($"ReceiptEntryViewModel - Edit mode: Receipt #{existingReceipt.ReceiptNumberModern}");
+                Infrastructure.Logging.Logger.Info($"ReceiptEntryViewModel - Edit mode: Receipt #{existingReceipt.ReceiptNumber}");
                 Infrastructure.Logging.Logger.Info($"ReceiptEntryViewModel - Receipt Date: {existingReceipt.ReceiptDate}, Time: {existingReceipt.ReceiptTime}");
                 if (existingReceipt.ReceiptTime == default(TimeSpan))
                 {
-                    Infrastructure.Logging.Logger.Warn($"ReceiptEntryViewModel - ReceiptTime is default (zero) for Receipt #{existingReceipt.ReceiptNumberModern}");
+                    Infrastructure.Logging.Logger.Warn($"ReceiptEntryViewModel - ReceiptTime is default (zero) for Receipt #{existingReceipt.ReceiptNumber}");
                 }
                 else
                 {
@@ -92,7 +92,7 @@ namespace WPFGrowerApp.ViewModels
                 {
                     ReceiptDate = DateTime.Now.Date,
                     ReceiptTime = DateTime.Now.TimeOfDay,
-                    GradeModern = 1,
+                    Grade = 1,
                     DockPercentage = 0
                 };
                 AttachReceiptEventHandlers();
@@ -151,23 +151,19 @@ namespace WPFGrowerApp.ViewModels
                 // If edit mode, select the current items
                 if (IsEditMode)
                 {
-                    Infrastructure.Logging.Logger.Info($"ReceiptEntryViewModel.InitializeAsync - Edit mode: Selecting current items for Receipt #{CurrentReceipt.ReceiptNumberModern}");
-                    Infrastructure.Logging.Logger.Info($"ReceiptEntryViewModel.InitializeAsync - Receipt.GrowerId={CurrentReceipt.GrowerId}, Receipt.ReceiptTime={CurrentReceipt.ReceiptTime}, Receipt.GradeModern={CurrentReceipt.GradeModern}");
+                    Infrastructure.Logging.Logger.Info($"ReceiptEntryViewModel.InitializeAsync - Edit mode: Selecting current items for Receipt #{CurrentReceipt.ReceiptNumber}");
+                    Infrastructure.Logging.Logger.Info($"ReceiptEntryViewModel.InitializeAsync - Receipt.GrowerId={CurrentReceipt.GrowerId}, Receipt.ReceiptTime={CurrentReceipt.ReceiptTime}, Receipt.Grade={CurrentReceipt.Grade}");
                     Infrastructure.Logging.Logger.Info($"ReceiptEntryViewModel.InitializeAsync - Growers.Count={Growers.Count}, First grower: {Growers.FirstOrDefault()?.GrowerNumber} - {Growers.FirstOrDefault()?.GrowerName}");
                     
-                    // Match by GrowerId (not GrowerNumber which is a different field)
-                    SelectedGrower = Growers.FirstOrDefault(g => g.GrowerId == CurrentReceipt.GrowerId);
+                        Infrastructure.Logging.Logger.Info($"ReceiptEntryViewModel.InitializeAsync - Edit mode selection - GrowerId={CurrentReceipt.GrowerId}, ProductId={CurrentReceipt.ProductId}, ProcessId={CurrentReceipt.ProcessId}, DepotId={CurrentReceipt.DepotId}");
+                    SelectedGrower = Growers.FirstOrDefault(g => g.GrowerId == CurrentReceipt.GrowerId)!;
                     
-                    // Compare IDs as strings - Receipt stores ints, so convert for comparison
-                    var productIdStr = CurrentReceipt.ProductId.ToString();
-                    var processIdStr = CurrentReceipt.ProcessId.ToString();
-                    var depotIdStr = CurrentReceipt.DepotId.ToString();
+                        SelectedProduct = Products.FirstOrDefault(p => p.ProductId == CurrentReceipt.ProductId)!;
+                        SelectedProcess = Processes.FirstOrDefault(p => p.ProcessId == CurrentReceipt.ProcessId)!;
+                        SelectedDepot = Depots.FirstOrDefault(d => d.DepotId == CurrentReceipt.DepotId)!;
+                    SelectedDepot = Depots.FirstOrDefault(d => d.DepotId == CurrentReceipt.DepotId);
                     
-                    SelectedProduct = Products.FirstOrDefault(p => p.ProductId == productIdStr);
-                    SelectedProcess = Processes.FirstOrDefault(p => p.ProcessId == processIdStr);
-                    SelectedDepot = Depots.FirstOrDefault(d => d.DepotId == depotIdStr);
-                    
-                    Infrastructure.Logging.Logger.Info($"ReceiptEntryViewModel.InitializeAsync - Edit mode selection - GrowerId={CurrentReceipt.GrowerId}, ProductId={productIdStr}, ProcessId={processIdStr}, DepotId={depotIdStr}");
+                    Infrastructure.Logging.Logger.Info($"ReceiptEntryViewModel.InitializeAsync - Edit mode selection - GrowerId={CurrentReceipt.GrowerId}, ProductId={CurrentReceipt.ProductId}, ProcessId={CurrentReceipt.ProcessId}, DepotId={CurrentReceipt.DepotId}");
                     Infrastructure.Logging.Logger.Info($"ReceiptEntryViewModel.InitializeAsync - Selected: Grower={SelectedGrower?.GrowerName} (GrowerNumber={SelectedGrower?.GrowerNumber}, GrowerId={SelectedGrower?.GrowerId}), Product={SelectedProduct?.Description}, Process={SelectedProcess?.Description}, Depot={SelectedDepot?.DepotName}");
                     
                     // Force UI updates
@@ -274,7 +270,7 @@ namespace WPFGrowerApp.ViewModels
             set => SetProperty(ref _statusMessage, value);
         }
 
-        public string WindowTitle => IsEditMode ? $"Edit Receipt - {CurrentReceipt?.ReceiptNumberModern}" : "Add New Receipt";
+    public string WindowTitle => IsEditMode ? $"Edit Receipt - {CurrentReceipt?.ReceiptNumber}" : "Add New Receipt";
 
         // Lookup collections
         public ObservableCollection<GrowerSearchResult> Growers
@@ -302,7 +298,7 @@ namespace WPFGrowerApp.ViewModels
         }
 
         // Selected items
-        public GrowerSearchResult SelectedGrower
+    public GrowerSearchResult? SelectedGrower
         {
             get => _selectedGrower;
             set
@@ -318,38 +314,38 @@ namespace WPFGrowerApp.ViewModels
             }
         }
 
-        public Product SelectedProduct
+    public Product? SelectedProduct
         {
             get => _selectedProduct;
             set
             {
                 if (SetProperty(ref _selectedProduct, value) && value != null)
                 {
-                    CurrentReceipt.ProductId = int.Parse(value.ProductId); // Parse string back to int
+                    CurrentReceipt.ProductId = value.ProductId;
                 }
             }
         }
 
-        public Process SelectedProcess
+    public Process? SelectedProcess
         {
             get => _selectedProcess;
             set
             {
                 if (SetProperty(ref _selectedProcess, value) && value != null)
                 {
-                    CurrentReceipt.ProcessId = int.Parse(value.ProcessId); // Parse string back to int
+                    CurrentReceipt.ProcessId = value.ProcessId;
                 }
             }
         }
 
-        public Depot SelectedDepot
+    public Depot? SelectedDepot
         {
             get => _selectedDepot;
             set
             {
                 if (SetProperty(ref _selectedDepot, value) && value != null)
                 {
-                    CurrentReceipt.DepotId = int.Parse(value.DepotId); // Parse string back to int
+                    CurrentReceipt.DepotId = value.DepotId;
                 }
             }
         }

@@ -41,7 +41,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        public async Task<Depot> GetDepotByIdAsync(string depotId)
+        public async Task<Depot?> GetDepotByIdAsync(int depotId)
         {
             try
             {
@@ -50,10 +50,11 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = @"
                         SELECT 
-                            DepotCode as DepotId, 
+                            DepotId,
+                            DepotCode,
                             DepotName
                         FROM Depots 
-                        WHERE DepotCode = @DepotId AND IsActive = 1";
+                        WHERE DepotId = @DepotId AND IsActive = 1";
                     return await connection.QueryFirstOrDefaultAsync<Depot>(sql, new { DepotId = depotId });
                 }
             }
@@ -64,7 +65,31 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        public async Task<bool> AddDepotAsync(Depot depot)
+        public async Task<Depot?> GetDepotByCodeAsync(string depotCode)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = @"
+                        SELECT 
+                            DepotId,
+                            DepotCode,
+                            DepotName
+                        FROM Depots 
+                        WHERE DepotCode = @DepotCode AND IsActive = 1";
+                    return await connection.QueryFirstOrDefaultAsync<Depot>(sql, new { DepotCode = depotCode });
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting depot by code '{depotCode}': {ex.Message}", ex);
+                throw;
+            }
+        }
+
+    public async Task<bool> AddDepotAsync(Depot depot)
         {
             if (depot == null) throw new ArgumentNullException(nameof(depot));
 
@@ -78,29 +103,24 @@ namespace WPFGrowerApp.DataAccess.Services
                             DepotCode, DepotName, IsActive, DisplayOrder,
                             CreatedAt, CreatedBy
                         ) VALUES (
-                            @DepotId, @DepotName, 1, 0,
+                            @DepotCode, @DepotName, 1, 0,
                             GETDATE(), @OperatorInitials
-                        )";
+                        );
+                        SELECT CAST(SCOPE_IDENTITY() as int);";
 
-                    var parameters = new
-                    {
-                        DepotId = depot.DepotId,
-                        DepotName = depot.DepotName,
-                        OperatorInitials = GetCurrentUserInitials()
-                    };
-
-                    int affectedRows = await connection.ExecuteAsync(sql, parameters);
-                    return affectedRows > 0;
+                    var newId = await connection.ExecuteScalarAsync<int>(sql, new { depot.DepotCode, depot.DepotName, OperatorInitials = GetCurrentUserInitials() });
+                    depot.DepotId = newId;
+                    return newId > 0;
                 }
             }
             catch (Exception ex)
             {
-                Logger.Error($"Error adding depot '{depot.DepotId}': {ex.Message}", ex);
+                Logger.Error($"Error adding depot '{depot.DepotCode}': {ex.Message}", ex);
                 throw;
             }
         }
 
-        public async Task<bool> UpdateDepotAsync(Depot depot)
+    public async Task<bool> UpdateDepotAsync(Depot depot)
         {
              if (depot == null) throw new ArgumentNullException(nameof(depot));
 
@@ -114,16 +134,9 @@ namespace WPFGrowerApp.DataAccess.Services
                             DepotName = @DepotName,
                             ModifiedAt = GETDATE(),
                             ModifiedBy = @OperatorInitials
-                        WHERE DepotCode = @DepotId AND IsActive = 1"; 
+                        WHERE DepotId = @DepotId AND IsActive = 1"; 
 
-                    var parameters = new
-                    {
-                        DepotId = depot.DepotId,
-                        DepotName = depot.DepotName,
-                        OperatorInitials = GetCurrentUserInitials()
-                    };
-
-                    int affectedRows = await connection.ExecuteAsync(sql, parameters);
+                    int affectedRows = await connection.ExecuteAsync(sql, new { depot.DepotName, depot.DepotId, OperatorInitials = GetCurrentUserInitials() });
                     return affectedRows > 0;
                 }
             }
@@ -134,10 +147,10 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        public async Task<bool> DeleteDepotAsync(string depotId, string operatorInitials)
+        public async Task<bool> DeleteDepotAsync(int depotId, string operatorInitials)
         {
-            if (string.IsNullOrWhiteSpace(depotId)) throw new ArgumentException("Depot ID cannot be empty.", nameof(depotId));
-            if (string.IsNullOrWhiteSpace(operatorInitials)) operatorInitials = GetCurrentUserInitials(); // Fallback
+            if (depotId <= 0) throw new ArgumentException("Depot ID must be positive.", nameof(depotId));
+            if (string.IsNullOrWhiteSpace(operatorInitials)) operatorInitials = GetCurrentUserInitials();
 
             try
             {
@@ -149,15 +162,9 @@ namespace WPFGrowerApp.DataAccess.Services
                             DeletedAt = GETDATE(),
                             DeletedBy = @OperatorInitials,
                             IsActive = 0
-                        WHERE DepotCode = @DepotId AND DeletedAt IS NULL"; 
+                        WHERE DepotId = @DepotId AND DeletedAt IS NULL"; 
 
-                    var parameters = new 
-                    {
-                        DepotId = depotId,
-                        OperatorInitials = operatorInitials
-                    };
-
-                    int affectedRows = await connection.ExecuteAsync(sql, parameters);
+                    int affectedRows = await connection.ExecuteAsync(sql, new { DepotId = depotId, OperatorInitials = operatorInitials });
                     // Logger.Info($"Attempted soft delete for DepotId '{depotId}'. Rows affected reported by database: {affectedRows}"); // Removed log
                     return affectedRows > 0;
                 }
@@ -165,6 +172,34 @@ namespace WPFGrowerApp.DataAccess.Services
             catch (Exception ex)
             {
                 Logger.Error($"Error deleting depot '{depotId}': {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        public async Task<bool> DeleteDepotByCodeAsync(string depotCode, string operatorInitials)
+        {
+            if (string.IsNullOrWhiteSpace(depotCode)) throw new ArgumentException("Depot code cannot be empty.", nameof(depotCode));
+            if (string.IsNullOrWhiteSpace(operatorInitials)) operatorInitials = GetCurrentUserInitials();
+
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = @"
+                        UPDATE Depots SET
+                            DeletedAt = GETDATE(),
+                            DeletedBy = @OperatorInitials,
+                            IsActive = 0
+                        WHERE DepotCode = @DepotCode AND DeletedAt IS NULL"; 
+
+                    int affectedRows = await connection.ExecuteAsync(sql, new { DepotCode = depotCode, OperatorInitials = operatorInitials });
+                    return affectedRows > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error deleting depot by code '{depotCode}': {ex.Message}", ex);
                 throw;
             }
         }

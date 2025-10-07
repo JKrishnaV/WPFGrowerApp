@@ -17,7 +17,7 @@ namespace WPFGrowerApp.ViewModels
         private readonly IProductService _productService;
         private readonly IProcessService _processService;
         private readonly IDialogService _dialogService;
-        private readonly Price _originalPrice;
+    private readonly Price? _originalPrice;
         private readonly bool _isEditMode;
 
         [ObservableProperty]
@@ -27,14 +27,14 @@ namespace WPFGrowerApp.ViewModels
         [ObservableProperty]
         private ObservableCollection<Product> _products;
 
-        [ObservableProperty]
-        private Product _selectedProduct;
+    [ObservableProperty]
+    private Product? _selectedProduct;
 
-        [ObservableProperty]
-        private ObservableCollection<Process> _processes;
+    [ObservableProperty]
+    private ObservableCollection<Process> _processes;
 
-        [ObservableProperty]
-        private Process _selectedProcess;
+    [ObservableProperty]
+    private Process? _selectedProcess;
 
         [ObservableProperty]
         private DateTime _effectiveDate;
@@ -214,7 +214,7 @@ namespace WPFGrowerApp.ViewModels
             IProductService productService,
             IProcessService processService,
             IDialogService dialogService,
-            Price priceToEdit = null,
+            Price? priceToEdit = null,
             bool isReadOnly = false)
         {
             _priceService = priceService;
@@ -227,7 +227,7 @@ namespace WPFGrowerApp.ViewModels
 
             WindowTitle = isReadOnly 
                 ? $"View Price - ID# {priceToEdit?.PriceID} (Read-Only)" 
-                : (_isEditMode ? $"Edit Price - ID# {priceToEdit.PriceID}" : "Add New Price");
+                : (_isEditMode && priceToEdit != null ? $"Edit Price - ID# {priceToEdit.PriceID}" : "Add New Price");
             EffectiveDate = DateTime.Today;
             PremiumTime = "10:10";
             SelectedTabIndex = 0;
@@ -262,8 +262,14 @@ namespace WPFGrowerApp.ViewModels
         private void LoadPriceData(Price price)
         {
             // Set product and process
-            SelectedProduct = Products?.FirstOrDefault(p => p.ProductId == price.Product);
-            SelectedProcess = Processes?.FirstOrDefault(p => p.ProcessId == price.Process);
+            if (int.TryParse(price.Product, out int prodId))
+                SelectedProduct = Products?.FirstOrDefault(p => p.ProductId == prodId) ?? Products?.FirstOrDefault()!;
+            else
+                SelectedProduct = Products?.FirstOrDefault()!;
+            if (int.TryParse(price.Process, out int procId))
+                SelectedProcess = Processes?.FirstOrDefault(p => p.ProcessId == procId) ?? Processes?.FirstOrDefault()!;
+            else
+                SelectedProcess = Processes?.FirstOrDefault()!;
             EffectiveDate = price.From;
 
             // Time premium
@@ -327,13 +333,13 @@ namespace WPFGrowerApp.ViewModels
                 var price = _isEditMode ? _originalPrice : new Price();
 
                 // Basic info
-                price.Product = SelectedProduct?.ProductId;
-                price.Process = SelectedProcess?.ProcessId;
+                price.Product = SelectedProduct != null ? SelectedProduct.ProductId.ToString() : string.Empty;
+                price.Process = SelectedProcess != null ? SelectedProcess.ProcessId.ToString() : string.Empty;
                 price.From = EffectiveDate;
 
                 // Time premium
                 price.TimePrem = TimePremiumEnabled;
-                price.Time = TimePremiumEnabled ? PremiumTime : null;
+                price.Time = TimePremiumEnabled ? PremiumTime : string.Empty;
                 price.CPremium = TimePremiumEnabled ? CanadianPremium : 0;
                 price.UPremium = 0; // Not used
 

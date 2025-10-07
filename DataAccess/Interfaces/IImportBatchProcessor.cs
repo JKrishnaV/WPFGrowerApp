@@ -11,7 +11,7 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// <summary>
         /// Starts a new import batch process
         /// </summary>
-        Task<ImportBatch> StartImportBatchAsync(string depot, string fileName);
+    Task<ImportBatch> StartImportBatchAsync(int depotId, string fileName);
 
         /// <summary>
         /// Processes a single receipt within the specified import batch.

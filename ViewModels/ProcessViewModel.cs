@@ -127,17 +127,22 @@ namespace WPFGrowerApp.ViewModels
         {
             if (SelectedProcess == null) return; 
 
-            // Basic Validation 
-            if (string.IsNullOrWhiteSpace(SelectedProcess.ProcessId) || SelectedProcess.ProcessId.Length > 2)
-            {
-                 await _dialogService?.ShowMessageBoxAsync("Process ID cannot be empty and must be 2 characters or less.", "Validation Error"); // Use async
-                 return;
-            }
-             if (string.IsNullOrWhiteSpace(SelectedProcess.Description) || SelectedProcess.Description.Length > 19)
-            {
-                 await _dialogService?.ShowMessageBoxAsync("Description cannot be empty and must be 19 characters or less.", "Validation Error"); // Use async
-                 return;
-            }
+          // Basic Validation 
+          if (SelectedProcess.ProcessId <= 0)
+          {
+              await _dialogService?.ShowMessageBoxAsync("Process ID must be a positive integer.", "Validation Error"); // Use async
+              return;
+          }
+          if (string.IsNullOrWhiteSpace(SelectedProcess.ProcessCode) || SelectedProcess.ProcessCode.Length > 8)
+          {
+              await _dialogService?.ShowMessageBoxAsync("Process Code cannot be empty and must be 8 characters or less.", "Validation Error"); // Use async
+              return;
+          }
+          if (string.IsNullOrWhiteSpace(SelectedProcess.Description) || SelectedProcess.Description.Length > 19)
+          {
+              await _dialogService?.ShowMessageBoxAsync("Description cannot be empty and must be 19 characters or less.", "Validation Error"); // Use async
+              return;
+          }
             // Add validation for DefGrade and ProcClass if needed (e.g., range checks)
 
             IsLoading = true;

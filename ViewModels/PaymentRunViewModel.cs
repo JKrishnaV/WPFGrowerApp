@@ -41,11 +41,11 @@ namespace WPFGrowerApp.ViewModels
         private DateTime _cutoffDate = DateTime.Today;
         private int _cropYear = DateTime.Today.Year;
         private bool _isRunning;
-        private string _statusMessage;
-        private ObservableCollection<string> _runLog;
-        private PostBatch _lastRunBatch; // For actual run
-        private List<string> _lastRunErrors; // For actual run
-        private TestRunResult _latestTestRunResult; // For test run
+        private string? _statusMessage;
+        private ObservableCollection<string>? _runLog;
+        private PaymentBatch? _lastRunBatch; // For actual run
+        private List<string>? _lastRunErrors; // For actual run
+        private TestRunResult? _latestTestRunResult; // For test run
 
         // --- Collections ---
         // Original backing collections for all items
@@ -128,7 +128,7 @@ namespace WPFGrowerApp.ViewModels
         public ObservableCollection<GrowerInfo> SelectedExcludeGrowers { get; private set; } = new ObservableCollection<GrowerInfo>();
 
         // On Hold List properties
-        private ObservableCollection<GrowerInfo> _onHoldGrowers;
+        private ObservableCollection<GrowerInfo>? _onHoldGrowers;
         private bool _isLoadingOnHoldGrowers;
 
 
@@ -146,6 +146,11 @@ namespace WPFGrowerApp.ViewModels
             _processService = processService ?? throw new ArgumentNullException(nameof(processService));
             _payGroupService = payGroupService ?? throw new ArgumentNullException(nameof(payGroupService));
             _growerService = growerService ?? throw new ArgumentNullException(nameof(growerService));
+
+            _growerSearchText = string.Empty;
+            _productSearchText = string.Empty;
+            _processSearchText = string.Empty;
+            _payGroupSearchText = string.Empty;
 
             RunLog = new ObservableCollection<string>();
             LastRunErrors = new List<string>();
@@ -177,6 +182,7 @@ namespace WPFGrowerApp.ViewModels
             CropYears.Add(currentYear);
             CropYears.Add(currentYear - 1);
             CropYears.Add(currentYear - 2);
+            CropYears.Add(2022); // Add 2022 for test data
             _cropYear = currentYear; // Set default
 
             // Add listeners for selection changes
@@ -215,7 +221,7 @@ namespace WPFGrowerApp.ViewModels
             if (string.IsNullOrEmpty(ProductSearchText)) return true;
             if (item is Product product)
             {
-                return (product.ProductId?.IndexOf(ProductSearchText, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                return (product.ProductCode?.IndexOf(ProductSearchText, StringComparison.OrdinalIgnoreCase) >= 0) ||
                        (product.Description?.IndexOf(ProductSearchText, StringComparison.OrdinalIgnoreCase) >= 0);
             }
             return false;
@@ -227,7 +233,7 @@ namespace WPFGrowerApp.ViewModels
             if (string.IsNullOrEmpty(ProcessSearchText)) return true;
             if (item is Process process)
             {
-                return (process.ProcessId?.IndexOf(ProcessSearchText, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                return (process.ProcessCode?.IndexOf(ProcessSearchText, StringComparison.OrdinalIgnoreCase) >= 0) ||
                        (process.Description?.IndexOf(ProcessSearchText, StringComparison.OrdinalIgnoreCase) >= 0);
             }
             return false;
@@ -239,7 +245,7 @@ namespace WPFGrowerApp.ViewModels
             if (string.IsNullOrEmpty(PayGroupSearchText)) return true;
             if (item is PayGroup payGroup)
             {
-                return (payGroup.PayGroupId?.IndexOf(PayGroupSearchText, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                return (payGroup.GroupCode?.IndexOf(PayGroupSearchText, StringComparison.OrdinalIgnoreCase) >= 0) ||
                        (payGroup.Description?.IndexOf(PayGroupSearchText, StringComparison.OrdinalIgnoreCase) >= 0);
             }
             return false;
@@ -285,7 +291,7 @@ namespace WPFGrowerApp.ViewModels
 
 
          // Properties for On Hold List
-         public ObservableCollection<GrowerInfo> OnHoldGrowers { get => _onHoldGrowers; private set => SetProperty(ref _onHoldGrowers, value); }
+         public ObservableCollection<GrowerInfo> OnHoldGrowers { get => _onHoldGrowers ?? new ObservableCollection<GrowerInfo>(); private set => SetProperty(ref _onHoldGrowers, value); }
          public bool IsLoadingOnHoldGrowers { get => _isLoadingOnHoldGrowers; private set => SetProperty(ref _isLoadingOnHoldGrowers, value); }
 
 
@@ -306,17 +312,17 @@ namespace WPFGrowerApp.ViewModels
 
         public string StatusMessage
         {
-            get => _statusMessage;
+            get => _statusMessage ?? string.Empty;
             private set => SetProperty(ref _statusMessage, value);
         }
 
         public ObservableCollection<string> RunLog
         {
-            get => _runLog;
+            get => _runLog ?? new ObservableCollection<string>();
             private set => SetProperty(ref _runLog, value);
         }
 
-         public PostBatch LastRunBatch
+        public PaymentBatch? LastRunBatch
         {
             get => _lastRunBatch;
             private set => SetProperty(ref _lastRunBatch, value);
@@ -324,11 +330,11 @@ namespace WPFGrowerApp.ViewModels
 
         public List<string> LastRunErrors
         {
-            get => _lastRunErrors;
+            get => _lastRunErrors ?? new List<string>();
             private set => SetProperty(ref _lastRunErrors, value);
         }
 
-        public TestRunResult LatestTestRunResult
+        public TestRunResult? LatestTestRunResult
         {
             get => _latestTestRunResult;
             private set => SetProperty(ref _latestTestRunResult, value);
@@ -363,10 +369,10 @@ namespace WPFGrowerApp.ViewModels
             Report($"Parameters: PaymentDate={PaymentDate:d}, CutoffDate={CutoffDate:d}, CropYear={CropYear}");
 
             // Prepare lists of IDs from selected items
-            var selectedProductIds = SelectedProducts.Select(p => p.ProductId).Where(id => !string.IsNullOrEmpty(id)).ToList();
-            var selectedProcessIds = SelectedProcesses.Select(p => p.ProcessId).Where(id => !string.IsNullOrEmpty(id)).ToList();
-            var selectedExcludeGrowerIds = SelectedExcludeGrowers.Select(g => g.GrowerNumber).Where(num => num != 0).ToList();
-            var selectedExcludePayGroupIds = SelectedExcludePayGroups.Select(pg => pg.PayGroupId).Where(id => !string.IsNullOrEmpty(id)).ToList();
+            var selectedProductIds = SelectedProducts.Select(p => p.ProductId).ToList();
+            var selectedProcessIds = SelectedProcesses.Select(p => p.ProcessId).ToList();
+            var selectedExcludeGrowerIds = SelectedExcludeGrowers.Select(g => (int)g.GrowerNumber).Where(num => num != 0).ToList();
+            var selectedExcludePayGroupIds = SelectedExcludePayGroups.Select(pg => pg.PayGroupId).ToList();
 
             // Log selected filters
             Report($"Filtering by Products: {(selectedProductIds.Any() ? string.Join(",", selectedProductIds) : "All")}");
@@ -376,9 +382,9 @@ namespace WPFGrowerApp.ViewModels
 
             try
             {
-                 // TODO: Update ProcessAdvancePaymentRunAsync signature in IPaymentService and PaymentService
-                 // The following line will cause compile errors until the service is updated.
-                var (success, errors, createdBatch) = await _paymentService.ProcessAdvancePaymentRunAsync(
+                 // ProcessAdvancePaymentRunAsync signature updated to use PaymentBatch and List<int>
+                (bool success, List<string> errors, PaymentBatch createdBatch) = 
+                    await _paymentService.ProcessAdvancePaymentRunAsync(
                     AdvanceNumber,
                     PaymentDate,
                     CutoffDate,
@@ -395,19 +401,19 @@ namespace WPFGrowerApp.ViewModels
 
                 if (success)
                 {
-                    StatusMessage = $"Payment run completed successfully for Batch {createdBatch?.PostBat}.";
+                    StatusMessage = $"Payment run completed successfully for Batch {createdBatch?.PaymentBatchId}.";
                     Report("Payment run finished successfully.");
-                    await _dialogService.ShowMessageBoxAsync($"Advance {AdvanceNumber} payment run completed successfully for Batch {createdBatch?.PostBat}.", "Payment Run Complete"); // Use async
+                    await _dialogService.ShowMessageBoxAsync($"Advance {AdvanceNumber} payment run completed successfully for Batch {createdBatch?.PaymentBatchId}.", "Payment Run Complete"); // Use async
                 }
                 else
                 {
-                    StatusMessage = $"Payment run completed with errors for Batch {createdBatch?.PostBat}. Check log.";
+                    StatusMessage = $"Payment run completed with errors for Batch {createdBatch?.PaymentBatchId}. Check log.";
                     Report("Payment run finished with errors:");
                     foreach(var error in LastRunErrors)
                     {
                         Report($"ERROR: {error}");
                     }
-                     await _dialogService.ShowMessageBoxAsync($"The payment run encountered errors. Please review the run log.\nBatch ID: {createdBatch?.PostBat}", "Payment Run Errors"); // Use async
+                     await _dialogService.ShowMessageBoxAsync($"The payment run encountered errors. Please review the run log.\nBatch ID: {createdBatch?.PaymentBatchId}", "Payment Run Errors"); // Use async
                 }
             }
             catch (Exception ex)
@@ -435,10 +441,10 @@ namespace WPFGrowerApp.ViewModels
             Report($"Parameters: PaymentDate={PaymentDate:d}, CutoffDate={CutoffDate:d}, CropYear={CropYear}");
 
             // Prepare lists of IDs from selected items (same as actual run)
-            var selectedProductIds = SelectedProducts.Select(p => p.ProductId).Where(id => !string.IsNullOrEmpty(id)).ToList();
-            var selectedProcessIds = SelectedProcesses.Select(p => p.ProcessId).Where(id => !string.IsNullOrEmpty(id)).ToList();
-            var selectedExcludeGrowerIds = SelectedExcludeGrowers.Select(g => g.GrowerNumber).Where(num => num != 0).ToList();
-            var selectedExcludePayGroupIds = SelectedExcludePayGroups.Select(pg => pg.PayGroupId).Where(id => !string.IsNullOrEmpty(id)).ToList();
+            var selectedProductIds = SelectedProducts.Select(p => p.ProductId).ToList();
+            var selectedProcessIds = SelectedProcesses.Select(p => p.ProcessId).ToList();
+            var selectedExcludeGrowerIds = SelectedExcludeGrowers.Select(g => (int)g.GrowerNumber).Where(num => num != 0).ToList();
+            var selectedExcludePayGroupIds = SelectedExcludePayGroups.Select(pg => pg.PayGroupId).ToList();
 
             // Log selected filters
             Report($"Filtering by Products: {(selectedProductIds.Any() ? string.Join(",", selectedProductIds) : "All")}");
@@ -516,14 +522,15 @@ namespace WPFGrowerApp.ViewModels
                     Report("Test run simulation finished successfully.");
 
                     // Show the Report in a dedicated Window instead of a dialog
-                    var reportViewModel = new PaymentTestRunReportViewModel(LatestTestRunResult);
-                    var reportWindow = new PaymentTestRunReportWindow
+                    if (LatestTestRunResult != null)
                     {
-                        DataContext = reportViewModel,
-                        // Optional: Set owner if you want modal-like behavior relative to the main window
-                        // Owner = System.Windows.Application.Current.MainWindow 
-                    };
-                    reportWindow.Show(); // Show as a non-modal window
+                        var reportViewModel = new PaymentTestRunReportViewModel(LatestTestRunResult);
+                        var reportWindow = new PaymentTestRunReportWindow
+                        {
+                            DataContext = reportViewModel,
+                        };
+                        reportWindow.Show();
+                    }
                 }
             }
             catch (Exception ex)
@@ -558,10 +565,10 @@ namespace WPFGrowerApp.ViewModels
             Report($"Parameters: PaymentDate={PaymentDate:d}, CutoffDate={CutoffDate:d}, CropYear={CropYear}");
 
             // Prepare lists of IDs from selected items (same as actual run)
-            var selectedProductIds = SelectedProducts.Select(p => p.ProductId).Where(id => !string.IsNullOrEmpty(id)).ToList();
-            var selectedProcessIds = SelectedProcesses.Select(p => p.ProcessId).Where(id => !string.IsNullOrEmpty(id)).ToList();
-            var selectedExcludeGrowerIds = SelectedExcludeGrowers.Select(g => g.GrowerNumber).Where(num => num != 0).ToList();
-            var selectedExcludePayGroupIds = SelectedExcludePayGroups.Select(pg => pg.PayGroupId).Where(id => !string.IsNullOrEmpty(id)).ToList();
+            var selectedProductIds = SelectedProducts.Select(p => p.ProductId).ToList();
+            var selectedProcessIds = SelectedProcesses.Select(p => p.ProcessId).ToList();
+            var selectedExcludeGrowerIds = SelectedExcludeGrowers.Select(g => (int)g.GrowerNumber).Where(num => num != 0).ToList();
+            var selectedExcludePayGroupIds = SelectedExcludePayGroups.Select(pg => pg.PayGroupId).ToList();
 
             // Log selected filters
             Report($"Filtering by Products: {(selectedProductIds.Any() ? string.Join(",", selectedProductIds) : "All")}");
@@ -585,6 +592,8 @@ namespace WPFGrowerApp.ViewModels
                 ExcludedGrowerDescriptions = SelectedExcludeGrowers.Select(g => $"{g.GrowerNumber} - {g.Name}".TrimStart(' ', '-')).ToList(),
                 ExcludedPayGroupDescriptions = SelectedExcludePayGroups.Select(pg => $"{pg.PayGroupId} - {pg.Description}".TrimStart(' ', '-')).ToList()
             };
+
+            System.IO.Stream? reportStream = null;
 
             try
             {
@@ -620,77 +629,80 @@ namespace WPFGrowerApp.ViewModels
                     // Create DataTable for the report
                     // Need access to the helper method, temporarily create instance of other VM
                     // TODO: Refactor DataTable creation into a shared service/helper
-                    var tempReportViewModel = new PaymentTestRunReportViewModel(LatestTestRunResult);
-                    System.Data.DataTable reportDataTable = tempReportViewModel.CreateDataTableFromGrowerPayments(); // Assuming this is made public/internal
-
-                    // Prepare data sources for Bold Reports Viewer
-                    // Use the correct ReportDataSource class from BoldReports.Windows
-                    var reportDataSource = new ReportDataSource
+                    if (LatestTestRunResult != null)
                     {
-                         Name = "GrowerPayments", // MUST match the DataSet name in RDL
-                         Value = reportDataTable
-                    };
-                    var dataSources = new List<ReportDataSource> { reportDataSource };
+                        var tempReportViewModel = new PaymentTestRunReportViewModel(LatestTestRunResult);
+                        System.Data.DataTable reportDataTable = tempReportViewModel.CreateDataTableFromGrowerPayments(); // Assuming this is made public/internal
 
-
-                    // Prepare parameters for Bold Reports Viewer
-                    // Use ReportParameter from BoldReports.Windows namespace
-                    var reportParameters = new List<ReportParameter>();
-                    reportParameters.Add(new ReportParameter() { Name = "ParamAdvanceNumber", Values = new List<string>() { parameters.AdvanceNumber.ToString() } });
-                    reportParameters.Add(new ReportParameter() { Name = "ParamPaymentDate", Values = new List<string>() { parameters.PaymentDate.ToString("d") } }); // Format date
-                    reportParameters.Add(new ReportParameter() { Name = "ParamCutoffDate", Values = new List<string>() { parameters.CutoffDate.ToString("d") } }); // Format date
-                    reportParameters.Add(new ReportParameter() { Name = "ParamCropYear", Values = new List<string>() { parameters.CropYear.ToString() } });
-                    reportParameters.Add(new ReportParameter() { Name = "ParamProductsFilter", Values = new List<string>() { parameters.ProductDescriptions.Any() ? string.Join(", ", parameters.ProductDescriptions) : "All" } });
-                    reportParameters.Add(new ReportParameter() { Name = "ParamProcessesFilter", Values = new List<string>() { parameters.ProcessDescriptions.Any() ? string.Join(", ", parameters.ProcessDescriptions) : "All" } });
-                    reportParameters.Add(new ReportParameter() { Name = "ParamExcludedGrowersFilter", Values = new List<string>() { parameters.ExcludedGrowerDescriptions.Any() ? string.Join(", ", parameters.ExcludedGrowerDescriptions) : "None" } });
-                    reportParameters.Add(new ReportParameter() { Name = "ParamExcludedPayGroupsFilter", Values = new List<string>() { parameters.ExcludedPayGroupDescriptions.Any() ? string.Join(", ", parameters.ExcludedPayGroupDescriptions) : "None" } });
-
-
-                    // --- Load Report from Stream ---
-                    System.IO.Stream reportStream = null;
-                    try
-                    {
-                        // Get the current assembly
-                        var assembly = System.Reflection.Assembly.GetExecutingAssembly();
-                        // Standard resource name (AssemblyName.Folder.File.Extension)
-                        string resourceName = "WPFGrowerApp.Reports.PaymentTestRunReport.rdlc";
-                        reportStream = assembly.GetManifestResourceStream(resourceName);
-
-                        if (reportStream == null)
+                        // Prepare data sources for Bold Reports Viewer
+                        // Use the correct ReportDataSource class from BoldReports.Windows
+                        var reportDataSource = new ReportDataSource
                         {
-                            // Attempt with just Folder.File.Extension (sometimes works if default namespace differs unexpectedly)
-                            resourceName = "Reports.PaymentTestRunReport.rdlc";
+                             Name = "GrowerPayments", // MUST match the DataSet name in RDL
+                             Value = reportDataTable
+                        };
+                        var dataSources = new List<ReportDataSource> { reportDataSource };
+
+
+                        // Prepare parameters for Bold Reports Viewer
+                        // Use ReportParameter from BoldReports.Windows namespace
+                        var reportParameters = new List<ReportParameter>();
+                        reportParameters.Add(new ReportParameter() { Name = "ParamAdvanceNumber", Values = new List<string>() { parameters.AdvanceNumber.ToString() } });
+                        reportParameters.Add(new ReportParameter() { Name = "ParamPaymentDate", Values = new List<string>() { parameters.PaymentDate.ToString("d") } }); // Format date
+                        reportParameters.Add(new ReportParameter() { Name = "ParamCutoffDate", Values = new List<string>() { parameters.CutoffDate.ToString("d") } }); // Format date
+                        reportParameters.Add(new ReportParameter() { Name = "ParamCropYear", Values = new List<string>() { parameters.CropYear.ToString() } });
+                        reportParameters.Add(new ReportParameter() { Name = "ParamProductsFilter", Values = new List<string>() { parameters.ProductDescriptions.Any() ? string.Join(", ", parameters.ProductDescriptions) : "All" } });
+                        reportParameters.Add(new ReportParameter() { Name = "ParamProcessesFilter", Values = new List<string>() { parameters.ProcessDescriptions.Any() ? string.Join(", ", parameters.ProcessDescriptions) : "All" } });
+                        reportParameters.Add(new ReportParameter() { Name = "ParamExcludedGrowersFilter", Values = new List<string>() { parameters.ExcludedGrowerDescriptions.Any() ? string.Join(", ", parameters.ExcludedGrowerDescriptions) : "None" } });
+                        reportParameters.Add(new ReportParameter() { Name = "ParamExcludedPayGroupsFilter", Values = new List<string>() { parameters.ExcludedPayGroupDescriptions.Any() ? string.Join(", ", parameters.ExcludedPayGroupDescriptions) : "None" } });
+
+
+                        // --- Load Report from Stream ---
+                        try
+                        {
+                            // Get the current assembly
+                            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+                            // Standard resource name (AssemblyName.Folder.File.Extension)
+                            string resourceName = "WPFGrowerApp.Reports.PaymentTestRunReport.rdlc";
                             reportStream = assembly.GetManifestResourceStream(resourceName);
-                        }
 
-                        if (reportStream == null)
+                            if (reportStream == null)
+                            {
+                                // Attempt with just Folder.File.Extension (sometimes works if default namespace differs unexpectedly)
+                                resourceName = "Reports.PaymentTestRunReport.rdlc";
+                                reportStream = assembly.GetManifestResourceStream(resourceName);
+                            }
+
+                            if (reportStream == null)
+                            {
+                                throw new Exception($"Embedded report resource not found. Tried paths: WPFGrowerApp.Reports.PaymentTestRunReport.rdlc and Reports.PaymentTestRunReport.rdlc");
+                            }
+                        }
+                        catch (Exception streamEx)
                         {
-                            throw new Exception($"Embedded report resource not found. Tried paths: WPFGrowerApp.Reports.PaymentTestRunReport.rdlc and Reports.PaymentTestRunReport.rdlc");
+                             Report($"CRITICAL ERROR: Failed to load embedded report stream: {streamEx.Message}");
+                             await _dialogService.ShowMessageBoxAsync($"Could not load the embedded report resource: {streamEx.Message}", "Report Load Error");
+                             IsRunning = false; // Ensure IsRunning is reset
+                             return; // Stop execution
+                        }
+                        // --- End Load Report from Stream ---
+
+
+                        if (reportStream != null)
+                        {
+                            // Create the ViewModel for the viewer window, passing the stream, data sources, and parameters
+                            var viewerViewModel = new BoldReportViewerViewModel(reportStream, dataSources, reportParameters);
+                            viewerViewModel.ReportTitle = $"Payment Test Run - {DateTime.Now:g}";
+
+                            // Show the Bold Report Viewer Window
+                            var reportViewerWindow = new Views.BoldReportViewerWindow();
+                            reportViewerWindow.DataContext = viewerViewModel;
+                            reportViewerWindow.Show(); // Show as a non-modal window
+
+                            StatusMessage = "Report viewer displayed.";
+                            Report("Report viewer displayed.");
                         }
                     }
-                    catch (Exception streamEx)
-                    {
-                         Report($"CRITICAL ERROR: Failed to load embedded report stream: {streamEx.Message}");
-                         await _dialogService.ShowMessageBoxAsync($"Could not load the embedded report resource: {streamEx.Message}", "Report Load Error");
-                         IsRunning = false; // Ensure IsRunning is reset
-                         return; // Stop execution
-                    }
-                    // --- End Load Report from Stream ---
-
-
-                    // Create the ViewModel for the viewer window, passing the stream, data sources, and parameters
-                    var viewerViewModel = new BoldReportViewerViewModel(reportStream, dataSources, reportParameters);
-                    viewerViewModel.ReportTitle = $"Payment Test Run - {DateTime.Now:g}";
-
-                    // Show the Bold Report Viewer Window
-                    var reportViewerWindow = new Views.BoldReportViewerWindow();
-                    reportViewerWindow.DataContext = viewerViewModel;
-                    // Set owner if desired for modality/behavior
-                    // reportViewerWindow.Owner = Application.Current.MainWindow;
-                    reportViewerWindow.Show(); // Show as a non-modal window
-
-                    StatusMessage = "Report viewer displayed.";
-                    Report("Report viewer displayed.");
                 }
             }
             catch (Exception ex)
@@ -754,10 +766,10 @@ namespace WPFGrowerApp.ViewModels
                 var onHold = await _growerService.GetOnHoldGrowersAsync();
 
                 // Apply client-side filtering based on Exclude options if needed
-                var excludedGrowerIds = SelectedExcludeGrowers.Select(g => g.GrowerNumber).Where(num => num != 0).ToList();
+                var excludedGrowerIds = SelectedExcludeGrowers.Select(g => (int)g.GrowerNumber).Where(num => num != 0).ToList();
                 if (excludedGrowerIds.Any())
                 {
-                    onHold = onHold.Where(g => !excludedGrowerIds.Contains(g.GrowerNumber)).ToList();
+                    onHold = onHold.Where(g => !excludedGrowerIds.Contains((int)g.GrowerNumber)).ToList();
                 }
                 // TODO: Add filtering for Products, Processes, PayGroups if required by business logic
 
@@ -781,7 +793,7 @@ namespace WPFGrowerApp.ViewModels
         }
 
         // Handler for selection changes in filter lists
-        private void SelectedFilters_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        private void SelectedFilters_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
             // Re-calculate the OnHoldGrowers list whenever a filter selection changes
            // _ = UpdateOnHoldGrowersAsync();

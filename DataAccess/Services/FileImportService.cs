@@ -161,14 +161,14 @@ namespace WPFGrowerApp.DataAccess.Services
                     var dockPercentStr = GetValueSafe(values, headerIndexes, "DOCKPERCENT");
 
                     // Basic validation and parsing
-                    if (!decimal.TryParse(growerIdStr, out var growerNumber) ||
-                        !decimal.TryParse(netStr, out var net) ||
+                    var growerNumber = growerIdStr;
+                    if (!decimal.TryParse(netStr, out var net) ||
                         !decimal.TryParse(priceStr, out var price) ||
                         !decimal.TryParse(ticketNoStr, out var ticketNumber) ||
                         !decimal.TryParse(dockPercentStr, out var dockPercent))
                     {
                         Logger.Warn($"Skipping line {i + 1} due to parsing error for basic numeric fields.");
-                         continue; // Skip row if essential numbers can't be parsed
+                        continue; // Skip row if essential numbers can't be parsed
                     }
 
                     // Removed the check that skipped empty receipts
@@ -194,13 +194,16 @@ namespace WPFGrowerApp.DataAccess.Services
 
                     // Lookup foreign keys (with caching for performance)
                     int? growerId = null;
+                    int? priceClassId = null;
                     int? productIdFk = null;
                     int? processIdFk = null;
                     int? depotIdFk = null;
 
                     try
                     {
-                        growerId = await GetGrowerIdByNumberAsync(growerNumber);
+                        var growerInfo = await GetGrowerIdByNumberAsync(growerNumber);
+                        growerId = growerInfo.GrowerId;
+                        priceClassId = growerInfo.DefaultPriceClassId;
                         productIdFk = string.IsNullOrEmpty(productId) ? null : await GetProductIdByCodeAsync(productId);
                         processIdFk = string.IsNullOrEmpty(processCode) ? null : await GetProcessIdByCodeAsync(processCode);
                         depotIdFk = string.IsNullOrEmpty(depot) ? null : await GetDepotIdByCodeAsync(depot);
@@ -217,7 +220,6 @@ namespace WPFGrowerApp.DataAccess.Services
                     {
                         // Legacy properties (for backward compatibility)
                         Depot = depot,
-                        ReceiptNumber = ticketNumber,
                         Product = productId,
                         GrowerNumber = growerNumber,
                         Gross = net, // CSV only has NET, no separate GROSS/TARE
@@ -227,7 +229,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         DockPercent = dockPercent,
                         // Grade = gradeId, // Removed - type conflict
                         Process = processCode,
-                        Date = parsedReceiptDateTime,
+                        ReceiptDate = parsedReceiptDateTime,
                         FromField = fieldId,
                         Imported = true,
                         DayUniq = await GenerateDayUniqAsync(parsedReceiptDateTime),
@@ -241,8 +243,8 @@ namespace WPFGrowerApp.DataAccess.Services
                         EditReason = editReason,
 
                         // MODERN PROPERTIES (for new Receipts table)
-                        ReceiptNumberModern = ticketNumber.ToString(),
-                        ReceiptDate = parsedDateIn.Date,
+                        ReceiptNumber = ticketNumber.ToString(),
+                        // Removed duplicate ReceiptDate assignment
                         ReceiptTime = timeInSpan,
                         GrowerId = growerId ?? 0,
                         ProductId = productIdFk ?? 0,
@@ -251,8 +253,9 @@ namespace WPFGrowerApp.DataAccess.Services
                         GrossWeight = net, // CSV only has NET
                         TareWeight = 0,
                         DockPercentage = dockPercent,
-                        GradeModern = (byte)grade,
-                        IsVoidedModern = !string.IsNullOrEmpty(voidedStr) && voidedStr.ToUpper() == "VOID",
+                        Grade = (byte)grade,
+                        PriceClassId = priceClassId ?? 1, // From Grower.DefaultPriceClassId
+                        IsVoided = !string.IsNullOrEmpty(voidedStr) && voidedStr.ToUpper() == "VOID",
                         VoidedReason = string.IsNullOrEmpty(voidedStr) || string.IsNullOrEmpty(editReason) ? string.Empty : editReason,
 
                         // ImportBatchId will be set in ImportBatchProcessor.ProcessSingleReceiptAsync
@@ -353,24 +356,24 @@ namespace WPFGrowerApp.DataAccess.Services
                     // Validate foreign keys are set
                     if (receipt.GrowerId <= 0)
                     {
-                        errors.Add($"Invalid or missing grower for receipt {receipt.ReceiptNumberModern}: {receipt.GrowerNumber}");
+                        errors.Add($"Invalid or missing grower for receipt {receipt.ReceiptNumber}: {receipt.GrowerNumber}");
                     }
 
                     if (receipt.ProductId <= 0 && !string.IsNullOrEmpty(receipt.Product))
                     {
-                        errors.Add($"Invalid or missing product for receipt {receipt.ReceiptNumberModern}: {receipt.Product}");
+                        errors.Add($"Invalid or missing product for receipt {receipt.ReceiptNumber}: {receipt.Product}");
                     }
 
                     // Validate weights (using modern properties)
                     if (receipt.GrossWeight <= 0)
                     {
-                        errors.Add($"Invalid gross weight for receipt {receipt.ReceiptNumberModern}: {receipt.GrossWeight}");
+                        errors.Add($"Invalid gross weight for receipt {receipt.ReceiptNumber}: {receipt.GrossWeight}");
                     }
 
                     // Validate dates
                     if (receipt.ReceiptDate > DateTime.Now.Date)
                     {
-                        errors.Add($"Future date not allowed: {receipt.ReceiptDate} for receipt: {receipt.ReceiptNumberModern}");
+                        errors.Add($"Future date not allowed: {receipt.ReceiptDate} for receipt: {receipt.ReceiptNumber}");
                     }
 
                     processedCount++;
@@ -433,26 +436,35 @@ namespace WPFGrowerApp.DataAccess.Services
 
         #region Foreign Key Lookup Methods with Caching
 
-        private async Task<int?> GetGrowerIdByNumberAsync(decimal growerNumber)
+        private async Task<(int? GrowerId, int? DefaultPriceClassId)> GetGrowerIdByNumberAsync(string growerNumber)
         {
-            var key = growerNumber.ToString();
+            var key = growerNumber;
             if (_growerLookupCache.TryGetValue(key, out var cachedId))
-                return cachedId;
+            {
+                // Return cached GrowerId and fetch DefaultPriceClassId separately
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    const string priceClassSql = "SELECT DefaultPriceClassId FROM Growers WHERE GrowerId = @GrowerId AND DeletedAt IS NULL";
+                    var priceClassId = await connection.ExecuteScalarAsync<int?>(priceClassSql, new { GrowerId = cachedId });
+                    return (cachedId, priceClassId ?? 1); // Default to 1 (CL1) if not set
+                }
+            }
 
             using (var connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync();
-                const string sql = "SELECT GrowerId FROM Growers WHERE GrowerNumber = @Number AND DeletedAt IS NULL";
-                var result = await connection.ExecuteScalarAsync<int?>(sql, new { Number = key });
+                const string sql = "SELECT GrowerId, DefaultPriceClassId FROM Growers WHERE GrowerNumber = @Number AND DeletedAt IS NULL";
+                var result = await connection.QueryFirstOrDefaultAsync<(int? GrowerId, int? DefaultPriceClassId)>(sql, new { Number = key });
 
-                if (!result.HasValue)
+                if (!result.GrowerId.HasValue)
                 {
                     Logger.Warn($"Grower not found: {growerNumber}");
                     throw new InvalidOperationException($"Grower not found: {growerNumber}");
                 }
 
-                _growerLookupCache[key] = result.Value;
-                return result.Value;
+                _growerLookupCache[key] = result.GrowerId.Value;
+                return (result.GrowerId, result.DefaultPriceClassId ?? 1); // Default to 1 (CL1) if not set
             }
         }
 

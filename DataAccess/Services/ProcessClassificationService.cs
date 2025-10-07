@@ -97,10 +97,10 @@ namespace WPFGrowerApp.DataAccess.Services
                     
                     // Query for processes with PROC_CLASS = 1 (Fresh)
                     var sql = @"
-                        SELECT PROCESS
-                        FROM Process
-                        WHERE PROC_CLASS = @FreshClass
-                        ORDER BY PROCESS";
+                        SELECT ProcessCode
+                        FROM Processes
+                        WHERE ProcessClass = @FreshClass AND IsActive = 1
+                        ORDER BY ProcessCode";
 
                     var freshCodes = await connection.QueryAsync<string>(
                         sql, 
@@ -138,9 +138,9 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     
                     var sql = @"
-                        SELECT PROC_CLASS
-                        FROM Process
-                        WHERE PROCESS = @ProcessCode";
+                        SELECT ProcessClass
+                        FROM Processes
+                        WHERE ProcessCode = @ProcessCode AND IsActive = 1";
 
                     var processClass = await connection.ExecuteScalarAsync<int?>(
                         sql, 

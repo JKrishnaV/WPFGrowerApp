@@ -6,24 +6,26 @@ namespace WPFGrowerApp.DataAccess.Models
 {
     public class Account : INotifyPropertyChanged
     {
-        private decimal _number;
+        private DateTime? _qaddDate;
+        private DateTime? _qdelDate;
+    private string _number = string.Empty;
         private DateTime _date;
-        private string _type;
-        private string _class;
-        private string _product;
-        private string _process;
+        private string _type = string.Empty;
+        private string _class = string.Empty;
+        private string _product = string.Empty;
+        private string _process = string.Empty;
         private decimal _grade;
         private decimal _lbs;
         private decimal _unitPrice;
         private decimal _dollars;
-        private string _description;
-        private string _series;
+        private string _description = string.Empty;
+        private string _series = string.Empty;
         private decimal _cheque;
-        private string _tSeries;
+        private string _tSeries = string.Empty;
         private decimal _tCheque;
         private decimal _year;
         private decimal _acctUnique;
-        private string _currency;
+        private string _currency = string.Empty;
         private bool _chgGst;
         private decimal _gstRate;
         private decimal _gstEst;
@@ -31,20 +33,15 @@ namespace WPFGrowerApp.DataAccess.Models
         private decimal _advNo;
         private decimal _advBat;
         private decimal _finBat;
-
-        // Audit Fields
-        private DateTime? _qaddDate;
-        private string _qaddTime;
-        private string _qaddOp;
         private DateTime? _qedDate;
-        private string _qedTime;
-        private string _qedOp;
-        private DateTime? _qdelDate;
-        private string _qdelTime;
-        private string _qdelOp;
+        private string _qaddTime = string.Empty;
+        private string _qaddOp = string.Empty;
+        private string _qedTime = string.Empty;
+        private string _qedOp = string.Empty;
+        private string _qdelTime = string.Empty;
+        private string _qdelOp = string.Empty;
 
-
-        public decimal Number
+        public string Number
         {
             get => _number;
             set
@@ -381,19 +378,19 @@ namespace WPFGrowerApp.DataAccess.Models
         public string QdelOp { get => _qdelOp; set => SetProperty(ref _qdelOp, value); }
 
 
-        public event PropertyChangedEventHandler PropertyChanged;
+    public event PropertyChangedEventHandler? PropertyChanged;
 
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName ?? string.Empty));
         }
 
         // Helper for INotifyPropertyChanged
-        protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = null)
+        protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
         {
             if (Equals(field, value)) return false;
             field = value;
-            OnPropertyChanged(propertyName);
+            OnPropertyChanged(propertyName ?? string.Empty);
             return true;
         }
     }

@@ -12,10 +12,10 @@ namespace WPFGrowerApp.Models
         public DateTime PaymentDate { get; set; }
         public DateTime CutoffDate { get; set; }
         public int CropYear { get; set; }
-        public List<decimal>? ExcludeGrowerIds { get; set; } // Nullable if not provided
+        public List<int>? ExcludeGrowerIds { get; set; } // Changed from List<decimal> to List<int>
         public List<string>? ExcludePayGroupIds { get; set; } // Nullable if not provided
-        public List<string>? ProductIds { get; set; } // Nullable if not provided
-        public List<string>? ProcessIds { get; set; } // Nullable if not provided
+        public List<int>? ProductIds { get; set; } // Nullable if not provided
+        public List<int>? ProcessIds { get; set; } // Nullable if not provided
 
         // Consider adding descriptions for display purposes if needed
         public List<string> ExcludedGrowerDescriptions { get; set; } = new List<string>();

@@ -11,7 +11,8 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// </summary>
         /// <param name="processId">The unique identifier for the process (PROCESS column).</param>
         /// <returns>The Process object or null if not found.</returns>
-        Task<Process> GetProcessByIdAsync(string processId);
+    Task<Process?> GetProcessByIdAsync(int processId);
+    Task<Process?> GetProcessByCodeAsync(string processCode);
 
         /// <summary>
         /// Gets all processes.
@@ -39,6 +40,7 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// <param name="processId">The ID of the process to delete.</param>
         /// <param name="operatorInitials">The initials of the operator performing the deletion.</param>
         /// <returns>True if the operation was successful, otherwise false.</returns>
-        Task<bool> DeleteProcessAsync(string processId, string operatorInitials); 
+    Task<bool> DeleteProcessAsync(int processId, string operatorInitials);
+    Task<bool> DeleteProcessByCodeAsync(string processCode, string operatorInitials);
     }
 }

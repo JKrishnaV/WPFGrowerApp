@@ -33,7 +33,7 @@ namespace WPFGrowerApp.ViewModels
         }
 
         // Expose specific parts of the result for easier binding
-        public TestRunInputParameters InputParameters => TestRunData?.InputParameters;
+    public TestRunInputParameters? InputParameters => TestRunData?.InputParameters;
         public List<TestRunGrowerPayment> GrowerPayments => TestRunData?.GrowerPayments ?? new List<TestRunGrowerPayment>();
         public List<string> GeneralErrors => TestRunData?.GeneralErrors ?? new List<string>();
         public bool HasAnyErrors => TestRunData?.HasAnyErrors ?? false;
@@ -46,6 +46,8 @@ namespace WPFGrowerApp.ViewModels
         public PaymentTestRunReportViewModel(TestRunResult testRunResult)
         {
             _testRunResult = testRunResult ?? throw new ArgumentNullException(nameof(testRunResult));
+            TopGrowerPayments = new List<ChartDataPoint>();
+            PaymentsByProduct = new List<ChartDataPoint>();
             PrepareChartData();
         }
 
@@ -193,14 +195,18 @@ namespace WPFGrowerApp.ViewModels
                         // Draw Summary
                         graphics.DrawString("Report Generated Based On:", headerFont, PdfBrushes.Black, new PointF(xMargin, yPos));
                         yPos += headerFont.Height + 5;
-                        string summaryLine1 = $"Advance #: {InputParameters.AdvanceNumber}   Payment Date: {InputParameters.PaymentDate:d}   Cutoff Date: {InputParameters.CutoffDate:d}   Crop Year: {InputParameters.CropYear}";
+                        string summaryLine1 = InputParameters != null
+                            ? $"Advance #: {InputParameters.AdvanceNumber}   Payment Date: {InputParameters.PaymentDate:d}   Cutoff Date: {InputParameters.CutoffDate:d}   Crop Year: {InputParameters.CropYear}"
+                            : "Advance parameters not available.";
                         graphics.DrawString(summaryLine1, font, PdfBrushes.Black, new PointF(xMargin, yPos));
                         yPos += font.Height + 5;
                         // Simplified filter display for PDF
-                        string filters = $"Filters: Products: { (InputParameters.ProductDescriptions.Any() ? string.Join(",", InputParameters.ProductDescriptions) : "All")}; " +
-                                         $"Processes: { (InputParameters.ProcessDescriptions.Any() ? string.Join(",", InputParameters.ProcessDescriptions) : "All")}; " +
-                                         $"Excluded Growers: { (InputParameters.ExcludedGrowerDescriptions.Any() ? string.Join(",", InputParameters.ExcludedGrowerDescriptions) : "None")}; " +
-                                         $"Excluded Pay Groups: { (InputParameters.ExcludedPayGroupDescriptions.Any() ? string.Join(",", InputParameters.ExcludedPayGroupDescriptions) : "None")}";
+                        string filters = InputParameters != null
+                            ? $"Filters: Products: {(InputParameters.ProductDescriptions.Any() ? string.Join(",", InputParameters.ProductDescriptions) : "All")}; " +
+                              $"Processes: {(InputParameters.ProcessDescriptions.Any() ? string.Join(",", InputParameters.ProcessDescriptions) : "All")}; " +
+                              $"Excluded Growers: {(InputParameters.ExcludedGrowerDescriptions.Any() ? string.Join(",", InputParameters.ExcludedGrowerDescriptions) : "None")}; " +
+                              $"Excluded Pay Groups: {(InputParameters.ExcludedPayGroupDescriptions.Any() ? string.Join(",", InputParameters.ExcludedPayGroupDescriptions) : "None")}"
+                            : "Filters not available.";
                         // Draw wrapped text for filters
                         PdfTextElement filterElement = new PdfTextElement(filters, font);
                         PdfLayoutResult filterDrawResult = filterElement.Draw(page, new RectangleF(xMargin, yPos, pageMaxWidth, page.GetClientSize().Height));
@@ -278,15 +284,39 @@ namespace WPFGrowerApp.ViewModels
                          // Summary
                          worksheet.Range[$"A{row}"].Text = "Report Generated Based On:";
                          worksheet.Range[$"A{row}"].CellStyle.Font.Bold = true; row++;
-                         worksheet.Range[$"A{row}"].Text = $"Advance #: {InputParameters.AdvanceNumber}"; row++;
-                         worksheet.Range[$"A{row}"].Text = $"Payment Date: {InputParameters.PaymentDate:d}"; row++;
-                         worksheet.Range[$"A{row}"].Text = $"Cutoff Date: {InputParameters.CutoffDate:d}"; row++;
-                         worksheet.Range[$"A{row}"].Text = $"Crop Year: {InputParameters.CropYear}"; row++;
+                        worksheet.Range[$"A{row}"].Text = InputParameters != null
+                            ? $"Advance #: {InputParameters.AdvanceNumber}"
+                            : "Advance parameters not available.";
+                        row++;
+                         worksheet.Range[$"A{row}"].Text = InputParameters != null
+                            ? $"Payment Date: {InputParameters.PaymentDate:d}"
+                            : "Payment date not available.";
+                        row++;
+                        worksheet.Range[$"A{row}"].Text = InputParameters != null
+                            ? $"Cutoff Date: {InputParameters.CutoffDate:d}"
+                            : "Cutoff date not available.";
+                        row++;
+                        worksheet.Range[$"A{row}"].Text = InputParameters != null
+                            ? $"Crop Year: {InputParameters.CropYear}"
+                            : "Crop year not available.";
+                        row++;
                          worksheet.Range[$"A{row}"].Text = $"Filters:"; row++;
-                         worksheet.Range[$"B{row}"].Text = $"Products: {(InputParameters.ProductDescriptions.Any() ? string.Join(", ", InputParameters.ProductDescriptions) : "All")}"; row++;
-                         worksheet.Range[$"B{row}"].Text = $"Processes: {(InputParameters.ProcessDescriptions.Any() ? string.Join(", ", InputParameters.ProcessDescriptions) : "All")}"; row++;
-                         worksheet.Range[$"B{row}"].Text = $"Excluded Growers: {(InputParameters.ExcludedGrowerDescriptions.Any() ? string.Join(", ", InputParameters.ExcludedGrowerDescriptions) : "None")}"; row++;
-                         worksheet.Range[$"B{row}"].Text = $"Excluded Pay Groups: {(InputParameters.ExcludedPayGroupDescriptions.Any() ? string.Join(", ", InputParameters.ExcludedPayGroupDescriptions) : "None")}"; row++;
+                        worksheet.Range[$"B{row}"].Text = InputParameters != null
+                            ? $"Products: {(InputParameters.ProductDescriptions.Any() ? string.Join(", ", InputParameters.ProductDescriptions) : "All")}"
+                            : "Products: parameters not available.";
+                        row++;
+                        worksheet.Range[$"B{row}"].Text = InputParameters != null
+                            ? $"Processes: {(InputParameters.ProcessDescriptions.Any() ? string.Join(", ", InputParameters.ProcessDescriptions) : "All")}"
+                            : "Processes: parameters not available.";
+                        row++;
+                        worksheet.Range[$"B{row}"].Text = InputParameters != null
+                            ? $"Excluded Growers: {(InputParameters.ExcludedGrowerDescriptions.Any() ? string.Join(", ", InputParameters.ExcludedGrowerDescriptions) : "None")}"
+                            : "Excluded Growers: parameters not available.";
+                        row++;
+                        worksheet.Range[$"B{row}"].Text = InputParameters != null
+                            ? $"Excluded Pay Groups: {(InputParameters.ExcludedPayGroupDescriptions.Any() ? string.Join(", ", InputParameters.ExcludedPayGroupDescriptions) : "None")}"
+                            : "Excluded Pay Groups: parameters not available.";
+                        row++;
                          row++; // Add blank row
 
                          // Data - Create DataTable first
@@ -344,7 +374,7 @@ namespace WPFGrowerApp.ViewModels
              {
                  // Add data, casting decimals to float where necessary
                  dataTable.Rows.Add(
-                     (float)growerPayment.GrowerNumber, // Cast int to float
+                     float.TryParse(growerPayment.GrowerNumber, out var growerNumFloat) ? growerNumFloat : 0f, // Parse string to float
                      growerPayment.GrowerName,
                      growerPayment.IsOnHold,
                      growerPayment.ReceiptCount, // int matches
@@ -401,7 +431,7 @@ namespace WPFGrowerApp.ViewModels
         // Helper class for chart data
         public class ChartDataPoint
         {
-            public string Category { get; set; }
+            public string? Category { get; set; }
             public double Value { get; set; }
         }
     }

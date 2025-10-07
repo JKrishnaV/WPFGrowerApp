@@ -11,7 +11,8 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// </summary>
         /// <param name="productId">The unique identifier for the product (PRODUCT column).</param>
         /// <returns>The Product object or null if not found.</returns>
-        Task<Product> GetProductByIdAsync(string productId);
+    Task<Product?> GetProductByIdAsync(int productId);
+    Task<Product?> GetProductByCodeAsync(string productCode);
 
         /// <summary>
         /// Gets all products.
@@ -39,6 +40,7 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// <param name="productId">The ID of the product to delete.</param>
         /// <param name="operatorInitials">The initials of the operator performing the deletion.</param>
         /// <returns>True if the operation was successful, otherwise false.</returns>
-        Task<bool> DeleteProductAsync(string productId, string operatorInitials); 
+    Task<bool> DeleteProductAsync(int productId, string operatorInitials);
+    Task<bool> DeleteProductByCodeAsync(string productCode, string operatorInitials);
     }
 }

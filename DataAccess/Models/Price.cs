@@ -5,12 +5,14 @@ namespace WPFGrowerApp.DataAccess.Models
 {
     public class Price : AuditableEntity
     {
-        public int PriceID { get; set; }
-        public string Product { get; set; }
-        public string Process { get; set; }
+    public int PriceID { get; set; }
+    public int ProductId { get; set; } // Surrogate key for Product
+    public int ProcessId { get; set; } // Surrogate key for Process
+    public string? Product { get; set; } // Business code (legacy)
+    public string? Process { get; set; } // Business code (legacy)
         public DateTime From { get; set; }
         public bool TimePrem { get; set; }
-        public string Time { get; set; }
+    public string? Time { get; set; }
         public decimal CPremium { get; set; }
         public decimal UPremium { get; set; }
         
@@ -25,11 +27,6 @@ namespace WPFGrowerApp.DataAccess.Models
         
         [Column("FIN_USED")]
         public bool FinUsed { get; set; }
-
-        // Summary fields from vw_ActivePriceSchedules
-        public int? PricePointsCount { get; set; }
-        public decimal? MinPrice { get; set; }
-        public decimal? MaxPrice { get; set; }
 
         // Canadian Prices
         public decimal CL1G1A1 { get; set; }

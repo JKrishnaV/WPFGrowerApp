@@ -124,17 +124,22 @@ namespace WPFGrowerApp.ViewModels
         {
             if (SelectedDepot == null) return;
 
-            // Basic Validation
-            if (string.IsNullOrWhiteSpace(SelectedDepot.DepotId) || SelectedDepot.DepotId.Length > 1)
-            {
-                 await _dialogService?.ShowMessageBoxAsync("Depot ID cannot be empty and must be 1 character.", "Validation Error"); // Use async
-                 return;
-            }
-             if (string.IsNullOrWhiteSpace(SelectedDepot.DepotName) || SelectedDepot.DepotName.Length > 12)
-            {
-                 await _dialogService?.ShowMessageBoxAsync("Depot Name cannot be empty and must be 12 characters or less.", "Validation Error"); // Use async
-                 return;
-            }
+          // Basic Validation
+          if (SelectedDepot.DepotId <= 0)
+          {
+              await _dialogService?.ShowMessageBoxAsync("Depot ID must be a positive integer.", "Validation Error"); // Use async
+              return;
+          }
+          if (string.IsNullOrWhiteSpace(SelectedDepot.DepotCode) || SelectedDepot.DepotCode.Length > 8)
+          {
+              await _dialogService?.ShowMessageBoxAsync("Depot Code cannot be empty and must be 8 characters or less.", "Validation Error"); // Use async
+              return;
+          }
+          if (string.IsNullOrWhiteSpace(SelectedDepot.DepotName) || SelectedDepot.DepotName.Length > 12)
+          {
+              await _dialogService?.ShowMessageBoxAsync("Depot Name cannot be empty and must be 12 characters or less.", "Validation Error"); // Use async
+              return;
+          }
 
             // --- Start Validation ---
             Depot existingDepotById = null; // Declare variable outside the try block
@@ -148,7 +153,7 @@ namespace WPFGrowerApp.ViewModels
                 {
                     // Check if ID already exists (should be caught by GetDepotByIdAsync, but double-check)
                     // This check is technically redundant if GetDepotByIdAsync works correctly, but safe to keep.
-                    if (allDepots.Any(d => d.DepotId.Equals(SelectedDepot.DepotId, StringComparison.OrdinalIgnoreCase)))
+                    if (allDepots.Any(d => d.DepotId == SelectedDepot.DepotId))
                     {
                         await _dialogService?.ShowMessageBoxAsync($"Depot ID '{SelectedDepot.DepotId}' already exists.", "Validation Error"); // Use async
                         return;

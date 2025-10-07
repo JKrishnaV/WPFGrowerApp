@@ -150,12 +150,11 @@
                     <!-- Price Level -->
                     <ComboBox Grid.Row="0" Grid.Column="0" Margin="0,0,5,10"
                               materialDesign:HintAssist.Hint="Price Level"
-                              Text="{Binding CurrentGrower.PayGroup, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                              Style="{StaticResource MaterialDesignOutlinedComboBox}">
-                        <ComboBoxItem Content="1"/>
-                        <ComboBoxItem Content="2"/>
-                        <ComboBoxItem Content="3"/>
-                    </ComboBox>
+                              SelectedValue="{Binding CurrentGrower.DefaultPriceClassId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                              ItemsSource="{Binding PriceClasses}"
+                              DisplayMemberPath="ClassName"
+                              SelectedValuePath="PriceClassId"
+                              Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
 
                     <!-- Currency -->
                     <ComboBox Grid.Row="0" Grid.Column="1" Margin="5,0,0,10"

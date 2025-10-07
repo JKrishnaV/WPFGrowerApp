@@ -384,7 +384,7 @@ namespace WPFGrowerApp.ViewModels
                 // Map the FINAL filtered results to Grower model and store for pagination
                 _allGrowers = filteredResults.Select(gsr => new Grower
                 {
-                    GrowerNumber = gsr.GrowerNumber,
+                    GrowerNumber = gsr.GrowerNumber.ToString(),
                     GrowerName = gsr.GrowerName,
                     ChequeName = gsr.ChequeName,
                     City = gsr.City,
@@ -406,7 +406,7 @@ namespace WPFGrowerApp.ViewModels
                     {
                         new Grower
                         {
-                            GrowerNumber = 0,
+                            GrowerNumber = string.Empty,
                             GrowerName = "No growers found with current filters",
                             ChequeName = string.Empty,
                             City = string.Empty,

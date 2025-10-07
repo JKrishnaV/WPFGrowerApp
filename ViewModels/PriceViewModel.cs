@@ -9,6 +9,7 @@ using WPFGrowerApp.Models;
 using WPFGrowerApp.Services;
 using WPFGrowerApp.Views;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace WPFGrowerApp.ViewModels
 {
@@ -20,14 +21,14 @@ namespace WPFGrowerApp.ViewModels
         private readonly IDialogService _dialogService;
         private readonly IServiceProvider _serviceProvider;
 
-        [ObservableProperty]
-        private ObservableCollection<PriceDisplayItem> _prices;
+    [ObservableProperty]
+    private ObservableCollection<PriceDisplayItem> _prices = new ObservableCollection<PriceDisplayItem>();
 
-        [ObservableProperty]
-        [NotifyCanExecuteChangedFor(nameof(ViewPriceCommand))]
-        [NotifyCanExecuteChangedFor(nameof(EditPriceCommand))]
-        [NotifyCanExecuteChangedFor(nameof(DeletePriceCommand))]
-        private PriceDisplayItem _selectedPrice;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ViewPriceCommand))]
+    [NotifyCanExecuteChangedFor(nameof(EditPriceCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DeletePriceCommand))]
+    private PriceDisplayItem _selectedPrice = null!;
 
         public PriceViewModel(
             IPriceService priceService, 
@@ -47,15 +48,21 @@ namespace WPFGrowerApp.ViewModels
         private async void LoadPrices()
         {
             var prices = await _priceService.GetAllAsync();
-            var products = await _productService.GetAllProductsAsync();
-            var processes = await _processService.GetAllProcessesAsync();
+            var products = (await _productService.GetAllProductsAsync()).ToList();
+            var processes = (await _processService.GetAllProcessesAsync()).ToList();
 
-            var displayItems = prices.Select(p => new PriceDisplayItem
+            var displayItems = new List<PriceDisplayItem>();
+            foreach (var p in prices)
             {
-                Price = p,
-                ProductName = products.FirstOrDefault(prod => prod.ProductId == p.Product)?.Description,
-                ProcessName = processes.FirstOrDefault(proc => proc.ProcessId == p.Process)?.Description
-            }).ToList();
+                var productName = products.FirstOrDefault(prod => prod.ProductId == p.ProductId)?.Description ?? string.Empty;
+                var processName = processes.FirstOrDefault(proc => proc.ProcessId == p.ProcessId)?.Description ?? string.Empty;
+                displayItems.Add(new PriceDisplayItem
+                {
+                    Price = p,
+                    ProductName = productName,
+                    ProcessName = processName
+                });
+            }
 
             Prices = new ObservableCollection<PriceDisplayItem>(displayItems);
         }

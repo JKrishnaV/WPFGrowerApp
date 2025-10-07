@@ -45,24 +45,17 @@ namespace WPFGrowerApp.Services
         }
 
         // ShowGrowerSearchDialog remains synchronous for now, using standard Window.ShowDialog()
-        public (bool? DialogResult, decimal? SelectedGrowerNumber) ShowGrowerSearchDialog()
+        GrowerSearchDialogResult IDialogService.ShowGrowerSearchDialog()
         {
-            // Resolve the view using the DI container
-            // This ensures the view and its ViewModel are constructed via DI
             var searchView = _serviceProvider.GetRequiredService<GrowerSearchView>();
-
-            // Consider setting owner if applicable (e.g., Application.Current.MainWindow)
-            // searchView.Owner = Application.Current.MainWindow; 
-
             bool? dialogResult = searchView.ShowDialog();
-
             if (dialogResult == true)
             {
-                return (true, searchView.SelectedGrowerNumber);
+                return new GrowerSearchDialogResult(true, searchView.SelectedGrowerNumber);
             }
             else
             {
-                return (dialogResult, null); // Return false or null result, null grower number
+                return new GrowerSearchDialogResult(dialogResult, null);
             }
         }
 
@@ -209,7 +202,7 @@ namespace WPFGrowerApp.Services
             // Get the namespace for dialog views
             var dialogNamespace = "WPFGrowerApp.Views.Dialogs";
 
-            // Get the expected view name by replacing "ViewModel" with "View"
+            // Get the expected view name by replacing \"ViewModel\" with \"View\"
             var viewModelName = viewModelType.Name;
             var expectedViewName = viewModelName.Replace("ViewModel", "View");
 

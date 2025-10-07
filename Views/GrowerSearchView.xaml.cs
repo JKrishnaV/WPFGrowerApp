@@ -16,7 +16,7 @@ namespace WPFGrowerApp.Views
         // Keep reference to ViewModel if needed for event handlers
         private readonly GrowerSearchViewModel _viewModel; 
 
-        public decimal? SelectedGrowerNumber { get; private set; }
+    public string? SelectedGrowerNumber { get; private set; }
 
         // Inject the ViewModel
         public GrowerSearchView(GrowerSearchViewModel viewModel) 
@@ -78,14 +78,14 @@ namespace WPFGrowerApp.Views
                 var selectedGrower = GrowersDataGrid.SelectedItem as GrowerSearchResult;
                 if (selectedGrower != null)
                 {
-                    SelectedGrowerNumber = selectedGrower.GrowerNumber;
+                    SelectedGrowerNumber = selectedGrower.GrowerNumber.ToString();
                 }
             }
         }
 
         private void SelectButton_Click(object sender, RoutedEventArgs e)
         {
-            if (SelectedGrowerNumber.HasValue)
+            if (!string.IsNullOrEmpty(SelectedGrowerNumber))
             {
                 DialogResult = true;
                 Close();
@@ -100,14 +100,14 @@ namespace WPFGrowerApp.Views
 
         private void NewGrowerButton_Click(object sender, RoutedEventArgs e)
         {
-            SelectedGrowerNumber = 0; // This will indicate a new grower
+            SelectedGrowerNumber = "0"; // This will indicate a new grower
             DialogResult = true;
             Close();
         }
 
         private void GrowersDataGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            if (SelectedGrowerNumber.HasValue)
+            if (!string.IsNullOrEmpty(SelectedGrowerNumber))
             {
                 DialogResult = true;
                 Close();

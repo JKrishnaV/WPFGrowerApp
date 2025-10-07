@@ -12,7 +12,6 @@ namespace WPFGrowerApp.DataAccess.Services
 {
     public class ProductService : BaseDatabaseService, IProductService
     {
-        // Helper to get current user initials (replace with actual implementation if available)
         private string GetCurrentUserInitials() => App.CurrentUser?.Username ?? "SYSTEM"; 
 
         public async Task<IEnumerable<Product>> GetAllProductsAsync()
@@ -27,6 +26,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     var sql = @"
                         SELECT
                             ProductId,
+                            ProductCode,
                             ProductName as Description,
                             '' as ShortDescription,
                             0 as Deduct,
@@ -35,7 +35,7 @@ namespace WPFGrowerApp.DataAccess.Services
                             '' as Variety
                         FROM Products
                         WHERE IsActive = 1
-                        ORDER BY ProductName"; // Order alphabetically for display
+                        ORDER BY ProductName"; 
                     return await connection.QueryAsync<Product>(sql);
                 }
             }
@@ -46,7 +46,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        public async Task<Product> GetProductByIdAsync(string productId)
+        public async Task<Product?> GetProductByIdAsync(int productId)
         {
             try
             {
@@ -55,15 +55,16 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = @"
                         SELECT
-                            ProductCode as ProductId,
+                            ProductId,
+                            ProductCode,
                             ProductName as Description,
                             '' as ShortDescription,
                             0 as Deduct,
-                            '' as Category,
+                            NULL as Category,
                             ChargeGST as ChargeGst,
                             '' as Variety
                         FROM Products
-                        WHERE ProductCode = @ProductId AND IsActive = 1";
+                        WHERE ProductId = @ProductId AND IsActive = 1";
                     return await connection.QueryFirstOrDefaultAsync<Product>(sql, new { ProductId = productId });
                 }
             }
@@ -74,6 +75,34 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
+        public async Task<Product?> GetProductByCodeAsync(string productCode)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = @"
+                        SELECT
+                            ProductId,
+                            ProductCode,
+                            ProductName as Description,
+                            '' as ShortDescription,
+                            0 as Deduct,
+                            NULL as Category,
+                            ChargeGST as ChargeGst,
+                            '' as Variety
+                        FROM Products
+                        WHERE ProductCode = @ProductCode AND IsActive = 1";
+                    return await connection.QueryFirstOrDefaultAsync<Product>(sql, new { ProductCode = productCode });
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting product by code '{productCode}': {ex.Message}", ex);
+                throw;
+            }
+        }
         public async Task<bool> AddProductAsync(Product product)
         {
             if (product == null) throw new ArgumentNullException(nameof(product));
@@ -87,10 +116,21 @@ namespace WPFGrowerApp.DataAccess.Services
                         INSERT INTO Products (
                             ProductCode, ProductName, Description, ChargeGST, UnitOfMeasure, IsActive, DisplayOrder, CreatedAt, CreatedBy
                         ) VALUES (
-                            @ProductId, @Description, @Description, @ChargeGst, 'LBS', 1, 0, GETDATE(), @OperatorInitials
-                        )";
+                            @ProductCode, @Description, @Description, @ChargeGst, 'LBS', 1, 0, GETDATE(), @OperatorInitials
+                        );
+                        SELECT CAST(SCOPE_IDENTITY() as int);";
 
-                    int affectedRows = await connection.ExecuteAsync(sql, product);
+                    var parameters = new
+                    {
+                        product.ProductCode,
+                        product.Description,
+                        product.ChargeGst,
+                        OperatorInitials = GetCurrentUserInitials()
+                    };
+
+                    int newId = await connection.ExecuteScalarAsync<int>(sql, parameters);
+                    product.ProductId = newId;
+                    int affectedRows = newId > 0 ? 1 : 0;
                     return affectedRows > 0;
                 }
             }
@@ -117,9 +157,17 @@ namespace WPFGrowerApp.DataAccess.Services
                             ChargeGST = @ChargeGst,
                             ModifiedAt = GETDATE(),
                             ModifiedBy = @OperatorInitials
-                        WHERE ProductCode = @ProductId AND IsActive = 1";
+                        WHERE ProductId = @ProductId AND IsActive = 1";
 
-                    int affectedRows = await connection.ExecuteAsync(sql, product);
+                    var parameters = new
+                    {
+                        product.ProductId,
+                        product.Description,
+                        product.ChargeGst,
+                        OperatorInitials = GetCurrentUserInitials()
+                    };
+
+                    int affectedRows = await connection.ExecuteAsync(sql, parameters);
                     return affectedRows > 0;
                 }
             }
@@ -130,10 +178,10 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        public async Task<bool> DeleteProductAsync(string productId, string operatorInitials)
+        public async Task<bool> DeleteProductAsync(int productId, string operatorInitials)
         {
-            if (string.IsNullOrWhiteSpace(productId)) throw new ArgumentException("Product ID cannot be empty.", nameof(productId));
-            if (string.IsNullOrWhiteSpace(operatorInitials)) operatorInitials = GetCurrentUserInitials(); // Fallback
+            if (productId <= 0) throw new ArgumentException("Product ID must be positive.", nameof(productId));
+            if (string.IsNullOrWhiteSpace(operatorInitials)) operatorInitials = GetCurrentUserInitials();
 
             try
             {
@@ -145,7 +193,7 @@ namespace WPFGrowerApp.DataAccess.Services
                             DeletedAt = GETDATE(),
                             DeletedBy = @OperatorInitials,
                             IsActive = 0
-                        WHERE ProductCode = @ProductId AND IsActive = 1";
+                        WHERE ProductId = @ProductId AND IsActive = 1";
 
                     int affectedRows = await connection.ExecuteAsync(sql, new { ProductId = productId, OperatorInitials = operatorInitials });
                     return affectedRows > 0;
@@ -154,6 +202,33 @@ namespace WPFGrowerApp.DataAccess.Services
             catch (Exception ex)
             {
                 Logger.Error($"Error deleting product '{productId}': {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        public async Task<bool> DeleteProductByCodeAsync(string productCode, string operatorInitials)
+        {
+            if (string.IsNullOrWhiteSpace(productCode)) throw new ArgumentException("Product code cannot be empty.", nameof(productCode));
+            if (string.IsNullOrWhiteSpace(operatorInitials)) operatorInitials = GetCurrentUserInitials();
+
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = @"
+                        UPDATE Products SET
+                            DeletedAt = GETDATE(),
+                            DeletedBy = @OperatorInitials,
+                            IsActive = 0
+                        WHERE ProductCode = @ProductCode AND IsActive = 1";
+                    int affectedRows = await connection.ExecuteAsync(sql, new { ProductCode = productCode, OperatorInitials = operatorInitials });
+                    return affectedRows > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error deleting product by code '{productCode}': {ex.Message}", ex);
                 throw;
             }
         }

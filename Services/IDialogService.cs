@@ -36,7 +36,7 @@ namespace WPFGrowerApp.Services
         Task<string?> ShowInputDialogAsync(string message, string title);
 
         // Method specific to the Grower Search interaction (remains synchronous for now)
-        (bool? DialogResult, decimal? SelectedGrowerNumber) ShowGrowerSearchDialog();
+        GrowerSearchDialogResult ShowGrowerSearchDialog();
 
         /// <summary>
         /// Shows a custom dialog associated with the provided ViewModel using Material Design DialogHost.

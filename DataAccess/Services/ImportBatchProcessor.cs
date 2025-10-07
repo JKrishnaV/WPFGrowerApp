@@ -30,12 +30,12 @@ namespace WPFGrowerApp.DataAccess.Services
             _validationService = validationService ?? throw new ArgumentNullException(nameof(validationService));
         }
 
-        public async Task<ImportBatch> StartImportBatchAsync(string depot, string fileName)
+        public async Task<ImportBatch> StartImportBatchAsync(int depotId, string fileName)
         {
             try
             {
-                Logger.Info($"Starting new import batch. Depot: {depot}, File: {fileName}");
-                return await _importBatchService.CreateImportBatchAsync(depot, fileName);
+                Logger.Info($"Starting new import batch. DepotId: {depotId}, File: {fileName}");
+                return await _importBatchService.CreateImportBatchAsync(depotId, fileName);
             }
             catch (Exception ex)
             {
@@ -126,10 +126,17 @@ namespace WPFGrowerApp.DataAccess.Services
                 importBatch.NoTrans = receipts.Count();
                 importBatch.Receipts = receipts.Count(r => !r.IsVoid);
                 importBatch.Voids = receipts.Count(r => r.IsVoid);
-                importBatch.LowReceipt = receipts.Min(r => r.ReceiptNumber);
-                importBatch.HighReceipt = receipts.Max(r => r.ReceiptNumber);
-                importBatch.LowDate = receipts.Min(r => r.Date);
-                importBatch.HighDate = receipts.Max(r => r.Date);
+                var validReceiptNumbers = receipts
+                    .Select(r => {
+                        decimal val;
+                        return decimal.TryParse(r.ReceiptNumber, out val) ? (decimal?)val : null;
+                    })
+                    .Where(x => x.HasValue)
+                    .ToList();
+                importBatch.LowReceipt = validReceiptNumbers.Any() ? validReceiptNumbers.Min(x => x.GetValueOrDefault()) : 0;
+                importBatch.HighReceipt = validReceiptNumbers.Any() ? validReceiptNumbers.Max(x => x.GetValueOrDefault()) : 0;
+                importBatch.LowDate = receipts.Min(r => r.ReceiptDate);
+                importBatch.HighDate = receipts.Max(r => r.ReceiptDate);
 
                 await _importBatchService.UpdateImportBatchAsync(importBatch);
                 Logger.Info($"Successfully updated statistics for import batch {importBatch.ImpBatch}");
@@ -165,7 +172,10 @@ namespace WPFGrowerApp.DataAccess.Services
                 var receipts = await _receiptService.GetReceiptsByImportBatchAsync(importBatch.ImpBatch);
                 foreach (var receipt in receipts)
                 {
-                    await _receiptService.DeleteReceiptAsync(receipt.ReceiptNumber);
+                    if (!string.IsNullOrEmpty(receipt.ReceiptNumber))
+                    {
+                        await _receiptService.DeleteReceiptAsync(receipt.ReceiptNumber);
+                    }
                 }
 
                 // Reopen the batch

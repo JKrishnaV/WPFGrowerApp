@@ -12,7 +12,7 @@ namespace WPFGrowerApp.DataAccess.Models
         private DateTime _date;
         private decimal _amount;
         private decimal _year;
-        private string _chequeType;
+    private string? _chequeType;
         private bool? _void; // Changed to nullable bool
         private DateTime? _dateClear;
         private bool? _isCleared; // Changed to nullable bool
@@ -107,7 +107,7 @@ namespace WPFGrowerApp.DataAccess.Models
 
         public string ChequeType
         {
-            get => _chequeType;
+            get => _chequeType ?? string.Empty;
             set
             {
                 if (_chequeType != value)
@@ -159,7 +159,7 @@ namespace WPFGrowerApp.DataAccess.Models
 
         public string Currency
         {
-            get => _currency;
+            get => _currency ?? string.Empty;
             set
             {
                 if (_currency != value)
@@ -185,7 +185,7 @@ namespace WPFGrowerApp.DataAccess.Models
 
         public string QaddTime
         {
-            get => _qaddTime;
+            get => _qaddTime ?? string.Empty;
             set
             {
                 if (_qaddTime != value)
@@ -198,7 +198,7 @@ namespace WPFGrowerApp.DataAccess.Models
 
         public string QaddOp
         {
-            get => _qaddOp;
+            get => _qaddOp ?? string.Empty;
             set
             {
                 if (_qaddOp != value)
@@ -224,7 +224,7 @@ namespace WPFGrowerApp.DataAccess.Models
 
         public string QedTime
         {
-            get => _qedTime;
+            get => _qedTime ?? string.Empty;
             set
             {
                 if (_qedTime != value)
@@ -237,7 +237,7 @@ namespace WPFGrowerApp.DataAccess.Models
 
         public string QedOp
         {
-            get => _qedOp;
+            get => _qedOp ?? string.Empty;
             set
             {
                 if (_qedOp != value)
@@ -263,7 +263,7 @@ namespace WPFGrowerApp.DataAccess.Models
 
         public string QdelTime
         {
-            get => _qdelTime;
+            get => _qdelTime ?? string.Empty;
             set
             {
                 if (_qdelTime != value)
@@ -276,7 +276,7 @@ namespace WPFGrowerApp.DataAccess.Models
 
         public string QdelOp
         {
-            get => _qdelOp;
+            get => _qdelOp ?? string.Empty;
             set
             {
                 if (_qdelOp != value)
@@ -286,18 +286,6 @@ namespace WPFGrowerApp.DataAccess.Models
                 }
             }
         }
-
-        /// <summary>Modern audit fields</summary>
-        public DateTime? CreatedAt { get; set; }
-        public string? CreatedBy { get; set; }
-        public DateTime? ModifiedAt { get; set; }
-        public string? ModifiedBy { get; set; }
-        
-        /// <summary>Timestamp when the cheque was soft-deleted</summary>
-        public DateTime? DeletedAt { get; set; }
-        
-        /// <summary>Username who deleted the cheque</summary>
-        public string? DeletedBy { get; set; }
 
         public event PropertyChangedEventHandler PropertyChanged;
 

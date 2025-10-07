@@ -9,7 +9,8 @@ namespace WPFGrowerApp.Models
     /// </summary>
     public class TestRunGrowerPayment
     {
-        public decimal GrowerNumber { get; set; }
+    public string GrowerNumber { get; set; } = string.Empty;
+    public int GrowerId { get; set; } // Modern DB primary key
         public string GrowerName { get; set; } = string.Empty; // Populate from GrowerInfo
         public string Currency { get; set; } = string.Empty; // Populate from GrowerInfo
         public bool IsOnHold { get; set; } // Populate from GrowerInfo

@@ -246,15 +246,16 @@ namespace WPFGrowerApp.DataAccess.Services
         /// <summary>
         /// Gets the count of receipts using a specific container type.
         /// Used to prevent deletion of container types that are in use.
+        /// Updated to query ContainerTransactions table instead of Receipts.ContainerId.
         /// </summary>
         /// <param name="containerId">Container ID to check</param>
         /// <returns>Count of receipts using this container</returns>
         public async Task<int> GetUsageCountAsync(int containerId)
         {
-            // Check Receipts table for container usage
+            // Check ContainerTransactions table for container usage
             const string sql = @"
                 SELECT COUNT(DISTINCT ReceiptId)
-                FROM Receipts
+                FROM ContainerTransactions
                 WHERE ContainerId = @ContainerId";
 
             using (var connection = new SqlConnection(_connectionString))

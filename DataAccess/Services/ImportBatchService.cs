@@ -13,7 +13,7 @@ namespace WPFGrowerApp.DataAccess.Services
     public class ImportBatchService : BaseDatabaseService, IImportBatchService
     {
 
-        public async Task<ImportBatch> CreateImportBatchAsync(string depot, string impFile)
+        public async Task<ImportBatch> CreateImportBatchAsync(int depotId, string impFile)
         {
             try
             {
@@ -22,7 +22,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     ImpBatch = await GetNextImportBatchNumberAsync(),
                     Date = DateTime.Now,
                     DataDate = DateTime.Now,
-                    Depot = depot,
+                    Depot = depotId.ToString(), // Legacy string field retains numeric id as string representation
                     ImpFile = impFile,
                     NoTrans = 0,
                     Voids = 0,
@@ -32,11 +32,6 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    
-                    // TODO: Lookup DepotId from depot code
-                    var depotId = await connection.ExecuteScalarAsync<int>(
-                        "SELECT DepotId FROM Depots WHERE DepotCode = @Depot AND IsActive = 1",
-                        new { importBatch.Depot });
                     
                     var sql = @"
                         INSERT INTO ImportBatches (

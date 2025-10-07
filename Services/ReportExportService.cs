@@ -156,7 +156,10 @@ namespace WPFGrowerApp.Services
                     int row = 6;
                     foreach (var grower in growers)
                     {
-                        sheet.Range[$"A{row}"].Number = (double)grower.GrowerNumber;
+                        if (double.TryParse(grower.GrowerNumber, out double growerNum))
+                            sheet.Range[$"A{row}"].Number = growerNum;
+                        else
+                            sheet.Range[$"A{row}"].Number = 0;
                         sheet.Range[$"B{row}"].Text = grower.GrowerName ?? string.Empty;
                         sheet.Range[$"C{row}"].Text = grower.ChequeName ?? string.Empty;
                         sheet.Range[$"D{row}"].Text = grower.Address ?? string.Empty;

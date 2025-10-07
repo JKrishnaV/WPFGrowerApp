@@ -139,7 +139,7 @@ namespace WPFGrowerApp.ViewModels
                 if (growers != null && growers.Any())
                 {
                     // Load complete grower details for each grower
-                    var detailedGrowerTasks = growers.Select(g => _growerService.GetGrowerByNumberAsync(g.GrowerNumber));
+                        var detailedGrowerTasks = growers.Select(g => _growerService.GetGrowerByNumberAsync(g.GrowerNumber.ToString()));
                     var detailedGrowers = await Task.WhenAll(detailedGrowerTasks);
                     
                     Growers = new ObservableCollection<Grower>(detailedGrowers.Where(g => g != null));

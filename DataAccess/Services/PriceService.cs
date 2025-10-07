@@ -74,9 +74,9 @@ namespace WPFGrowerApp.DataAccess.Services
                         pa.PriceAreaId AS AreaId
                     FROM 
                         (SELECT 1 AS Dummy) d
-                    LEFT JOIN PriceClasses pc ON pc.ClassCode = @ClassCode AND pc.IsActive = 1
-                    LEFT JOIN PriceGrades pg ON pg.GradeNumber = @GradeNumber AND pg.IsActive = 1
-                    LEFT JOIN PriceAreas pa ON pa.AreaCode = @AreaCode AND pa.IsActive = 1";
+                    LEFT JOIN PriceClasses pc ON pc.ClassCode = @ClassCode
+                    LEFT JOIN PriceGrades pg ON pg.GradeNumber = @GradeNumber
+                    LEFT JOIN PriceAreas pa ON pa.AreaCode = @AreaCode";
                 
                 var result = await connection.QuerySingleOrDefaultAsync<dynamic>(
                     sql, 
@@ -132,7 +132,6 @@ namespace WPFGrowerApp.DataAccess.Services
                           AND pr.ProcessCode = @ProcessId
                           AND ps.EffectiveFrom <= @ReceiptDate
                           AND (ps.EffectiveTo IS NULL OR ps.EffectiveTo >= @ReceiptDate)
-                          AND ps.IsActive = 1
                           AND pc.ClassCode = @ClassCode
                           AND pg.GradeNumber = @GradeNumber
                           AND pa.AreaCode = @AreaCode
@@ -184,7 +183,8 @@ namespace WPFGrowerApp.DataAccess.Services
                     var sql = @"
                         SELECT TOP 1 
                             ps.TimePremiumEnabled,
-                            ISNULL(ps.TimePremiumAmount, 0) AS PremiumAmount,
+                            ISNULL(ps.CanadianPremiumAmount, 0) AS CanadianPremium,
+                            ISNULL(ps.USPremiumAmount, 0) AS USPremium,
                             ps.PremiumCutoffTime
                         FROM PriceSchedules ps
                         INNER JOIN Products p ON ps.ProductId = p.ProductId
@@ -193,7 +193,6 @@ namespace WPFGrowerApp.DataAccess.Services
                           AND pr.ProcessCode = @ProcessId
                           AND ps.EffectiveFrom <= @ReceiptDate
                           AND (ps.EffectiveTo IS NULL OR ps.EffectiveTo >= @ReceiptDate)
-                          AND ps.IsActive = 1
                         ORDER BY ps.EffectiveFrom DESC";
 
                     var result = await connection.QuerySingleOrDefaultAsync<dynamic>(sql, new
@@ -206,7 +205,10 @@ namespace WPFGrowerApp.DataAccess.Services
                     if (result != null)
                     {
                         bool enabled = result.TimePremiumEnabled;
-                        decimal amount = result.PremiumAmount;
+                        // Select premium based on grower currency
+                        decimal amount = (growerCurrency == 'C') 
+                            ? (decimal)result.CanadianPremium 
+                            : (decimal)result.USPremium;
                         TimeSpan? cutoffTime = result.PremiumCutoffTime;
                         
                         // Check if receipt qualifies for premium (before cutoff time)
@@ -352,14 +354,15 @@ namespace WPFGrowerApp.DataAccess.Services
                           AND pr.ProcessCode = @ProcessId
                           AND ps.EffectiveFrom <= @ReceiptDate
                           AND (ps.EffectiveTo IS NULL OR ps.EffectiveTo >= @ReceiptDate)
-                          AND ps.IsActive = 1
                         ORDER BY ps.EffectiveFrom DESC";
 
+                    // Guard against invalid SQL date
+                    var safeDate = (receiptDate < new DateTime(1753, 1, 1)) ? new DateTime(2000, 1, 1) : receiptDate;
                     var priceId = await connection.ExecuteScalarAsync<int?>(sql, new
                     {
                         ProductId = productId,
                         ProcessId = processId,
-                        ReceiptDate = receiptDate
+                        ReceiptDate = safeDate
                     });
 
                     if (priceId.HasValue)
@@ -395,6 +398,8 @@ namespace WPFGrowerApp.DataAccess.Services
                 var schedulesSql = @"
                     SELECT 
                         ps.PriceScheduleId AS PriceID,
+                        ps.ProductId AS ProductId,
+                        ps.ProcessId AS ProcessId,
                         p.ProductCode AS Product,
                         pr.ProcessCode AS Process,
                         ps.EffectiveFrom AS [From],

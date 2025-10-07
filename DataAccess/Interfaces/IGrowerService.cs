@@ -8,7 +8,8 @@ namespace WPFGrowerApp.DataAccess.Interfaces
     public interface IGrowerService : IDatabaseService
     {
         Task<List<GrowerSearchResult>> SearchGrowersAsync(string searchTerm);
-        Task<Grower> GetGrowerByNumberAsync(decimal growerNumber);
+    Task<Grower> GetGrowerByNumberAsync(string growerNumber);
+    Task<Grower> GetGrowerByIdAsync(int growerId);
         Task<bool> SaveGrowerAsync(Grower grower);
         Task<List<GrowerSearchResult>> GetAllGrowersAsync(); // Returns search result model
         Task<List<string>> GetUniqueProvincesAsync();

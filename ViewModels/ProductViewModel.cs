@@ -15,7 +15,7 @@ namespace WPFGrowerApp.ViewModels
         private readonly IProductService _productService;
         private readonly IDialogService _dialogService; // Assuming a dialog service exists
         private ObservableCollection<Product> _products;
-        private Product _selectedProduct;
+    private Product? _selectedProduct;
         private bool _isEditing;
         private bool _isLoading;
 
@@ -25,7 +25,7 @@ namespace WPFGrowerApp.ViewModels
             set => SetProperty(ref _products, value);
         }
 
-        public Product SelectedProduct
+    public Product? SelectedProduct
         {
             get => _selectedProduct;
             set
@@ -139,11 +139,12 @@ namespace WPFGrowerApp.ViewModels
             if (SelectedProduct == null) return; 
 
             // Basic Validation (Add more robust validation as needed)
-            if (string.IsNullOrWhiteSpace(SelectedProduct.ProductId) || SelectedProduct.ProductId.Length > 2)
-            {
-                 await _dialogService?.ShowMessageBoxAsync("Product ID cannot be empty and must be 1 or 2 characters.", "Validation Error"); // Use async
-                 return;
-            }
+          // ProductId is now int, so check for valid range
+          if (SelectedProduct.ProductId <= 0)
+          {
+              await _dialogService?.ShowMessageBoxAsync("Product ID must be a positive integer.", "Validation Error"); // Use async
+              return;
+          }
              if (string.IsNullOrWhiteSpace(SelectedProduct.Description))
             {
                  await _dialogService?.ShowMessageBoxAsync("Description cannot be empty.", "Validation Error"); // Use async
@@ -161,19 +162,19 @@ namespace WPFGrowerApp.ViewModels
                 {
                     // Add new product
                     success = await _productService.AddProductAsync(SelectedProduct);
-                    if(success) await _dialogService?.ShowMessageBoxAsync("Product added successfully.", "Success"); // Use async
+                    if(success && _dialogService != null) await _dialogService.ShowMessageBoxAsync("Product added successfully.", "Success");
                 }
                 else
                 {
                     // Update existing product
                     success = await _productService.UpdateProductAsync(SelectedProduct);
-                     if(success) await _dialogService?.ShowMessageBoxAsync("Product updated successfully.", "Success"); // Use async
+                    if(success && _dialogService != null) await _dialogService.ShowMessageBoxAsync("Product updated successfully.", "Success");
                 }
 
                 if (success)
                 {
                     // IsEditing will be set to false automatically when LoadProductsAsync clears SelectedProduct
-                    await LoadProductsAsync(null); // Pass null parameter
+                    await LoadProductsAsync(new object());
                 }
                 else
                 {
@@ -197,7 +198,9 @@ namespace WPFGrowerApp.ViewModels
              if (!CanSaveCancelDelete(parameter)) return; // Use combined CanExecute
 
             // Use the new ShowConfirmationDialog method
-            var confirm = await _dialogService?.ShowConfirmationDialogAsync($"Are you sure you want to delete product '{SelectedProduct.Description}' ({SelectedProduct.ProductId})?", "Confirm Delete"); // Use async
+                var confirm = _dialogService != null
+                    ? await _dialogService.ShowConfirmationDialogAsync($"Are you sure you want to delete product '{SelectedProduct!.Description}' ({SelectedProduct!.ProductId})?", "Confirm Delete")
+                    : false;
             
             // ShowConfirmationDialog returns true for Yes, false otherwise
             if (confirm != true) return; 
@@ -206,22 +209,25 @@ namespace WPFGrowerApp.ViewModels
             try
             {
                 // Assuming logical delete by setting QDEL fields in the service
-                bool success = await _productService.DeleteProductAsync(SelectedProduct.ProductId, App.CurrentUser?.Username ?? "SYSTEM"); 
+                bool success = await _productService.DeleteProductAsync(SelectedProduct!.ProductId, App.CurrentUser?.Username ?? "SYSTEM");
 
                 if (success)
                 {
-                    await _dialogService?.ShowMessageBoxAsync("Product deleted successfully.", "Success"); // Use async
-                    await LoadProductsAsync(null); // Pass null parameter
+                    if (_dialogService != null)
+                        await _dialogService.ShowMessageBoxAsync("Product deleted successfully.", "Success");
+                    await LoadProductsAsync(new object());
                 }
                 else
                 {
-                    await _dialogService?.ShowMessageBoxAsync("Failed to delete the product.", "Error"); // Use async
+                    if (_dialogService != null)
+                        await _dialogService.ShowMessageBoxAsync("Failed to delete the product.", "Error");
                 }
             }
             catch (Exception ex)
             {
-                Infrastructure.Logging.Logger.Error($"Error deleting product {SelectedProduct.ProductId}.", ex);
-                await _dialogService?.ShowMessageBoxAsync($"Error deleting product: {ex.Message}", "Error"); // Use async
+                Infrastructure.Logging.Logger.Error($"Error deleting product {SelectedProduct!.ProductId}.", ex);
+                if (_dialogService != null)
+                    await _dialogService.ShowMessageBoxAsync($"Error deleting product: {ex.Message}", "Error");
             }
              finally
             {

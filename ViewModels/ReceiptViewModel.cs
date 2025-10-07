@@ -81,7 +81,7 @@ namespace WPFGrowerApp.ViewModels
             AddReceiptCommand = new RelayCommand(async p => await AddReceiptAsync(), p => !IsLoading);
             EditReceiptCommand = new RelayCommand(async p => await EditReceiptAsync(), p => SelectedReceipt != null && !IsLoading);
             DeleteReceiptCommand = new RelayCommand(async p => await DeleteReceiptAsync(), p => SelectedReceipt != null && !IsLoading);
-            VoidReceiptCommand = new RelayCommand(async p => await VoidReceiptAsync(), p => SelectedReceipt != null && !SelectedReceipt.IsVoidedModern && !IsLoading);
+            VoidReceiptCommand = new RelayCommand(async p => await VoidReceiptAsync(), p => SelectedReceipt != null && !SelectedReceipt.IsVoided && !IsLoading);
             ViewReceiptDetailsCommand = new RelayCommand(async p => await ViewReceiptDetailsAsync(), p => SelectedReceipt != null);
             RefreshCommand = new RelayCommand(async p => await LoadReceiptsAsync(), p => !IsLoading);
             ClearFiltersCommand = new RelayCommand(ClearFilters);
@@ -272,7 +272,6 @@ namespace WPFGrowerApp.ViewModels
                     Infrastructure.Logging.Logger.Info($"LoadReceiptsAsync - Applying search filter: '{SearchText}'");
                     var searchLower = SearchText.ToLower();
                     allReceipts = allReceipts.Where(r =>
-                        r.ReceiptNumberModern?.ToLower().Contains(searchLower) == true ||
                         r.ReceiptNumber.ToString().Contains(searchLower) ||
                         r.GrowerName?.ToLower().Contains(searchLower) == true ||
                         r.GrowerId.ToString().Contains(searchLower) ||
@@ -285,7 +284,7 @@ namespace WPFGrowerApp.ViewModels
                 if (!ShowVoidedReceipts)
                 {
                     var beforeCount = allReceipts.Count;
-                    allReceipts = allReceipts.Where(r => !r.IsVoidedModern).ToList();
+                    allReceipts = allReceipts.Where(r => !r.IsVoided).ToList();
                     Infrastructure.Logging.Logger.Info($"LoadReceiptsAsync - Filtered out {beforeCount - allReceipts.Count} voided receipts. Remaining: {allReceipts.Count}");
                 }
 
@@ -366,14 +365,14 @@ namespace WPFGrowerApp.ViewModels
                 return;
             }
 
-            Infrastructure.Logging.Logger.Info($"EditReceiptAsync - Starting edit for Receipt #{SelectedReceipt.ReceiptNumberModern}");
+            Infrastructure.Logging.Logger.Info($"EditReceiptAsync - Starting edit for Receipt #{SelectedReceipt.ReceiptNumber}");
             
             try
             {
                 // Check if receipt is voided
-                if (SelectedReceipt.IsVoidedModern)
+                if (SelectedReceipt.IsVoided)
                 {
-                    Infrastructure.Logging.Logger.Warn($"EditReceiptAsync - Cannot edit voided receipt #{SelectedReceipt.ReceiptNumberModern}");
+                    Infrastructure.Logging.Logger.Warn($"EditReceiptAsync - Cannot edit voided receipt #{SelectedReceipt.ReceiptNumber}");
                     await _dialogService.ShowMessageBoxAsync("Cannot edit a voided receipt.", "Edit Not Allowed");
                     return;
                 }
@@ -410,7 +409,7 @@ namespace WPFGrowerApp.ViewModels
             {
                 StatusMessage = $"Error editing receipt: {ex.Message}";
                 await _dialogService.ShowMessageBoxAsync($"Error editing receipt: {ex.Message}", "Edit Error");
-                Infrastructure.Logging.Logger.Error($"EditReceiptAsync - Error editing receipt #{SelectedReceipt?.ReceiptNumberModern}", ex);
+                Infrastructure.Logging.Logger.Error($"EditReceiptAsync - Error editing receipt #{SelectedReceipt?.ReceiptNumber}", ex);
             }
         }
 
@@ -421,12 +420,12 @@ namespace WPFGrowerApp.ViewModels
             try
             {
                 var result = await _dialogService.ShowConfirmationAsync(
-                    $"Are you sure you want to delete receipt {SelectedReceipt.ReceiptNumberModern}?\n\nThis will soft delete the receipt (it can be restored).",
+                    $"Are you sure you want to delete receipt {SelectedReceipt.ReceiptNumber}?\n\nThis will soft delete the receipt (it can be restored).",
                     "Confirm Delete");
 
                 if (result == true)
                 {
-                    var receiptNumber = decimal.Parse(SelectedReceipt.ReceiptNumberModern ?? SelectedReceipt.ReceiptNumber.ToString());
+                    var receiptNumber = SelectedReceipt.ReceiptNumber ?? string.Empty;
                     var deleted = await _receiptService.DeleteReceiptAsync(receiptNumber);
 
                     if (deleted)
@@ -451,7 +450,7 @@ namespace WPFGrowerApp.ViewModels
 
         private async Task VoidReceiptAsync()
         {
-            if (SelectedReceipt == null || SelectedReceipt.IsVoidedModern) return;
+            if (SelectedReceipt == null || SelectedReceipt.IsVoided) return;
 
             try
             {
@@ -462,7 +461,7 @@ namespace WPFGrowerApp.ViewModels
 
                 if (!string.IsNullOrWhiteSpace(reason))
                 {
-                    var receiptNumber = decimal.Parse(SelectedReceipt.ReceiptNumberModern ?? SelectedReceipt.ReceiptNumber.ToString());
+                    var receiptNumber = SelectedReceipt.ReceiptNumber ?? string.Empty;
                     var voided = await _receiptService.VoidReceiptAsync(receiptNumber, reason);
 
                     if (voided)
@@ -496,7 +495,7 @@ namespace WPFGrowerApp.ViewModels
                 var growerName = grower?.GrowerName ?? "Unknown";
 
                 // Build detailed message
-                var details = $"Receipt Number: {SelectedReceipt.ReceiptNumberModern}\n" +
+                var details = $"Receipt Number: {SelectedReceipt.ReceiptNumber}\n" +
                              $"Date: {SelectedReceipt.ReceiptDate:yyyy-MM-dd}\n" +
                              $"Time: {SelectedReceipt.ReceiptTime}\n" +
                              $"Grower: {growerName} ({SelectedReceipt.GrowerNumber})\n" +
@@ -508,10 +507,10 @@ namespace WPFGrowerApp.ViewModels
                              $"Dock Weight: {SelectedReceipt.DockWeight:N2} lbs\n" +
                              $"Final Weight: {SelectedReceipt.FinalWeight:N2} lbs\n" +
                              $"\n" +
-                             $"Grade: {SelectedReceipt.GradeModern}\n" +
-                             $"Voided: {(SelectedReceipt.IsVoidedModern ? "Yes" : "No")}\n";
+                             $"Grade: {SelectedReceipt.Grade}\n" +
+                             $"Voided: {(SelectedReceipt.IsVoided ? "Yes" : "No")}\n";
 
-                if (SelectedReceipt.IsVoidedModern)
+                if (SelectedReceipt.IsVoided)
                 {
                     details += $"Void Reason: {SelectedReceipt.VoidedReason}\n" +
                               $"Voided Date: {SelectedReceipt.VoidedAt:yyyy-MM-dd HH:mm}\n" +

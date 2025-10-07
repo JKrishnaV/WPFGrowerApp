@@ -43,7 +43,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        public async Task<Process> GetProcessByIdAsync(string processId)
+        public async Task<Process?> GetProcessByIdAsync(int processId)
         {
             try
             {
@@ -52,12 +52,13 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = @"
                         SELECT
-                            ProcessCode as ProcessId,
+                            ProcessId,
+                            ProcessCode,
                             ProcessName as Description,
                             0 as DefGrade,
-                            '' as ProcClass
+                            0 as ProcClass
                         FROM Processes
-                        WHERE ProcessCode = @ProcessId AND IsActive = 1";
+                        WHERE ProcessId = @ProcessId AND IsActive = 1";
                     return await connection.QueryFirstOrDefaultAsync<Process>(sql, new { ProcessId = processId });
                 }
             }
@@ -68,7 +69,33 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        public async Task<bool> AddProcessAsync(Process process)
+        public async Task<Process?> GetProcessByCodeAsync(string processCode)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = @"
+                        SELECT
+                            ProcessId,
+                            ProcessCode,
+                            ProcessName as Description,
+                            0 as DefGrade,
+                            0 as ProcClass
+                        FROM Processes
+                        WHERE ProcessCode = @ProcessCode AND IsActive = 1";
+                    return await connection.QueryFirstOrDefaultAsync<Process>(sql, new { ProcessCode = processCode });
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting process by code '{processCode}': {ex.Message}", ex);
+                throw;
+            }
+        }
+
+    public async Task<bool> AddProcessAsync(Process process)
         {
             if (process == null) throw new ArgumentNullException(nameof(process));
 
@@ -82,29 +109,31 @@ namespace WPFGrowerApp.DataAccess.Services
                             ProcessCode, ProcessName, Description, IsActive, DisplayOrder,
                             CreatedAt, CreatedBy
                         ) VALUES (
-                            @ProcessId, @Description, @Description, 1, 0,
+                            @ProcessCode, @Description, @Description, 1, 0,
                             GETDATE(), @OperatorInitials
-                        )";
+                        );
+                        SELECT CAST(SCOPE_IDENTITY() as int);";
 
                     var parameters = new
                     {
-                        ProcessId = process.ProcessId,
-                        Description = process.Description,
+                        process.ProcessCode,
+                        process.Description,
                         OperatorInitials = GetCurrentUserInitials()
                     };
 
-                    int affectedRows = await connection.ExecuteAsync(sql, parameters);
-                    return affectedRows > 0;
+                    int newId = await connection.ExecuteScalarAsync<int>(sql, parameters);
+                    process.ProcessId = newId;
+                    return newId > 0;
                 }
             }
             catch (Exception ex)
             {
-                Logger.Error($"Error adding process '{process.ProcessId}': {ex.Message}", ex);
+                Logger.Error($"Error adding process '{process.ProcessCode}': {ex.Message}", ex);
                 throw;
             }
         }
 
-        public async Task<bool> UpdateProcessAsync(Process process)
+    public async Task<bool> UpdateProcessAsync(Process process)
         {
              if (process == null) throw new ArgumentNullException(nameof(process));
 
@@ -119,16 +148,9 @@ namespace WPFGrowerApp.DataAccess.Services
                             Description = @Description,
                             ModifiedAt = GETDATE(),
                             ModifiedBy = @OperatorInitials
-                        WHERE ProcessCode = @ProcessId AND IsActive = 1";
+                        WHERE ProcessId = @ProcessId AND IsActive = 1";
 
-                    var parameters = new
-                    {
-                        ProcessId = process.ProcessId,
-                        Description = process.Description,
-                        OperatorInitials = GetCurrentUserInitials()
-                    };
-
-                    int affectedRows = await connection.ExecuteAsync(sql, parameters);
+                    int affectedRows = await connection.ExecuteAsync(sql, new { process.Description, process.ProcessId, OperatorInitials = GetCurrentUserInitials() });
                     return affectedRows > 0;
                 }
             }
@@ -139,10 +161,10 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        public async Task<bool> DeleteProcessAsync(string processId, string operatorInitials)
+        public async Task<bool> DeleteProcessAsync(int processId, string operatorInitials)
         {
-            if (string.IsNullOrWhiteSpace(processId)) throw new ArgumentException("Process ID cannot be empty.", nameof(processId));
-            if (string.IsNullOrWhiteSpace(operatorInitials)) operatorInitials = GetCurrentUserInitials(); // Fallback
+            if (processId <= 0) throw new ArgumentException("Process ID must be positive.", nameof(processId));
+            if (string.IsNullOrWhiteSpace(operatorInitials)) operatorInitials = GetCurrentUserInitials();
 
             try
             {
@@ -154,7 +176,7 @@ namespace WPFGrowerApp.DataAccess.Services
                             DeletedAt = GETDATE(),
                             DeletedBy = @OperatorInitials,
                             IsActive = 0
-                        WHERE ProcessCode = @ProcessId AND IsActive = 1"; 
+                        WHERE ProcessId = @ProcessId AND IsActive = 1"; 
 
                     int affectedRows = await connection.ExecuteAsync(sql, new { ProcessId = processId, OperatorInitials = operatorInitials });
                     return affectedRows > 0;
@@ -163,6 +185,34 @@ namespace WPFGrowerApp.DataAccess.Services
             catch (Exception ex)
             {
                 Logger.Error($"Error deleting process '{processId}': {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        public async Task<bool> DeleteProcessByCodeAsync(string processCode, string operatorInitials)
+        {
+            if (string.IsNullOrWhiteSpace(processCode)) throw new ArgumentException("Process code cannot be empty.", nameof(processCode));
+            if (string.IsNullOrWhiteSpace(operatorInitials)) operatorInitials = GetCurrentUserInitials();
+
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = @"
+                        UPDATE Processes SET
+                            DeletedAt = GETDATE(),
+                            DeletedBy = @OperatorInitials,
+                            IsActive = 0
+                        WHERE ProcessCode = @ProcessCode AND IsActive = 1"; 
+
+                    int affectedRows = await connection.ExecuteAsync(sql, new { ProcessCode = processCode, OperatorInitials = operatorInitials });
+                    return affectedRows > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error deleting process by code '{processCode}': {ex.Message}", ex);
                 throw;
             }
         }
