@@ -85,6 +85,7 @@ namespace WPFGrowerApp
             services.AddTransient<AppearanceSettingsViewModel>(); // Register Appearance Settings VM
             services.AddTransient<PriceViewModel>();
             services.AddTransient<ContainerViewModel>(); // Added Container VM
+            services.AddTransient<GrowersManagementViewModel>(); // Added Growers Management VM
 
             // Register Views (Views are typically not registered unless needed for DI resolution like DialogService)
             services.AddTransient<GrowerSearchView>(); // Needed by DialogService

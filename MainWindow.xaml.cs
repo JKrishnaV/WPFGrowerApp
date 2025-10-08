@@ -8,6 +8,8 @@ using WPFGrowerApp.Services;
 using WPFGrowerApp.ViewModels;
 using WPFGrowerApp.Views;
 using WPFGrowerApp.Infrastructure.Logging; // Added for Logger
+using MaterialDesignThemes.Wpf;
+using WPFGrowerApp.ViewModels.Dialogs;
 
 namespace WPFGrowerApp
 {
@@ -112,6 +114,7 @@ namespace WPFGrowerApp
                 this.DragMove();
             }
         }
+
 
 
     }

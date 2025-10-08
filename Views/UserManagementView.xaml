@@ -14,233 +14,282 @@
              x:Name="userManagementView">
     <UserControl.Resources>
         <ResourceDictionary>
-            <Style x:Key="ScaledMaterialDesignFloatingHintTextBox" TargetType="TextBox" BasedOn="{StaticResource MaterialDesignFloatingHintTextBox}">
-                <Setter Property="FontSize" Value="{DynamicResource ScaledFontSizeNormal}"/>
-            </Style>
-            <Style x:Key="ScaledMaterialDesignFloatingHintRevealPasswordBox" TargetType="PasswordBox" BasedOn="{StaticResource MaterialDesignFloatingHintRevealPasswordBox}">
-                <Setter Property="FontSize" Value="{DynamicResource ScaledFontSizeNormal}"/>
-            </Style>
-            <Style x:Key="ScaledMaterialDesignFilledComboBox" TargetType="ComboBox" BasedOn="{StaticResource MaterialDesignFilledComboBox}">
-                <Setter Property="FontSize" Value="{DynamicResource ScaledFontSizeNormal}"/>
-            </Style>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Styles/StandardizedViewTemplate.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            
             <converters:ActiveStatusConverter x:Key="ActiveStatusConverter"/>
             <converters:ActiveStatusBrushConverter x:Key="ActiveStatusBrushConverter"/>
             <converters:NotNullConverter x:Key="NotNullConverter"/>
             <converters:NotNullOrEmptyToVisibilityConverter x:Key="NotNullOrEmptyToVisibilityConverter"/>
             <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+            <converters:BoolToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <converters:IsNotCurrentUserConverter x:Key="IsNotCurrentUserConverter"/>
         </ResourceDictionary>
     </UserControl.Resources>
+    
     <Grid Margin="10">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Breadcrumb -->
             <RowDefinition Height="Auto"/> <!-- Title -->
-            <RowDefinition Height="Auto"/> <!-- Search -->
-            <RowDefinition Height="*"/>    <!-- DataGrid -->
-            <RowDefinition Height="Auto"/> <!-- Edit Form -->
-            <RowDefinition Height="Auto"/> <!-- Buttons -->
+            <RowDefinition Height="Auto"/> <!-- Search Bar -->
+            <RowDefinition Height="Auto"/> <!-- User Statistics -->
+            <RowDefinition Height="*"/>    <!-- Main Content Area -->
+            <RowDefinition Height="Auto"/> <!-- Status/Footer Bar -->
         </Grid.RowDefinitions>
 
-        <!-- Title -->
-        <TextBlock Grid.Row="0" 
-                   Text="Manage Users" 
-                   Style="{StaticResource MaterialDesignHeadline5TextBlock}" 
-                   Margin="0,0,0,15"/>
+        <!-- Breadcrumb Navigation -->
+        <materialDesign:ColorZone Grid.Row="0" Style="{StaticResource BreadcrumbNavigationStyle}">
+            <StackPanel Orientation="Horizontal">
+                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                        Command="{Binding NavigateToDashboardCommand}"
+                        Padding="5,0">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Home" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                        <TextBlock Text="Dashboard" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+                <materialDesign:PackIcon Kind="ChevronRight" Width="16" Height="16" VerticalAlignment="Center" Margin="5,0"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <materialDesign:PackIcon Kind="AccountGroup" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBlock Text="User Management" FontSize="12" FontWeight="SemiBold"/>
+                </StackPanel>
+            </StackPanel>
+        </materialDesign:ColorZone>
 
-        <!-- Search Box -->
-        <Grid Grid.Row="1" Margin="0,0,0,10">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            
-            <TextBox Grid.Column="0"
-                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                     materialDesign:HintAssist.Hint="Search users..."
-                     Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"
-                     Margin="0,0,10,0">
-                <TextBox.InputBindings>
-                    <KeyBinding Key="Enter" 
-                               Command="{Binding SearchCommand}"/>
-                </TextBox.InputBindings>
-            </TextBox>
-            
-            <Button Grid.Column="1"
-                    Style="{StaticResource MaterialDesignFloatingActionMiniLightButton}"
-                    ToolTip="Search">
-                <materialDesign:PackIcon Kind="Magnify" Height="24" Width="24"/>
-            </Button>
-        </Grid>
+        <!-- View Title -->
+        <TextBlock Grid.Row="1" 
+                   Text="User Management" 
+                   Style="{StaticResource StandardizedViewTitleStyle}"/>
 
-        <!-- Users List -->
-        <DataGrid Grid.Row="2" 
-                  ItemsSource="{Binding FilteredUsers}" 
-                  SelectedItem="{Binding SelectedUser, Mode=TwoWay}"
-                  AutoGenerateColumns="False"
-                  IsReadOnly="True"
-                  CanUserAddRows="False"
-                  CanUserSortColumns="True"
-                  SelectionMode="Single"
-                  materialDesign:DataGridAssist.CellPadding="13 8 8 8"
-                  materialDesign:DataGridAssist.ColumnHeaderPadding="8"
-                  Margin="0,0,0,10"
-                  MaxHeight="350">
-            <DataGrid.Resources>
-                <Style TargetType="DataGridRow" BasedOn="{StaticResource MaterialDesignDataGridRow}">
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding IsActive}" Value="False">
-                            <Setter Property="Background" Value="#FFF5F5F5"/>
-                            <Setter Property="Foreground" Value="#FF757575"/>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </DataGrid.Resources>
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Username" 
-                                  Binding="{Binding Username}" 
-                                  Width="Auto"
-                                  SortDirection="Ascending"/>
-                <DataGridTextColumn Header="Full Name" 
-                                  Binding="{Binding FullName}" 
-                                  Width="Auto"/>
-                <DataGridTextColumn Header="Email" 
-                                  Binding="{Binding Email}" 
-                                  Width="Auto"/>
-                <DataGridTemplateColumn Header="Status" Width="Auto">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding IsActive, Converter={StaticResource ActiveStatusConverter}}"
-                                     Foreground="{Binding IsActive, Converter={StaticResource ActiveStatusBrushConverter}}"/>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-                <DataGridTextColumn Header="Last Login" 
-                                  Binding="{Binding LastLoginDate, StringFormat={}{0:dd/MM/yyyy HH:mm}}" 
-                                  Width="Auto"/>
-            </DataGrid.Columns>
-        </DataGrid>
-
-        <!-- Edit/Add Form -->
-        <materialDesign:Card Grid.Row="3" 
-                            Margin="0,10,0,10" 
-                            Padding="15"
-                            Visibility="{Binding SelectedUser, Converter={StaticResource NotNullConverter}}">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/> <!-- Error Message -->
-                    <RowDefinition Height="Auto"/> <!-- Username and Full Name -->
-                    <RowDefinition Height="Auto"/> <!-- Email and Password -->
-                    <RowDefinition Height="Auto"/> <!-- Status -->
-                </Grid.RowDefinitions>
+        <!-- Search Bar -->
+        <materialDesign:Card Grid.Row="2" Margin="0,0,0,10">
+            <Grid Margin="15">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Error Message -->
-                <TextBlock Grid.Row="0" 
-                          Grid.ColumnSpan="2"
-                          Text="{Binding ErrorMessage}"
-                          Foreground="Red"
-                          TextWrapping="Wrap"
-                          Margin="5,0,5,10"
-                          Visibility="{Binding ErrorMessage, Converter={StaticResource NotNullOrEmptyToVisibilityConverter}}"/>
+                <TextBox Grid.Column="0"
+                       Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                       materialDesign:HintAssist.Hint="Search users by name, email, or role..."
+                       Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                       VerticalAlignment="Center">
+                    <TextBox.InputBindings>
+                        <KeyBinding Key="Enter" Command="{Binding SearchCommand}"/>
+                    </TextBox.InputBindings>
+                </TextBox>
 
-                <!-- Username -->
-                <TextBox Grid.Row="1" 
-                        Grid.Column="0"
-                        Margin="5"
-                        materialDesign:HintAssist.Hint="Username"
-                        Text="{Binding EditUsername, UpdateSourceTrigger=PropertyChanged}"
-                        Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"/>
+                <Button Grid.Column="1"
+                      Command="{Binding SearchCommand}"
+                      Style="{StaticResource MaterialDesignRaisedButton}"
+                      Width="100"
+                      Margin="10,0,5,0">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Magnify" Width="16" Height="16" Margin="0,0,5,0"/>
+                        <TextBlock Text="Search"/>
+                    </StackPanel>
+                </Button>
 
-                <!-- Full Name -->
-                <TextBox Grid.Row="1" 
-                        Grid.Column="1"
-                        Margin="5"
-                        materialDesign:HintAssist.Hint="Full Name"
-                        Text="{Binding EditFullName, UpdateSourceTrigger=PropertyChanged}"
-                        Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"/>
+                <Button Grid.Column="2"
+                      Command="{Binding ClearSearchCommand}"
+                      Style="{StaticResource MaterialDesignOutlinedButton}"
+                      Width="90"
+                      Margin="5,0">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Close" Width="16" Height="16" Margin="0,0,5,0"/>
+                        <TextBlock Text="Clear"/>
+                    </StackPanel>
+                </Button>
 
-                <!-- Email -->
-                <TextBox Grid.Row="2" 
-                        Grid.Column="0"
-                        Margin="5"
-                        materialDesign:HintAssist.Hint="Email"
-                        Text="{Binding EditEmail, UpdateSourceTrigger=PropertyChanged}"
-                        Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"/>
+                <Button Grid.Column="3"
+                      Command="{Binding NewCommand}"
+                      Style="{StaticResource MaterialDesignRaisedButton}"
+                      Width="120"
+                      Margin="0,0,10,0">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Plus" Width="16" Height="16" Margin="0,0,5,0"/>
+                        <TextBlock Text="Add New"/>
+                    </StackPanel>
+                </Button>
 
-                <!-- Password (only for new users) -->
-                <PasswordBox Grid.Row="2" 
-                           Grid.Column="1"
-                           Margin="5"
-                           materialDesign:HintAssist.Hint="Password"
-                           Style="{StaticResource ScaledMaterialDesignFloatingHintRevealPasswordBox}"
-                           Visibility="{Binding IsNewUser, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                <ComboBox Grid.Row="3" Grid.Column="1" 
-                          ItemsSource="{Binding Roles}"
-                          SelectedItem="{Binding SelectedRole}"
-                          DisplayMemberPath="RoleName"
-                          IsEnabled="{Binding CanEditRole}"
-                          Margin="5"  
-                          materialDesign:HintAssist.Hint="Role"
-                          Style="{StaticResource ScaledMaterialDesignFilledComboBox}"/>
-                <!-- Active Status -->
-                <StackPanel Grid.Row="3" 
-                          Grid.Column="0"
-                          Orientation="Horizontal"
-                          Margin="5">
-                    <TextBlock Text="Account Status:"
-                             VerticalAlignment="Center"
-                             Margin="0,0,10,0"/>
-                    <ToggleButton IsChecked="{Binding EditIsActive}"
-                                Style="{StaticResource MaterialDesignSwitchToggleButton}"/>
-                    <TextBlock Text="{Binding EditIsActive, Converter={StaticResource ActiveStatusConverter}}"
-                             VerticalAlignment="Center"
-                             Margin="10,0,0,0"/>
+                <Button Grid.Column="4"
+                      Command="{Binding RefreshCommand}"
+                      Style="{StaticResource MaterialDesignIconButton}"
+                      Width="40">
+                    <materialDesign:PackIcon Kind="Refresh" Width="20" Height="20"/>
+                </Button>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- User Statistics -->
+        <materialDesign:Card Grid.Row="3" Margin="0,0,0,10" Background="{DynamicResource PrimaryHueLightBrush}">
+            <Grid Margin="15">
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="AccountGroup" 
+                                           Width="20" Height="20" 
+                                           VerticalAlignment="Center" 
+                                           Margin="0,0,8,0"
+                                           Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"/>
+                    <TextBlock Text="{Binding FilteredUsers.Count, StringFormat='{}{0} Users'}" 
+                              FontWeight="SemiBold"
+                              VerticalAlignment="Center"
+                              Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"
+                              Margin="0,0,20,0"/>
+                    
+                    <materialDesign:PackIcon Kind="AccountCheck" 
+                                           Width="20" Height="20" 
+                                           VerticalAlignment="Center" 
+                                           Margin="0,0,8,0"
+                                           Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"/>
+                    <TextBlock Text="{Binding ActiveUsersCount, StringFormat='{}{0} Active'}" 
+                              FontWeight="SemiBold"
+                              VerticalAlignment="Center"
+                              Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"
+                              Margin="0,0,20,0"/>
+                    
+                    <materialDesign:PackIcon Kind="AccountCancel" 
+                                           Width="20" Height="20" 
+                                           VerticalAlignment="Center" 
+                                           Margin="0,0,8,0"
+                                           Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"/>
+                    <TextBlock Text="{Binding InactiveUsersCount, StringFormat='{}{0} Inactive'}" 
+                              FontWeight="SemiBold"
+                              VerticalAlignment="Center"
+                              Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"/>
                 </StackPanel>
             </Grid>
         </materialDesign:Card>
 
-        <!-- Action Buttons -->
-        <StackPanel Grid.Row="4" 
-                    Orientation="Horizontal" 
-                    HorizontalAlignment="Right" 
-                    Margin="0,10,0,0">
-            <Button Content="New"
-                    Command="{Binding NewCommand}"
-                    Style="{StaticResource MaterialDesignRaisedButton}"
-                    Margin="5"
-                    IsEnabled="{Binding IsEditing, Converter={StaticResource InverseBooleanConverter}}"/>
-            <Button Content="Save"
-                    Command="{Binding SaveCommand}"
-                    Style="{StaticResource MaterialDesignRaisedButton}"
-                    Margin="5"
-                    Background="{DynamicResource PrimaryHueMidBrush}"
-                    Foreground="{DynamicResource PrimaryHueMidForegroundBrush}"/>
-            <Button Content="Delete"
-                    Command="{Binding DeleteCommand}"
-                    Style="{StaticResource MaterialDesignRaisedButton}"
-                    Background="IndianRed"
-                    Foreground="White"
-                    Margin="5"/>
-            <Button Content="Cancel"
-                    Command="{Binding CancelCommand}"
-                    Style="{StaticResource MaterialDesignOutlinedButton}"
-                    Margin="5"/>
-        </StackPanel>
+        <!-- User List -->
+        <materialDesign:Card Grid.Row="4" Style="{StaticResource MainContentAreaStyle}">
+            <DataGrid
+                  ItemsSource="{Binding FilteredUsers}"
+                  SelectedItem="{Binding SelectedUser}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True"
+                  CanUserAddRows="False"
+                  SelectionMode="Single"
+                  materialDesign:DataGridAssist.CellPadding="13 8 8 8"
+                  materialDesign:DataGridAssist.ColumnHeaderPadding="13 10 8 10"
+                  MouseDoubleClick="UsersDataGrid_MouseDoubleClick"
+                  x:Name="UsersDataGrid">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Username" Binding="{Binding Username}" Width="120">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter Property="FontSize" Value="14"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+                <DataGridTextColumn Header="Full Name" Binding="{Binding FullName}" Width="180"/>
+                <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="200"/>
+                <DataGridTextColumn Header="Last Login" Binding="{Binding LastLoginDate, StringFormat='{}{0:MMM dd, yyyy HH:mm}'}" Width="150"/>
+                <DataGridTemplateColumn Header="Status" Width="100" SortMemberPath="IsActive">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Border Background="{Binding IsActive, Converter={StaticResource ActiveStatusBrushConverter}}"
+                                  CornerRadius="10"
+                                  Padding="8,1"
+                                  HorizontalAlignment="Left"
+                                  VerticalAlignment="Center">
+                                <TextBlock Text="{Binding IsActive, Converter={StaticResource ActiveStatusConverter}}"
+                                         Foreground="White"
+                                         FontWeight="SemiBold"
+                                         FontSize="11"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center"/>
+                            </Border>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="Actions" Width="120">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Margin="5" HorizontalAlignment="Left">
+                                <Button Style="{StaticResource MaterialDesignIconButton}"
+                                       Width="30" Height="30"
+                                       ToolTip="Edit User"
+                                       Click="EditUser_Click"
+                                       Tag="{Binding}">
+                                    <materialDesign:PackIcon Kind="Pencil" Width="16" Height="16"/>
+                                </Button>
+                                <!-- Hide delete button for the currently logged-in user -->
+                                <Button Width="30" Height="30"
+                                       ToolTip="Delete User"
+                                       Click="DeleteUser_Click"
+                                       Tag="{Binding}"
+                                       Foreground="IndianRed">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource MaterialDesignIconButton}">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Converter={StaticResource IsNotCurrentUserConverter}}" Value="False">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <materialDesign:PackIcon Kind="Delete" Width="16" Height="16"/>
+                                </Button>
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+
+            <!-- Row Style -->
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow" BasedOn="{StaticResource MaterialDesignDataGridRow}">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsActive}" Value="False">
+                            <Setter Property="Opacity" Value="0.6"/>
+                            <Setter Property="FontStyle" Value="Italic"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.RowStyle>
+            </DataGrid>
+        </materialDesign:Card>
+
+        <!-- Status Bar -->
+        <materialDesign:ColorZone Grid.Row="5" Style="{StaticResource StatusFooterBarStyle}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock Text="Status: " FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding StatusMessage}"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <TextBlock Text="Users: " FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding FilteredUsers.Count}"/>
+                    <TextBlock Text=" | " Margin="5,0"/>
+                    <TextBlock Text="Last Updated: " FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding LastUpdated}"/>
+                </StackPanel>
+            </Grid>
+        </materialDesign:ColorZone>
 
         <!-- Loading Indicator -->
-        <materialDesign:Card Grid.Row="2" 
-                            Grid.RowSpan="4"
-                            VerticalAlignment="Center"
-                            HorizontalAlignment="Center"
-                            Padding="20"
-                            Background="{DynamicResource MaterialDesignCardBackground}"
+        <materialDesign:Card Grid.Row="0" 
+                            Grid.RowSpan="6"
+                            Style="{StaticResource LoadingIndicatorStyle}"
                             Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
             <StackPanel Orientation="Horizontal">
                 <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}"
                             Value="0"
                             IsIndeterminate="True"/>
-                <TextBlock Text="Loading..."
+                <TextBlock Text="Loading users..."
                           VerticalAlignment="Center"
                           Margin="10,0,0,0"/>
             </StackPanel>

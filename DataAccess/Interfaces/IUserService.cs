@@ -31,10 +31,18 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         Task<bool> UpdateUserStatusAsync(int userId, bool isActive);
         Task<IEnumerable<Role>> GetAllRolesAsync();
 
-        // Add other methods as needed, e.g.:
-        // Task<User> GetUserByUsernameAsync(string username);
-        // Task CreateUserAsync(User user, string password); // Handles hashing internally
-        // Task LockUserAsync(string username);
-        // Task UnlockUserAsync(string username);
+        /// <summary>
+        /// Manually unlocks a user account (admin function).
+        /// </summary>
+        /// <param name="userId">The ID of the user to unlock.</param>
+        /// <returns>True if the account was unlocked successfully, otherwise false.</returns>
+        Task<bool> UnlockUserAsync(int userId);
+
+        /// <summary>
+        /// Gets the lockout status and remaining time for a user.
+        /// </summary>
+        /// <param name="userId">The ID of the user.</param>
+        /// <returns>Tuple with IsLocked status and RemainingMinutes (null if not locked or no time info).</returns>
+        Task<(bool IsLocked, int? RemainingMinutes)> GetLockoutStatusAsync(int userId);
     }
 }

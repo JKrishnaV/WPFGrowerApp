@@ -17,5 +17,7 @@ namespace WPFGrowerApp.Models
         public string PayGroup { get; set; }
         public string Phone2 { get; set; }
         public bool IsOnHold { get; set; }
+        public bool IsActive { get; set; }
+        public string Status { get; set; }
     }
 }

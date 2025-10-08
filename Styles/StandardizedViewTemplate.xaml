@@ -1,0 +1,103 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
+
+    <!-- Note: Apply Background and Margin directly to the UserControl root element -->
+    <!-- Background="{DynamicResource MaterialDesignPaper}" -->
+    <!-- Grid Margin="10" for the main content grid -->
+
+    <!-- Breadcrumb Navigation Style -->
+    <Style x:Key="BreadcrumbNavigationStyle" TargetType="materialDesign:ColorZone">
+        <Setter Property="Mode" Value="PrimaryLight"/>
+        <Setter Property="Padding" Value="10,8"/>
+        <Setter Property="Margin" Value="0,0,0,10"/>
+        <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+
+    <!-- View Title Style -->
+    <Style x:Key="StandardizedViewTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource MaterialDesignHeadline4TextBlock}">
+        <Setter Property="Margin" Value="0,0,0,15"/>
+    </Style>
+
+    <!-- Filters/Actions Panel Style -->
+    <Style x:Key="FiltersActionsPanelStyle" TargetType="materialDesign:Card">
+        <Setter Property="Margin" Value="0,0,0,15"/>
+        <Setter Property="Padding" Value="15"/>
+        <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp2"/>
+    </Style>
+
+    <!-- Main Content Area Style -->
+    <Style x:Key="MainContentAreaStyle" TargetType="materialDesign:Card">
+        <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp2"/>
+    </Style>
+
+    <!-- Status/Footer Bar Style -->
+    <Style x:Key="StatusFooterBarStyle" TargetType="materialDesign:ColorZone">
+        <Setter Property="Mode" Value="PrimaryLight"/>
+        <Setter Property="Padding" Value="10,8"/>
+        <Setter Property="Margin" Value="0,10,0,0"/>
+        <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+
+    <!-- Action Button Row Style -->
+    <Style x:Key="ActionButtonRowStyle" TargetType="StackPanel">
+        <Setter Property="Orientation" Value="Horizontal"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+    </Style>
+
+    <!-- Search Row Style -->
+    <Style x:Key="SearchRowStyle" TargetType="Grid">
+        <Setter Property="Margin" Value="0,0,0,10"/>
+    </Style>
+
+    <!-- Filters Row Style -->
+    <Style x:Key="FiltersRowStyle" TargetType="Grid">
+        <Setter Property="Margin" Value="0,0,0,10"/>
+    </Style>
+
+    <!-- Loading Indicator Style -->
+    <Style x:Key="LoadingIndicatorStyle" TargetType="materialDesign:Card">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="Padding" Value="20"/>
+        <Setter Property="Background" Value="{DynamicResource MaterialDesignCardBackground}"/>
+    </Style>
+
+    <!-- DataGrid Standard Style -->
+    <Style x:Key="StandardizedDataGridStyle" TargetType="DataGrid" BasedOn="{StaticResource MaterialDesignDataGrid}">
+        <Setter Property="AutoGenerateColumns" Value="False"/>
+        <Setter Property="IsReadOnly" Value="True"/>
+        <Setter Property="CanUserAddRows" Value="False"/>
+        <Setter Property="CanUserSortColumns" Value="True"/>
+        <Setter Property="SelectionMode" Value="Single"/>
+        <Setter Property="materialDesign:DataGridAssist.CellPadding" Value="13 8 8 8"/>
+        <Setter Property="materialDesign:DataGridAssist.ColumnHeaderPadding" Value="8"/>
+        <Setter Property="GridLinesVisibility" Value="None"/>
+        <Setter Property="AlternatingRowBackground" Value="{DynamicResource MaterialDesignDivider}"/>
+    </Style>
+
+    <!-- Status Badge Style -->
+    <Style x:Key="StatusBadgeStyle" TargetType="Border">
+        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+
+    <!-- Primary Action Button Style -->
+    <Style x:Key="PrimaryActionButtonStyle" TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+        <Setter Property="Margin" Value="0,0,5,0"/>
+    </Style>
+
+    <!-- Secondary Action Button Style -->
+    <Style x:Key="SecondaryActionButtonStyle" TargetType="Button" BasedOn="{StaticResource MaterialDesignOutlinedButton}">
+        <Setter Property="Margin" Value="0,0,5,0"/>
+    </Style>
+
+    <!-- Danger Action Button Style -->
+    <Style x:Key="DangerActionButtonStyle" TargetType="Button" BasedOn="{StaticResource MaterialDesignOutlinedButton}">
+        <Setter Property="Background" Value="IndianRed"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Margin" Value="0,0,5,0"/>
+    </Style>
+
+</ResourceDictionary>

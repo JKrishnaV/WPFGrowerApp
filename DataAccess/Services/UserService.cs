@@ -30,10 +30,11 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = @"
                         SELECT UserId, Username, FullName, Email, PasswordHash, PasswordSalt, 
-                               IsActive, CreatedAt as DateCreated, LastLoginAt as LastLoginDate, 
-                               FailedLoginAttempts, IsLocked as IsLockedOut
+                               RoleId, IsActive, 
+                               CreatedAt, CreatedBy, ModifiedAt, ModifiedBy, DeletedAt, DeletedBy,
+                               LastLoginAt, FailedLoginAttempts, IsLocked, LastLockoutAt
                         FROM AppUsers 
-                        WHERE Username = @Username";
+                        WHERE Username = @Username AND DeletedAt IS NULL";
                     
                     user = await connection.QuerySingleOrDefaultAsync<User>(sql, new { Username = username });
 
@@ -52,9 +53,30 @@ namespace WPFGrowerApp.DataAccess.Services
 
                     if (user.IsLockedOut)
                     {
-                         Logger.Warn($"Authentication failed: User '{username}' is locked out.");
-                         // Optionally check if lockout duration has expired
-                         return null; // Account locked out
+                         // Check if auto-unlock period has expired (30 minutes)
+                         if (user.LastLockoutDate.HasValue)
+                         {
+                             var lockoutDuration = TimeSpan.FromMinutes(30);
+                             if (DateTime.UtcNow - user.LastLockoutDate.Value > lockoutDuration)
+                             {
+                                 // Auto-unlock the account
+                                 Logger.Info($"Auto-unlocking account '{username}' after lockout period expired.");
+                                 await UnlockUserInternalAsync(connection, user.UserId);
+                                 user.IsLocked = false;
+                                 user.FailedLoginAttempts = 0;
+                             }
+                             else
+                             {
+                                 var remainingMinutes = (int)(lockoutDuration - (DateTime.UtcNow - user.LastLockoutDate.Value)).TotalMinutes;
+                                 Logger.Warn($"Authentication failed: User '{username}' is locked out. Try again in {remainingMinutes} minutes.");
+                                 return null; // Account still locked
+                             }
+                         }
+                         else
+                         {
+                             Logger.Warn($"Authentication failed: User '{username}' is locked out.");
+                             return null; // Account locked out
+                         }
                     }
 
                     // Verify password
@@ -130,15 +152,16 @@ namespace WPFGrowerApp.DataAccess.Services
 
         private async Task HandleFailedLoginAttemptAsync(SqlConnection connection, User user)
         {
-            // Basic lockout logic: Lock after 5 failed attempts (adjust as needed)
-            const int maxFailedAttempts = 5; 
+            // Lock after 3 failed attempts
+            const int maxFailedAttempts = 3; 
             int newAttemptCount = user.FailedLoginAttempts + 1;
             bool lockAccount = newAttemptCount >= maxFailedAttempts;
 
             var sql = @"
                 UPDATE AppUsers 
                 SET FailedLoginAttempts = @NewAttemptCount, 
-                    IsLocked = @LockAccount
+                    IsLocked = @LockAccount,
+                    LastLockoutAt = @LastLockoutAt
                 WHERE UserId = @UserId";
             
             try
@@ -146,13 +169,14 @@ namespace WPFGrowerApp.DataAccess.Services
                 await connection.ExecuteAsync(sql, new 
                 { 
                     NewAttemptCount = newAttemptCount, 
-                    LockAccount = lockAccount, 
+                    LockAccount = lockAccount,
+                    LastLockoutAt = lockAccount ? DateTime.UtcNow : (DateTime?)null,
                     UserId = user.UserId 
                 });
 
                 if(lockAccount)
                 {
-                    Logger.Warn($"User account '{user.Username}' locked due to excessive failed login attempts.");
+                    Logger.Warn($"User account '{user.Username}' locked due to {maxFailedAttempts} failed login attempts. Account will auto-unlock in 30 minutes.");
                 }
             }
             catch (Exception ex)
@@ -227,11 +251,13 @@ namespace WPFGrowerApp.DataAccess.Services
                     
                     var sql = @"
                         SELECT UserId, Username, FullName, Email, 
-                               IsActive, CreatedAt as DateCreated, LastLoginAt as LastLoginDate, 
-                               FailedLoginAttempts, IsLocked as IsLockedOut
-                        FROM AppUsers";
+                               RoleId, IsActive,
+                               CreatedAt, CreatedBy, ModifiedAt, ModifiedBy, DeletedAt, DeletedBy,
+                               LastLoginAt, FailedLoginAttempts, IsLocked, LastLockoutAt
+                        FROM AppUsers
+                        WHERE DeletedAt IS NULL";
 
-                    Logger.Info("Executing SQL query to get all users");
+                    Logger.Info("Executing SQL query to get all users (excluding soft-deleted)");
                     var result = (await connection.QueryAsync<User>(sql)).ToList();
                     Logger.Info($"Query executed successfully. Retrieved {result.Count} users");
                     
@@ -254,10 +280,11 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = @"
                         SELECT UserId, Username, FullName, Email, 
-                               IsActive, CreatedAt as DateCreated, LastLoginAt as LastLoginDate, 
-                               FailedLoginAttempts, IsLocked as IsLockedOut
+                               RoleId, IsActive,
+                               CreatedAt, CreatedBy, ModifiedAt, ModifiedBy, DeletedAt, DeletedBy,
+                               LastLoginAt, FailedLoginAttempts, IsLocked, LastLockoutAt
                         FROM AppUsers 
-                        WHERE UserId = @UserId";
+                        WHERE UserId = @UserId AND DeletedAt IS NULL";
 
                     return await connection.QuerySingleOrDefaultAsync<User>(sql, new { UserId = userId });
                 }
@@ -278,10 +305,11 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = @"
                         SELECT UserId, Username, FullName, Email, 
-                               IsActive, CreatedAt as DateCreated, LastLoginAt as LastLoginDate, 
-                               FailedLoginAttempts, IsLocked as IsLockedOut
+                               RoleId, IsActive,
+                               CreatedAt, CreatedBy, ModifiedAt, ModifiedBy, DeletedAt, DeletedBy,
+                               LastLoginAt, FailedLoginAttempts, IsLocked, LastLockoutAt
                         FROM AppUsers 
-                        WHERE Username = @Username";
+                        WHERE Username = @Username AND DeletedAt IS NULL";
 
                     return await connection.QuerySingleOrDefaultAsync<User>(sql, new { Username = username });
                 }
@@ -303,7 +331,8 @@ namespace WPFGrowerApp.DataAccess.Services
                 var (hash, salt) = PasswordHasher.HashPassword(password);
                 user.PasswordHash = hash;
                 user.PasswordSalt = salt;
-                user.DateCreated = DateTime.UtcNow;
+                user.CreatedAt = DateTime.UtcNow;
+                user.CreatedBy = App.CurrentUser?.Username ?? "System";
 
                 using (var connection = new SqlConnection(_connectionString))
                 {
@@ -311,17 +340,17 @@ namespace WPFGrowerApp.DataAccess.Services
                     var sql = @"
                         INSERT INTO AppUsers (
                             Username, FullName, Email, PasswordHash, PasswordSalt,
-                            IsActive, CreatedAt, FailedLoginAttempts, IsLocked
+                            RoleId, IsActive, CreatedAt, CreatedBy, FailedLoginAttempts, IsLocked
                         ) VALUES (
                             @Username, @FullName, @Email, @PasswordHash, @PasswordSalt,
-                            @IsActive, GETUTCDATE(), 0, 0
+                            @RoleId, @IsActive, @CreatedAt, @CreatedBy, 0, 0
                         )";
 
                     int rowsAffected = await connection.ExecuteAsync(sql, user);
                     
                     if (rowsAffected > 0)
                     {
-                        Logger.Info($"User created successfully: {user.Username}");
+                        Logger.Info($"User created successfully: {user.Username} by {user.CreatedBy}");
                         return true;
                     }
                     else
@@ -353,14 +382,19 @@ namespace WPFGrowerApp.DataAccess.Services
                             FullName = @FullName,
                             Email = @Email,
                             RoleId = @RoleId,
-                            IsActive = @IsActive
-                        WHERE UserId = @UserId";
+                            IsActive = @IsActive,
+                            ModifiedAt = @ModifiedAt,
+                            ModifiedBy = @ModifiedBy
+                        WHERE UserId = @UserId AND DeletedAt IS NULL";
+
+                    user.ModifiedAt = DateTime.UtcNow;
+                    user.ModifiedBy = App.CurrentUser?.Username ?? "System";
 
                     int rowsAffected = await connection.ExecuteAsync(sql, user);
 
                     if (rowsAffected > 0)
                     {
-                        Logger.Info($"User updated successfully: {user.Username}");
+                        Logger.Info($"User updated successfully: {user.Username} by {user.ModifiedBy}");
                         return true;
                     }
                     else
@@ -384,18 +418,33 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    var sql = "DELETE FROM AppUsers WHERE UserId = @UserId";
+                    
+                    // Soft delete: Set DeletedAt and DeletedBy instead of hard deleting
+                    var sql = @"
+                        UPDATE AppUsers 
+                        SET DeletedAt = @DeletedAt,
+                            DeletedBy = @DeletedBy,
+                            IsActive = 0
+                        WHERE UserId = @UserId AND DeletedAt IS NULL";
 
-                    int rowsAffected = await connection.ExecuteAsync(sql, new { UserId = userId });
+                    var deletedBy = App.CurrentUser?.Username ?? "System";
+                    var deletedAt = DateTime.UtcNow;
+
+                    int rowsAffected = await connection.ExecuteAsync(sql, new 
+                    { 
+                        UserId = userId,
+                        DeletedAt = deletedAt,
+                        DeletedBy = deletedBy
+                    });
 
                     if (rowsAffected > 0)
                     {
-                        Logger.Info($"User deleted successfully. UserId: {userId}");
+                        Logger.Info($"User soft deleted successfully. UserId: {userId} by {deletedBy}");
                         return true;
                     }
                     else
                     {
-                        Logger.Warn($"Failed to delete user. UserId: {userId} not found.");
+                        Logger.Warn($"Failed to delete user. UserId: {userId} not found or already deleted.");
                         return false;
                     }
                 }
@@ -421,6 +470,87 @@ namespace WPFGrowerApp.DataAccess.Services
             {
                 Logger.Error($"Error retrieving roles" ,ex);
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// Unlocks a user account manually (for admin use).
+        /// </summary>
+        public async Task<bool> UnlockUserAsync(int userId)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    await UnlockUserInternalAsync(connection, userId);
+                    Logger.Info($"User account unlocked manually. UserId: {userId} by {App.CurrentUser?.Username ?? "System"}");
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error unlocking user. UserId: {userId}", ex);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Internal method to unlock a user (used by both manual and auto-unlock).
+        /// </summary>
+        private async Task UnlockUserInternalAsync(SqlConnection connection, int userId)
+        {
+            var sql = @"
+                UPDATE AppUsers 
+                SET IsLocked = 0,
+                    FailedLoginAttempts = 0
+                WHERE UserId = @UserId";
+            
+            await connection.ExecuteAsync(sql, new { UserId = userId });
+        }
+
+        /// <summary>
+        /// Gets the lockout status and remaining time for a user.
+        /// </summary>
+        public async Task<(bool IsLocked, int? RemainingMinutes)> GetLockoutStatusAsync(int userId)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = @"
+                        SELECT IsLocked, LastLockoutAt
+                        FROM AppUsers 
+                        WHERE UserId = @UserId";
+
+                    var result = await connection.QuerySingleOrDefaultAsync<(bool IsLocked, DateTime? LastLockoutAt)>(
+                        sql, new { UserId = userId });
+
+                    if (!result.IsLocked)
+                    {
+                        return (false, null);
+                    }
+
+                    if (result.LastLockoutAt.HasValue)
+                    {
+                        var lockoutDuration = TimeSpan.FromMinutes(30);
+                        var elapsed = DateTime.UtcNow - result.LastLockoutAt.Value;
+                        var remaining = lockoutDuration - elapsed;
+                        
+                        if (remaining.TotalMinutes > 0)
+                        {
+                            return (true, (int)Math.Ceiling(remaining.TotalMinutes));
+                        }
+                    }
+
+                    return (true, null);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting lockout status for UserId: {userId}", ex);
+                return (false, null);
             }
         }
     }

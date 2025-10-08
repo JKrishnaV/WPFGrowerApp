@@ -80,7 +80,7 @@ namespace WPFGrowerApp.Services
             // Set the DataContext
             view.DataContext = viewModel;
 
-            // Show the dialog directly
+            // Show all dialogs in the RootDialogHost
             await DialogHost.Show(view, RootDialogHostId);
         }
 

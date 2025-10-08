@@ -11,6 +11,8 @@ using WPFGrowerApp.Services;
 using System.Text.RegularExpressions;
 using System.ComponentModel;
 using System.Collections.Generic;
+using WPFGrowerApp.ViewModels.Dialogs;
+using System.Windows;
 
 namespace WPFGrowerApp.ViewModels
 {
@@ -27,10 +29,12 @@ namespace WPFGrowerApp.ViewModels
         private bool _editIsActive;
         private string _errorMessage;
         private string _searchText;
-        private bool _canEditRole ;
+        private bool _canEditRole;
         private ObservableCollection<User> _filteredUsers;
         private ObservableCollection<Role> _roles;
         private Role _selectedRole;
+        private string _statusMessage = "Ready";
+        private string _lastUpdated;
 
         public UserManagementViewModel(IUserService userService, IDialogService dialogService)
         {
@@ -45,9 +49,15 @@ namespace WPFGrowerApp.ViewModels
 
             // Initialize commands
             NewCommand = new RelayCommand(NewUserExecute);
+            EditCommand = new RelayCommand(EditExecute, CanEditExecute);
             SaveCommand = new RelayCommand(SaveExecuteAsync, CanSaveExecute);
             DeleteCommand = new RelayCommand(DeleteExecuteAsync, CanDeleteExecute);
             CancelCommand = new RelayCommand(CancelExecute, CanCancelExecute);
+            SearchCommand = new RelayCommand(SearchExecute);
+            ExportCommand = new RelayCommand(ExportExecute);
+            RefreshCommand = new RelayCommand(RefreshExecute);
+            ClearSearchCommand = new RelayCommand(ClearSearchExecute);
+            NavigateToDashboardCommand = new RelayCommand(NavigateToDashboardExecute);
 
             // Initialize collections
             Users = new ObservableCollection<User>();
@@ -208,10 +218,32 @@ namespace WPFGrowerApp.ViewModels
             set => SetProperty(ref _errorMessage, value);
         }
 
-        public ICommand NewCommand { get; }
-        public ICommand SaveCommand { get; }
-        public ICommand DeleteCommand { get; }
-        public ICommand CancelCommand { get; }
+        public string StatusMessage
+        {
+            get => _statusMessage;
+            set => SetProperty(ref _statusMessage, value);
+        }
+
+        public string LastUpdated
+        {
+            get => _lastUpdated;
+            set => SetProperty(ref _lastUpdated, value);
+        }
+
+        // Computed properties for statistics
+        public int ActiveUsersCount => Users?.Count(u => u.IsActive) ?? 0;
+        public int InactiveUsersCount => Users?.Count(u => !u.IsActive) ?? 0;
+
+    public ICommand NewCommand { get; }
+    public ICommand EditCommand { get; }
+    public ICommand SaveCommand { get; }
+    public ICommand DeleteCommand { get; }
+    public ICommand CancelCommand { get; }
+    public ICommand SearchCommand { get; }
+    public ICommand ExportCommand { get; }
+    public ICommand RefreshCommand { get; }
+    public ICommand ClearSearchCommand { get; }
+    public ICommand NavigateToDashboardCommand { get; }
 
         private async Task LoadUsersAsync()
         {
@@ -228,6 +260,10 @@ namespace WPFGrowerApp.ViewModels
                 }
                 
                 FilterUsers();
+                
+                // Notify UI that statistics have changed
+                OnPropertyChanged(nameof(ActiveUsersCount));
+                OnPropertyChanged(nameof(InactiveUsersCount));
             }
             catch (Exception ex)
             {
@@ -241,16 +277,57 @@ namespace WPFGrowerApp.ViewModels
             }
         }
 
-        private void NewUserExecute(object parameter)
+        private async void NewUserExecute(object parameter)
         {
-            SelectedUser = new User
+            try
             {
-                IsActive = true,
-                DateCreated = DateTime.Now
-            };
-            IsNewUser = true;
-            // When creating a new user, the role should be editable
-            CanEditRole = true; 
+                // Create dialog view model for new user
+                var dialogViewModel = new UserEditDialogViewModel(null, Roles, _dialogService);
+
+                // Show the dialog
+                await _dialogService.ShowDialogAsync(dialogViewModel);
+
+                // If user saved, create the new user
+                if (dialogViewModel.WasSaved)
+                {
+                    IsLoading = true;
+                    var newUser = dialogViewModel.UserData;
+                    
+                    // Validate that username doesn't already exist
+                    var existingUser = await _userService.GetUserByUsernameAsync(newUser.Username);
+                    if (existingUser != null)
+                    {
+                        await _dialogService.ShowMessageBoxAsync("Username already exists. Please choose a different username.", "Error");
+                        IsLoading = false;
+                        return;
+                    }
+
+                    // Create the user with the password
+                    var success = await _userService.CreateUserAsync(newUser, dialogViewModel.Password);
+
+                    if (success)
+                    {
+                        await LoadUsersAsync();
+                        StatusMessage = $"User '{newUser.Username}' created successfully";
+                        await _dialogService.ShowMessageBoxAsync($"User '{newUser.Username}' created successfully.", "Success");
+                        
+                        Logger.Info($"User Management: Created user '{newUser.Username}' by {App.CurrentUser?.Username}");
+                    }
+                    else
+                    {
+                        await _dialogService.ShowMessageBoxAsync("Failed to create user. Please try again.", "Error");
+                        StatusMessage = "Failed to create user";
+                    }
+                    
+                    IsLoading = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error creating new user", ex);
+                await _dialogService.ShowMessageBoxAsync("An unexpected error occurred while creating the user.", "Error");
+                IsLoading = false;
+            }
         }
 
         private bool CanSaveExecute(object parameter)
@@ -382,16 +459,27 @@ namespace WPFGrowerApp.ViewModels
                 if (result)
                 {
                     IsLoading = true;
+                    var deletedUsername = SelectedUser.Username;
                     var success = await _userService.DeleteUserAsync(SelectedUser.UserId);
                     if (success)
                     {
                         Users.Remove(SelectedUser);
+                        FilterUsers(); // Update filtered users
                         SelectedUser = null;
+                        
+                        // Update statistics
+                        OnPropertyChanged(nameof(ActiveUsersCount));
+                        OnPropertyChanged(nameof(InactiveUsersCount));
+                        
+                        StatusMessage = $"User '{deletedUsername}' deleted successfully";
                         await _dialogService.ShowMessageBoxAsync("User deleted successfully.", "Success");
+                        
+                        Logger.Info($"User Management: Deleted user '{deletedUsername}' by {App.CurrentUser?.Username}");
                     }
                     else
                     {
                         await _dialogService.ShowMessageBoxAsync("Failed to delete user. Please try again.", "Error");
+                        StatusMessage = "Failed to delete user";
                     }
                 }
             }
@@ -465,12 +553,141 @@ namespace WPFGrowerApp.ViewModels
                 {
                     Roles.Add(role);
                 }
+                
+                StatusMessage = "Ready";
+                LastUpdated = DateTime.Now.ToString("HH:mm:ss");
             }
             catch (Exception ex)
             {
                 Logger.Error("Error loading roles", ex);
                 ErrorMessage = "Failed to load roles. Please try again.";
+                StatusMessage = "Error loading roles";
             }
+        }
+
+        private async void NavigateToDashboardExecute(object parameter)
+        {
+            try
+            {
+                StatusMessage = "Navigation to dashboard...";
+                
+                // Get the MainViewModel from the MainWindow
+                if (Application.Current?.MainWindow?.DataContext is MainViewModel mainViewModel)
+                {
+                    // Execute the dashboard navigation command
+                    if (mainViewModel.NavigateToDashboardCommand?.CanExecute(null) == true)
+                    {
+                        mainViewModel.NavigateToDashboardCommand.Execute(null);
+                        StatusMessage = "Navigated to Dashboard";
+                    }
+                    else
+                    {
+                        StatusMessage = "Unable to navigate to Dashboard";
+                    }
+                }
+                else
+                {
+                    StatusMessage = "Navigation service not available";
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error navigating to dashboard", ex);
+                StatusMessage = "Navigation failed";
+            }
+        }
+
+        private bool CanEditExecute(object parameter)
+        {
+            return SelectedUser != null;
+        }
+
+        private async void EditExecute(object parameter)
+        {
+            if (SelectedUser == null) return;
+
+            try
+            {
+                // Create dialog view model for editing
+                var dialogViewModel = new UserEditDialogViewModel(SelectedUser, Roles, _dialogService);
+
+                // Show the dialog
+                await _dialogService.ShowDialogAsync(dialogViewModel);
+
+                // If user saved, update the user
+                if (dialogViewModel.WasSaved)
+                {
+                    IsLoading = true;
+                    var updatedUser = dialogViewModel.UserData;
+
+                    // Prevent deactivating own account
+                    if (updatedUser.Username != null && 
+                        updatedUser.Username.Equals(App.CurrentUser?.Username, StringComparison.OrdinalIgnoreCase) && 
+                        !updatedUser.IsActive)
+                    {
+                        await _dialogService.ShowMessageBoxAsync("You cannot deactivate your own account.", "Warning");
+                        IsLoading = false;
+                        return;
+                    }
+
+                    // Update the user
+                    var success = await _userService.UpdateUserAsync(updatedUser);
+
+                    if (success)
+                    {
+                        // Update the user in the collection
+                        var existingUser = Users.FirstOrDefault(u => u.UserId == updatedUser.UserId);
+                        if (existingUser != null)
+                        {
+                            var index = Users.IndexOf(existingUser);
+                            Users[index] = updatedUser;
+                        }
+
+                        await LoadUsersAsync();
+                        StatusMessage = $"User '{updatedUser.Username}' updated successfully";
+                        await _dialogService.ShowMessageBoxAsync($"User '{updatedUser.Username}' updated successfully.", "Success");
+                        
+                        Logger.Info($"User Management: Updated user '{updatedUser.Username}' by {App.CurrentUser?.Username}");
+                    }
+                    else
+                    {
+                        await _dialogService.ShowMessageBoxAsync("Failed to update user. Please try again.", "Error");
+                        StatusMessage = "Failed to update user";
+                    }
+                    
+                    IsLoading = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error editing user", ex);
+                await _dialogService.ShowMessageBoxAsync("An unexpected error occurred while updating the user.", "Error");
+                IsLoading = false;
+            }
+        }
+
+        private void ExportExecute(object parameter)
+        {
+            StatusMessage = "Export functionality not yet implemented";
+            _dialogService.ShowMessageBoxAsync("Export functionality will be implemented to export users to CSV/Excel format.", "Export Users");
+        }
+
+        private void RefreshExecute(object parameter)
+        {
+            _ = LoadUsersAsync();
+            _ = LoadRolesAsync();
+        }
+
+        private void SearchExecute(object parameter)
+        {
+            FilterUsers();
+            StatusMessage = $"Search completed - {FilteredUsers.Count} users found";
+        }
+
+        private void ClearSearchExecute(object parameter)
+        {
+            SearchText = string.Empty;
+            StatusMessage = "Search cleared";
         }
     }
 }

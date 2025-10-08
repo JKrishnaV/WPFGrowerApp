@@ -131,7 +131,7 @@
    </Window.Resources>
 
    <materialDesign:Card UniformCornerRadius="8" Background="#F0F0F0">
-       <materialDesign:DialogHost Identifier="RootDialogHost" CloseOnClickAway="True"> 
+       <materialDesign:DialogHost Identifier="RootDialogHost" CloseOnClickAway="False"> 
            <Grid>
                <Grid.ColumnDefinitions>
                    <ColumnDefinition x:Name="MenuColumn" Width="Auto"/>
