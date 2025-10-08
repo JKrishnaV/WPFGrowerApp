@@ -155,17 +155,36 @@
                            </Button>
                        </StackPanel>
 
-                       <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                           <Button x:Name="LogoutButton" 
-                                   Style="{StaticResource WindowControlButtonStyle}" 
-                                   Command="{Binding LogoutCommand}"
-                                   ToolTip="Logout">
-                               <materialDesign:PackIcon Kind="Logout" Width="16" Height="16" />
-                           </Button>
-                           <Button x:Name="MinimizeButton" Content="&#xE921;" Style="{StaticResource WindowControlButtonStyle}" Click="MinimizeButton_Click"/>
-                           <Button x:Name="MaximizeButton" Content="&#xE922;" Style="{StaticResource WindowControlButtonStyle}" Click="MaximizeButton_Click"/>
-                           <Button x:Name="CloseButton" Content="&#xE8BB;" Style="{StaticResource CloseButtonStyle}" Click="CloseButton_Click"/>
-                       </StackPanel>
+                      <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                          <!-- Theme Toggle Button -->
+                          <Button x:Name="ThemeToggleButton" 
+                                  Style="{StaticResource WindowControlButtonStyle}" 
+                                  Command="{Binding ToggleThemeCommand}"
+                                  ToolTip="Toggle Dark/Light Theme">
+                              <Grid>
+                                  <!-- Moon icon for Dark mode (shown when light theme is active) -->
+                                  <materialDesign:PackIcon Kind="WeatherNight" 
+                                                           Width="16" 
+                                                           Height="16"
+                                                           Visibility="{Binding IsDarkTheme, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+                                  <!-- Sun icon for Light mode (shown when dark theme is active) -->
+                                  <materialDesign:PackIcon Kind="WeatherSunny" 
+                                                           Width="16" 
+                                                           Height="16"
+                                                           Visibility="{Binding IsDarkTheme, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                              </Grid>
+                          </Button>
+                          
+                          <Button x:Name="LogoutButton" 
+                                  Style="{StaticResource WindowControlButtonStyle}" 
+                                  Command="{Binding LogoutCommand}"
+                                  ToolTip="Logout">
+                              <materialDesign:PackIcon Kind="Logout" Width="16" Height="16" />
+                          </Button>
+                          <Button x:Name="MinimizeButton" Content="&#xE921;" Style="{StaticResource WindowControlButtonStyle}" Click="MinimizeButton_Click"/>
+                          <Button x:Name="MaximizeButton" Content="&#xE922;" Style="{StaticResource WindowControlButtonStyle}" Click="MaximizeButton_Click"/>
+                          <Button x:Name="CloseButton" Content="&#xE8BB;" Style="{StaticResource CloseButtonStyle}" Click="CloseButton_Click"/>
+                      </StackPanel>
                    </Grid>
 
                    <ScrollViewer Grid.Row="1" 

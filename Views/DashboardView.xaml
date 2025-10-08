@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:WPFGrowerApp.Views"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="700">
 
@@ -12,22 +13,122 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Styles/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+            
+            <!-- Dark Theme Colors -->
+            <SolidColorBrush x:Key="DarkCardBackground" Color="#2D2D30"/>
+            <SolidColorBrush x:Key="DarkCardBorder" Color="#3F3F46"/>
+            <SolidColorBrush x:Key="DarkCardHoverBackground" Color="#3E3E42"/>
+            <SolidColorBrush x:Key="DarkCardHoverBorder" Color="#007ACC"/>
+            <SolidColorBrush x:Key="DarkTextPrimary" Color="#E0E0E0"/>
+            <SolidColorBrush x:Key="DarkTextSecondary" Color="#A0A0A0"/>
+            <SolidColorBrush x:Key="DarkAccent" Color="#BB86FC"/>
+            <SolidColorBrush x:Key="DarkHeaderBackground" Color="#1E1E1E"/>
+            <SolidColorBrush x:Key="DarkMainBackground" Color="#1E1E1E"/>
+            
+            <!-- Light Theme Colors -->
+            <SolidColorBrush x:Key="LightCardBackground" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="LightCardBorder" Color="#CCCCCC"/>
+            <SolidColorBrush x:Key="LightCardHoverBackground" Color="#F5F5F5"/>
+            <SolidColorBrush x:Key="LightCardHoverBorder" Color="#3F51B5"/>
+            <SolidColorBrush x:Key="LightTextPrimary" Color="#212121"/>
+            <SolidColorBrush x:Key="LightTextSecondary" Color="#757575"/>
+            <SolidColorBrush x:Key="LightAccent" Color="#3F51B5"/>
+            <SolidColorBrush x:Key="LightHeaderBackground" Color="#3F51B5"/>
+            <SolidColorBrush x:Key="LightMainBackground" Color="#FAFAFA"/>
+            
+            <!-- Dynamic Theme Resources (will be updated by code-behind) -->
+            <SolidColorBrush x:Key="CardBackground" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="CardBorder" Color="#CCCCCC"/>
+            <SolidColorBrush x:Key="CardHoverBackground" Color="#F5F5F5"/>
+            <SolidColorBrush x:Key="CardHoverBorder" Color="#3F51B5"/>
+            <SolidColorBrush x:Key="TextPrimary" Color="#212121"/>
+            <SolidColorBrush x:Key="TextSecondary" Color="#757575"/>
+            <SolidColorBrush x:Key="AccentColor" Color="#3F51B5"/>
+            <SolidColorBrush x:Key="HeaderBackground" Color="#3F51B5"/>
+            
+            <!-- Card Style for Dashboard Cards - Theme Aware -->
+            <Style x:Key="DashboardCardStyle" TargetType="Border">
+                <Setter Property="Background" Value="{DynamicResource CardBackground}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource CardBorder}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="CornerRadius" Value="8"/>
+                <Setter Property="Margin" Value="10"/>
+                <Setter Property="Padding" Value="20"/>
+                <Setter Property="Effect">
+                    <Setter.Value>
+                        <DropShadowEffect Color="Black" Opacity="0.3" ShadowDepth="3" BlurRadius="10"/>
+                    </Setter.Value>
+                </Setter>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="BorderBrush" Value="{DynamicResource CardHoverBorder}"/>
+                        <Setter Property="Background" Value="{DynamicResource CardHoverBackground}"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+            
+            <!-- Icon Style - Theme Aware -->
+            <Style x:Key="DashboardIconStyle" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="Segoe UI Emoji"/>
+                <Setter Property="FontSize" Value="32"/>
+                <Setter Property="Foreground" Value="{DynamicResource AccentColor}"/>
+                <Setter Property="HorizontalAlignment" Value="Center"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+                <Setter Property="Margin" Value="0,0,0,10"/>
+            </Style>
+            
+            <!-- Stats Text Style - Theme Aware -->
+            <Style x:Key="StatsTextStyle" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="Segoe UI"/>
+                <Setter Property="FontSize" Value="24"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+                <Setter Property="Foreground" Value="{DynamicResource AccentColor}"/>
+                <Setter Property="HorizontalAlignment" Value="Center"/>
+                <Setter Property="Margin" Value="0,5,0,5"/>
+            </Style>
+            
+            <!-- Card Title Style - Theme Aware -->
+            <Style x:Key="CardTitleStyle" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="Segoe UI"/>
+                <Setter Property="FontSize" Value="16"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                <Setter Property="HorizontalAlignment" Value="Center"/>
+                <Setter Property="Margin" Value="0,0,0,10"/>
+            </Style>
+            
+            <!-- Body Text Style - Theme Aware -->
+            <Style x:Key="DarkBodyTextStyle" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="Segoe UI"/>
+                <Setter Property="FontSize" Value="{DynamicResource ScaledFontSizeNormal}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            </Style>
+            
+            <!-- Header Text Style - Theme Aware -->
+            <Style x:Key="DarkHeaderTextStyle" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="Segoe UI"/>
+                <Setter Property="FontSize" Value="{DynamicResource ScaledFontSizeHeader}"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            </Style>
         </ResourceDictionary>
     </UserControl.Resources>
     
-    <Grid Margin="10">
+    <Grid Margin="15">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         
-        <!-- Header -->
+        <!-- Header - Theme Aware -->
         <Border Grid.Row="0" 
-                Background="{StaticResource PrimaryBrush}" 
-                Padding="15,10" 
-                Margin="0,0,0,15"
-                 CornerRadius="4">
-             <TextBlock Text="Dashboard" 
+                Background="{DynamicResource HeaderBackground}" 
+                Padding="20,15" 
+                Margin="0,0,0,20"
+                CornerRadius="8"
+                BorderBrush="{DynamicResource CardBorder}"
+                BorderThickness="0,0,0,2">
+            <TextBlock Text="📊 Dashboard" 
                         Foreground="White" 
                         FontSize="{DynamicResource ScaledFontSizeHeader}" 
                         FontWeight="SemiBold" 
@@ -35,23 +136,28 @@
         </Border>
         
         <!-- Content -->
-        <Grid Grid.Row="1">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
             
-            <!-- Welcome Message -->
-            <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <!-- Welcome Message - Theme Aware -->
+                <StackPanel Grid.Row="0" Margin="0,0,0,25">
                 <TextBlock Text="Welcome to Berry Farm Management" 
-                           Style="{StaticResource HeaderTextStyle}"/>
-                <TextBlock Text="" 
-                           Style="{StaticResource BodyTextStyle}"/>
+                               Style="{StaticResource DarkHeaderTextStyle}"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="Manage your growers, receipts, and operations from one central location" 
+                               Style="{StaticResource DarkBodyTextStyle}"
+                               HorizontalAlignment="Center"
+                               Foreground="{DynamicResource TextSecondary}"/>
             </StackPanel>
             
-            <!-- Quick Access Buttons -->
+                <!-- Dashboard Cards Grid -->
             <Grid Grid.Row="1">
                 <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
@@ -60,38 +166,126 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 
-                <!-- Grower Button -->
-                <Button Grid.Row="0" Grid.Column="0"
-                        Content="Grower Management"
-                        Style="{StaticResource PrimaryButtonStyle}"
-                        Margin="10,10,10,10"
-                        Height="100"
+                    <!-- Grower Management Card -->
+                    <Border Grid.Row="0" Grid.Column="0" 
+                            Style="{StaticResource DashboardCardStyle}">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" 
                         Command="{Binding DataContext.NavigateToGrowersCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/>
+                        </Border.InputBindings>
+                        <StackPanel>
+                            <TextBlock Text="👥" Style="{StaticResource DashboardIconStyle}"/>
+                            <TextBlock Text="Grower Management" Style="{StaticResource CardTitleStyle}"/>
+                            <TextBlock Text="{Binding TotalGrowers, StringFormat='{}{0:N0}'}" Style="{StaticResource StatsTextStyle}"/>
+                            <TextBlock Text="Total Growers" Style="{StaticResource DarkBodyTextStyle}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding ActiveGrowers, StringFormat='{}{0:N0} Active'}" 
+                                       Style="{StaticResource DarkBodyTextStyle}" 
+                                       HorizontalAlignment="Center"
+                                       Foreground="{DynamicResource TextSecondary}"/>
+                        </StackPanel>
+                    </Border>
 
-                <!-- Import Button  -->
-                <Button Grid.Row="0" Grid.Column="1"
-                        Content="Import"
-                        Style="{StaticResource PrimaryButtonStyle}"
-                        Margin="10,10,10,10"
-                        Height="100"
+                    <!-- Receipt Management Card -->
+                    <Border Grid.Row="0" Grid.Column="1" 
+                            Style="{StaticResource DashboardCardStyle}">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" 
+                                          Command="{Binding DataContext.NavigateToReceiptsCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/>
+                        </Border.InputBindings>
+                        <StackPanel>
+                            <TextBlock Text="📄" Style="{StaticResource DashboardIconStyle}"/>
+                            <TextBlock Text="Receipt Management" Style="{StaticResource CardTitleStyle}"/>
+                            <TextBlock Text="{Binding TotalReceipts, StringFormat='{}{0:N0}'}" Style="{StaticResource StatsTextStyle}"/>
+                            <TextBlock Text="Total Receipts" Style="{StaticResource DarkBodyTextStyle}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding PendingReceipts, StringFormat='{}{0:N0} Pending'}" 
+                                       Style="{StaticResource DarkBodyTextStyle}" 
+                                       HorizontalAlignment="Center"
+                                       Foreground="{DynamicResource TextSecondary}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Reports Card -->
+                    <Border Grid.Row="0" Grid.Column="2" 
+                            Style="{StaticResource DashboardCardStyle}">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" 
+                                          Command="{Binding DataContext.NavigateToReportsCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/>
+                        </Border.InputBindings>
+                        <StackPanel>
+                            <TextBlock Text="📊" Style="{StaticResource DashboardIconStyle}"/>
+                            <TextBlock Text="Reports" Style="{StaticResource CardTitleStyle}"/>
+                            <TextBlock Text="Analytics" Style="{StaticResource StatsTextStyle}" FontSize="18"/>
+                            <TextBlock Text="Data Insights" Style="{StaticResource DarkBodyTextStyle}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="View &amp; Export" Style="{StaticResource DarkBodyTextStyle}" 
+                                       HorizontalAlignment="Center"
+                                       Foreground="{DynamicResource TextSecondary}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Import Card -->
+                    <Border Grid.Row="1" Grid.Column="0" 
+                            Style="{StaticResource DashboardCardStyle}">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" 
                         Command="{Binding DataContext.NavigateToImportCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/>
+                        </Border.InputBindings>
+                        <StackPanel>
+                            <TextBlock Text="📥" Style="{StaticResource DashboardIconStyle}"/>
+                            <TextBlock Text="Import" Style="{StaticResource CardTitleStyle}"/>
+                            <TextBlock Text="{Binding RecentImports, StringFormat='{}{0:N0}'}" Style="{StaticResource StatsTextStyle}"/>
+                            <TextBlock Text="Recent Imports" Style="{StaticResource DarkBodyTextStyle}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Last 30 Days" Style="{StaticResource DarkBodyTextStyle}" 
+                                       HorizontalAlignment="Center"
+                                       Foreground="{DynamicResource TextSecondary}"/>
+                        </StackPanel>
+                    </Border>
 
-                <!-- Reports Button -->
-                <Button Grid.Row="1" Grid.Column="0"
-                        Content="Reports"
-                        Style="{StaticResource PrimaryButtonStyle}"
-                        Margin="10,10,10,10"
-                        Height="100"
-                        Command="{Binding DataContext.NavigateToReportsCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/>
+                    <!-- Payment Run Card -->
+                    <Border Grid.Row="1" Grid.Column="1" 
+                            Style="{StaticResource DashboardCardStyle}">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" 
+                                          Command="{Binding DataContext.NavigateToPaymentRunCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/>
+                        </Border.InputBindings>
+                        <StackPanel>
+                            <TextBlock Text="💰" Style="{StaticResource DashboardIconStyle}"/>
+                            <TextBlock Text="Payment Run" Style="{StaticResource CardTitleStyle}"/>
+                            <TextBlock Text="{Binding PendingPayments, StringFormat='{}{0:N0}'}" Style="{StaticResource StatsTextStyle}"/>
+                            <TextBlock Text="Pending Payments" Style="{StaticResource DarkBodyTextStyle}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Ready to Process" Style="{StaticResource DarkBodyTextStyle}" 
+                                       HorizontalAlignment="Center"
+                                       Foreground="{DynamicResource TextSecondary}"/>
+                        </StackPanel>
+                    </Border>
 
-                <!-- Settings Button -->
-                <Button Grid.Row="1" Grid.Column="1"
-                        Content="Settings"
-                        Style="{StaticResource PrimaryButtonStyle}"
-                        Margin="10,10,10,10"
-                        Height="100"
+                    <!-- Settings Card -->
+                    <Border Grid.Row="1" Grid.Column="2" 
+                            Style="{StaticResource DashboardCardStyle}">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" 
                         Command="{Binding DataContext.NavigateToSettingsCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/>
+                        </Border.InputBindings>
+                        <StackPanel>
+                            <TextBlock Text="⚙️" Style="{StaticResource DashboardIconStyle}"/>
+                            <TextBlock Text="Settings" Style="{StaticResource CardTitleStyle}"/>
+                            <TextBlock Text="{Binding TotalProducts, StringFormat='{}{0:N0}'}" Style="{StaticResource StatsTextStyle}"/>
+                            <TextBlock Text="Products Available" Style="{StaticResource DarkBodyTextStyle}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="System Config" Style="{StaticResource DarkBodyTextStyle}" 
+                                       HorizontalAlignment="Center"
+                                       Foreground="{DynamicResource TextSecondary}"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+                
+                <!-- Loading Indicator - Theme Aware -->
+                <Grid Grid.Row="1" Background="{DynamicResource CardBackground}" Opacity="0.9" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="Loading dashboard data..." 
+                                   Style="{StaticResource DarkBodyTextStyle}" 
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
             </Grid>
-        </Grid>
+        </ScrollViewer>
     </Grid>
 </UserControl>

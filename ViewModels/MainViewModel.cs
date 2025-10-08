@@ -17,12 +17,14 @@ namespace WPFGrowerApp.ViewModels
         private bool _isMenuOpen = true; // Default to open
         private readonly IServiceProvider _serviceProvider;
         private readonly IDialogService _dialogService;
+        private readonly IThemeService _themeService;
 
-        // Inject IServiceProvider and IDialogService
-        public MainViewModel(IServiceProvider serviceProvider, IDialogService dialogService) 
+        // Inject IServiceProvider, IDialogService, and IThemeService
+        public MainViewModel(IServiceProvider serviceProvider, IDialogService dialogService, IThemeService themeService) 
         {
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
             _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
+            _themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
 
             // Initialize commands using the NavigateToAsync helper
             NavigateToDashboardCommand = new RelayCommand(async p => await NavigateToAsync<DashboardViewModel>("Dashboard", p), CanNavigate); // Use async lambda
@@ -44,6 +46,9 @@ namespace WPFGrowerApp.ViewModels
 
             // Initialize LogoutCommand
             LogoutCommand = new RelayCommand(async p => await LogoutExecuteAsync(), CanLogout);
+
+            // Initialize ToggleThemeCommand
+            ToggleThemeCommand = new RelayCommand(ToggleThemeExecute);
         }
 
         // --- Menu State ---
@@ -58,6 +63,28 @@ namespace WPFGrowerApp.ViewModels
         private void ToggleMenuExecute(object parameter)
         {
             IsMenuOpen = !IsMenuOpen;
+        }
+
+        // --- Theme Toggle ---
+        public bool IsDarkTheme
+        {
+            get => _themeService.IsDarkTheme;
+            set
+            {
+                if (_themeService.IsDarkTheme != value)
+                {
+                    _themeService.IsDarkTheme = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public ICommand ToggleThemeCommand { get; }
+
+        private void ToggleThemeExecute(object parameter)
+        {
+            _themeService.ToggleTheme();
+            OnPropertyChanged(nameof(IsDarkTheme));
         }
 
         // --- Navigation Helper ---

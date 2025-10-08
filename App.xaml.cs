@@ -58,6 +58,7 @@ namespace WPFGrowerApp
             services.AddTransient<ReportExportService>();
             services.AddSingleton<IDialogService, DialogService>();
             services.AddSingleton<IUISettingsService, UISettingsService>(); // Register UI Settings Service
+            services.AddSingleton<IThemeService, ThemeService>(); // Register Theme Service
 
             // Register ViewModels
             services.AddTransient<MainViewModel>();
