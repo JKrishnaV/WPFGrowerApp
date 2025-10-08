@@ -1,4 +1,6 @@
 using System;
+using System.Windows;
+using MaterialDesignThemes.Wpf;
 using WPFGrowerApp.Infrastructure.Logging;
 
 namespace WPFGrowerApp.Services
@@ -6,6 +8,7 @@ namespace WPFGrowerApp.Services
     public class ThemeService : IThemeService
     {
         private bool _isDarkTheme;
+        private readonly PaletteHelper _paletteHelper;
 
         public bool IsDarkTheme
         {
@@ -15,6 +18,7 @@ namespace WPFGrowerApp.Services
                 if (_isDarkTheme != value)
                 {
                     _isDarkTheme = value;
+                    ApplyMaterialDesignTheme(value);
                     ThemeChanged?.Invoke(this, EventArgs.Empty);
                     Logger.Info($"Theme changed to: {(value ? "Dark" : "Light")}");
                 }
@@ -27,6 +31,7 @@ namespace WPFGrowerApp.Services
         {
             // Default to light theme
             _isDarkTheme = false;
+            _paletteHelper = new PaletteHelper();
         }
 
         public void ApplyDarkTheme()
@@ -42,6 +47,25 @@ namespace WPFGrowerApp.Services
         public void ToggleTheme()
         {
             IsDarkTheme = !IsDarkTheme;
+        }
+
+        private void ApplyMaterialDesignTheme(bool isDark)
+        {
+            try
+            {
+                var theme = _paletteHelper.GetTheme();
+                
+                // Set base theme (Light or Dark)
+                theme.SetBaseTheme(isDark ? BaseTheme.Dark : BaseTheme.Light);
+                
+                _paletteHelper.SetTheme(theme);
+                
+                Logger.Info($"MaterialDesign theme applied: {(isDark ? "Dark" : "Light")}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error applying MaterialDesign theme: {ex.Message}", ex);
+            }
         }
     }
 }

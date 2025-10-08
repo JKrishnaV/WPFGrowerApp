@@ -1,0 +1,45 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- Dark Theme Colors -->
+    <SolidColorBrush x:Key="DarkCardBackground" Color="#2D2D30"/>
+    <SolidColorBrush x:Key="DarkCardBorder" Color="#3F3F46"/>
+    <SolidColorBrush x:Key="DarkCardHoverBackground" Color="#3E3E42"/>
+    <SolidColorBrush x:Key="DarkCardHoverBorder" Color="#007ACC"/>
+    <SolidColorBrush x:Key="DarkTextPrimary" Color="#E0E0E0"/>
+    <SolidColorBrush x:Key="DarkTextSecondary" Color="#A0A0A0"/>
+    <SolidColorBrush x:Key="DarkAccent" Color="#BB86FC"/>
+    <SolidColorBrush x:Key="DarkHeaderBackground" Color="#1E1E1E"/>
+    <SolidColorBrush x:Key="DarkMainBackground" Color="#1E1E1E"/>
+    <SolidColorBrush x:Key="DarkInputBackground" Color="#252526"/>
+    <SolidColorBrush x:Key="DarkInputBorder" Color="#3F3F46"/>
+    
+    <!-- Light Theme Colors -->
+    <SolidColorBrush x:Key="LightCardBackground" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="LightCardBorder" Color="#CCCCCC"/>
+    <SolidColorBrush x:Key="LightCardHoverBackground" Color="#F5F5F5"/>
+    <SolidColorBrush x:Key="LightCardHoverBorder" Color="#3F51B5"/>
+    <SolidColorBrush x:Key="LightTextPrimary" Color="#212121"/>
+    <SolidColorBrush x:Key="LightTextSecondary" Color="#757575"/>
+    <SolidColorBrush x:Key="LightAccent" Color="#3F51B5"/>
+    <SolidColorBrush x:Key="LightHeaderBackground" Color="#3F51B5"/>
+    <SolidColorBrush x:Key="LightMainBackground" Color="#FAFAFA"/>
+    <SolidColorBrush x:Key="LightInputBackground" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="LightInputBorder" Color="#CCCCCC"/>
+    
+    <!-- Dynamic Theme Resources (will be updated at runtime) -->
+    <!-- These are the resources that views should bind to -->
+    <SolidColorBrush x:Key="ThemeCardBackground" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="ThemeCardBorder" Color="#CCCCCC"/>
+    <SolidColorBrush x:Key="ThemeCardHoverBackground" Color="#F5F5F5"/>
+    <SolidColorBrush x:Key="ThemeCardHoverBorder" Color="#3F51B5"/>
+    <SolidColorBrush x:Key="ThemeTextPrimary" Color="#212121"/>
+    <SolidColorBrush x:Key="ThemeTextSecondary" Color="#757575"/>
+    <SolidColorBrush x:Key="ThemeAccentColor" Color="#3F51B5"/>
+    <SolidColorBrush x:Key="ThemeHeaderBackground" Color="#3F51B5"/>
+    <SolidColorBrush x:Key="ThemeMainBackground" Color="#FAFAFA"/>
+    <SolidColorBrush x:Key="ThemeInputBackground" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="ThemeInputBorder" Color="#CCCCCC"/>
+    
+</ResourceDictionary>
+

@@ -2,6 +2,7 @@ using System.Windows.Controls;
 using System.Windows.Input; // Added for MouseButtonEventArgs
 using System.Windows.Media; // Added for VisualTreeHelper
 using System.Windows; // Added for DependencyObject
+using WPFGrowerApp.Helpers;
 
 namespace WPFGrowerApp.Views
 {
@@ -13,6 +14,7 @@ namespace WPFGrowerApp.Views
         public PaymentRunView()
         {
             InitializeComponent(); // Restored InitializeComponent call
+            ThemeHelper.EnableThemeSupport(this);
         }
 
         // Event handler to allow deselecting the last item in a multi-select ListBox

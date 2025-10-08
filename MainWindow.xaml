@@ -28,7 +28,7 @@
                 <Setter Property="BorderThickness" Value="0"/>
                 <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
                 <Setter Property="FontSize" Value="{DynamicResource ScaledFontSizeNormal}"/>
-                <Setter Property="Foreground" Value="#333333"/>
+               <Setter Property="Foreground" Value="{DynamicResource MaterialDesignBody}"/>
                 <Setter Property="Template">
                    <Setter.Value>
                        <ControlTemplate TargetType="Button">
@@ -37,11 +37,11 @@
                            </Border>
                            <ControlTemplate.Triggers>
                                <Trigger Property="IsMouseOver" Value="True">
-                                   <Setter Property="Background" Value="#E5E5E5" TargetName="border"/>
-                                   <Setter Property="Foreground" Value="#000000"/>
+                                  <Setter Property="Background" Value="{DynamicResource MaterialDesignDivider}" TargetName="border"/>
                                </Trigger>
                                <Trigger Property="IsPressed" Value="True">
-                                   <Setter Property="Background" Value="#CCCCCC" TargetName="border"/>
+                                  <Setter Property="Background" Value="{DynamicResource MaterialDesignDivider}" TargetName="border"/>
+                                  <Setter Property="Opacity" Value="0.7"/>
                                </Trigger>
                            </ControlTemplate.Triggers>
                        </ControlTemplate>
@@ -49,28 +49,28 @@
                </Setter>
            </Style>
            
-           <!-- Close Button Style -->
-           <Style x:Key="CloseButtonStyle" TargetType="Button" BasedOn="{StaticResource WindowControlButtonStyle}">
-               <Setter Property="Template">
-                   <Setter.Value>
-                       <ControlTemplate TargetType="Button">
-                           <Border x:Name="border" Background="{TemplateBinding Background}">
-                               <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                           </Border>
-                           <ControlTemplate.Triggers>
-                               <Trigger Property="IsMouseOver" Value="True">
-                                   <Setter Property="Background" Value="#E81123" />
-                                   <Setter Property="Foreground" Value="White"/>
-                               </Trigger>
-                               <Trigger Property="IsPressed" Value="True">
-                                   <Setter Property="Background" Value="#F1707A" />
-                                   <Setter Property="Foreground" Value="White"/>
-                               </Trigger>
-                           </ControlTemplate.Triggers>
-                       </ControlTemplate>
-                   </Setter.Value>
-               </Setter>
-           </Style>
+          <!-- Close Button Style -->
+          <Style x:Key="CloseButtonStyle" TargetType="Button" BasedOn="{StaticResource WindowControlButtonStyle}">
+              <Setter Property="Template">
+                  <Setter.Value>
+                      <ControlTemplate TargetType="Button">
+                          <Border x:Name="border" Background="{TemplateBinding Background}">
+                              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                          </Border>
+                          <ControlTemplate.Triggers>
+                              <Trigger Property="IsMouseOver" Value="True">
+                                  <Setter Property="Background" Value="#E81123" TargetName="border"/>
+                                  <Setter Property="Foreground" Value="White"/>
+                              </Trigger>
+                              <Trigger Property="IsPressed" Value="True">
+                                  <Setter Property="Background" Value="#F1707A" TargetName="border"/>
+                                  <Setter Property="Foreground" Value="White"/>
+                              </Trigger>
+                          </ControlTemplate.Triggers>
+                      </ControlTemplate>
+                  </Setter.Value>
+              </Setter>
+          </Style>
 
            <!-- Style for the Menu Toggle Button -->
             <Style x:Key="MenuToggleButtonStyle" TargetType="Button">
@@ -79,12 +79,29 @@
                 <Setter Property="Content" Value="☰"/>
                 <Setter Property="FontSize" Value="{DynamicResource ScaledFontSizeLarge}"/>
                 <Setter Property="Background" Value="Transparent"/>
-                <Setter Property="Foreground" Value="Black"/>
+                <Setter Property="Foreground" Value="{DynamicResource MaterialDesignBody}"/>
                <Setter Property="BorderThickness" Value="0"/>
                <Setter Property="VerticalAlignment" Value="Center"/>
                <Setter Property="HorizontalAlignment" Value="Left"/>
                <Setter Property="Margin" Value="15,0,0,0"/>
                <Setter Property="Command" Value="{Binding ToggleMenuCommand}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}" 
+                                    CornerRadius="4"
+                                    Padding="5">
+                                <ContentPresenter HorizontalAlignment="Center" 
+                                                  VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource MaterialDesignDivider}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
            </Style>
 
            <!-- Style for HamburgerMenu Width Animation -->
@@ -125,66 +142,680 @@
 
                <Grid Grid.Column="1">
                    <Grid.RowDefinitions>
-                       <RowDefinition Height="50"/>
+                      <RowDefinition Height="60"/>
                        <RowDefinition Height="*"/>
                    </Grid.RowDefinitions>
 
-                   <Grid Grid.Row="0" Background="#5454A8" MouseLeftButtonDown="HeaderArea_MouseLeftButtonDown">
+                  <!-- Modern Header Design -->
+                  <Grid x:Name="HeaderGrid" Grid.Row="0" Background="{DynamicResource MaterialDesignPaper}" MouseLeftButtonDown="HeaderArea_MouseLeftButtonDown">
+                      <Grid.Effect>
+                          <DropShadowEffect Color="Black" Opacity="0.1" BlurRadius="8" ShadowDepth="2" Direction="270"/>
+                      </Grid.Effect>
                        <Grid.ColumnDefinitions>
+                          <!-- Left Section: Menu + Home + Title -->
+                          <ColumnDefinition Width="Auto"/>
+                          <!-- Center Section: Search + Notifications -->
                            <ColumnDefinition Width="*"/>
+                          <!-- Right Section: User Profile + Theme + Window Controls -->
                            <ColumnDefinition Width="Auto"/>
                        </Grid.ColumnDefinitions>
-                       <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="10,0,0,0">
+
+                      <!-- LEFT SECTION: Navigation & Branding -->
+                      <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="5,0,20,0">
+                          <!-- Hamburger Menu Button -->
                            <Button x:Name="MenuToggleButton" 
-                               HorizontalAlignment="Left" 
+                                  Style="{StaticResource MenuToggleButtonStyle}"
+                                  ToolTip="Toggle Menu"/>
+                          
+                          <!-- Home Button -->
+                          <Button x:Name="HomeButton"
+                                  Width="35" Height="35"
+                                  Margin="5,0,10,0"
+                                  Background="Transparent"
+                                  BorderThickness="0"
+                                  Command="{Binding NavigateToDashboardCommand}"
+                                  ToolTip="Go to Dashboard"
+                                  VerticalAlignment="Center">
+                              <Button.Template>
+                                  <ControlTemplate TargetType="Button">
+                                      <Border Background="{TemplateBinding Background}" 
+                                              CornerRadius="4"
+                                              Padding="5">
+                                          <materialDesign:PackIcon Kind="Home" 
+                                                                   Width="20" 
+                                                                   Height="20" 
+                                                                   Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                                                   VerticalAlignment="Center"
+                                                                   HorizontalAlignment="Center"/>
+                                      </Border>
+                                      <ControlTemplate.Triggers>
+                                          <Trigger Property="IsMouseOver" Value="True">
+                                              <Setter Property="Background" Value="{DynamicResource MaterialDesignDivider}"/>
+                                          </Trigger>
+                                      </ControlTemplate.Triggers>
+                                  </ControlTemplate>
+                              </Button.Template>
+                          </Button>
+                          
+                          <!-- App Title & Version -->
+                          <StackPanel VerticalAlignment="Center">
+                              <TextBlock Text="Berry Farm Management" 
+                                         FontSize="16" 
+                                         FontWeight="SemiBold" 
+                                         Foreground="{DynamicResource MaterialDesignBody}"/>
+                              <TextBlock Text="Version 2.1.0" 
+                                         FontSize="9" 
+                                         Foreground="{DynamicResource MaterialDesignBodyLight}" 
+                                         Margin="0,-3,0,0"/>
+                          </StackPanel>
+                      </StackPanel>
+
+                      <!-- CENTER SECTION: Search & Notifications -->
+                      <StackPanel Grid.Column="1" 
+                                  Orientation="Horizontal" 
+                                  HorizontalAlignment="Center" 
+                                  VerticalAlignment="Center"
+                                  Margin="20,0">
+                          
+                          <!-- Global Search Bar -->
+                          <Border Background="{DynamicResource MaterialDesignTextFieldBoxBackground}" 
+                                  CornerRadius="20" 
+                                  Padding="10,5"
+                                  Width="300"
+                                  Height="35"
+                                  BorderBrush="{DynamicResource PrimaryHueMidBrush}"
+                                  BorderThickness="1"
+                                  VerticalAlignment="Center">
+                              <Grid>
+                                  <Grid.ColumnDefinitions>
+                                      <ColumnDefinition Width="Auto"/>
+                                      <ColumnDefinition Width="*"/>
+                                  </Grid.ColumnDefinitions>
+                                  
+                                  <materialDesign:PackIcon Kind="Magnify" 
+                                                           Grid.Column="0"
+                                                           Width="18" 
+                                                           Height="18" 
+                                                           Foreground="{DynamicResource PrimaryHueMidBrush}" 
+                                                           VerticalAlignment="Center"
+                                                           Margin="0,0,8,0"/>
+                                  
+                                  <TextBox Grid.Column="1"
+                                           Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                           Background="Transparent"
+                                           BorderThickness="0"
+                                           Foreground="{DynamicResource MaterialDesignBody}"
+                                           FontSize="13"
+                                           VerticalAlignment="Center"
+                                           materialDesign:HintAssist.Hint="Search growers, receipts..."
+                                           materialDesign:HintAssist.Foreground="{DynamicResource MaterialDesignBodyLight}"
+                                           CaretBrush="{DynamicResource PrimaryHueMidBrush}"/>
+                              </Grid>
+                          </Border>
+                          
+                          <!-- Notifications Dropdown -->
+                          <materialDesign:PopupBox PlacementMode="BottomAndAlignRightEdges"
+                                                   StaysOpen="False"
+                                                   Margin="15,0,0,0"
+                                                   Background="Transparent">
+                              <materialDesign:PopupBox.Style>
+                                  <Style TargetType="materialDesign:PopupBox">
+                                      <Setter Property="Background" Value="Transparent"/>
+                                      <Setter Property="BorderBrush" Value="Transparent"/>
+                                      <Setter Property="BorderThickness" Value="0"/>
+                                  </Style>
+                              </materialDesign:PopupBox.Style>
+                              <materialDesign:PopupBox.ToggleContent>
+                                  <Border Background="Transparent"
+                                          CornerRadius="20"
+                                          Width="40"
+                                          Height="40"
+                                          Padding="8">
+                                      <Border.Style>
+                                          <Style TargetType="Border">
+                                              <Style.Triggers>
+                                                  <Trigger Property="IsMouseOver" Value="True">
+                                                      <Setter Property="Background" Value="{DynamicResource MaterialDesignDivider}"/>
+                                                  </Trigger>
+                                              </Style.Triggers>
+                                          </Style>
+                                      </Border.Style>
+                                      <Grid>
+                                          <materialDesign:PackIcon Kind="Bell" 
+                                                                   Width="22" 
+                                                                   Height="22" 
+                                                                   Foreground="{DynamicResource MaterialDesignBody}"
+                                                                   VerticalAlignment="Center"
+                                                                   HorizontalAlignment="Center"/>
+                                          
+                                          <!-- Notification Badge -->
+                                          <Border Background="#FF4444" 
+                                                  CornerRadius="10" 
+                                                  Width="18" 
+                                                  Height="18"
+                                                  HorizontalAlignment="Right"
+                                                  VerticalAlignment="Top"
+                                                  Margin="0,-5,-5,0"
+                                                  Visibility="{Binding HasNotifications, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                              <TextBlock Text="{Binding NotificationCount}" 
+                                                         FontSize="10" 
+                                                         FontWeight="Bold" 
+                                                         Foreground="White"
+                                                         HorizontalAlignment="Center"
+                                                         VerticalAlignment="Center"/>
+                                          </Border>
+                                      </Grid>
+                                  </Border>
+                              </materialDesign:PopupBox.ToggleContent>
+                              
+                              <!-- Notifications Dropdown Content -->
+                              <Grid Background="Transparent">
+                                  <Border Background="{DynamicResource MaterialDesignPaper}"
+                                          BorderBrush="{DynamicResource MaterialDesignDivider}"
+                                          BorderThickness="1"
+                                          CornerRadius="12"
+                                          Width="340"
+                                          MaxHeight="420"
+                                          Padding="0,12"
+                                          Margin="4"
+                                          ClipToBounds="True">
+                                      <Border.Effect>
+                                          <DropShadowEffect Color="Black" Opacity="0.3" BlurRadius="8" ShadowDepth="3" Direction="270"/>
+                                      </Border.Effect>
+                                  
+                                  <StackPanel>
+                                      <!-- Notifications Header -->
+                                      <Border Background="{DynamicResource MaterialDesignDivider}"
+                                              CornerRadius="8"
+                                              Margin="12,0,12,8"
+                                              Padding="12,10">
+                                          <StackPanel Orientation="Horizontal">
+                                              <materialDesign:PackIcon Kind="Bell" 
+                                                                       Width="22" 
+                                                                       Height="22" 
+                                                                       Foreground="{DynamicResource PrimaryHueMidBrush}"
                                VerticalAlignment="Center"
-                               Margin="15,0,0,0"
+                                                                       Margin="0,0,10,0"/>
+                                              <StackPanel VerticalAlignment="Center">
+                                                  <TextBlock Text="Notifications" 
+                                                             FontSize="14" 
+                                                             FontWeight="SemiBold"
+                                                             Foreground="{DynamicResource MaterialDesignBody}"/>
+                                                  <TextBlock Text="{Binding NotificationCount, StringFormat='{}{0} new notifications'}" 
+                                                             FontSize="11" 
+                                                             Foreground="{DynamicResource MaterialDesignBodyLight}"
+                                                             Margin="0,2,0,0"
+                                                             Visibility="{Binding HasNotifications, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                              </StackPanel>
+                                          </StackPanel>
+                                      </Border>
+                                      
+                                      <!-- Notification Items -->
+                                      <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto" Margin="8,0">
+                                          <StackPanel>
+                                              <!-- Sample Notification 1 -->
+                                              <Border Background="Transparent"
+                                                      CornerRadius="8"
+                                                      Margin="4,2"
+                                                      Padding="12,10">
+                                                  <Border.Style>
+                                                      <Style TargetType="Border">
+                                                          <Style.Triggers>
+                                                              <Trigger Property="IsMouseOver" Value="True">
+                                                                  <Setter Property="Background" Value="{DynamicResource MaterialDesignDivider}"/>
+                                                              </Trigger>
+                                                          </Style.Triggers>
+                                                      </Style>
+                                                  </Border.Style>
+                                                  <Grid>
+                                                      <Grid.ColumnDefinitions>
+                                                          <ColumnDefinition Width="Auto"/>
+                                                          <ColumnDefinition Width="*"/>
+                                                      </Grid.ColumnDefinitions>
+                                                      
+                                                      <materialDesign:PackIcon Kind="AlertCircle" 
+                                                                               Grid.Column="0"
+                                                                               Width="22" 
+                                                                               Height="22" 
+                                                                               Foreground="#FF9800"
+                                                                               VerticalAlignment="Top"
+                                                                               Margin="0,2,12,0"/>
+                                                      
+                                                      <StackPanel Grid.Column="1">
+                                                          <TextBlock Text="Payment batch ready" 
+                                                                     FontWeight="Medium"
+                                                                     FontSize="13"
+                                                                     TextWrapping="Wrap"
+                                                                     Foreground="{DynamicResource MaterialDesignBody}"/>
+                                                          <TextBlock Text="Process payment batch #1025" 
+                                                                     FontSize="11" 
+                                                                     TextWrapping="Wrap"
+                                                                     Foreground="{DynamicResource MaterialDesignBodyLight}"
+                                                                     Margin="0,3,0,0"/>
+                                                      </StackPanel>
+                                                  </Grid>
+                                              </Border>
+                                              
+                                              <!-- Sample Notification 2 -->
+                                              <Border Background="Transparent"
+                                                      CornerRadius="8"
+                                                      Margin="4,2"
+                                                      Padding="12,10">
+                                                  <Border.Style>
+                                                      <Style TargetType="Border">
+                                                          <Style.Triggers>
+                                                              <Trigger Property="IsMouseOver" Value="True">
+                                                                  <Setter Property="Background" Value="{DynamicResource MaterialDesignDivider}"/>
+                                                              </Trigger>
+                                                          </Style.Triggers>
+                                                      </Style>
+                                                  </Border.Style>
+                                                  <Grid>
+                                                      <Grid.ColumnDefinitions>
+                                                          <ColumnDefinition Width="Auto"/>
+                                                          <ColumnDefinition Width="*"/>
+                                                      </Grid.ColumnDefinitions>
+                                                      
+                                                      <materialDesign:PackIcon Kind="FileDocument" 
+                                                                               Grid.Column="0"
+                                                                               Width="22" 
+                                                                               Height="22" 
+                                                                               Foreground="#2196F3"
+                                                                               VerticalAlignment="Top"
+                                                                               Margin="0,2,12,0"/>
+                                                      
+                                                      <StackPanel Grid.Column="1">
+                                                          <TextBlock Text="5 receipts pending" 
+                                                                     FontWeight="Medium"
+                                                                     FontSize="13"
+                                                                     TextWrapping="Wrap"
+                                                                     Foreground="{DynamicResource MaterialDesignBody}"/>
+                                                          <TextBlock Text="Review and approve pending receipts" 
+                                                                     FontSize="11" 
+                                                                     TextWrapping="Wrap"
+                                                                     Foreground="{DynamicResource MaterialDesignBodyLight}"
+                                                                     Margin="0,3,0,0"/>
+                                                      </StackPanel>
+                                                  </Grid>
+                                              </Border>
+                                              
+                                              <!-- Sample Notification 3 -->
+                                              <Border Background="Transparent"
+                                                      CornerRadius="8"
+                                                      Margin="4,2"
+                                                      Padding="12,10">
+                                                  <Border.Style>
+                                                      <Style TargetType="Border">
+                                                          <Style.Triggers>
+                                                              <Trigger Property="IsMouseOver" Value="True">
+                                                                  <Setter Property="Background" Value="{DynamicResource MaterialDesignDivider}"/>
+                                                              </Trigger>
+                                                          </Style.Triggers>
+                                                      </Style>
+                                                  </Border.Style>
+                                                  <Grid>
+                                                      <Grid.ColumnDefinitions>
+                                                          <ColumnDefinition Width="Auto"/>
+                                                          <ColumnDefinition Width="*"/>
+                                                      </Grid.ColumnDefinitions>
+                                                      
+                                                      <materialDesign:PackIcon Kind="CheckCircle" 
+                                                                               Grid.Column="0"
+                                                                               Width="22" 
+                                                                               Height="22" 
+                                                                               Foreground="#4CAF50"
+                                                                               VerticalAlignment="Top"
+                                                                               Margin="0,2,12,0"/>
+                                                      
+                                                      <StackPanel Grid.Column="1">
+                                                          <TextBlock Text="Import completed" 
+                                                                     FontWeight="Medium"
+                                                                     FontSize="13"
+                                                                     TextWrapping="Wrap"
+                                                                     Foreground="{DynamicResource MaterialDesignBody}"/>
+                                                          <TextBlock Text="Successfully imported 150 records" 
+                                                                     FontSize="11" 
+                                                                     TextWrapping="Wrap"
+                                                                     Foreground="{DynamicResource MaterialDesignBodyLight}"
+                                                                     Margin="0,3,0,0"/>
+                                                      </StackPanel>
+                                                  </Grid>
+                                              </Border>
+                                          </StackPanel>
+                                      </ScrollViewer>
+                                      
+                                      <!-- View All Notifications -->
+                                      <Border Background="{DynamicResource MaterialDesignDivider}"
+                                              CornerRadius="8"
+                                              Margin="8,8,8,0"
+                                              Padding="12,8">
+                                          <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                                  HorizontalContentAlignment="Center"
+                                                  Background="Transparent"
+                                                  BorderThickness="0"
+                                                  Padding="0">
+                                              <TextBlock Text="View All Notifications" 
+                                                         FontWeight="Medium"
+                                                         FontSize="13"
+                                                         Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                          </Button>
+                                      </Border>
+                                  </StackPanel>
+                                      </Border>
+                                  </Grid>
+                          </materialDesign:PopupBox>
+                      </StackPanel>
+
+                      <!-- RIGHT SECTION: User Profile + Theme + Window Controls -->
+                      <StackPanel Grid.Column="2" 
+                                  Orientation="Horizontal" 
+                                  HorizontalAlignment="Right"
+                                  VerticalAlignment="Center">
+                          
+                          <!-- User Profile Dropdown -->
+                          <materialDesign:PopupBox PlacementMode="BottomAndAlignRightEdges"
+                                                   StaysOpen="False"
+                                                   Margin="0,0,10,0"
+                                                   HorizontalAlignment="Right"
+                                                   Background="Transparent">
+                              <materialDesign:PopupBox.Style>
+                                  <Style TargetType="materialDesign:PopupBox">
+                                      <Setter Property="Background" Value="Transparent"/>
+                                      <Setter Property="BorderBrush" Value="Transparent"/>
+                                      <Setter Property="BorderThickness" Value="0"/>
+                                  </Style>
+                              </materialDesign:PopupBox.Style>
+                              <materialDesign:PopupBox.ToggleContent>
+                                  <Border Background="Transparent"
+                                          CornerRadius="20"
+                                          Padding="8,5"
+                                          Height="40">
+                                      <Border.Style>
+                                          <Style TargetType="Border">
+                                              <Style.Triggers>
+                                                  <Trigger Property="IsMouseOver" Value="True">
+                                                      <Setter Property="Background" Value="{DynamicResource MaterialDesignDivider}"/>
+                                                  </Trigger>
+                                              </Style.Triggers>
+                                          </Style>
+                                      </Border.Style>
+                                      <StackPanel Orientation="Horizontal">
+                                          <!-- User Avatar -->
+                                          <Border Background="{DynamicResource PrimaryHueMidBrush}" 
+                                                  CornerRadius="15" 
                                Width="30" 
                                Height="30"
-                               Style="{StaticResource MenuToggleButtonStyle}"/>
-                           <Button x:Name="HomeButton"
-                                   HorizontalAlignment="Left"
+                                                  VerticalAlignment="Center">
+                                              <TextBlock Text="{Binding CurrentUserInitials}" 
+                                                         FontSize="12" 
+                                                         FontWeight="Bold" 
+                                                         Foreground="White"
+                                                         HorizontalAlignment="Center"
+                                                         VerticalAlignment="Center"/>
+                                          </Border>
+                                          
+                                          <!-- User Name -->
+                                          <TextBlock Text="{Binding CurrentUserName}" 
+                                                     FontSize="13" 
+                                                     FontWeight="SemiBold" 
+                                                     Foreground="{DynamicResource MaterialDesignBody}"
+                                                     VerticalAlignment="Center"
+                                                     Margin="8,0,5,0"/>
+                                          
+                                          <!-- Dropdown Arrow -->
+                                          <materialDesign:PackIcon Kind="ChevronDown" 
+                                                                   Width="16" 
+                                                                   Height="16" 
+                                                                   Foreground="{DynamicResource MaterialDesignBody}"
+                                                                   VerticalAlignment="Center"/>
+                                      </StackPanel>
+                                  </Border>
+                              </materialDesign:PopupBox.ToggleContent>
+                              
+                              <!-- Dropdown Menu Content -->
+                              <Grid Background="Transparent">
+                                  <Border Background="{DynamicResource MaterialDesignPaper}"
+                                          BorderBrush="{DynamicResource MaterialDesignDivider}"
+                                          BorderThickness="1"
+                                          CornerRadius="12"
+                                          Width="200"
+                                          Padding="0,8"
+                                          Margin="4"
+                                          ClipToBounds="True">
+                                      <Border.Effect>
+                                          <DropShadowEffect Color="Black" Opacity="0.3" BlurRadius="8" ShadowDepth="3" Direction="270"/>
+                                      </Border.Effect>
+                                  
+                                  <StackPanel>
+                                      <!-- User Info Header -->
+                                      <Border Background="{DynamicResource MaterialDesignDivider}"
+                                              CornerRadius="8"
+                                              Margin="8,0,8,6"
+                                              Padding="8,6">
+                                          <StackPanel Orientation="Horizontal">
+                                              <!-- User Avatar -->
+                                              <Border Background="{DynamicResource PrimaryHueMidBrush}" 
+                                                      CornerRadius="16" 
+                                                      Width="32" 
+                                                      Height="32"
+                                                      VerticalAlignment="Center">
+                                                  <TextBlock Text="{Binding CurrentUserInitials}" 
+                                                             FontSize="14" 
+                                                             FontWeight="Bold" 
+                                                             Foreground="White"
+                                                             HorizontalAlignment="Center"
+                                                             VerticalAlignment="Center"/>
+                                              </Border>
+                                              
+                                              <!-- User Details -->
+                                              <StackPanel Margin="8,0,0,0" VerticalAlignment="Center">
+                                                  <TextBlock Text="{Binding CurrentUserName}" 
+                                                             FontSize="13" 
+                                                             FontWeight="SemiBold"
+                                                             Foreground="{DynamicResource MaterialDesignBody}"/>
+                                                  <TextBlock Text="Administrator" 
+                                                             FontSize="10" 
+                                                             Foreground="{DynamicResource MaterialDesignBodyLight}"
+                                                             Margin="0,1,0,0"/>
+                                              </StackPanel>
+                                          </StackPanel>
+                                      </Border>
+                                      
+                                      <!-- Menu Items -->
+                                      <StackPanel Margin="6,0,6,6">
+                                          <!-- Settings Option -->
+                                          <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                                  HorizontalContentAlignment="Left"
+                                                  Margin="2,1"
+                                                  Padding="8,6"
+                                                  Command="{Binding NavigateToSettingsCommand}">
+                                              <Button.Template>
+                                                  <ControlTemplate TargetType="Button">
+                                                      <Border Background="{TemplateBinding Background}" 
+                                                              CornerRadius="8"
+                                                              Padding="{TemplateBinding Padding}">
+                                                          <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                            VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                                      </Border>
+                                                      <ControlTemplate.Triggers>
+                                                          <Trigger Property="IsMouseOver" Value="True">
+                                                              <Setter Property="Background" Value="{DynamicResource MaterialDesignDivider}"/>
+                                                          </Trigger>
+                                                      </ControlTemplate.Triggers>
+                                                  </ControlTemplate>
+                                              </Button.Template>
+                                              <StackPanel Orientation="Horizontal">
+                                                  <materialDesign:PackIcon Kind="Settings" 
+                                                                           Width="16" 
+                                                                           Height="16" 
+                                                                           Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                                                           VerticalAlignment="Center"
+                                                                           Margin="0,0,8,0"/>
+                                                  <TextBlock Text="Settings" 
+                                                             FontSize="12"
+                                                             FontWeight="Medium"
+                                                             Foreground="{DynamicResource MaterialDesignBody}"
+                                                             VerticalAlignment="Center"/>
+                                              </StackPanel>
+                                          </Button>
+                                          
+                                          <!-- Change Password Option -->
+                                          <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                                  HorizontalContentAlignment="Left"
+                                                  Margin="2,1"
+                                                  Padding="8,6"
+                                                  Command="{Binding NavigateToChangePasswordCommand}">
+                                              <Button.Template>
+                                                  <ControlTemplate TargetType="Button">
+                                                      <Border Background="{TemplateBinding Background}" 
+                                                              CornerRadius="8"
+                                                              Padding="{TemplateBinding Padding}">
+                                                          <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                            VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                                      </Border>
+                                                      <ControlTemplate.Triggers>
+                                                          <Trigger Property="IsMouseOver" Value="True">
+                                                              <Setter Property="Background" Value="{DynamicResource MaterialDesignDivider}"/>
+                                                          </Trigger>
+                                                      </ControlTemplate.Triggers>
+                                                  </ControlTemplate>
+                                              </Button.Template>
+                                              <StackPanel Orientation="Horizontal">
+                                                  <materialDesign:PackIcon Kind="Lock" 
+                                                                           Width="16" 
+                                                                           Height="16" 
+                                                                           Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                                                           VerticalAlignment="Center"
+                                                                           Margin="0,0,8,0"/>
+                                                  <TextBlock Text="Change Password" 
+                                                             FontSize="12"
+                                                             FontWeight="Medium"
+                                                             Foreground="{DynamicResource MaterialDesignBody}"
+                                                             VerticalAlignment="Center"/>
+                                              </StackPanel>
+                                          </Button>
+                                          
+                                          <!-- Activity Log Option -->
+                                          <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                                  HorizontalContentAlignment="Left"
+                                                  Margin="2,1"
+                                                  Padding="8,6">
+                                              <Button.Template>
+                                                  <ControlTemplate TargetType="Button">
+                                                      <Border Background="{TemplateBinding Background}" 
+                                                              CornerRadius="8"
+                                                              Padding="{TemplateBinding Padding}">
+                                                          <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                            VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                                      </Border>
+                                                      <ControlTemplate.Triggers>
+                                                          <Trigger Property="IsMouseOver" Value="True">
+                                                              <Setter Property="Background" Value="{DynamicResource MaterialDesignDivider}"/>
+                                                          </Trigger>
+                                                      </ControlTemplate.Triggers>
+                                                  </ControlTemplate>
+                                              </Button.Template>
+                                              <StackPanel Orientation="Horizontal">
+                                                  <materialDesign:PackIcon Kind="ChartLine" 
+                                                                           Width="16" 
+                                                                           Height="16" 
+                                                                           Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                                                           VerticalAlignment="Center"
+                                                                           Margin="0,0,8,0"/>
+                                                  <TextBlock Text="Activity Log" 
+                                                             FontSize="12"
+                                                             FontWeight="Medium"
+                                                             Foreground="{DynamicResource MaterialDesignBody}"
+                                                             VerticalAlignment="Center"/>
+                                              </StackPanel>
+                                          </Button>
+                                          
+                                          <!-- Separator -->
+                                          <Border Height="1" 
+                                                  Background="{DynamicResource MaterialDesignDivider}" 
+                                                  Margin="8,4,8,4"/>
+                                          
+                                          <!-- Logout Option -->
+                                          <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                                  HorizontalContentAlignment="Left"
+                                                  Margin="2,1"
+                                                  Padding="8,6"
+                                                  Command="{Binding LogoutCommand}">
+                                              <Button.Template>
+                                                  <ControlTemplate TargetType="Button">
+                                                      <Border Background="{TemplateBinding Background}" 
+                                                              CornerRadius="8"
+                                                              Padding="{TemplateBinding Padding}">
+                                                          <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                            VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                                      </Border>
+                                                      <ControlTemplate.Triggers>
+                                                          <Trigger Property="IsMouseOver" Value="True">
+                                                              <Setter Property="Background" Value="#FFEBEE"/>
+                                                          </Trigger>
+                                                      </ControlTemplate.Triggers>
+                                                  </ControlTemplate>
+                                              </Button.Template>
+                                              <StackPanel Orientation="Horizontal">
+                                                  <materialDesign:PackIcon Kind="Logout" 
+                                                                           Width="16" 
+                                                                           Height="16" 
+                                                                           Foreground="#D32F2F"
                                    VerticalAlignment="Center"
-                                   Margin="10,0,0,0"
-                                   Width="30"
-                                   Height="30"
-                                   Style="{StaticResource MenuToggleButtonStyle}" 
-                                   Command="{Binding NavigateToDashboardCommand}"
-                                   ToolTip="Go to Dashboard">
-                               <materialDesign:PackIcon Kind="Home" Width="16" Height="16" />
+                                                                           Margin="0,0,8,0"/>
+                                                  <TextBlock Text="Logout" 
+                                                             FontSize="12"
+                                                             FontWeight="Medium"
+                                                             Foreground="#D32F2F"
+                                                             VerticalAlignment="Center"/>
+                                              </StackPanel>
                            </Button>
                        </StackPanel>
+                                  </StackPanel>
+                                      </Border>
+                                  </Grid>
+                          </materialDesign:PopupBox>
 
-                      <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
                           <!-- Theme Toggle Button -->
                           <Button x:Name="ThemeToggleButton" 
-                                  Style="{StaticResource WindowControlButtonStyle}" 
+                                   Style="{StaticResource WindowControlButtonStyle}" 
                                   Command="{Binding ToggleThemeCommand}"
-                                  ToolTip="Toggle Dark/Light Theme">
+                                  ToolTip="Toggle Dark/Light Theme"
+                                  Width="46"
+                                  Height="40">
                               <Grid>
                                   <!-- Moon icon for Dark mode (shown when light theme is active) -->
                                   <materialDesign:PackIcon Kind="WeatherNight" 
-                                                           Width="16" 
-                                                           Height="16"
+                                                           Width="18" 
+                                                           Height="18"
+                                                           Foreground="{DynamicResource MaterialDesignBody}"
                                                            Visibility="{Binding IsDarkTheme, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
                                   <!-- Sun icon for Light mode (shown when dark theme is active) -->
                                   <materialDesign:PackIcon Kind="WeatherSunny" 
-                                                           Width="16" 
-                                                           Height="16"
+                                                           Width="18" 
+                                                           Height="18"
+                                                           Foreground="{DynamicResource MaterialDesignBody}"
                                                            Visibility="{Binding IsDarkTheme, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                               </Grid>
-                          </Button>
+                           </Button>
                           
-                          <Button x:Name="LogoutButton" 
+                          <!-- Window Control Buttons -->
+                          <Button x:Name="MinimizeButton" 
+                                  Content="&#xE921;" 
                                   Style="{StaticResource WindowControlButtonStyle}" 
-                                  Command="{Binding LogoutCommand}"
-                                  ToolTip="Logout">
-                              <materialDesign:PackIcon Kind="Logout" Width="16" Height="16" />
-                          </Button>
-                          <Button x:Name="MinimizeButton" Content="&#xE921;" Style="{StaticResource WindowControlButtonStyle}" Click="MinimizeButton_Click"/>
-                          <Button x:Name="MaximizeButton" Content="&#xE922;" Style="{StaticResource WindowControlButtonStyle}" Click="MaximizeButton_Click"/>
-                          <Button x:Name="CloseButton" Content="&#xE8BB;" Style="{StaticResource CloseButtonStyle}" Click="CloseButton_Click"/>
-                      </StackPanel>
+                                  Click="MinimizeButton_Click"
+                                  Foreground="{DynamicResource MaterialDesignBody}"/>
+                          <Button x:Name="MaximizeButton" 
+                                  Content="&#xE922;" 
+                                  Style="{StaticResource WindowControlButtonStyle}" 
+                                  Click="MaximizeButton_Click"
+                                  Foreground="{DynamicResource MaterialDesignBody}"/>
+                          <Button x:Name="CloseButton" 
+                                  Content="&#xE8BB;" 
+                                  Style="{StaticResource CloseButtonStyle}" 
+                                  Click="CloseButton_Click"
+                                  Foreground="{DynamicResource MaterialDesignBody}"/>
+                       </StackPanel>
                    </Grid>
 
                    <ScrollViewer Grid.Row="1" 

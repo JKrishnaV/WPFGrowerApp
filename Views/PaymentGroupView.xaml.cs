@@ -5,6 +5,7 @@ using WPFGrowerApp.DataAccess.Models;
 using WPFGrowerApp.ViewModels;
 using WPFGrowerApp.Services; // For IDialogService access via ViewModel
 using WPFGrowerApp.DataAccess.Interfaces; // For IPayGroupService access via ViewModel
+using WPFGrowerApp.Helpers;
 
 namespace WPFGrowerApp.Views
 {
@@ -23,6 +24,7 @@ namespace WPFGrowerApp.Views
         public PaymentGroupView()
         {
             InitializeComponent();
+            ThemeHelper.EnableThemeSupport(this);
             // Ensure ViewModel is ready when the control loads
             this.Loaded += PaymentGroupView_Loaded;
         }

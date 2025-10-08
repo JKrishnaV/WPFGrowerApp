@@ -1,4 +1,5 @@
 using System.Windows.Controls;
+using WPFGrowerApp.Helpers;
 
 namespace WPFGrowerApp.Views
 {
@@ -10,6 +11,7 @@ namespace WPFGrowerApp.Views
         public DepotView()
         {
             InitializeComponent();
+            ThemeHelper.EnableThemeSupport(this);
         }
     }
 }

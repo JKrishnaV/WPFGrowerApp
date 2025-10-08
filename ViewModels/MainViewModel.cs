@@ -49,6 +49,9 @@ namespace WPFGrowerApp.ViewModels
 
             // Initialize ToggleThemeCommand
             ToggleThemeCommand = new RelayCommand(ToggleThemeExecute);
+            
+            // Initialize NavigateToChangePasswordCommand
+            NavigateToChangePasswordCommand = new RelayCommand(async p => await NavigateToAsync<ChangePasswordViewModel>("Change Password", p), CanNavigate);
         }
 
         // --- Menu State ---
@@ -115,6 +118,7 @@ namespace WPFGrowerApp.ViewModels
         public ICommand NavigateToInventoryCommand { get; }
         public ICommand NavigateToPaymentRunCommand { get; } // Added
         public ICommand NavigateToSettingsCommand { get; }
+        public ICommand NavigateToChangePasswordCommand { get; } // Added
         public ICommand LogoutCommand { get; } // Added
 
         private bool CanNavigate(object? parameter) => !_isNavigating; // Changed parameter to object?
@@ -250,5 +254,44 @@ namespace WPFGrowerApp.ViewModels
                 }
             }
         }
+
+        // --- Header Features ---
+        private string _searchText = string.Empty;
+        private int _notificationCount = 0;
+        private string _currentUserName = "Admin User";
+        private string _currentUserInitials = "AU";
+
+        public string SearchText
+        {
+            get => _searchText;
+            set => SetProperty(ref _searchText, value);
+        }
+
+        public int NotificationCount
+        {
+            get => _notificationCount;
+            set
+            {
+                SetProperty(ref _notificationCount, value);
+                OnPropertyChanged(nameof(HasNotifications));
+            }
+        }
+
+        public bool HasNotifications => NotificationCount > 0;
+
+        public string CurrentUserName
+        {
+            get => _currentUserName;
+            set => SetProperty(ref _currentUserName, value);
+        }
+
+        public string CurrentUserInitials
+        {
+            get => _currentUserInitials;
+            set => SetProperty(ref _currentUserInitials, value);
+        }
+
+        // --- End Header Features ---
+
     } // End of MainViewModel class
 } // End of namespace

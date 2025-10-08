@@ -28,6 +28,7 @@
                  <ResourceDictionary Source="/Styles/Animations.xaml"/>
                  <ResourceDictionary Source="/Styles/ButtonStyles.xaml"/>
                  <ResourceDictionary Source="/Styles/ListBoxStyles.xaml"/> <!-- Added ListBox Styles -->
+                 <ResourceDictionary Source="/Styles/ThemeColors.xaml"/> <!-- Theme Colors -->
              </ResourceDictionary.MergedDictionaries>
 
              <!-- Base Font Size and Scaling Factor -->

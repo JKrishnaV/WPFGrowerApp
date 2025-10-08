@@ -1,4 +1,5 @@
 using System.Windows.Controls;
+using WPFGrowerApp.Helpers;
 
 namespace WPFGrowerApp.Views
 {
@@ -7,6 +8,7 @@ namespace WPFGrowerApp.Views
         public UserManagementView()
         {
             InitializeComponent();
+            ThemeHelper.EnableThemeSupport(this);
         }
     }
 } 
