@@ -59,6 +59,7 @@ namespace WPFGrowerApp
             services.AddSingleton<IDialogService, DialogService>();
             services.AddSingleton<IUISettingsService, UISettingsService>(); // Register UI Settings Service
             services.AddSingleton<IThemeService, ThemeService>(); // Register Theme Service
+            services.AddSingleton<IHelpContentProvider, HelpContentProvider>(); // Register Help Content Provider
 
             // Register ViewModels
             services.AddTransient<MainViewModel>();

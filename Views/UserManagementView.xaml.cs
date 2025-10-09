@@ -13,6 +13,9 @@ namespace WPFGrowerApp.Views
         {
             InitializeComponent();
             ThemeHelper.EnableThemeSupport(this);
+            
+            // Set focus to the UserControl when loaded so keyboard shortcuts work
+            Loaded += (s, e) => Focus();
         }
 
         private void UsersDataGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)

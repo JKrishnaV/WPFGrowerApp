@@ -20,6 +20,7 @@ namespace WPFGrowerApp.ViewModels
     {
         private readonly IUserService _userService;
         private readonly IDialogService _dialogService;
+        private readonly IHelpContentProvider _helpContentProvider;
         private User _selectedUser;
         private bool _isLoading;
         private bool _isNewUser;
@@ -36,7 +37,7 @@ namespace WPFGrowerApp.ViewModels
         private string _statusMessage = "Ready";
         private string _lastUpdated;
 
-        public UserManagementViewModel(IUserService userService, IDialogService dialogService)
+        public UserManagementViewModel(IUserService userService, IDialogService dialogService, IHelpContentProvider helpContentProvider)
         {
             // Check if current user is admin
             if (App.CurrentUser == null || !App.CurrentUser.IsAdmin)
@@ -46,6 +47,7 @@ namespace WPFGrowerApp.ViewModels
 
             _userService = userService ?? throw new ArgumentNullException(nameof(userService));
             _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
+            _helpContentProvider = helpContentProvider ?? throw new ArgumentNullException(nameof(helpContentProvider));
 
             // Initialize commands
             NewCommand = new RelayCommand(NewUserExecute);
@@ -58,6 +60,7 @@ namespace WPFGrowerApp.ViewModels
             RefreshCommand = new RelayCommand(RefreshExecute);
             ClearSearchCommand = new RelayCommand(ClearSearchExecute);
             NavigateToDashboardCommand = new RelayCommand(NavigateToDashboardExecute);
+            ShowHelpCommand = new RelayCommand(ShowHelpExecute);
 
             // Initialize collections
             Users = new ObservableCollection<User>();
@@ -244,6 +247,7 @@ namespace WPFGrowerApp.ViewModels
     public ICommand RefreshCommand { get; }
     public ICommand ClearSearchCommand { get; }
     public ICommand NavigateToDashboardCommand { get; }
+    public ICommand ShowHelpCommand { get; }
 
         private async Task LoadUsersAsync()
         {
@@ -688,6 +692,31 @@ namespace WPFGrowerApp.ViewModels
         {
             SearchText = string.Empty;
             StatusMessage = "Search cleared";
+        }
+
+        private async void ShowHelpExecute(object parameter)
+        {
+            try
+            {
+                // Get help content for User Management view
+                var helpContent = _helpContentProvider.GetHelpContent("UserManagement");
+
+                // Create help dialog ViewModel
+                var helpViewModel = new HelpDialogViewModel(
+                    helpContent.Title,
+                    helpContent.Content,
+                    helpContent.QuickTips,
+                    helpContent.KeyboardShortcuts
+                );
+
+                // Show the help dialog
+                await _dialogService.ShowDialogAsync(helpViewModel);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error showing help", ex);
+                await _dialogService.ShowMessageBoxAsync("Unable to display help content at this time.", "Error");
+            }
         }
     }
 }
