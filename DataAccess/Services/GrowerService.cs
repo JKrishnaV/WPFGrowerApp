@@ -368,5 +368,47 @@ namespace WPFGrowerApp.DataAccess.Services
                 throw;
             }
         }
+
+        /// <summary>
+        /// Gets the total count of all growers (optimized for dashboard)
+        /// </summary>
+        public async Task<int> GetTotalGrowersCountAsync()
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = "SELECT COUNT(*) FROM Growers WHERE DeletedAt IS NULL";
+                    return await connection.ExecuteScalarAsync<int>(sql);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error in GetTotalGrowersCountAsync: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets the count of active growers (not on hold, optimized for dashboard)
+        /// </summary>
+        public async Task<int> GetActiveGrowersCountAsync()
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = "SELECT COUNT(*) FROM Growers WHERE IsOnHold = 0 AND DeletedAt IS NULL";
+                    return await connection.ExecuteScalarAsync<int>(sql);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error in GetActiveGrowersCountAsync: {ex.Message}", ex);
+                throw;
+            }
+        }
     }
 }

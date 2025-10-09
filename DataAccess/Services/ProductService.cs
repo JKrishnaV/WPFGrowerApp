@@ -232,5 +232,26 @@ namespace WPFGrowerApp.DataAccess.Services
                 throw;
             }
         }
+
+        /// <summary>
+        /// Gets the total count of active products (optimized for dashboard)
+        /// </summary>
+        public async Task<int> GetTotalProductsCountAsync()
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = "SELECT COUNT(*) FROM Products WHERE IsActive = 1";
+                    return await connection.ExecuteScalarAsync<int>(sql);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error in GetTotalProductsCountAsync: {ex.Message}", ex);
+                throw;
+            }
+        }
     }
 }

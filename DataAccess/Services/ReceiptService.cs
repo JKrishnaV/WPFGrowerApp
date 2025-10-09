@@ -1073,5 +1073,51 @@ namespace WPFGrowerApp.DataAccess.Services
         }
 
         #endregion
+
+        #region Dashboard Statistics Methods
+
+        /// <summary>
+        /// Gets the total count of receipts (optimized for dashboard)
+        /// </summary>
+        public async Task<int> GetTotalReceiptsCountAsync()
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = "SELECT COUNT(*) FROM Receipts WHERE DeletedAt IS NULL";
+                    return await connection.ExecuteScalarAsync<int>(sql);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error in GetTotalReceiptsCountAsync: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets the count of non-voided receipts (pending receipts, optimized for dashboard)
+        /// </summary>
+        public async Task<int> GetPendingReceiptsCountAsync()
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = "SELECT COUNT(*) FROM Receipts WHERE IsVoided = 0 AND DeletedAt IS NULL";
+                    return await connection.ExecuteScalarAsync<int>(sql);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error in GetPendingReceiptsCountAsync: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        #endregion
     }
 }

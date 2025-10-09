@@ -271,5 +271,34 @@ namespace WPFGrowerApp.DataAccess.Services
                 throw;
             }
         }
+
+        /// <summary>
+        /// Gets the count of recent import batches within the specified date range (optimized for dashboard)
+        /// </summary>
+        public async Task<int> GetRecentImportsCountAsync(DateTime? startDate = null)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = "SELECT COUNT(*) FROM ImportBatches WHERE 1=1";
+                    
+                    var parameters = new DynamicParameters();
+                    if (startDate.HasValue)
+                    {
+                        sql += " AND ImportDate >= @StartDate";
+                        parameters.Add("@StartDate", startDate.Value);
+                    }
+                    
+                    return await connection.ExecuteScalarAsync<int>(sql, parameters);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error in GetRecentImportsCountAsync: {ex.Message}");
+                throw;
+            }
+        }
     }
 }
