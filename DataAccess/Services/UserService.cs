@@ -14,6 +14,13 @@ namespace WPFGrowerApp.DataAccess.Services
     public class UserService : BaseDatabaseService, IUserService
     {
         // Note: BaseDatabaseService constructor handles getting the connection string
+        private readonly IAuditLogService _auditLogService;
+
+        public UserService()
+        {
+            // Initialize audit log service for detailed history tracking
+            _auditLogService = new AuditLogService();
+        }
 
         public async Task<User> AuthenticateAsync(string username, string password)
         {
@@ -341,16 +348,32 @@ namespace WPFGrowerApp.DataAccess.Services
                         INSERT INTO AppUsers (
                             Username, FullName, Email, PasswordHash, PasswordSalt,
                             RoleId, IsActive, CreatedAt, CreatedBy, FailedLoginAttempts, IsLocked
-                        ) VALUES (
+                        ) 
+                        OUTPUT INSERTED.UserId
+                        VALUES (
                             @Username, @FullName, @Email, @PasswordHash, @PasswordSalt,
                             @RoleId, @IsActive, @CreatedAt, @CreatedBy, 0, 0
                         )";
 
-                    int rowsAffected = await connection.ExecuteAsync(sql, user);
+                    // Get the new UserId
+                    int newUserId = await connection.ExecuteScalarAsync<int>(sql, user);
                     
-                    if (rowsAffected > 0)
+                    if (newUserId > 0)
                     {
-                        Logger.Info($"User created successfully: {user.Username} by {user.CreatedBy}");
+                        user.UserId = newUserId;
+                        Logger.Info($"User created successfully: {user.Username} (ID: {newUserId}) by {user.CreatedBy}");
+                        
+                        // Log to detailed audit log
+                        var auditEntries = new List<AuditLogEntry>
+                        {
+                            AuditLogEntry.CreateInsertEntry("AppUsers", newUserId, user.CreatedBy, "Username", user.Username),
+                            AuditLogEntry.CreateInsertEntry("AppUsers", newUserId, user.CreatedBy, "FullName", user.FullName),
+                            AuditLogEntry.CreateInsertEntry("AppUsers", newUserId, user.CreatedBy, "Email", user.Email),
+                            AuditLogEntry.CreateInsertEntry("AppUsers", newUserId, user.CreatedBy, "RoleId", user.RoleId?.ToString()),
+                            AuditLogEntry.CreateInsertEntry("AppUsers", newUserId, user.CreatedBy, "IsActive", user.IsActive.ToString())
+                        };
+                        await _auditLogService.LogBatchAsync(auditEntries);
+                        
                         return true;
                     }
                     else
@@ -376,6 +399,22 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
+                    
+                    // Get the current user data BEFORE updating to track changes
+                    var sqlGetOld = @"
+                        SELECT UserId, Username, FullName, Email, RoleId, IsActive
+                        FROM AppUsers 
+                        WHERE UserId = @UserId AND DeletedAt IS NULL";
+                    
+                    var oldUser = await connection.QuerySingleOrDefaultAsync<User>(sqlGetOld, new { UserId = user.UserId });
+                    
+                    if (oldUser == null)
+                    {
+                        Logger.Warn($"User not found for update: {user.UserId}");
+                        return false;
+                    }
+                    
+                    // Now perform the update
                     var sql = @"
                         UPDATE AppUsers 
                         SET Username = @Username,
@@ -395,6 +434,32 @@ namespace WPFGrowerApp.DataAccess.Services
                     if (rowsAffected > 0)
                     {
                         Logger.Info($"User updated successfully: {user.Username} by {user.ModifiedBy}");
+                        
+                        // Log detailed changes to audit log
+                        var auditEntries = new List<AuditLogEntry>();
+                        
+                        if (oldUser.Username != user.Username)
+                            auditEntries.Add(AuditLogEntry.CreateUpdateEntry("AppUsers", user.UserId, "Username", oldUser.Username, user.Username, user.ModifiedBy));
+                        
+                        if (oldUser.FullName != user.FullName)
+                            auditEntries.Add(AuditLogEntry.CreateUpdateEntry("AppUsers", user.UserId, "FullName", oldUser.FullName, user.FullName, user.ModifiedBy));
+                        
+                        if (oldUser.Email != user.Email)
+                            auditEntries.Add(AuditLogEntry.CreateUpdateEntry("AppUsers", user.UserId, "Email", oldUser.Email, user.Email, user.ModifiedBy));
+                        
+                        if (oldUser.RoleId != user.RoleId)
+                            auditEntries.Add(AuditLogEntry.CreateUpdateEntry("AppUsers", user.UserId, "RoleId", oldUser.RoleId?.ToString(), user.RoleId?.ToString(), user.ModifiedBy));
+                        
+                        if (oldUser.IsActive != user.IsActive)
+                            auditEntries.Add(AuditLogEntry.CreateUpdateEntry("AppUsers", user.UserId, "IsActive", oldUser.IsActive.ToString(), user.IsActive.ToString(), user.ModifiedBy));
+                        
+                        // Only log if there were actual changes
+                        if (auditEntries.Any())
+                        {
+                            await _auditLogService.LogBatchAsync(auditEntries);
+                            Logger.Debug($"Logged {auditEntries.Count} field changes to audit log for user {user.UserId}");
+                        }
+                        
                         return true;
                     }
                     else
@@ -419,6 +484,16 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     
+                    // Get user info before deleting for audit log
+                    var sqlGetUser = "SELECT Username, FullName, Email FROM AppUsers WHERE UserId = @UserId AND DeletedAt IS NULL";
+                    var userInfo = await connection.QuerySingleOrDefaultAsync<User>(sqlGetUser, new { UserId = userId });
+                    
+                    if (userInfo == null)
+                    {
+                        Logger.Warn($"Failed to delete user. UserId: {userId} not found or already deleted.");
+                        return false;
+                    }
+                    
                     // Soft delete: Set DeletedAt and DeletedBy instead of hard deleting
                     var sql = @"
                         UPDATE AppUsers 
@@ -439,7 +514,12 @@ namespace WPFGrowerApp.DataAccess.Services
 
                     if (rowsAffected > 0)
                     {
-                        Logger.Info($"User soft deleted successfully. UserId: {userId} by {deletedBy}");
+                        Logger.Info($"User soft deleted successfully. UserId: {userId} ({userInfo.Username}) by {deletedBy}");
+                        
+                        // Log to detailed audit log
+                        var auditEntry = AuditLogEntry.CreateDeleteEntry("AppUsers", userId, deletedBy, "Username", userInfo.Username);
+                        await _auditLogService.LogAsync(auditEntry);
+                        
                         return true;
                     }
                     else
