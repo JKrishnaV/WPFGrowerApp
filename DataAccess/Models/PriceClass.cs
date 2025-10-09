@@ -89,6 +89,100 @@ namespace WPFGrowerApp.DataAccess.Models
             }
         }
 
+        // ====================================================================
+        // AUDIT COLUMNS
+        // ====================================================================
+        
+        private DateTime _createdAt;
+        private string _createdBy = "SYSTEM";
+        private DateTime? _modifiedAt;
+        private string? _modifiedBy;
+        private DateTime? _deletedAt;
+        private string? _deletedBy;
+
+        public DateTime CreatedAt
+        {
+            get => _createdAt;
+            set
+            {
+                if (_createdAt != value)
+                {
+                    _createdAt = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string CreatedBy
+        {
+            get => _createdBy;
+            set
+            {
+                if (_createdBy != value)
+                {
+                    _createdBy = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public DateTime? ModifiedAt
+        {
+            get => _modifiedAt;
+            set
+            {
+                if (_modifiedAt != value)
+                {
+                    _modifiedAt = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string? ModifiedBy
+        {
+            get => _modifiedBy;
+            set
+            {
+                if (_modifiedBy != value)
+                {
+                    _modifiedBy = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public DateTime? DeletedAt
+        {
+            get => _deletedAt;
+            set
+            {
+                if (_deletedAt != value)
+                {
+                    _deletedAt = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string? DeletedBy
+        {
+            get => _deletedBy;
+            set
+            {
+                if (_deletedBy != value)
+                {
+                    _deletedBy = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Returns true if the record is soft-deleted
+        /// </summary>
+        public bool IsDeleted => DeletedAt.HasValue;
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)

@@ -72,6 +72,41 @@ namespace WPFGrowerApp.DataAccess.Models
             set => SetProperty(ref _createdBy, value);
         }
 
+        // Additional Audit Columns
+        private DateTime? _modifiedAt;
+        private string? _modifiedBy;
+        private DateTime? _deletedAt;
+        private string? _deletedBy;
+
+        public DateTime? ModifiedAt
+        {
+            get => _modifiedAt;
+            set => SetProperty(ref _modifiedAt, value);
+        }
+
+        public string? ModifiedBy
+        {
+            get => _modifiedBy;
+            set => SetProperty(ref _modifiedBy, value);
+        }
+
+        public DateTime? DeletedAt
+        {
+            get => _deletedAt;
+            set => SetProperty(ref _deletedAt, value);
+        }
+
+        public string? DeletedBy
+        {
+            get => _deletedBy;
+            set => SetProperty(ref _deletedBy, value);
+        }
+
+        /// <summary>
+        /// Returns true if the record is soft-deleted
+        /// </summary>
+        public bool IsDeleted => DeletedAt.HasValue;
+
         // Navigation properties for display purposes
         public string? ContainerCode
         {
