@@ -100,6 +100,19 @@
         <dialogs:PayGroupEditDialogView/>
     </DataTemplate>
     
+    <!-- Phase 1 - Payment Management View Mappings -->
+    <DataTemplate DataType="{x:Type viewmodels:PaymentBatchViewModel}">
+        <views:PaymentBatchListView />
+    </DataTemplate>
+    
+    <DataTemplate DataType="{x:Type viewmodels:ChequeManagementViewModel}">
+        <views:ChequeManagementView />
+    </DataTemplate>
+    
+    <DataTemplate DataType="{x:Type viewmodels:FinalPaymentViewModel}">
+        <views:FinalPaymentView />
+    </DataTemplate>
+    
     <!-- Add other dialog mappings here if needed -->
 
 </ResourceDictionary>

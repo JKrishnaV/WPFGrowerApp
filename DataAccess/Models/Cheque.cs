@@ -4,294 +4,266 @@ using System.Runtime.CompilerServices;
 
 namespace WPFGrowerApp.DataAccess.Models
 {
+    /// <summary>
+    /// Represents a payment cheque in the modern database schema.
+    /// Matches the Cheques table structure with clean, modern field names.
+    /// </summary>
     public class Cheque : INotifyPropertyChanged
     {
-        private string _series;
-        private decimal _chequeNumber;
-        private decimal _growerNumber;
-        private DateTime _date;
-        private decimal _amount;
-        private decimal _year;
-    private string? _chequeType;
-        private bool? _void; // Changed to nullable bool
-        private DateTime? _dateClear;
-        private bool? _isCleared; // Changed to nullable bool
-        private string _currency;
-        private DateTime? _qaddDate;
-        private string _qaddTime;
-        private string _qaddOp;
-        private DateTime? _qedDate;
-        private string _qedTime;
-        private string _qedOp;
-        private DateTime? _qdelDate;
-        private string _qdelTime;
-        private string _qdelOp;
+        // ======================================================================
+        // PRIMARY IDENTIFICATION
+        // ======================================================================
+        
+        private int _chequeId;
+        private int _chequeSeriesId;
+        private int _chequeNumber;
+        private int _fiscalYear;
 
-        public string Series
+        public int ChequeId
         {
-            get => _series;
-            set
-            {
-                if (_series != value)
-                {
-                    _series = value;
-                    OnPropertyChanged();
-                }
-            }
+            get => _chequeId;
+            set => SetProperty(ref _chequeId, value);
         }
 
-        public decimal ChequeNumber
+        public int ChequeSeriesId
+        {
+            get => _chequeSeriesId;
+            set => SetProperty(ref _chequeSeriesId, value);
+        }
+
+        public int ChequeNumber
         {
             get => _chequeNumber;
-            set
-            {
-                if (_chequeNumber != value)
-                {
-                    _chequeNumber = value;
-                    OnPropertyChanged();
-                }
-            }
+            set => SetProperty(ref _chequeNumber, value);
         }
 
-        public decimal GrowerNumber
+        public int FiscalYear
         {
-            get => _growerNumber;
-            set
-            {
-                if (_growerNumber != value)
-                {
-                    _growerNumber = value;
-                    OnPropertyChanged();
-                }
-            }
+            get => _fiscalYear;
+            set => SetProperty(ref _fiscalYear, value);
         }
 
-        public DateTime Date
+        // ======================================================================
+        // PAYMENT DETAILS
+        // ======================================================================
+        
+        private int _growerId;
+        private int? _paymentBatchId;
+        private DateTime _chequeDate;
+        private decimal _chequeAmount;
+
+        public int GrowerId
         {
-            get => _date;
-            set
-            {
-                if (_date != value)
-                {
-                    _date = value;
-                    OnPropertyChanged();
-                }
-            }
+            get => _growerId;
+            set => SetProperty(ref _growerId, value);
         }
 
-        public decimal Amount
+        public int? PaymentBatchId
         {
-            get => _amount;
-            set
-            {
-                if (_amount != value)
-                {
-                    _amount = value;
-                    OnPropertyChanged();
-                }
-            }
+            get => _paymentBatchId;
+            set => SetProperty(ref _paymentBatchId, value);
         }
 
-        public decimal Year
+        public DateTime ChequeDate
         {
-            get => _year;
-            set
-            {
-                if (_year != value)
-                {
-                    _year = value;
-                    OnPropertyChanged();
-                }
-            }
+            get => _chequeDate;
+            set => SetProperty(ref _chequeDate, value);
         }
 
-        public string ChequeType
+        public decimal ChequeAmount
         {
-            get => _chequeType ?? string.Empty;
-            set
-            {
-                if (_chequeType != value)
-                {
-                    _chequeType = value;
-                    OnPropertyChanged();
-                }
-            }
+            get => _chequeAmount;
+            set => SetProperty(ref _chequeAmount, value);
         }
 
-        public bool? Void // Changed to nullable bool
+        // ======================================================================
+        // CURRENCY & PAYEE
+        // ======================================================================
+        
+        private string _currencyCode = "CAD";
+        private decimal _exchangeRate = 1.0m;
+        private string? _payeeName;
+        private string? _memo;
+
+        public string CurrencyCode
         {
-            get => _void;
-            set
-            {
-                if (_void != value)
-                {
-                    _void = value;
-                    OnPropertyChanged();
-                }
-            }
+            get => _currencyCode ?? "CAD";
+            set => SetProperty(ref _currencyCode, value);
         }
 
-        public DateTime? DateClear
+        public decimal ExchangeRate
         {
-            get => _dateClear;
-            set
-            {
-                if (_dateClear != value)
-                {
-                    _dateClear = value;
-                    OnPropertyChanged();
-                }
-            }
+            get => _exchangeRate;
+            set => SetProperty(ref _exchangeRate, value);
         }
 
-        public bool? IsCleared // Changed to nullable bool
+        public string? PayeeName
         {
-            get => _isCleared;
-            set
-            {
-                if (_isCleared != value)
-                {
-                    _isCleared = value;
-                    OnPropertyChanged();
-                }
-            }
+            get => _payeeName;
+            set => SetProperty(ref _payeeName, value);
         }
 
-        public string Currency
+        public string? Memo
         {
-            get => _currency ?? string.Empty;
-            set
-            {
-                if (_currency != value)
-                {
-                    _currency = value;
-                    OnPropertyChanged();
-                }
-            }
+            get => _memo;
+            set => SetProperty(ref _memo, value);
         }
 
-        public DateTime? QaddDate
+        // ======================================================================
+        // STATUS & CLEARING
+        // ======================================================================
+        
+        private string _status = "Issued";
+        private DateTime? _clearedDate;
+        private DateTime? _voidedDate;
+        private string? _voidedReason;
+
+        /// <summary>
+        /// Cheque status: Issued, Cleared, Voided, Stopped
+        /// </summary>
+        public string Status
         {
-            get => _qaddDate;
-            set
-            {
-                if (_qaddDate != value)
-                {
-                    _qaddDate = value;
-                    OnPropertyChanged();
-                }
-            }
+            get => _status ?? "Issued";
+            set => SetProperty(ref _status, value);
         }
 
-        public string QaddTime
+        public DateTime? ClearedDate
         {
-            get => _qaddTime ?? string.Empty;
-            set
-            {
-                if (_qaddTime != value)
-                {
-                    _qaddTime = value;
-                    OnPropertyChanged();
-                }
-            }
+            get => _clearedDate;
+            set => SetProperty(ref _clearedDate, value);
         }
 
-        public string QaddOp
+        public DateTime? VoidedDate
         {
-            get => _qaddOp ?? string.Empty;
-            set
-            {
-                if (_qaddOp != value)
-                {
-                    _qaddOp = value;
-                    OnPropertyChanged();
-                }
-            }
+            get => _voidedDate;
+            set => SetProperty(ref _voidedDate, value);
         }
 
-        public DateTime? QedDate
+        public string? VoidedReason
         {
-            get => _qedDate;
-            set
-            {
-                if (_qedDate != value)
-                {
-                    _qedDate = value;
-                    OnPropertyChanged();
-                }
-            }
+            get => _voidedReason;
+            set => SetProperty(ref _voidedReason, value);
         }
 
-        public string QedTime
+        // ======================================================================
+        // AUDIT TRAIL
+        // ======================================================================
+        
+        private DateTime _createdAt;
+        private string? _createdBy;
+        private DateTime? _printedAt;
+        private string? _printedBy;
+        private string? _voidedBy;
+
+        public DateTime CreatedAt
         {
-            get => _qedTime ?? string.Empty;
-            set
-            {
-                if (_qedTime != value)
-                {
-                    _qedTime = value;
-                    OnPropertyChanged();
-                }
-            }
+            get => _createdAt;
+            set => SetProperty(ref _createdAt, value);
         }
 
-        public string QedOp
+        public string? CreatedBy
         {
-            get => _qedOp ?? string.Empty;
-            set
-            {
-                if (_qedOp != value)
-                {
-                    _qedOp = value;
-                    OnPropertyChanged();
-                }
-            }
+            get => _createdBy;
+            set => SetProperty(ref _createdBy, value);
         }
 
-        public DateTime? QdelDate
+        /// <summary>
+        /// When the cheque was actually printed (added for tracking)
+        /// </summary>
+        public DateTime? PrintedAt
         {
-            get => _qdelDate;
-            set
-            {
-                if (_qdelDate != value)
-                {
-                    _qdelDate = value;
-                    OnPropertyChanged();
-                }
-            }
+            get => _printedAt;
+            set => SetProperty(ref _printedAt, value);
         }
 
-        public string QdelTime
+        public string? PrintedBy
         {
-            get => _qdelTime ?? string.Empty;
-            set
-            {
-                if (_qdelTime != value)
-                {
-                    _qdelTime = value;
-                    OnPropertyChanged();
-                }
-            }
+            get => _printedBy;
+            set => SetProperty(ref _printedBy, value);
         }
 
-        public string QdelOp
+        public string? VoidedBy
         {
-            get => _qdelOp ?? string.Empty;
-            set
-            {
-                if (_qdelOp != value)
-                {
-                    _qdelOp = value;
-                    OnPropertyChanged();
-                }
-            }
+            get => _voidedBy;
+            set => SetProperty(ref _voidedBy, value);
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        // ======================================================================
+        // NAVIGATION PROPERTIES (Not mapped to database)
+        // ======================================================================
+        
+        private string? _growerName;
+        private string? _seriesCode;
+        private string? _paymentTypeName;
 
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        /// <summary>
+        /// Grower name for display purposes
+        /// </summary>
+        public string? GrowerName
+        {
+            get => _growerName;
+            set => SetProperty(ref _growerName, value);
+        }
+
+        /// <summary>
+        /// Cheque series code for display (e.g., "A", "B", "MAIN")
+        /// </summary>
+        public string? SeriesCode
+        {
+            get => _seriesCode;
+            set => SetProperty(ref _seriesCode, value);
+        }
+
+        /// <summary>
+        /// Payment type name for display (e.g., "Advance 1", "Final Payment")
+        /// </summary>
+        public string? PaymentTypeName
+        {
+            get => _paymentTypeName;
+            set => SetProperty(ref _paymentTypeName, value);
+        }
+
+        // ======================================================================
+        // COMPUTED PROPERTIES
+        // ======================================================================
+
+        /// <summary>
+        /// Is this cheque voided?
+        /// </summary>
+        public bool IsVoided => Status == "Voided";
+
+        /// <summary>
+        /// Is this cheque cleared?
+        /// </summary>
+        public bool IsCleared => Status == "Cleared";
+
+        /// <summary>
+        /// Can this cheque be voided? (Only issued cheques can be voided)
+        /// </summary>
+        public bool CanBeVoided => Status == "Issued";
+
+        /// <summary>
+        /// Full cheque number for display (e.g., "A-1234")
+        /// </summary>
+        public string DisplayChequeNumber => $"{SeriesCode ?? "?"}-{ChequeNumber}";
+
+        // ======================================================================
+        // INOTIFYPROPERTYCHANGED IMPLEMENTATION
+        // ======================================================================
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+        {
+            if (Equals(field, value)) return false;
+            field = value;
+            OnPropertyChanged(propertyName);
+            return true;
         }
     }
 }

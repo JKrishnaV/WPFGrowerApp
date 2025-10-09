@@ -1,0 +1,27 @@
+// LEGACY ChequeService.cs - BACKUP
+// This file contains the original implementation that uses legacy Cheque model properties
+// and legacy database table/column names (CHEQUE table, SERIES, CHEQUE, NUMBER, etc.)
+//
+// After modernizing the Cheque model to use:
+// - ChequeSeriesId, ChequeNumber (int), GrowerId, ChequeDate, ChequeAmount, FiscalYear
+// - Status (instead of Void), ClearedDate, CurrencyCode
+// - CreatedAt/CreatedBy/ModifiedAt/ModifiedBy (instead of QADD_*/QED_*)
+//
+// This service needs to be completely rewritten to use the modern Cheques table schema.
+//
+// For now, these methods are commented out and stubbed to allow the build to succeed.
+// ChequeGenerationService handles the core cheque generation functionality for Phase 1.
+//
+// TODO: Rewrite this service for modern schema as Phase 1.5 or Phase 2
+
+// Methods that need modernization:
+// 1. GetAllChequesAsync()
+// 2. GetChequeBySeriesAndNumberAsync()
+// 3. GetChequesByGrowerNumberAsync()
+// 4. GetChequesByDateRangeAsync()
+// 5. SaveChequeAsync()
+// 6. VoidChequeAsync()
+// 7. GetNextChequeNumberAsync()
+// 8. CreateChequesAsync()
+// 9. GetTemporaryChequesAsync()
+

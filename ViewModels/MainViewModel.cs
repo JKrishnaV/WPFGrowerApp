@@ -37,6 +37,11 @@ namespace WPFGrowerApp.ViewModels
             NavigateToPaymentRunCommand = new RelayCommand(async p => await NavigateToAsync<PaymentRunViewModel>("Payment Run", p), CanNavigate); // Use async lambda
             // Update Settings command to navigate to the new SettingsHostViewModel
             NavigateToSettingsCommand = new RelayCommand(async p => await NavigateToAsync<SettingsHostViewModel>("Settings", p), CanNavigate); // Use async lambda
+            
+            // Phase 1 - New payment management navigation commands
+            NavigateToPaymentBatchesCommand = new RelayCommand(async p => await NavigateToAsync<PaymentBatchViewModel>("Payment Batches", p), CanNavigate);
+            NavigateToChequeManagementCommand = new RelayCommand(async p => await NavigateToAsync<ChequeManagementViewModel>("Cheque Management", p), CanNavigate);
+            NavigateToFinalPaymentCommand = new RelayCommand(async p => await NavigateToAsync<FinalPaymentViewModel>("Final Payment", p), CanNavigate);
 
             // Set default view model to Dashboard
             _ = NavigateToAsync<DashboardViewModel>("Dashboard"); // Call async method, discard task
@@ -120,6 +125,11 @@ namespace WPFGrowerApp.ViewModels
         public ICommand NavigateToSettingsCommand { get; }
         public ICommand NavigateToChangePasswordCommand { get; } // Added
         public ICommand LogoutCommand { get; } // Added
+        
+        // Phase 1 - Payment management navigation
+        public ICommand NavigateToPaymentBatchesCommand { get; }
+        public ICommand NavigateToChequeManagementCommand { get; }
+        public ICommand NavigateToFinalPaymentCommand { get; }
 
         private bool CanNavigate(object? parameter) => !_isNavigating; // Changed parameter to object?
 

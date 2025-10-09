@@ -1,0 +1,313 @@
+<UserControl x:Class="WPFGrowerApp.Views.FinalPaymentView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:WPFGrowerApp.Views"
+             xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:converters="clr-namespace:WPFGrowerApp.Converters"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:FinalPaymentViewModel}"
+             d:DesignHeight="700" d:DesignWidth="1200"
+             Background="{DynamicResource MaterialDesignPaper}"
+             Focusable="True"
+             x:Name="finalPaymentView">
+
+    <!-- Keyboard Shortcuts -->
+    <UserControl.InputBindings>
+        <KeyBinding Key="F1" Command="{Binding ShowHelpCommand}"/>
+        <KeyBinding Key="F5" Command="{Binding RefreshCommand}"/>
+    </UserControl.InputBindings>
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Styles/StandardizedViewTemplate.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisConverter"/>
+            <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>  <!-- Breadcrumb -->
+            <RowDefinition Height="Auto"/>  <!-- Title -->
+            <RowDefinition Height="Auto"/>  <!-- Parameters Card -->
+            <RowDefinition Height="Auto"/>  <!-- On Hold Growers -->
+            <RowDefinition Height="*"/>     <!-- Run Log -->
+            <RowDefinition Height="Auto"/>  <!-- Status Bar -->
+        </Grid.RowDefinitions>
+
+        <!-- Breadcrumb Navigation -->
+        <materialDesign:ColorZone Grid.Row="0" Style="{StaticResource BreadcrumbNavigationStyle}">
+            <StackPanel Orientation="Horizontal">
+                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                        Padding="5,0">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Home" Width="16" Height="16"
+                                               VerticalAlignment="Center" Margin="0,0,5,0"/>
+                        <TextBlock Text="Dashboard" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+                <materialDesign:PackIcon Kind="ChevronRight" Width="16" Height="16"
+                                       VerticalAlignment="Center" Margin="5,0"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <materialDesign:PackIcon Kind="CashMultiple" Width="16" Height="16"
+                                           VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBlock Text="Final Payment" FontSize="12" FontWeight="SemiBold"/>
+                </StackPanel>
+            </StackPanel>
+        </materialDesign:ColorZone>
+
+        <!-- Title -->
+        <TextBlock Grid.Row="1"
+                   Text="Final Payment (Year-End)"
+                   Style="{StaticResource StandardizedViewTitleStyle}"/>
+
+        <!-- Parameters Section -->
+        <materialDesign:Card Grid.Row="2" Padding="16" Margin="0,0,0,16">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/> <!-- Main Inputs -->
+                    <RowDefinition Height="Auto"/> <!-- Filter Section -->
+                    <RowDefinition Height="Auto"/> <!-- Action Buttons -->
+                </Grid.RowDefinitions>
+
+                <!-- Row 0: Main Parameters -->
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <DatePicker Grid.Column="0" Margin="0,5"
+                                materialDesign:HintAssist.Hint="Payment Date"
+                                Style="{StaticResource MaterialDesignFloatingHintDatePicker}"
+                                SelectedDate="{Binding PaymentDate}"/>
+
+                    <DatePicker Grid.Column="2" Margin="0,5"
+                                materialDesign:HintAssist.Hint="Include Deductions Up To"
+                                Style="{StaticResource MaterialDesignFloatingHintDatePicker}"
+                                SelectedDate="{Binding CutoffDate}"/>
+
+                    <ComboBox Grid.Column="4" Margin="0,5"
+                              materialDesign:HintAssist.Hint="Crop Year"
+                              Style="{StaticResource MaterialDesignFloatingHintComboBox}"
+                              ItemsSource="{Binding CropYears}"
+                              SelectedItem="{Binding CropYear}"/>
+                </Grid>
+
+                <!-- Row 1: Filter Section -->
+                <GroupBox Grid.Row="1" Header="Filters (Optional)" Margin="0,16,0,0"
+                          Style="{StaticResource MaterialDesignGroupBox}">
+                    <Grid Margin="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Exclude Pay Groups -->
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Exclude Pay Groups:" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                            <TextBox materialDesign:HintAssist.Hint="Search pay groups..."
+                                     Text="{Binding PayGroupSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,0,5"/>
+                            <ListBox ItemsSource="{Binding FilteredPayGroupsView}"
+                                     SelectionMode="Multiple"
+                                     Height="120"
+                                     materialDesign:ListBoxAssist.IsToggle="True">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding GroupName}"/>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
+
+                        <!-- Exclude Growers -->
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Exclude Growers:" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                            <TextBox materialDesign:HintAssist.Hint="Search growers..."
+                                     Text="{Binding GrowerSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     Margin="0,0,0,5"/>
+                            <ListBox ItemsSource="{Binding FilteredGrowersView}"
+                                     SelectionMode="Multiple"
+                                     Height="120"
+                                     materialDesign:ListBoxAssist.IsToggle="True">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding GrowerNumber}" FontWeight="Bold" Margin="0,0,5,0"/>
+                                            <TextBlock Text="-"/>
+                                            <TextBlock Text="{Binding GrowerName}" Margin="5,0,0,0"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
+                    </Grid>
+                </GroupBox>
+
+                <!-- Row 2: Action Buttons -->
+                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,16,0,0" HorizontalAlignment="Right">
+                    <Button Command="{Binding CalculateFinalPaymentsCommand}"
+                            Style="{StaticResource MaterialDesignRaisedButton}"
+                            Margin="0,0,10,0"
+                            Padding="20,8">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Calculator" Width="20" Height="20" Margin="0,0,8,0"/>
+                            <TextBlock Text="Calculate Final Payments" FontSize="14"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Command="{Binding PostBatchCommand}"
+                            Style="{StaticResource MaterialDesignRaisedButton}"
+                            Margin="0,0,10,0"
+                            IsEnabled="{Binding CanPostBatch}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="CheckCircle" Width="16" Height="16" Margin="0,0,5,0"/>
+                            <TextBlock Text="Post Batch"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Command="{Binding GenerateChequesCommand}"
+                            Style="{StaticResource MaterialDesignRaisedButton}"
+                            Margin="0,0,10,0"
+                            IsEnabled="{Binding CanGenerateCheques}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="CheckbookArrowRight" Width="16" Height="16" Margin="0,0,5,0"/>
+                            <TextBlock Text="Generate Cheques"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Command="{Binding PrintChequesCommand}"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Margin="0,0,10,0"
+                            IsEnabled="{Binding CanPrintCheques}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Printer" Width="16" Height="16" Margin="0,0,5,0"/>
+                            <TextBlock Text="Print Cheques"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Command="{Binding PrintStatementsCommand}"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            IsEnabled="{Binding CanPrintStatements}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="FileDocument" Width="16" Height="16" Margin="0,0,5,0"/>
+                            <TextBlock Text="Print Statements"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- On Hold Growers Card -->
+        <materialDesign:Card Grid.Row="3" Margin="0,0,0,16"
+                             Visibility="{Binding OnHoldGrowers.Count, Converter={StaticResource BoolToVisConverter}}">
+            <Grid Margin="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <materialDesign:PackIcon Grid.Column="0" Kind="AlertCircle"
+                                       Width="24" Height="24"
+                                       VerticalAlignment="Center"
+                                       Foreground="#FFC107"
+                                       Margin="0,0,10,0"/>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock FontWeight="SemiBold">
+                        <Run Text="{Binding OnHoldGrowers.Count, Mode=OneWay}"/>
+                        <Run Text="Grower(s) On Hold (will not receive payment)"/>
+                    </TextBlock>
+                    <ItemsControl ItemsSource="{Binding OnHoldGrowers}" Margin="0,5,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock FontSize="11" Opacity="0.8">
+                                    <Run Text="#"/>
+                                    <Run Text="{Binding GrowerNumber}"/>
+                                    <Run Text="-"/>
+                                    <Run Text="{Binding GrowerName}"/>
+                                </TextBlock>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Run Log -->
+        <materialDesign:Card Grid.Row="4" Style="{StaticResource MainContentAreaStyle}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="Processing Log" 
+                           Style="{StaticResource MaterialDesignSubtitle1TextBlock}"
+                           Margin="16,16,16,8"/>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="16,0,16,16">
+                    <ItemsControl ItemsSource="{Binding RunLog}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" 
+                                           FontFamily="Consolas" 
+                                           FontSize="11"
+                                           Margin="0,1"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Status Bar -->
+        <materialDesign:ColorZone Grid.Row="5" Style="{StaticResource StatusFooterBarStyle}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock Text="Status: " FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding StatusMessage}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="HelpCircle" Width="16" Height="16" 
+                                           VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBlock Text="Press F1 for help | F5 to refresh" FontSize="11" Opacity="0.7"/>
+                </StackPanel>
+            </Grid>
+        </materialDesign:ColorZone>
+
+        <!-- Loading Indicator -->
+        <materialDesign:Card Grid.Row="0"
+                            Grid.RowSpan="6"
+                            Style="{StaticResource LoadingIndicatorStyle}"
+                            Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisConverter}}">
+            <StackPanel Orientation="Horizontal">
+                <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}"
+                            Value="0"
+                            IsIndeterminate="True"/>
+                <TextBlock Text="Processing final payments..."
+                          VerticalAlignment="Center"
+                          Margin="10,0,0,0"/>
+            </StackPanel>
+        </materialDesign:Card>
+    </Grid>
+</UserControl>
+

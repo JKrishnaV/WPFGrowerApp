@@ -45,6 +45,11 @@ namespace WPFGrowerApp
             services.AddTransient<IPriceService, PriceService>(); // Added
             services.AddTransient<IPostBatchService, PostBatchService>(); // Added
             services.AddTransient<IPaymentBatchService, PaymentBatchService>(); // Added for modern payment processing
+            services.AddTransient<IPaymentTypeService, PaymentTypeService>(); // Added for payment types
+            services.AddTransient<IPaymentBatchManagementService, PaymentBatchManagementService>(); // Added for payment batch management
+            services.AddTransient<IChequeGenerationService, ChequeGenerationService>(); // Added for cheque generation
+            services.AddTransient<IChequePrintingService, ChequePrintingService>(); // Added for cheque printing
+            services.AddTransient<IStatementPrintingService, StatementPrintingService>(); // Added for statement printing
             services.AddTransient<IPaymentService, PaymentService>();
             services.AddTransient<IDepotService, DepotService>();
             services.AddTransient<IProductService, ProductService>(); 
@@ -80,6 +85,9 @@ namespace WPFGrowerApp
             services.AddTransient<DepotViewModel>(); // Added Depot VM
             services.AddTransient<PaymentGroupViewModel>(); // Added Payment Group VM
             services.AddTransient<PaymentRunViewModel>();
+            services.AddTransient<PaymentBatchViewModel>(); // Phase 1 - Payment Batch Management
+            services.AddTransient<ChequeManagementViewModel>(); // Phase 1 - Cheque Management
+            services.AddTransient<FinalPaymentViewModel>(); // Phase 1 - Final Payment
             services.AddTransient<LoginViewModel>();
             services.AddTransient<ChangePasswordViewModel>();
             services.AddTransient<UserManagementViewModel>();

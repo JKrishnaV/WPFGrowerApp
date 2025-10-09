@@ -35,6 +35,12 @@ namespace WPFGrowerApp.ViewModels
         private readonly IProcessService _processService;
         private readonly IPayGroupService _payGroupService;
         private readonly IGrowerService _growerService;
+        
+        // Phase 1 - New services
+        private readonly IPaymentBatchManagementService _batchManagementService;
+        private readonly IChequeGenerationService _chequeGenerationService;
+        private readonly IChequePrintingService _chequePrintingService;
+        private readonly IStatementPrintingService _statementPrintingService;
 
         private int _advanceNumber = 1;
         private DateTime _paymentDate = DateTime.Today;
@@ -46,6 +52,13 @@ namespace WPFGrowerApp.ViewModels
         private PaymentBatch? _lastRunBatch; // For actual run
         private List<string>? _lastRunErrors; // For actual run
         private TestRunResult? _latestTestRunResult; // For test run
+        
+        // Phase 1 - Enhanced properties
+        private PaymentBatch? _currentBatch;
+        private ObservableCollection<Cheque>? _generatedCheques;
+        private bool _chequesGenerated;
+        private bool _chequesPrinted;
+        private bool _statementsGenerated;
 
         // --- Collections ---
         // Original backing collections for all items
@@ -138,7 +151,11 @@ namespace WPFGrowerApp.ViewModels
             IProductService productService,
             IProcessService processService,
             IPayGroupService payGroupService,
-            IGrowerService growerService)
+            IGrowerService growerService,
+            IPaymentBatchManagementService batchManagementService,
+            IChequeGenerationService chequeGenerationService,
+            IChequePrintingService chequePrintingService,
+            IStatementPrintingService statementPrintingService)
         {
             _paymentService = paymentService ?? throw new ArgumentNullException(nameof(paymentService));
             _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
@@ -146,6 +163,10 @@ namespace WPFGrowerApp.ViewModels
             _processService = processService ?? throw new ArgumentNullException(nameof(processService));
             _payGroupService = payGroupService ?? throw new ArgumentNullException(nameof(payGroupService));
             _growerService = growerService ?? throw new ArgumentNullException(nameof(growerService));
+            _batchManagementService = batchManagementService ?? throw new ArgumentNullException(nameof(batchManagementService));
+            _chequeGenerationService = chequeGenerationService ?? throw new ArgumentNullException(nameof(chequeGenerationService));
+            _chequePrintingService = chequePrintingService ?? throw new ArgumentNullException(nameof(chequePrintingService));
+            _statementPrintingService = statementPrintingService ?? throw new ArgumentNullException(nameof(statementPrintingService));
 
             _growerSearchText = string.Empty;
             _productSearchText = string.Empty;
@@ -340,12 +361,56 @@ namespace WPFGrowerApp.ViewModels
             private set => SetProperty(ref _latestTestRunResult, value);
         }
 
+        // Phase 1 - Enhanced properties
+        public PaymentBatch? CurrentBatch
+        {
+            get => _currentBatch;
+            private set => SetProperty(ref _currentBatch, value);
+        }
 
-        // Commands
+        public ObservableCollection<Cheque> GeneratedCheques
+        {
+            get => _generatedCheques ??= new ObservableCollection<Cheque>();
+            private set => SetProperty(ref _generatedCheques, value);
+        }
+
+        public bool ChequesGenerated
+        {
+            get => _chequesGenerated;
+            private set => SetProperty(ref _chequesGenerated, value);
+        }
+
+        public bool ChequesPrinted
+        {
+            get => _chequesPrinted;
+            private set => SetProperty(ref _chequesPrinted, value);
+        }
+
+        public bool StatementsGenerated
+        {
+            get => _statementsGenerated;
+            private set => SetProperty(ref _statementsGenerated, value);
+        }
+
+        // Can Execute properties for commands
+        public bool CanPostBatch => LatestTestRunResult != null && CurrentBatch == null && !IsRunning;
+        public bool CanGenerateCheques => CurrentBatch != null && !ChequesGenerated && !IsRunning;
+        public bool CanPrintCheques => ChequesGenerated && !IsRunning;
+        public bool CanPrintStatements => CurrentBatch != null && !IsRunning;
+
+
+        // Commands - Basic Operations
         public ICommand LoadFiltersCommand => new RelayCommand(async o => await LoadFiltersAsync());
         public ICommand StartPaymentRunCommand => new RelayCommand(async o => await StartPaymentRunAsync(), o => !IsRunning);
         public ICommand TestRunCommand => new RelayCommand(async o => await PerformTestRunAsync(), o => !IsRunning); // Shows Dialog Report
         public ICommand ViewBoldReportCommand => new RelayCommand(async o => await PerformViewBoldReportAsync(), o => !IsRunning); // Shows Bold Report Viewer
+        
+        // Commands - Phase 1 Enhancements (NEW)
+        public ICommand PostBatchCommand => new RelayCommand(async o => await PostBatchAsync(), o => CanPostBatch);
+        public ICommand GenerateChequesCommand => new RelayCommand(async o => await GenerateChequesAsync(), o => CanGenerateCheques);
+        public ICommand PrintChequesCommand => new RelayCommand(async o => await PrintChequesAsync(), o => CanPrintCheques);
+        public ICommand PrintStatementsCommand => new RelayCommand(async o => await PrintStatementsAsync(), o => CanPrintStatements);
+        public ICommand ViewBatchDetailsCommand => new RelayCommand(async o => await ViewBatchDetailsAsync(), o => CurrentBatch != null);
 
 
         // IProgress<string> implementation
@@ -798,6 +863,310 @@ namespace WPFGrowerApp.ViewModels
         {
             // Re-calculate the OnHoldGrowers list whenever a filter selection changes
            // _ = UpdateOnHoldGrowersAsync();
+        }
+
+        // ==============================================================
+        // PHASE 1 - NEW COMMAND IMPLEMENTATIONS
+        // ==============================================================
+
+        /// <summary>
+        /// Post the payment batch (create batch, generate cheques, post to accounts)
+        /// </summary>
+        private async Task PostBatchAsync()
+        {
+            try
+            {
+                if (LatestTestRunResult == null)
+                {
+                    await _dialogService.ShowMessageBoxAsync("Please run a test first before posting.", "Test Required");
+                    return;
+                }
+
+                // Confirm with user
+                var confirm = await _dialogService.ShowConfirmationAsync(
+                    $"This will:\n" +
+                    $"• Create payment batch\n" +
+                    $"• Generate {LatestTestRunResult.GrowerPayments.Count} cheques\n" +
+                    $"• Post ${LatestTestRunResult.GrowerPayments.Sum(gp => gp.TotalCalculatedPayment):N2} to accounts\n\n" +
+                    $"Continue?",
+                    $"Post Advance {AdvanceNumber} Payment Batch?");
+
+                if (confirm != true)
+                    return;
+
+                IsRunning = true;
+                StatusMessage = "Posting payment batch...";
+                Report("Starting batch posting...");
+
+                try
+                {
+                    // 1. Create payment batch
+                    Report("Creating payment batch...");
+                    var paymentTypeId = AdvanceNumber; // Assuming PaymentTypeId matches advance number
+                    CurrentBatch = await _batchManagementService.CreatePaymentBatchAsync(
+                        paymentTypeId: paymentTypeId,
+                        batchDate: PaymentDate,
+                        cropYear: CropYear,
+                        cutoffDate: CutoffDate,
+                        notes: $"Advance {AdvanceNumber} - {LatestTestRunResult.GrowerPayments.Count} growers",
+                        createdBy: App.CurrentUser?.Username);
+
+                    Report($"✓ Created batch: {CurrentBatch.BatchNumber}");
+
+                    // 2. Run the actual payment processing (posts to accounts, creates allocations)
+                    Report("Processing payments to accounts...");
+                    
+                    var selectedProductIds = SelectedProducts.Select(p => p.ProductId).ToList();
+                    var selectedProcessIds = SelectedProcesses.Select(p => p.ProcessId).ToList();
+                    var selectedExcludeGrowerIds = SelectedExcludeGrowers.Select(g => (int)g.GrowerNumber).Where(num => num != 0).ToList();
+                    var selectedExcludePayGroupIds = SelectedExcludePayGroups.Select(pg => pg.PayGroupId).ToList();
+
+                    var (success, errors, postedBatch) = await _paymentService.ProcessAdvancePaymentRunAsync(
+                        AdvanceNumber,
+                        PaymentDate,
+                        CutoffDate,
+                        CropYear,
+                        selectedExcludeGrowerIds,
+                        selectedExcludePayGroupIds,
+                        selectedProductIds,
+                        selectedProcessIds,
+                        this);
+
+                    if (!success || errors.Any())
+                    {
+                        Report("⚠ Payment processing completed with errors");
+                        foreach (var error in errors)
+                        {
+                            Report($"  ERROR: {error}");
+                        }
+                        
+                        await _dialogService.ShowMessageBoxAsync(
+                            $"Payment processing completed with {errors.Count} error(s). Check the run log for details.",
+                            "Posting Completed with Errors");
+                    }
+                    else
+                    {
+                        Report("✓ Successfully posted payments to accounts");
+                        StatusMessage = $"Batch {CurrentBatch.BatchNumber} posted successfully";
+                        
+                        await _dialogService.ShowMessageBoxAsync(
+                            $"Payment batch posted successfully!\n\n" +
+                            $"Batch: {CurrentBatch.BatchNumber}\n" +
+                            $"Growers: {LatestTestRunResult.GrowerPayments.Count}\n" +
+                            $"Total Amount: ${LatestTestRunResult.GrowerPayments.Sum(gp => gp.TotalCalculatedPayment):N2}",
+                            "Batch Posted");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Report($"✗ ERROR: {ex.Message}");
+                    Logger.Error("Error posting batch", ex);
+                    await _dialogService.ShowMessageBoxAsync($"Error posting batch: {ex.Message}", "Error");
+                    throw;
+                }
+            }
+            finally
+            {
+                IsRunning = false;
+            }
+        }
+
+        /// <summary>
+        /// Generate cheques for the current batch
+        /// </summary>
+        private async Task GenerateChequesAsync()
+        {
+            try
+            {
+                if (CurrentBatch == null || LatestTestRunResult == null)
+                {
+                    await _dialogService.ShowMessageBoxAsync("No batch available. Please post a batch first.", "No Batch");
+                    return;
+                }
+
+                IsRunning = true;
+                StatusMessage = "Generating cheques...";
+                Report("Generating cheques for batch...");
+
+                // Convert test result to GrowerPaymentAmount list
+                var growerPayments = LatestTestRunResult.GrowerPayments
+                    .Select(gp => new GrowerPaymentAmount
+                    {
+                        GrowerId = int.TryParse(gp.GrowerNumber, out var id) ? id : 0,
+                        GrowerName = gp.GrowerName,
+                        PaymentAmount = gp.TotalCalculatedPayment,
+                        IsOnHold = gp.IsOnHold
+                    }).ToList();
+
+                // Generate cheques
+                var cheques = await _chequeGenerationService.GenerateChequesForBatchAsync(
+                    CurrentBatch.PaymentBatchId,
+                    growerPayments);
+
+                GeneratedCheques.Clear();
+                foreach (var cheque in cheques)
+                {
+                    GeneratedCheques.Add(cheque);
+                }
+
+                ChequesGenerated = true;
+                Report($"✓ Generated {cheques.Count} cheques");
+                StatusMessage = $"Generated {cheques.Count} cheques";
+
+                await _dialogService.ShowMessageBoxAsync(
+                    $"Successfully generated {cheques.Count} cheques!\n\n" +
+                    $"Cheque range: {cheques.Min(c => c.ChequeNumber)} - {cheques.Max(c => c.ChequeNumber)}",
+                    "Cheques Generated");
+            }
+            catch (Exception ex)
+            {
+                Report($"✗ ERROR: {ex.Message}");
+                Logger.Error("Error generating cheques", ex);
+                await _dialogService.ShowMessageBoxAsync($"Error generating cheques: {ex.Message}", "Error");
+            }
+            finally
+            {
+                IsRunning = false;
+            }
+        }
+
+        /// <summary>
+        /// Print generated cheques
+        /// </summary>
+        private async Task PrintChequesAsync()
+        {
+            try
+            {
+                if (!GeneratedCheques.Any())
+                {
+                    await _dialogService.ShowMessageBoxAsync("No cheques to print. Please generate cheques first.", "No Cheques");
+                    return;
+                }
+
+                IsRunning = true;
+                StatusMessage = "Printing cheques...";
+                Report($"Printing {GeneratedCheques.Count} cheques...");
+
+                // Print all cheques
+                var printedCount = await _chequePrintingService.PrintChequesAsync(GeneratedCheques.ToList());
+
+                if (printedCount > 0)
+                {
+                    ChequesPrinted = true;
+                    Report($"✓ Printed {printedCount} cheques");
+                    StatusMessage = $"Printed {printedCount} cheques successfully";
+
+                    await _dialogService.ShowMessageBoxAsync(
+                        $"Successfully printed {printedCount} cheques!",
+                        "Printing Complete");
+                }
+                else
+                {
+                    Report("Printing cancelled by user");
+                }
+            }
+            catch (Exception ex)
+            {
+                Report($"✗ ERROR: {ex.Message}");
+                Logger.Error("Error printing cheques", ex);
+                await _dialogService.ShowMessageBoxAsync($"Error printing cheques: {ex.Message}", "Error");
+            }
+            finally
+            {
+                IsRunning = false;
+            }
+        }
+
+        /// <summary>
+        /// Print advance statements for all growers in batch
+        /// </summary>
+        private async Task PrintStatementsAsync()
+        {
+            try
+            {
+                if (CurrentBatch == null || LatestTestRunResult == null)
+                {
+                    await _dialogService.ShowMessageBoxAsync("No batch available to print statements for.", "No Batch");
+                    return;
+                }
+
+                IsRunning = true;
+                StatusMessage = "Printing statements...";
+                Report($"Printing statements for {LatestTestRunResult.GrowerPayments.Count} growers...");
+
+                // Print statements
+                var printedCount = await _statementPrintingService.PrintBatchStatementsAsync(
+                    LatestTestRunResult.GrowerPayments,
+                    AdvanceNumber,
+                    CurrentBatch.PaymentBatchId);
+
+                if (printedCount > 0)
+                {
+                    StatementsGenerated = true;
+                    Report($"✓ Printed {printedCount} statements");
+                    StatusMessage = $"Printed {printedCount} statements successfully";
+
+                    await _dialogService.ShowMessageBoxAsync(
+                        $"Successfully printed {printedCount} advance statements!",
+                        "Printing Complete");
+                }
+                else
+                {
+                    Report("Statement printing cancelled by user");
+                }
+            }
+            catch (Exception ex)
+            {
+                Report($"✗ ERROR: {ex.Message}");
+                Logger.Error("Error printing statements", ex);
+                await _dialogService.ShowMessageBoxAsync($"Error printing statements: {ex.Message}", "Error");
+            }
+            finally
+            {
+                IsRunning = false;
+            }
+        }
+
+        /// <summary>
+        /// View details of the current payment batch
+        /// </summary>
+        private async Task ViewBatchDetailsAsync()
+        {
+            try
+            {
+                if (CurrentBatch == null)
+                {
+                    await _dialogService.ShowMessageBoxAsync("No batch selected.", "No Batch");
+                    return;
+                }
+
+                // Get batch summary
+                var summary = await _batchManagementService.GetBatchSummaryAsync(CurrentBatch.PaymentBatchId);
+
+                // Display summary
+                var message = $"Batch Details:\n\n" +
+                             $"Batch Number: {summary.BatchNumber}\n" +
+                             $"Payment Type: {summary.PaymentTypeName}\n" +
+                             $"Batch Date: {summary.BatchDate:yyyy-MM-dd}\n" +
+                             $"Status: {summary.Status}\n\n" +
+                             $"Growers: {summary.TotalGrowers}\n" +
+                             $"Receipts: {summary.TotalReceipts}\n" +
+                             $"Amount: ${summary.TotalAmount:N2}\n" +
+                             $"Cheques Generated: {summary.ChequesGenerated}\n\n" +
+                             $"Created: {summary.CreatedAt:g} by {summary.CreatedBy}";
+
+                if (summary.PostedAt.HasValue)
+                {
+                    message += $"\nPosted: {summary.PostedAt:g} by {summary.PostedBy}";
+                }
+
+                await _dialogService.ShowMessageBoxAsync(message, "Batch Details");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error viewing batch details", ex);
+                await _dialogService.ShowMessageBoxAsync($"Error loading batch details: {ex.Message}", "Error");
+            }
         }
 
     }

@@ -1,38 +1,144 @@
 using System;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 namespace WPFGrowerApp.DataAccess.Models
 {
     /// <summary>
-    /// Model class for ReceiptPaymentAllocation
-    /// Matches the ReceiptPaymentAllocations table schema
+    /// Represents a payment allocation to a receipt.
+    /// Links receipts to payment batches and tracks what was paid.
+    /// Matches the ReceiptPaymentAllocations table in the modern database.
     /// </summary>
-    public class ReceiptPaymentAllocation
+    public class ReceiptPaymentAllocation : INotifyPropertyChanged
     {
-        public int AllocationId { get; set; }
-        public int ReceiptId { get; set; }
-        public int PaymentBatchId { get; set; }
-        public int PaymentTypeId { get; set; }
-        public string PaymentTypeName { get; set; } // From join with PaymentTypes
-        public int PriceScheduleId { get; set; }
-        public decimal PricePerPound { get; set; }
-        public decimal QuantityPaid { get; set; }
-        public decimal AmountPaid { get; set; }
-        public DateTime AllocatedAt { get; set; }
+        // ======================================================================
+        // PRIMARY IDENTIFICATION
+        // ======================================================================
         
-        // ====================================================================
-        // AUDIT COLUMNS
-        // ====================================================================
+        private int _allocationId;
+        private int _receiptId;
+        private int _paymentBatchId;
+        private int _paymentTypeId;
+
+        public int AllocationId
+        {
+            get => _allocationId;
+            set => SetProperty(ref _allocationId, value);
+        }
+
+        public int ReceiptId
+        {
+            get => _receiptId;
+            set => SetProperty(ref _receiptId, value);
+        }
+
+        public int PaymentBatchId
+        {
+            get => _paymentBatchId;
+            set => SetProperty(ref _paymentBatchId, value);
+        }
+
+        public int PaymentTypeId
+        {
+            get => _paymentTypeId;
+            set => SetProperty(ref _paymentTypeId, value);
+        }
+
+        // ======================================================================
+        // PRICING & PAYMENT DETAILS
+        // ======================================================================
         
-        public DateTime CreatedAt { get; set; }
-        public string CreatedBy { get; set; }
-        public DateTime? ModifiedAt { get; set; }
-        public string? ModifiedBy { get; set; }
-        public DateTime? DeletedAt { get; set; }
-        public string? DeletedBy { get; set; }
+        private int _priceScheduleId;
+        private decimal _pricePerPound;
+        private decimal _quantityPaid;
+        private decimal _amountPaid;
+
+        public int PriceScheduleId
+        {
+            get => _priceScheduleId;
+            set => SetProperty(ref _priceScheduleId, value);
+        }
+
+        public decimal PricePerPound
+        {
+            get => _pricePerPound;
+            set => SetProperty(ref _pricePerPound, value);
+        }
+
+        public decimal QuantityPaid
+        {
+            get => _quantityPaid;
+            set => SetProperty(ref _quantityPaid, value);
+        }
+
+        public decimal AmountPaid
+        {
+            get => _amountPaid;
+            set => SetProperty(ref _amountPaid, value);
+        }
+
+        // ======================================================================
+        // AUDIT TRAIL
+        // ======================================================================
         
-        /// <summary>
-        /// Returns true if the record is soft-deleted
-        /// </summary>
-        public bool IsDeleted => DeletedAt.HasValue;
+        private DateTime _allocatedAt;
+
+        public DateTime AllocatedAt
+        {
+            get => _allocatedAt;
+            set => SetProperty(ref _allocatedAt, value);
+        }
+
+        // ======================================================================
+        // NAVIGATION PROPERTIES (Not mapped to database)
+        // ======================================================================
+        
+        private string? _receiptNumber;
+        private string? _growerName;
+        private string? _paymentTypeName;
+        private string? _batchNumber;
+
+        public string? ReceiptNumber
+        {
+            get => _receiptNumber;
+            set => SetProperty(ref _receiptNumber, value);
+        }
+
+        public string? GrowerName
+        {
+            get => _growerName;
+            set => SetProperty(ref _growerName, value);
+        }
+
+        public string? PaymentTypeName
+        {
+            get => _paymentTypeName;
+            set => SetProperty(ref _paymentTypeName, value);
+        }
+
+        public string? BatchNumber
+        {
+            get => _batchNumber;
+            set => SetProperty(ref _batchNumber, value);
+        }
+
+        // ======================================================================
+        // INOTIFYPROPERTYCHANGED IMPLEMENTATION
+        // ======================================================================
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+        {
+            if (Equals(field, value)) return false;
+            field = value;
+            OnPropertyChanged(propertyName);
+            return true;
+        }
     }
 }

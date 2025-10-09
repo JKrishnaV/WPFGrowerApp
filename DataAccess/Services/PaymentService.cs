@@ -375,6 +375,13 @@ namespace WPFGrowerApp.DataAccess.Services
                     currentGrowerPayment.Currency = grower.Currency.ToString();
                     currentGrowerPayment.IsOnHold = grower.OnHold;
 
+                    // SIMPLIFIED: Skip processing entirely if grower is on hold
+                    if (grower.OnHold)
+                    {
+                        progress?.Report($"GrowerID {growerId} ({grower.GrowerName}) is ON HOLD - skipping all receipts.");
+                        continue; // Skip to next grower - don't add to results at all
+                    }
+
                     // 4. Process each receipt for the grower (Moved from ProcessAdvancePaymentRunAsync)
                     foreach (var receipt in growerReceipts)
                     {
