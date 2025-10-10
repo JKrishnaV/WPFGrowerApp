@@ -130,8 +130,8 @@
             </Grid.ColumnDefinitions>
 
             <syncfusion:SfChart Grid.Column="0" Header="Top 5 Grower Payments" Margin="0,0,8,0" MinHeight="200">
-                 <syncfusion:SfChart.Legend>
-                    <syncfusion:ChartLegend DockPosition="Bottom"/>
+                <syncfusion:SfChart.Legend>
+                    <syncfusion:ChartLegend DockPosition="Bottom" Visibility="Visible"/>
                 </syncfusion:SfChart.Legend>
                 <syncfusion:PieSeries ItemsSource="{Binding TopGrowerPayments}"
                                      XBindingPath="Category" 
@@ -147,6 +147,9 @@
             </syncfusion:SfChart>
 
             <syncfusion:SfChart Grid.Column="1" Header="Total Payment by Product" Margin="8,0,0,0" MinHeight="200">
+                <syncfusion:SfChart.Legend>
+                    <syncfusion:ChartLegend DockPosition="Bottom" Visibility="Visible"/>
+                </syncfusion:SfChart.Legend>
                 <syncfusion:SfChart.PrimaryAxis>
                     <syncfusion:CategoryAxis/>
                 </syncfusion:SfChart.PrimaryAxis>

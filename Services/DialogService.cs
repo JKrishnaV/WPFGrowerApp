@@ -5,6 +5,7 @@ using WPFGrowerApp.Views;
 using System.Threading.Tasks; // Added for Task
 using MaterialDesignThemes.Wpf; // Added for DialogHost
 using WPFGrowerApp.Views.Dialogs; // Added for custom dialog views
+using WPFGrowerApp.ViewModels; // Added for InputDialogViewModel
 using System.Linq;
 using System.Reflection;
 
@@ -106,84 +107,36 @@ namespace WPFGrowerApp.Services
         }
 
         /// <summary>
-        /// Shows an input dialog for text entry.
+        /// Shows a modern Material Design input dialog for text entry.
         /// </summary>
+        /// <param name="message">The message/prompt to display.</param>
+        /// <param name="title">The title of the input dialog.</param>
+        /// <param name="initialText">Optional initial text in the input field.</param>
+        /// <param name="placeholder">Optional placeholder text.</param>
+        /// <param name="multiline">Whether the input should be multiline.</param>
+        /// <returns>The entered text, or null if cancelled.</returns>
+        public async Task<string?> ShowInputDialogAsync(string message, string title, string? initialText = null, string? placeholder = null, bool multiline = false)
+        {
+            var viewModel = new InputDialogViewModel(message, title, initialText, placeholder, multiline);
+            var dialogView = new InputDialogView
+            {
+                DataContext = viewModel
+            };
+
+            var result = await MaterialDesignThemes.Wpf.DialogHost.Show(dialogView, RootDialogHostId);
+            
+            return viewModel.Result ? viewModel.InputText : null;
+        }
+
+        /// <summary>
+        /// Shows a modern Material Design input dialog for text entry (backward compatibility overload).
+        /// </summary>
+        /// <param name="message">The message/prompt to display.</param>
+        /// <param name="title">The title of the input dialog.</param>
+        /// <returns>The entered text, or null if cancelled.</returns>
         public async Task<string?> ShowInputDialogAsync(string message, string title)
         {
-            var result = await Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                var inputWindow = new Window
-                {
-                    Title = title,
-                    Width = 400,
-                    Height = 200,
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                    Owner = Application.Current.MainWindow,
-                    ResizeMode = ResizeMode.NoResize
-                };
-
-                var stackPanel = new System.Windows.Controls.StackPanel
-                {
-                    Margin = new Thickness(20)
-                };
-
-                var messageBlock = new System.Windows.Controls.TextBlock
-                {
-                    Text = message,
-                    TextWrapping = TextWrapping.Wrap,
-                    Margin = new Thickness(0, 0, 0, 10)
-                };
-
-                var inputBox = new System.Windows.Controls.TextBox
-                {
-                    Margin = new Thickness(0, 0, 0, 10)
-                };
-
-                var buttonPanel = new System.Windows.Controls.StackPanel
-                {
-                    Orientation = System.Windows.Controls.Orientation.Horizontal,
-                    HorizontalAlignment = HorizontalAlignment.Right
-                };
-
-                var okButton = new System.Windows.Controls.Button
-                {
-                    Content = "OK",
-                    Width = 80,
-                    Margin = new Thickness(0, 0, 10, 0),
-                    IsDefault = true
-                };
-                okButton.Click += (s, e) =>
-                {
-                    inputWindow.DialogResult = true;
-                    inputWindow.Close();
-                };
-
-                var cancelButton = new System.Windows.Controls.Button
-                {
-                    Content = "Cancel",
-                    Width = 80,
-                    IsCancel = true
-                };
-                cancelButton.Click += (s, e) =>
-                {
-                    inputWindow.DialogResult = false;
-                    inputWindow.Close();
-                };
-
-                buttonPanel.Children.Add(okButton);
-                buttonPanel.Children.Add(cancelButton);
-
-                stackPanel.Children.Add(messageBlock);
-                stackPanel.Children.Add(inputBox);
-                stackPanel.Children.Add(buttonPanel);
-
-                inputWindow.Content = stackPanel;
-
-                var dialogResult = inputWindow.ShowDialog();
-                return dialogResult == true ? inputBox.Text : null;
-            });
-
-            return result;
+            return await ShowInputDialogAsync(message, title, null, null, false);
         }
 
         /// <summary>

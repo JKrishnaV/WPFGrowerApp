@@ -13,8 +13,9 @@ namespace WPFGrowerApp.DataAccess.Interfaces
     {
         /// <summary>
         /// Initiates and processes a payment run for a specific advance type.
+        /// SUPPORTS UNLIMITED ADVANCES: Works for any advance number (1, 2, 3, 4, 5, ...)
         /// </summary>
-        /// <param name="advanceNumber">The advance number (1, 2, or 3).</param>
+        /// <param name="advanceNumber">The advance number (1, 2, 3, 4, 5, ...) - unlimited!</param>
         /// <param name="paymentDate">The date to assign to the payment transactions.</param>
         /// <param name="cutoffDate">The cutoff date for including receipts.</param>
         /// <param name="cropYear">The crop year for the payment.</param>
@@ -23,8 +24,8 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// <param name="productIds">Optional: List of product IDs to include (if empty, include all).</param>
         /// <param name="processIds">Optional: List of process IDs to include (if empty, include all).</param>
         /// <param name="progress">Optional: Progress reporting.</param>
-        /// <returns>A tuple indicating success, a list of any errors encountered, and the created PaymentBatch.</returns>
-        Task<(bool Success, List<string> Errors, PaymentBatch CreatedBatch)> ProcessAdvancePaymentRunAsync(
+        /// <returns>A tuple indicating success, a list of any errors encountered, and the created PaymentBatch (null if error).</returns>
+        Task<(bool Success, List<string> Errors, PaymentBatch? CreatedBatch)> ProcessAdvancePaymentRunAsync(
             int advanceNumber,
             DateTime paymentDate,
             DateTime cutoffDate,
@@ -38,8 +39,9 @@ namespace WPFGrowerApp.DataAccess.Interfaces
 
         /// <summary>
         /// Performs a test run simulation of an advance payment run without committing changes.
+        /// SUPPORTS UNLIMITED ADVANCES: Works for any advance number (1, 2, 3, 4, 5, ...)
         /// </summary>
-        /// <param name="advanceNumber">The advance number (1, 2, or 3).</param>
+        /// <param name="advanceNumber">The advance number (1, 2, 3, 4, 5, ...) - unlimited!</param>
         /// <param name="paymentDate">The date to simulate payment transactions.</param>
         /// <param name="cutoffDate">The cutoff date for including receipts.</param>
         /// <param name="cropYear">The crop year for the payment.</param>

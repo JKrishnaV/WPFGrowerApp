@@ -11,8 +11,8 @@
        WindowStartupLocation="CenterScreen"
        WindowStyle="None" 
        ResizeMode="CanResizeWithGrip"
-       AllowsTransparency="True"
-       Background="Transparent"> 
+       AllowsTransparency="False"
+       Background="{DynamicResource MaterialDesignPaper}"> 
    
    <Window.Resources>
        <ResourceDictionary>
@@ -147,10 +147,11 @@
                    </Grid.RowDefinitions>
 
                   <!-- Modern Header Design -->
-                  <Grid x:Name="HeaderGrid" Grid.Row="0" Background="{DynamicResource MaterialDesignPaper}" MouseLeftButtonDown="HeaderArea_MouseLeftButtonDown">
-                      <Grid.Effect>
-                          <DropShadowEffect Color="Black" Opacity="0.1" BlurRadius="8" ShadowDepth="2" Direction="270"/>
-                      </Grid.Effect>
+                  <materialDesign:Card Grid.Row="0" 
+                                       UniformCornerRadius="0" 
+                                       materialDesign:ElevationAssist.Elevation="Dp2"
+                                       Background="{DynamicResource MaterialDesignPaper}">
+                      <Grid x:Name="HeaderGrid" MouseLeftButtonDown="HeaderArea_MouseLeftButtonDown">
                        <Grid.ColumnDefinitions>
                           <!-- Left Section: Menu + Home + Title -->
                           <ColumnDefinition Width="Auto"/>
@@ -309,19 +310,15 @@
                               </materialDesign:PopupBox.ToggleContent>
                               
                               <!-- Notifications Dropdown Content -->
-                              <Grid Background="Transparent">
+                              <materialDesign:Card UniformCornerRadius="12"
+                                                   materialDesign:ElevationAssist.Elevation="Dp8"
+                                                   Width="340"
+                                                   MaxHeight="420"
+                                                   Padding="0,12"
+                                                   Margin="4">
                                   <Border Background="{DynamicResource MaterialDesignPaper}"
-                                          BorderBrush="{DynamicResource MaterialDesignDivider}"
-                                          BorderThickness="1"
                                           CornerRadius="12"
-                                          Width="340"
-                                          MaxHeight="420"
-                                          Padding="0,12"
-                                          Margin="4"
                                           ClipToBounds="True">
-                                      <Border.Effect>
-                                          <DropShadowEffect Color="Black" Opacity="0.3" BlurRadius="8" ShadowDepth="3" Direction="270"/>
-                                      </Border.Effect>
                                   
                                   <StackPanel>
                                       <!-- Notifications Header -->
@@ -502,7 +499,7 @@
                                       </Border>
                                   </StackPanel>
                                       </Border>
-                                  </Grid>
+                              </materialDesign:Card>
                           </materialDesign:PopupBox>
                       </StackPanel>
 
@@ -573,18 +570,14 @@
                               </materialDesign:PopupBox.ToggleContent>
                               
                               <!-- Dropdown Menu Content -->
-                              <Grid Background="Transparent">
+                              <materialDesign:Card UniformCornerRadius="12"
+                                                   materialDesign:ElevationAssist.Elevation="Dp8"
+                                                   Width="200"
+                                                   Padding="0,8"
+                                                   Margin="4">
                                   <Border Background="{DynamicResource MaterialDesignPaper}"
-                                          BorderBrush="{DynamicResource MaterialDesignDivider}"
-                                          BorderThickness="1"
                                           CornerRadius="12"
-                                          Width="200"
-                                          Padding="0,8"
-                                          Margin="4"
                                           ClipToBounds="True">
-                                      <Border.Effect>
-                                          <DropShadowEffect Color="Black" Opacity="0.3" BlurRadius="8" ShadowDepth="3" Direction="270"/>
-                                      </Border.Effect>
                                   
                                   <StackPanel>
                                       <!-- User Info Header -->
@@ -773,7 +766,7 @@
                        </StackPanel>
                                   </StackPanel>
                                       </Border>
-                                  </Grid>
+                              </materialDesign:Card>
                           </materialDesign:PopupBox>
 
                           <!-- Theme Toggle Button -->
@@ -817,6 +810,7 @@
                                   Foreground="{DynamicResource MaterialDesignBody}"/>
                        </StackPanel>
                    </Grid>
+                   </materialDesign:Card>
 
                    <ScrollViewer Grid.Row="1" 
                            VerticalScrollBarVisibility="Auto" 

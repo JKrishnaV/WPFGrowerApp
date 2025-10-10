@@ -21,9 +21,8 @@ namespace WPFGrowerApp.DataAccess.Services
         private readonly IProcessClassificationService _processClassificationService; // For Fresh vs Non-Fresh tracking
 
         // Constants for Account Types (mirroring TT_ values from XBase++)
-        private const string AccTypeAdvance1 = "ADV1"; // Placeholder - Use actual code
-        private const string AccTypeAdvance2 = "ADV2"; // Placeholder
-        private const string AccTypeAdvance3 = "ADV3"; // Placeholder
+        // Note: Advance types are now dynamically generated from PaymentTypes table
+        // These constants remain for non-advance payment types
         private const string AccTypeDeduction = "DED";  // Placeholder
         private const string AccTypePremium = "PREM"; // Placeholder
         // Add other types as needed (e.g., Loan payments, Equity)
@@ -45,7 +44,7 @@ namespace WPFGrowerApp.DataAccess.Services
         }
 
         // --- Actual Payment Run ---
-        public async Task<(bool Success, List<string> Errors, PaymentBatch CreatedBatch)> ProcessAdvancePaymentRunAsync(
+        public async Task<(bool Success, List<string> Errors, PaymentBatch? CreatedBatch)> ProcessAdvancePaymentRunAsync(
             int advanceNumber,
             DateTime paymentDate,
             DateTime cutoffDate,
@@ -58,7 +57,7 @@ namespace WPFGrowerApp.DataAccess.Services
             IProgress<string>? progress = null)
         {
             var errors = new List<string>();
-            PaymentBatch createdBatch = null;
+            PaymentBatch? createdBatch = null;
             bool overallSuccess = false;
 
             try
@@ -371,6 +370,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         continue; // Skip this grower
                     }
                     // Populate from Grower object
+                    currentGrowerPayment.GrowerNumber = grower.GrowerNumber ?? string.Empty;
                     currentGrowerPayment.GrowerName = grower.GrowerName ?? string.Empty;
                     currentGrowerPayment.Currency = grower.Currency.ToString();
                     currentGrowerPayment.IsOnHold = grower.OnHold;
@@ -428,15 +428,21 @@ namespace WPFGrowerApp.DataAccess.Services
                                 grower.PriceLevel,
                                 receipt.Grade);
 
-                            // Calculate what has already been paid (cumulative with max logic)
+                            // ================================================================
+                            // GENERIC CALCULATION LOGIC - SUPPORTS UNLIMITED ADVANCES!
+                            // ================================================================
+                            // Calculate what has already been paid from ReceiptPaymentAllocations
+                            // This replaces the hardcoded if/else chains for advances 1, 2, 3
+                            // Now works for advance 1, 2, 3, 4, 5, ... unlimited!
+                            
                             decimal alreadyPaid = 0;
-
+                            
                             if (parameters.AdvanceNumber == 1)
                             {
-                                // First advance - simple case
+                                // First advance - nothing previously paid
                                 calculatedAdvancePrice = currentRunningPrice;
                                 
-                                // Get time premium using grower currency
+                                // Premium and deduction only on first advance
                                 premiumPrice = await _priceService.GetTimePremiumAsync(
                                     receipt.Product ?? string.Empty,
                                     receipt.Process ?? string.Empty,
@@ -446,32 +452,15 @@ namespace WPFGrowerApp.DataAccess.Services
                                     
                                 marketingDeduction = await _priceService.GetMarketingDeductionAsync(receipt.Product ?? string.Empty);
                             }
-                            else if (parameters.AdvanceNumber == 2)
+                            else
                             {
-                                // Advance 2: RunAdvPrice(2) - paid_adv1
-                                var prevAdv1Price = await GetPreviousAdvancePrice(decimal.TryParse(receipt.ReceiptNumber, out var num1) ? num1 : 0, 1);
-                                alreadyPaid = prevAdv1Price;
-                                calculatedAdvancePrice = currentRunningPrice - alreadyPaid;
-                            }
-                            else if (parameters.AdvanceNumber == 3)
-                            {
-                                // Advance 3: RunAdvPrice(3) - max(RunAdvPrice(2), paid_adv1)
-                                // This mirrors GROW_AP.PRG line 420:
-                                // nAdvance3 := Daily->(RunAdvPrice(3)) - max( Daily->(RunAdvPrice(2)), Daily->adv_pr1 )
-                                var prevAdv1Price = await GetPreviousAdvancePrice(decimal.TryParse(receipt.ReceiptNumber, out var num2) ? num2 : 0, 1);
+                                // Subsequent advances (2, 3, 4, 5, ... unlimited)
+                                // Get cumulative price per pound already paid from ReceiptPaymentAllocations
+                                alreadyPaid = await GetAlreadyPaidCumulativePriceAsync(receipt.ReceiptId, parameters.AdvanceNumber);
                                 
-                                // Get running price through advance 2
-                                var runningPriceAfterAdv2 = await GetRunningAdvancePriceAsync(
-                                    receipt.Product ?? string.Empty,
-                                    receipt.Process ?? string.Empty,
-                                    receipt.ReceiptDate,
-                                    2,  // Up to advance 2
-                                    grower.Currency,
-                                    grower.PriceLevel,
-                                    receipt.Grade);
-                                
-                                // Use max to handle cases where advance 2 wasn't paid or was less than advance 1
-                                alreadyPaid = Math.Max(runningPriceAfterAdv2, prevAdv1Price);
+                                // Calculate incremental payment: Current cumulative - Already paid
+                                // The currentRunningPrice already has max() protection from GetRunningAdvancePriceAsync
+                                // So we just subtract what was already paid
                                 calculatedAdvancePrice = currentRunningPrice - alreadyPaid;
                             }
 
@@ -556,36 +545,55 @@ namespace WPFGrowerApp.DataAccess.Services
             };
         }
 
-        // Helper to get advance number from account type
+        /// <summary>
+        /// Gets the advance number from an account type code.
+        /// SUPPORTS UNLIMITED ADVANCES: Parses any "ADVn" format (ADV1, ADV2, ADV3, ADV4, ...)
+        /// </summary>
+        /// <param name="accountType">Account type code (e.g., "ADV1", "ADV2", "ADV4")</param>
+        /// <returns>Advance number, or 0 if not an advance payment type</returns>
         private decimal GetAdvanceNumberFromType(string accountType)
         {
-            if (accountType == AccTypeAdvance1) return 1;
-            if (accountType == AccTypeAdvance2) return 2;
-            if (accountType == AccTypeAdvance3) return 3;
+            // Handle dynamic advance types: ADV1, ADV2, ADV3, ADV4, ADV5, etc.
+            if (accountType?.StartsWith("ADV", StringComparison.OrdinalIgnoreCase) == true && accountType.Length > 3)
+            {
+                if (int.TryParse(accountType.Substring(3), out int advNum))
+                {
+                    return advNum;
+                }
+            }
             return 0; // Not an advance payment type
         }
 
-        // Helper to get the account type string based on advance number
+        /// <summary>
+        /// Gets the account type code for a given advance number.
+        /// SUPPORTS UNLIMITED ADVANCES: Generates "ADVn" format dynamically (ADV1, ADV2, ADV3, ADV4, ...)
+        /// </summary>
+        /// <param name="advanceNumber">Advance number (1, 2, 3, 4, 5, ...)</param>
+        /// <returns>Account type code (e.g., "ADV1", "ADV2", "ADV4")</returns>
+        /// <exception cref="ArgumentOutOfRangeException">If advance number is less than 1</exception>
         private string GetAdvanceAccountType(int advanceNumber)
         {
-            switch (advanceNumber)
+            if (advanceNumber < 1)
             {
-                case 1: return AccTypeAdvance1;
-                case 2: return AccTypeAdvance2;
-                case 3: return AccTypeAdvance3;
-                default: throw new ArgumentOutOfRangeException(nameof(advanceNumber));
+                throw new ArgumentOutOfRangeException(nameof(advanceNumber), 
+                    "Advance number must be 1 or greater");
             }
+            
+            // Dynamically generate account type: ADV1, ADV2, ADV3, ADV4, ADV5, ...
+            return $"ADV{advanceNumber}";
         }
 
         /// <summary>
         /// Calculates the cumulative running advance price up to the specified advance number.
         /// Uses max() to ensure the price never goes backward (mirrors legacy RunAdvPrice).
         /// This prevents negative advance payments when price table has decreasing values.
+        /// 
+        /// SUPPORTS UNLIMITED ADVANCES: Works for any advance number (1, 2, 3, 4, 5, ...)
         /// </summary>
         /// <param name="product">Product code</param>
         /// <param name="process">Process code</param>
         /// <param name="receiptDate">Receipt date</param>
-        /// <param name="upToAdvanceNumber">Calculate cumulative price up to this advance (1, 2, or 3)</param>
+        /// <param name="upToAdvanceNumber">Calculate cumulative price up to this advance (1, 2, 3, 4, ...)</param>
         /// <param name="currency">Grower currency (C/U)</param>
         /// <param name="priceLevel">Grower price level (1-3)</param>
         /// <param name="grade">Receipt grade</param>
@@ -632,39 +640,47 @@ namespace WPFGrowerApp.DataAccess.Services
             return Math.Round(amount, 2, MidpointRounding.AwayFromZero);
         }
 
-        // Helper to get previously paid advance price (needs implementation)
+        /// <summary>
+        /// [OBSOLETE - LEGACY METHOD]
+        /// This method was used in the original hardcoded implementation for advances 1-3.
+        /// It has been replaced by GetAlreadyPaidCumulativePriceAsync which queries
+        /// ReceiptPaymentAllocations table directly and supports unlimited advances.
+        /// 
+        /// Kept for reference only. New code should use GetAlreadyPaidCumulativePriceAsync.
+        /// </summary>
+        [Obsolete("Use GetAlreadyPaidCumulativePriceAsync instead - supports unlimited advances")]
         private async Task<decimal> GetPreviousAdvancePrice(decimal receiptNumber, int advanceNumberToGet)
         {
-            // This needs to query the Daily table for the specific receipt
-            // and return the value from ADV_PR1 or ADV_PR2 column.
+            // LEGACY: This queried Daily table for ADV_PR1, ADV_PR2 columns
+            // NEW: Use GetAlreadyPaidCumulativePriceAsync which queries ReceiptPaymentAllocations
             var receipt = await _receiptService.GetReceiptByNumberAsync(receiptNumber);
             if (receipt == null) return 0;
 
-            // TODO: Accessing ADV_PR1, ADV_PR2 etc. requires adding them to the Receipt model
-            // or querying them directly here. Add these properties to Receipt.cs model first.
-            // Example (assuming properties exist):
-            // Access the newly added properties on the Receipt model
+            // Hardcoded for advance 1-2 only (limited implementation)
             if (advanceNumberToGet == 1)
-            {
-                return receipt.AdvPr1 ?? 0; // Use the AdvPr1 property
-            }
+                return receipt.AdvPr1 ?? 0;
             if (advanceNumberToGet == 2)
-            {
-                return receipt.AdvPr2 ?? 0; // Use the AdvPr2 property
-            }
+                return receipt.AdvPr2 ?? 0;
 
-            return 0; // Should not happen if advanceNumberToGet is 1 or 2
+            return 0; // Can't handle advance 3+
         }
 
         /// <summary>
         /// Gets the cumulative price per pound already paid for a receipt from previous advances.
-        /// Used for backward price protection calculation.
+        /// This method queries the ReceiptPaymentAllocations table to get actual paid prices.
+        /// Used for calculating incremental payment amounts for subsequent advances.
+        /// 
+        /// SUPPORTS UNLIMITED ADVANCES: Works for any advance number (1, 2, 3, 4, 5, ...)
         /// </summary>
+        /// <param name="receiptId">The receipt ID to query</param>
+        /// <param name="currentAdvanceNumber">Current advance being processed</param>
+        /// <returns>Sum of all prices per pound paid in previous advances</returns>
         private async Task<decimal> GetAlreadyPaidCumulativePriceAsync(int receiptId, int currentAdvanceNumber)
         {
             var allocations = await _receiptService.GetReceiptPaymentAllocationsAsync(receiptId);
             
             // Sum prices from previous advances only (not current or future)
+            // This works for ANY advance number - no hardcoded limits!
             return allocations
                 .Where(a => a.PaymentTypeId < currentAdvanceNumber)
                 .Sum(a => a.PricePerPound);

@@ -10,39 +10,42 @@
              xmlns:infra="clr-namespace:WPFGrowerApp.Infrastructure"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:PaymentRunViewModel, IsDesignTimeCreatable=False}"
-             d:DesignHeight="600" d:DesignWidth="800"
+             d:DesignHeight="800" d:DesignWidth="1200"
              Background="{DynamicResource MaterialDesignPaper}">
 
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/> <!-- Title -->
-            <RowDefinition Height="Auto"/> <!-- Parameters Card -->
-            <RowDefinition Height="*"/>    <!-- On Hold Growers -->
-            <RowDefinition Height="*"/>    <!-- Run Log -->
+                <RowDefinition Height="Auto"/> <!-- Main Parameters Card -->
+                <RowDefinition Height="Auto"/> <!-- Enhanced Filters Card -->
+                <RowDefinition Height="Auto"/> <!-- Preview Summary Card -->
+                <RowDefinition Height="Auto"/> <!-- On Hold Growers & Run Log (Combined) -->
             <RowDefinition Height="Auto"/> <!-- Status Bar -->
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Style="{StaticResource MaterialDesignHeadline5TextBlock}" Text="Run Advance Payment" Margin="0,0,0,16"/>
+            <TextBlock Grid.Row="0" Style="{StaticResource MaterialDesignHeadline5TextBlock}" 
+                       Text="Run Advance Payment" Margin="0,0,0,16"/>
 
-        <!-- Parameters Section -->
+            <!-- Main Parameters Section -->
         <materialDesign:Card Grid.Row="1" Padding="16" Margin="0,0,0,16">
             <Grid>
                  <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/> <!-- Row 0: Main Inputs -->
-                    <RowDefinition Height="Auto"/> <!-- Row 1: Filter GroupBox -->
-                    <RowDefinition Height="Auto"/> <!-- Row 2: Run Button -->
+                        <RowDefinition Height="Auto"/> <!-- Main Parameters -->
+                        <RowDefinition Height="Auto"/> <!-- Filter Presets -->
+                        <RowDefinition Height="Auto"/> <!-- Action Buttons -->
                 </Grid.RowDefinitions>
 
-                <!-- Row 0: Main Inputs Grid -->
+                    <!-- Main Parameters Grid -->
                 <Grid Grid.Row="0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>    <!-- Col 0 -->
-                        <ColumnDefinition Width="20"/>   <!-- Spacer -->
-                        <ColumnDefinition Width="*"/>    <!-- Col 2 -->
-                        <ColumnDefinition Width="20"/>   <!-- Spacer -->
-                        <ColumnDefinition Width="*"/>    <!-- Col 4 -->
-                        <ColumnDefinition Width="20"/>   <!-- Spacer -->
-                        <ColumnDefinition Width="*"/>    <!-- Col 6 -->
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
                     <ComboBox Grid.Column="0" Margin="0,5"
@@ -58,207 +61,67 @@
                                 Style="{StaticResource MaterialDesignFloatingHintDatePicker}"
                                 SelectedDate="{Binding PaymentDate}"/>
 
+                        <!-- NEW: Receipt Date Range -->
                     <DatePicker Grid.Column="4" Margin="0,5"
-                                materialDesign:HintAssist.Hint="Include Receipts Up To"
+                                    materialDesign:HintAssist.Hint="Receipt Date From"
+                                    Style="{StaticResource MaterialDesignFloatingHintDatePicker}"
+                                    SelectedDate="{Binding ReceiptDateFrom}"/>
+
+                        <DatePicker Grid.Column="6" Margin="0,5"
+                                    materialDesign:HintAssist.Hint="Receipt Date To"
                                 Style="{StaticResource MaterialDesignFloatingHintDatePicker}"
                                 SelectedDate="{Binding CutoffDate}"/>
-
-                    <!-- Changed TextBox to ComboBox for Crop Year -->
-                    <ComboBox Grid.Column="6" Margin="0,5"
-                             materialDesign:HintAssist.Hint="Crop Year"
-                             Style="{StaticResource MaterialDesignFloatingHintComboBox}"
-                             ItemsSource="{Binding CropYears}"
-                             SelectedValue="{Binding CropYear}"/>
                 </Grid>
 
-                <!-- Row 1: Filter GroupBox -->
-                <GroupBox Grid.Row="1" Margin="0,15,0,0"
-                          Header="Optional Filters"
-                          Style="{StaticResource MaterialDesignCardGroupBox}">
-                    <Grid>
+                    <!-- NEW: Filter Presets Row -->
+                    <Grid Grid.Row="1" Margin="0,16,0,0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>    <!-- Col 0 -->
-                            <ColumnDefinition Width="20"/>   <!-- Spacer -->
-                            <ColumnDefinition Width="*"/>    <!-- Col 2 -->
-                            <ColumnDefinition Width="20"/>   <!-- Spacer -->
-                            <ColumnDefinition Width="*"/>    <!-- Col 4 -->
-                            <ColumnDefinition Width="20"/>   <!-- Spacer -->
-                            <ColumnDefinition Width="*"/>    <!-- Col 6 -->
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/> <!-- Labels -->
-                            <RowDefinition Height="Auto"/> <!-- Search Boxes (Optional) -->
-                            <RowDefinition Height="Auto"/> <!-- ListBoxes -->
-                        </Grid.RowDefinitions>
 
-                        <!-- Labels -->
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Product IDs:" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" VerticalAlignment="Bottom" Margin="0,0,0,0"/>
-                        <TextBlock Grid.Row="0" Grid.Column="2" Text="Process IDs:" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" VerticalAlignment="Bottom" Margin="0,0,0,0"/>
-                        <TextBlock Grid.Row="0" Grid.Column="4" Text="Exclude Growers:" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" VerticalAlignment="Bottom" Margin="0,0,0,0"/>
-                        <TextBlock Grid.Row="0" Grid.Column="6" Text="Exclude Pay Groups:" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" VerticalAlignment="Bottom" Margin="0,0,0,0"/>
+                        <TextBlock Grid.Column="0" Text="Presets:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        
+                        <ComboBox Grid.Column="1" Margin="0,0,8,0"
+                                  materialDesign:HintAssist.Hint="Select Filter Preset"
+                                  Style="{StaticResource MaterialDesignFloatingHintComboBox}"
+                                  ItemsSource="{Binding FilterPresets}"
+                                  SelectedItem="{Binding SelectedPreset}"
+                                  DisplayMemberPath="Name"/>
+                        
+                        <Button Grid.Column="2" Style="{StaticResource MaterialDesignFlatButton}"
+                                Command="{Binding LoadPresetCommand}"
+                                Content="Load" Margin="0,0,4,0"/>
+                        
+                        <Button Grid.Column="3" Style="{StaticResource MaterialDesignFlatButton}"
+                                Command="{Binding SavePresetCommand}"
+                                Content="Save" Margin="0,0,4,0"/>
+                        
+                        <Button Grid.Column="4" Style="{StaticResource MaterialDesignFlatButton}"
+                                Command="{Binding DeletePresetCommand}"
+                                Content="Delete" Margin="0,0,8,0"/>
 
-                        <!-- Search Boxes -->
-                        <TextBox Grid.Row="1" Grid.Column="0" Margin="0,5,0,2"
-                                 materialDesign:HintAssist.Hint="Search..."
-                                 Text="{Binding ProductSearchText, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
-                        <TextBox Grid.Row="1" Grid.Column="2" Margin="0,5,0,2"
-                                 materialDesign:HintAssist.Hint="Search..."
-                                 Text="{Binding ProcessSearchText, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
-                        <TextBox Grid.Row="1" Grid.Column="4" Margin="0,5,0,2"
-                                 materialDesign:HintAssist.Hint="Search..."
-                                 Text="{Binding GrowerSearchText, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
-                        <TextBox Grid.Row="1" Grid.Column="6" Margin="0,5,0,2"
-                                 materialDesign:HintAssist.Hint="Search..."
-                                 Text="{Binding PayGroupSearchText, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
-
-
-                        <!-- ListBoxes -->
-                        <ListBox Grid.Row="2" Grid.Column="0" Margin="0,5,0,5" MaxHeight="115" 
-                         ItemsSource="{Binding FilteredProducts}" 
-                         SelectionMode="Extended"
-                         infra:ListBoxSelectedItemsBehavior.SelectedItems="{Binding SelectedProducts}"
-                         ItemContainerStyle="{StaticResource ListBoxItemStyle_CustomHighlight}"
-                         PreviewMouseLeftButtonDown="ListBoxItem_PreviewMouseLeftButtonDown_Toggle"
-                         IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBooleanConverter}}">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                                    <TextBlock x:Name="ProductText">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Text">
-                                                    <Setter.Value>
-                                                        <MultiBinding StringFormat="{}{0} - {1}">
-                                                            <Binding Path="ProductId"/>
-                                                            <Binding Path="Description"/>
-                                                        </MultiBinding>
-                                                    </Setter.Value>
-                                                </Setter>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding ProductId}" Value="{x:Null}">
-                                                        <Setter Property="Text" Value="{Binding Description}"/>
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding ProductId}" Value="">
-                                                        <Setter Property="Text" Value="{Binding Description}"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-
-                        <ListBox Grid.Row="2" Grid.Column="2" Margin="0,5,0,5" MaxHeight="115" 
-                         ItemsSource="{Binding FilteredProcesses}" 
-                         SelectionMode="Extended"
-                         infra:ListBoxSelectedItemsBehavior.SelectedItems="{Binding SelectedProcesses}"
-                         ItemContainerStyle="{StaticResource ListBoxItemStyle_CustomHighlight}"
-                         PreviewMouseLeftButtonDown="ListBoxItem_PreviewMouseLeftButtonDown_Toggle"
-                         IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBooleanConverter}}">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                                    <TextBlock x:Name="ProcessText">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Text">
-                                                    <Setter.Value>
-                                                        <MultiBinding StringFormat="{}{0} - {1}">
-                                                            <Binding Path="ProcessId"/>
-                                                            <Binding Path="Description"/>
-                                                        </MultiBinding>
-                                                    </Setter.Value>
-                                                </Setter>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding ProcessId}" Value="{x:Null}">
-                                                        <Setter Property="Text" Value="{Binding Description}"/>
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding ProcessId}" Value="">
-                                                        <Setter Property="Text" Value="{Binding Description}"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-
-                        <ListBox Grid.Row="2" Grid.Column="4" Margin="0,5,0,5" MaxHeight="115" 
-                         ItemsSource="{Binding FilteredGrowers}" 
-                         SelectionMode="Extended"
-                         infra:ListBoxSelectedItemsBehavior.SelectedItems="{Binding SelectedExcludeGrowers}"
-                         ItemContainerStyle="{StaticResource ListBoxItemStyle_CustomHighlight}"
-                         PreviewMouseLeftButtonDown="ListBoxItem_PreviewMouseLeftButtonDown_Toggle"
-                         IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBooleanConverter}}">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                                    <TextBlock x:Name="GrowerText">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Text">
-                                                    <Setter.Value>
-                                                        <MultiBinding StringFormat="{}{1} - {0}"> <!-- Swapped order -->
-                                                            <Binding Path="Name"/>
-                                                            <Binding Path="GrowerNumber"/> <!-- Reverted Binding -->
-                                                        </MultiBinding>
-                                                    </Setter.Value>
-                                                </Setter>
-                                                <Style.Triggers>
-                                                    <!-- Keep trigger for placeholder if re-added later -->
-                                                    <DataTrigger Binding="{Binding GrowerNumber}" Value="0"> <!-- Reverted Binding -->
-                                                        <Setter Property="Text" Value="{Binding Name}"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-
-                        <ListBox Grid.Row="2" Grid.Column="6" Margin="0,5,0,5" MaxHeight="115" 
-                         ItemsSource="{Binding FilteredPayGroups}"
-                         SelectionMode="Extended"
-                         infra:ListBoxSelectedItemsBehavior.SelectedItems="{Binding SelectedExcludePayGroups}"
-                         ItemContainerStyle="{StaticResource ListBoxItemStyle_CustomHighlight}"
-                         PreviewMouseLeftButtonDown="ListBoxItem_PreviewMouseLeftButtonDown_Toggle"
-                         IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBooleanConverter}}">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                                    <TextBlock x:Name="PayGroupText">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Text">
-                                                    <Setter.Value>
-                                                        <MultiBinding StringFormat="{}{0} - {1}">
-                                                            <Binding Path="PayGroupId"/>
-                                                            <Binding Path="Description"/>
-                                                        </MultiBinding>
-                                                    </Setter.Value>
-                                                </Setter>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding PayGroupId}" Value="{x:Null}">
-                                                        <Setter Property="Text" Value="{Binding Description}"/>
-                                                    </DataTrigger>
-                                                     <DataTrigger Binding="{Binding PayGroupId}" Value="">
-                                                        <Setter Property="Text" Value="{Binding Description}"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
+                        <TextBlock Grid.Column="6" Text="Crop Year:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        
+                        <ComboBox Grid.Column="7" Width="100"
+                                  Style="{StaticResource MaterialDesignFloatingHintComboBox}"
+                                  ItemsSource="{Binding CropYears}"
+                                  SelectedValue="{Binding CropYear}"/>
                     </Grid>
-                </GroupBox>
 
-                <!-- Row 2: Run Buttons -->
+                    <!-- Action Buttons -->
                 <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                        <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                                Command="{Binding PreviewCountCommand}"
+                                Content="Preview Count"
+                                ToolTip="Preview how many receipts will be included"
+                                Margin="0,0,8,0"/>
                     <Button Style="{StaticResource MaterialDesignRaisedButton}"
                             Command="{Binding TestRunCommand}"
                             IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBooleanConverter}}"
@@ -276,49 +139,428 @@
                             IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBooleanConverter}}"
                             Content="Start Payment Run"/>
                 </StackPanel>
+                </Grid>
+            </materialDesign:Card>
 
+            <!-- NEW: Enhanced Filters Section -->
+            <materialDesign:Card Grid.Row="2" Padding="16" Margin="0,0,0,16">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/> <!-- Header -->
+                        <RowDefinition Height="Auto"/> <!-- Basic Filters -->
+                        <RowDefinition Height="Auto"/> <!-- Advanced Options Toggle -->
+                        <RowDefinition Height="Auto"/> <!-- Advanced Options (Collapsible) -->
+                    </Grid.RowDefinitions>
+
+                    <!-- Header with Advanced Options Toggle -->
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <TextBlock Grid.Column="0" Text="Enhanced Filters" 
+                                   Style="{StaticResource MaterialDesignSubtitle1TextBlock}"/>
+                        
+                        <Button Grid.Column="1" Style="{StaticResource MaterialDesignFlatButton}"
+                                Content="{Binding ShowAdvancedOptions, Converter={StaticResource BooleanToTextConverter}}"
+                                Command="{Binding ToggleAdvancedOptionsCommand}">
+                            <Button.ContentTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="ChevronDown" Width="16" Height="16"/>
+                                        <TextBlock Text="{Binding}" Margin="4,0,0,0"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </Button.ContentTemplate>
+                        </Button>
+                    </Grid>
+
+                    <!-- Basic Filters -->
+                    <Grid Grid.Row="1" Margin="0,16,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Product Filter -->
+                        <GroupBox Grid.Column="0" Header="Product IDs">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/> <!-- Selection Summary -->
+                                    <RowDefinition Height="Auto"/> <!-- Quick Actions -->
+                                    <RowDefinition Height="Auto"/> <!-- Search -->
+                                    <RowDefinition Height="*"/>    <!-- List -->
+                                </Grid.RowDefinitions>
+                                
+                                <!-- Selection Summary -->
+                                <TextBlock Grid.Row="0" Text="{Binding SelectedProductsSummary}" 
+                                           Style="{StaticResource MaterialDesignCaptionTextBlock}"
+                                           Margin="0,0,0,4"/>
+                                
+                                <!-- Quick Actions -->
+                                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,4">
+                                    <Button Content="All" Command="{Binding SelectAllProductsCommand}" 
+                                            Style="{StaticResource MaterialDesignFlatButton}"
+                                            Padding="8,2" Margin="0,0,4,0"/>
+                                    <Button Content="Clear" Command="{Binding ClearAllProductsCommand}" 
+                                            Style="{StaticResource MaterialDesignFlatButton}"
+                                            Padding="8,2"/>
+                                </StackPanel>
+                                
+                                <TextBox Grid.Row="2" Margin="0,0,0,4"
+                                         materialDesign:HintAssist.Hint="Search..."
+                                         Text="{Binding ProductSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                                
+                    <ListBox Grid.Row="3" MaxHeight="120" 
+                             ItemsSource="{Binding ProductFilterItems}" 
+                             IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBooleanConverter}}"
+                             VirtualizingPanel.IsVirtualizing="True"
+                             VirtualizingPanel.VirtualizationMode="Recycling"
+                             ScrollViewer.CanContentScroll="True">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <CheckBox Content="{Binding DisplayText}" 
+                                                      IsChecked="{Binding IsSelected}"
+                                                      Margin="4,2"/>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </GroupBox>
+
+                        <!-- Process Filter -->
+                        <GroupBox Grid.Column="2" Header="Process IDs">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/> <!-- Selection Summary -->
+                                    <RowDefinition Height="Auto"/> <!-- Quick Actions -->
+                                    <RowDefinition Height="Auto"/> <!-- Search -->
+                                    <RowDefinition Height="*"/>    <!-- List -->
+                                </Grid.RowDefinitions>
+                                
+                                <!-- Selection Summary -->
+                                <TextBlock Grid.Row="0" Text="{Binding SelectedProcessesSummary}" 
+                                           Style="{StaticResource MaterialDesignCaptionTextBlock}"
+                                           Margin="0,0,0,4"/>
+                                
+                                <!-- Quick Actions -->
+                                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,4">
+                                    <Button Content="All" Command="{Binding SelectAllProcessesCommand}" 
+                                            Style="{StaticResource MaterialDesignFlatButton}"
+                                            Padding="8,2" Margin="0,0,4,0"/>
+                                    <Button Content="Clear" Command="{Binding ClearAllProcessesCommand}" 
+                                            Style="{StaticResource MaterialDesignFlatButton}"
+                                            Padding="8,2"/>
+                                </StackPanel>
+                                
+                                <TextBox Grid.Row="2" Margin="0,0,0,4"
+                                         materialDesign:HintAssist.Hint="Search..."
+                                         Text="{Binding ProcessSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                                
+                    <ListBox Grid.Row="3" MaxHeight="120" 
+                             ItemsSource="{Binding ProcessFilterItems}" 
+                             IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBooleanConverter}}"
+                             VirtualizingPanel.IsVirtualizing="True"
+                             VirtualizingPanel.VirtualizationMode="Recycling"
+                             ScrollViewer.CanContentScroll="True">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <CheckBox Content="{Binding DisplayText}" 
+                                                      IsChecked="{Binding IsSelected}"
+                                                      Margin="4,2"/>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </GroupBox>
+
+                        <!-- Grower Filter -->
+                        <GroupBox Grid.Column="4" Header="Growers">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/> <!-- Selection Summary -->
+                                    <RowDefinition Height="Auto"/> <!-- Quick Actions -->
+                                    <RowDefinition Height="Auto"/> <!-- Search -->
+                                    <RowDefinition Height="*"/>    <!-- List -->
+                                </Grid.RowDefinitions>
+                                
+                                <!-- Selection Summary -->
+                                <TextBlock Grid.Row="0" Text="{Binding SelectedGrowersSummary}" 
+                                           Style="{StaticResource MaterialDesignCaptionTextBlock}"
+                                           Margin="0,0,0,4"/>
+                                
+                                <!-- Quick Actions -->
+                                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,4">
+                                    <Button Content="All" Command="{Binding SelectAllGrowersCommand}" 
+                                            Style="{StaticResource MaterialDesignFlatButton}"
+                                            Padding="8,2" Margin="0,0,4,0"/>
+                                    <Button Content="Clear" Command="{Binding ClearAllGrowersCommand}" 
+                                            Style="{StaticResource MaterialDesignFlatButton}"
+                                            Padding="8,2"/>
+                                </StackPanel>
+                                
+                                <TextBox Grid.Row="2" Margin="0,0,0,4"
+                                         materialDesign:HintAssist.Hint="Search..."
+                                         Text="{Binding GrowerSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                                
+                                <ListBox Grid.Row="3" MaxHeight="120" 
+                                         ItemsSource="{Binding FilteredGrowerFilterItems}" 
+                                         IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBooleanConverter}}"
+                                         VirtualizingPanel.IsVirtualizing="True"
+                                         VirtualizingPanel.VirtualizationMode="Recycling"
+                                         ScrollViewer.CanContentScroll="True">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <CheckBox Content="{Binding DisplayText}" 
+                                                      IsChecked="{Binding IsSelected}"
+                                                      Margin="4,2"/>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </GroupBox>
+
+                        <!-- Pay Group Filter -->
+                        <GroupBox Grid.Column="6" Header="Pay Groups">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/> <!-- Selection Summary -->
+                                    <RowDefinition Height="Auto"/> <!-- Quick Actions -->
+                                    <RowDefinition Height="Auto"/> <!-- Search -->
+                                    <RowDefinition Height="*"/>    <!-- List -->
+                                </Grid.RowDefinitions>
+                                
+                                <!-- Selection Summary -->
+                                <TextBlock Grid.Row="0" Text="{Binding SelectedPayGroupsSummary}" 
+                                           Style="{StaticResource MaterialDesignCaptionTextBlock}"
+                                           Margin="0,0,0,4"/>
+                                
+                                <!-- Quick Actions -->
+                                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,4">
+                                    <Button Content="All" Command="{Binding SelectAllPayGroupsCommand}" 
+                                            Style="{StaticResource MaterialDesignFlatButton}"
+                                            Padding="8,2" Margin="0,0,4,0"/>
+                                    <Button Content="Clear" Command="{Binding ClearAllPayGroupsCommand}" 
+                                            Style="{StaticResource MaterialDesignFlatButton}"
+                                            Padding="8,2"/>
+                                </StackPanel>
+                                
+                                <TextBox Grid.Row="2" Margin="0,0,0,4"
+                                         materialDesign:HintAssist.Hint="Search..."
+                                         Text="{Binding PayGroupSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                                
+                                <ListBox Grid.Row="3" MaxHeight="120" 
+                                         ItemsSource="{Binding FilteredPayGroupFilterItems}"
+                                         IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBooleanConverter}}"
+                                         VirtualizingPanel.IsVirtualizing="True"
+                                         VirtualizingPanel.VirtualizationMode="Recycling"
+                                         ScrollViewer.CanContentScroll="True">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <CheckBox Content="{Binding DisplayText}" 
+                                                      IsChecked="{Binding IsSelected}"
+                                                      Margin="4,2"/>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </GroupBox>
+                    </Grid>
+
+                    <!-- Advanced Options (Collapsible) -->
+                    <Grid Grid.Row="3" Margin="0,16,0,0">
+                        <Grid.Style>
+                            <Style TargetType="Grid">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ShowAdvancedOptions}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Style>
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Process Class Filter -->
+                        <GroupBox Grid.Column="0" Header="Process Classes">
+                            <StackPanel>
+                                <CheckBox Content="Fresh" IsChecked="{Binding IncludeFresh}" Margin="0,4"/>
+                                <CheckBox Content="Processed" IsChecked="{Binding IncludeProcessed}" Margin="0,4"/>
+                                <CheckBox Content="Juice" IsChecked="{Binding IncludeJuice}" Margin="0,4"/>
+                                <CheckBox Content="Other" IsChecked="{Binding IncludeOther}" Margin="0,4"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- Grade Filter -->
+                        <GroupBox Grid.Column="2" Header="Grades">
+                            <StackPanel>
+                                <CheckBox Content="Grade 1" IsChecked="{Binding IncludeGrade1}" Margin="0,4"/>
+                                <CheckBox Content="Grade 2" IsChecked="{Binding IncludeGrade2}" Margin="0,4"/>
+                                <CheckBox Content="Grade 3" IsChecked="{Binding IncludeGrade3}" Margin="0,4"/>
+                                <CheckBox Content="Other Grade" IsChecked="{Binding IncludeOtherGrade}" Margin="0,4"/>
+                            </StackPanel>
+                        </GroupBox>
+
+                        <!-- Additional Options -->
+                        <GroupBox Grid.Column="4" Header="Additional Options">
+                            <StackPanel>
+                                <TextBox Margin="0,4"
+                                         materialDesign:HintAssist.Hint="Minimum Weight"
+                                         Text="{Binding MinimumWeight}"
+                                         Style="{StaticResource MaterialDesignFloatingHintTextBox}"/>
+                                
+                                <CheckBox Content="Show Unpayable Receipts" 
+                                          IsChecked="{Binding ShowUnpayableReceipts}" 
+                                          Margin="0,8,0,4"/>
+                                
+                                <CheckBox Content="Include Previously Paid" 
+                                          IsChecked="{Binding IncludePreviouslyPaid}" 
+                                          Margin="0,4"/>
+                            </StackPanel>
+                        </GroupBox>
+                    </Grid>
+                </Grid>
+            </materialDesign:Card>
+
+            <!-- NEW: Preview Summary Card -->
+            <materialDesign:Card Grid.Row="3" Padding="16" Margin="0,0,0,16">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Payment Preview" Style="{StaticResource MaterialDesignSubtitle1TextBlock}"/>
+                        <TextBlock Text="{Binding PreviewSummaryText}" 
+                                   Style="{StaticResource MaterialDesignBody2TextBlock}"
+                                   Margin="0,8,0,0"/>
+                    </StackPanel>
+                    
+                    <Button Grid.Column="1" Style="{StaticResource MaterialDesignRaisedButton}"
+                            Command="{Binding PreviewCountCommand}"
+                            Content="Refresh Preview"
+                            VerticalAlignment="Top"/>
             </Grid>
         </materialDesign:Card>
 
-        <!-- On Hold Growers Section -->
-        <GroupBox Grid.Row="2" Margin="0,10,0,0" Header="Growers Currently On Hold" Style="{StaticResource MaterialDesignCardGroupBox}">
-                 <!-- Wrap ListView in ScrollViewer with MaxHeight -->
-                 <ScrollViewer MaxHeight="250" VerticalScrollBarVisibility="Auto">
-                     <ListView ItemsSource="{Binding OnHoldGrowers}"
-                               MinHeight="100">
-                               <!-- Removed ScrollViewer attached property -->
+        <!-- Combined On Hold Growers & Run Log Section -->
+        <Grid Grid.Row="4" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="10"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- On Hold Growers Section -->
+            <GroupBox Grid.Column="0" Header="Growers Currently On Hold" 
+                      Style="{StaticResource MaterialDesignCardGroupBox}">
+                <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                    <ListView ItemsSource="{Binding OnHoldGrowers}" MinHeight="100">
                          <ListView.View>
                              <GridView>
-                            <GridViewColumn Header="Number" DisplayMemberBinding="{Binding GrowerNumber}" Width="100"/> <!-- Reverted Binding -->
+                                <GridViewColumn Header="Number" DisplayMemberBinding="{Binding GrowerNumber}" Width="100"/>
                             <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="250"/>
                              </GridView>
                          </ListView.View>
                      </ListView>
                  </ScrollViewer>
-         </GroupBox>
+            </GroupBox>
 
-        <!-- Log/Status Section -->
-        <Grid Grid.Row="3">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-             <TextBlock Grid.Row="0" Style="{StaticResource MaterialDesignSubtitle1TextBlock}" Text="Run Log:" Margin="0,0,0,8"/>
-             <!-- Wrap ListBox in ScrollViewer with MaxHeight -->
-             <ScrollViewer Grid.Row="1" MaxHeight="200" VerticalScrollBarVisibility="Auto" Margin="0,0,0,8">
-                 <ListBox ItemsSource="{Binding RunLog}" BorderThickness="1" BorderBrush="{DynamicResource MaterialDesignDivider}" HorizontalContentAlignment="Stretch"/>
-             </ScrollViewer>
+            <!-- Run Log Section -->
+            <GroupBox Grid.Column="2" Header="Run Log" Style="{StaticResource MaterialDesignCardGroupBox}">
+                <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                    <ListBox x:Name="RunLogListBox" 
+                             ItemsSource="{Binding RunLog}" 
+                             SelectionMode="Extended"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             SelectionChanged="RunLogListBox_SelectionChanged"
+                             VirtualizingPanel.IsVirtualizing="True"
+                             VirtualizingPanel.VirtualizationMode="Recycling"
+                             ScrollViewer.CanContentScroll="True">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="4"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                        
+                        <!-- Context Menu -->
+                        <ListBox.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Copy Selected" 
+                                          Command="{Binding CopySelectedRunLogCommand}"
+                                          ToolTip="Copy selected log entries to clipboard">
+                                    <MenuItem.Icon>
+                                        <materialDesign:PackIcon Kind="ContentCopy" Width="16" Height="16"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Copy All" 
+                                          Command="{Binding CopyRunLogCommand}"
+                                          ToolTip="Copy all log entries to clipboard">
+                                    <MenuItem.Icon>
+                                        <materialDesign:PackIcon Kind="ContentCopy" Width="16" Height="16"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <Separator/>
+                                <MenuItem Header="Select All" 
+                                          Command="ApplicationCommands.SelectAll"
+                                          ToolTip="Select all log entries">
+                                    <MenuItem.Icon>
+                                        <materialDesign:PackIcon Kind="SelectAll" Width="16" Height="16"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="Clear Selection" 
+                                          Command="{Binding ClearRunLogSelectionCommand}"
+                                          ToolTip="Clear current selection">
+                                    <MenuItem.Icon>
+                                        <materialDesign:PackIcon Kind="Close" Width="16" Height="16"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                            </ContextMenu>
+                        </ListBox.ContextMenu>
+                        
+                        <!-- Keyboard Input Bindings -->
+                        <ListBox.InputBindings>
+                            <KeyBinding Key="A" Modifiers="Ctrl" Command="ApplicationCommands.SelectAll"/>
+                            <KeyBinding Key="C" Modifiers="Ctrl" Command="{Binding CopySelectedRunLogCommand}"/>
+                        </ListBox.InputBindings>
+                    </ListBox>
+                </ScrollViewer>
+            </GroupBox>
         </Grid>
 
-
-        <StatusBar Grid.Row="4" VerticalAlignment="Bottom">
+            <!-- Status Bar -->
+            <StatusBar Grid.Row="5" Margin="0,16,0,0">
             <StatusBarItem>
-                <TextBlock Text="{Binding StatusMessage}" />
+                    <TextBlock Text="{Binding StatusMessage}"/>
             </StatusBarItem>
              <StatusBarItem HorizontalAlignment="Right">
-                <ProgressBar Width="100" Height="15" IsIndeterminate="{Binding IsRunning}" Visibility="{Binding IsRunning, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                    <StackPanel Orientation="Horizontal">
+                        <ProgressBar Width="100" Height="16" Margin="0,0,8,0"
+                                     IsIndeterminate="{Binding IsRunning}"
+                                     Visibility="{Binding IsRunning, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                        <TextBlock Text="{Binding IsRunning, Converter={StaticResource BooleanToTextConverter}, ConverterParameter=Running|Ready}"/>
+                    </StackPanel>
             </StatusBarItem>
         </StatusBar>
-
     </Grid>
+    </ScrollViewer>
 </UserControl>

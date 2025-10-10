@@ -28,7 +28,18 @@ namespace WPFGrowerApp.Services
         Task<bool> ShowConfirmationDialogAsync(string message, string title); // Changed to async
 
         /// <summary>
-        /// Shows an input dialog for text entry.
+        /// Shows a modern Material Design input dialog for text entry.
+        /// </summary>
+        /// <param name="message">The message/prompt to display.</param>
+        /// <param name="title">The title of the input dialog.</param>
+        /// <param name="initialText">Optional initial text in the input field.</param>
+        /// <param name="placeholder">Optional placeholder text.</param>
+        /// <param name="multiline">Whether the input should be multiline.</param>
+        /// <returns>The entered text, or null if cancelled.</returns>
+        Task<string?> ShowInputDialogAsync(string message, string title, string? initialText = null, string? placeholder = null, bool multiline = false);
+        
+        /// <summary>
+        /// Shows a modern Material Design input dialog for text entry (backward compatibility overload).
         /// </summary>
         /// <param name="message">The message/prompt to display.</param>
         /// <param name="title">The title of the input dialog.</param>

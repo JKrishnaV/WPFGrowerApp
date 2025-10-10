@@ -57,6 +57,15 @@
               <converters:ActiveStatusBrushConverter x:Key="ActiveStatusBrushConverter"/>
               <converters:StringListConverter x:Key="StringListConverter"/> <!-- Added StringListConverter -->
               <converters:BoolToStatusColorConverter x:Key="BoolToStatusColorConverter"/> <!-- Added for Container Status -->
+              
+              <!-- NEW: Enhanced Filter Converters -->
+              <converters:BooleanToTextConverter x:Key="BooleanToTextConverter"/>
+              <converters:StringToBooleanConverter x:Key="StringToBooleanConverter"/>
+              
+              <!-- NEW: Input Dialog Converters -->
+              <converters:BooleanToTextWrappingConverter x:Key="BooleanToTextWrappingConverter"/>
+              <converters:BooleanToScrollBarVisibilityConverter x:Key="BooleanToScrollBarVisibilityConverter"/>
+              <converters:BooleanToHeightConverter x:Key="BooleanToHeightConverter"/>
          </ResourceDictionary>
      </Application.Resources>
  </Application>

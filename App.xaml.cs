@@ -106,9 +106,12 @@ namespace WPFGrowerApp
 
         protected override void OnStartup(StartupEventArgs e)
         {
+            // Enable hardware acceleration for better performance
+            System.Windows.Media.RenderOptions.ProcessRenderMode = System.Windows.Interop.RenderMode.Default;
+            
             Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense("Ngo9BigBOggjHTQxAR8/V1NMaF5cXmBCf1FpRmJGdld5fUVHYVZUTXxaS00DNHVRdkdmWXteeXZXR2ZdVkByXUdWYUE=");
             Bold.Licensing.BoldLicenseProvider.RegisterLicense("thM9QOwjcTvfk9RnKaWmdI8poSCmqPFEvoqx7cPcCCs=");
-            Logger.Info("Application starting up.");
+            Logger.Info("Application starting up with hardware acceleration enabled.");
 
             // Apply initial font scaling from settings BEFORE calling base.OnStartup
             // to ensure resources are ready before UI elements are created.

@@ -3,6 +3,8 @@ using System.Windows.Input; // Added for MouseButtonEventArgs
 using System.Windows.Media; // Added for VisualTreeHelper
 using System.Windows; // Added for DependencyObject
 using WPFGrowerApp.Helpers;
+using System.Linq; // Added for Cast and ToList
+using WPFGrowerApp.ViewModels; // Added for PaymentRunViewModel
 
 namespace WPFGrowerApp.Views
 {
@@ -60,6 +62,24 @@ namespace WPFGrowerApp.Views
                 return parent;
             else
                 return FindParent<T>(parentObject);
+        }
+
+        // Handle selection changes in Run Log
+        private void RunLogListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // Update the ViewModel with selected items
+            var viewModel = DataContext as PaymentRunViewModel;
+            if (viewModel != null)
+            {
+                if (RunLogListBox.SelectedItems.Count > 0)
+                {
+                    viewModel.SelectedRunLogItems = RunLogListBox.SelectedItems.Cast<string>().ToList();
+                }
+                else
+                {
+                    viewModel.SelectedRunLogItems.Clear();
+                }
+            }
         }
     }
 }

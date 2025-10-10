@@ -13,7 +13,7 @@ using WPFGrowerApp.Infrastructure.Logging;
 using WPFGrowerApp.Services;
 using System.Windows.Data; // For ICollectionView
 using System.Collections.Specialized; // For INotifyCollectionChanged
-using WPFGrowerApp.Models; // Added for AdvanceOption
+using WPFGrowerApp.Models; // Added for AdvanceOption, FilterPreset, and FilterItem
 
 // Need this for the PdfViewerWindow call later
 using WPFGrowerApp.Views;
@@ -45,6 +45,7 @@ namespace WPFGrowerApp.ViewModels
         private int _advanceNumber = 1;
         private DateTime _paymentDate = DateTime.Today;
         private DateTime _cutoffDate = DateTime.Today;
+        private DateTime? _receiptDateFrom; // NEW: Receipt date range start
         private int _cropYear = DateTime.Today.Year;
         private bool _isRunning;
         private string? _statusMessage;
@@ -89,6 +90,7 @@ namespace WPFGrowerApp.ViewModels
                 if (SetProperty(ref _growerSearchText, value))
                 {
                     _filteredGrowersView?.Refresh(); // Refresh the filtered view
+                    FilteredGrowerFilterItems?.Refresh(); // Refresh the FilterItem view
                 }
             }
         }
@@ -128,17 +130,56 @@ namespace WPFGrowerApp.ViewModels
                 if (SetProperty(ref _payGroupSearchText, value))
                 {
                     _filteredPayGroupsView?.Refresh();
+                    FilteredPayGroupFilterItems?.Refresh(); // Refresh the FilterItem view
                 }
             }
         }
         // --- End Search Text Properties ---
 
+        // NEW: Enhanced Filter Properties
+        private decimal? _minimumWeight;
+        private bool _showUnpayableReceipts;
+        private bool _includePreviouslyPaid;
+        private bool _showAdvancedOptions;
+        
+        // Process Class Filter
+        private bool _includeFresh = true;
+        private bool _includeProcessed = true;
+        private bool _includeJuice = true;
+        private bool _includeOther = true;
+        
+        // Grade Filter
+        private bool _includeGrade1 = true;
+        private bool _includeGrade2 = true;
+        private bool _includeGrade3 = true;
+        private bool _includeOtherGrade = true;
+        
+        // Preview/Summary Properties
+        private int _previewReceiptCount;
+        private int _previewGrowerCount;
+        private decimal _previewEstimatedTotal;
+        private int _previewSkippedCount;
+        private string _previewSummaryText = "Click 'Preview Count' to see payment summary";
+        
+        // Filter Presets
+        private ObservableCollection<FilterPreset> _filterPresets = new ObservableCollection<FilterPreset>();
+        private FilterPreset? _selectedPreset;
 
-        // Collections to hold selected items from ListBoxes
+        // Collections to hold selected items from ListBoxes (LEGACY - for backward compatibility)
         public ObservableCollection<Product> SelectedProducts { get; private set; } = new ObservableCollection<Product>();
         public ObservableCollection<Process> SelectedProcesses { get; private set; } = new ObservableCollection<Process>();
         public ObservableCollection<PayGroup> SelectedExcludePayGroups { get; private set; } = new ObservableCollection<PayGroup>();
         public ObservableCollection<GrowerInfo> SelectedExcludeGrowers { get; private set; } = new ObservableCollection<GrowerInfo>();
+
+        // NEW: FilterItem collections for checkbox-based selection
+        public ObservableCollection<FilterItem<Product>> ProductFilterItems { get; private set; } = new ObservableCollection<FilterItem<Product>>();
+        public ObservableCollection<FilterItem<Process>> ProcessFilterItems { get; private set; } = new ObservableCollection<FilterItem<Process>>();
+        public ObservableCollection<FilterItem<GrowerInfo>> GrowerFilterItems { get; private set; } = new ObservableCollection<FilterItem<GrowerInfo>>();
+        public ObservableCollection<FilterItem<PayGroup>> PayGroupFilterItems { get; private set; } = new ObservableCollection<FilterItem<PayGroup>>();
+
+        // Filtered Collections for Search
+        public ICollectionView FilteredGrowerFilterItems { get; }
+        public ICollectionView FilteredPayGroupFilterItems { get; }
 
         // On Hold List properties
         private ObservableCollection<GrowerInfo>? _onHoldGrowers;
@@ -193,6 +234,12 @@ namespace WPFGrowerApp.ViewModels
             _filteredGrowersView = CollectionViewSource.GetDefaultView(_allGrowers);
             _filteredGrowersView.Filter = FilterGrowers; // Existing filter
 
+            // Setup filtered views for FilterItem collections
+            FilteredGrowerFilterItems = CollectionViewSource.GetDefaultView(GrowerFilterItems);
+            FilteredGrowerFilterItems.Filter = FilterGrowerFilterItems;
+            FilteredPayGroupFilterItems = CollectionViewSource.GetDefaultView(PayGroupFilterItems);
+            FilteredPayGroupFilterItems.Filter = FilterPayGroupFilterItems;
+
             // Populate Advance Options
             AdvanceOptions.Add(new AdvanceOption { Display = "First Advance Payment", Value = 1 });
             AdvanceOptions.Add(new AdvanceOption { Display = "Second Advance Payment", Value = 2 });
@@ -205,6 +252,7 @@ namespace WPFGrowerApp.ViewModels
             CropYears.Add(currentYear - 2);
             CropYears.Add(2022); // Add 2022 for test data
             _cropYear = currentYear; // Set default
+            _receiptDateFrom = null; // Initialize receipt date from
 
             // Add listeners for selection changes
             SelectedProducts.CollectionChanged += SelectedFilters_CollectionChanged;
@@ -272,6 +320,38 @@ namespace WPFGrowerApp.ViewModels
             return false;
         }
 
+        // Filter logic for GrowerFilterItems
+        private bool FilterGrowerFilterItems(object item)
+        {
+            if (string.IsNullOrEmpty(GrowerSearchText))
+            {
+                return true; // No filter applied
+            }
+
+            if (item is FilterItem<GrowerInfo> growerItem)
+            {
+                var grower = growerItem.Item;
+                // Check if name or number contains the search text (case-insensitive)
+                return (grower.Name?.IndexOf(GrowerSearchText, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                       (grower.GrowerNumber.ToString().IndexOf(GrowerSearchText, StringComparison.OrdinalIgnoreCase) >= 0);
+            }
+
+            return false;
+        }
+
+        // Filter logic for PayGroupFilterItems
+        private bool FilterPayGroupFilterItems(object item)
+        {
+            if (string.IsNullOrEmpty(PayGroupSearchText)) return true;
+            if (item is FilterItem<PayGroup> payGroupItem)
+            {
+                var payGroup = payGroupItem.Item;
+                return (payGroup.GroupCode?.IndexOf(PayGroupSearchText, StringComparison.OrdinalIgnoreCase) >= 0) ||
+                       (payGroup.Description?.IndexOf(PayGroupSearchText, StringComparison.OrdinalIgnoreCase) >= 0);
+            }
+            return false;
+        }
+
 
         // Properties for UI Binding
         public int AdvanceNumber
@@ -290,6 +370,13 @@ namespace WPFGrowerApp.ViewModels
         {
             get => _cutoffDate;
              set { SetProperty(ref _cutoffDate, value); }
+        }
+
+        // NEW: Receipt Date Range
+        public DateTime? ReceiptDateFrom
+        {
+            get => _receiptDateFrom;
+            set => SetProperty(ref _receiptDateFrom, value);
         }
 
         public int CropYear
@@ -314,6 +401,134 @@ namespace WPFGrowerApp.ViewModels
          // Properties for On Hold List
          public ObservableCollection<GrowerInfo> OnHoldGrowers { get => _onHoldGrowers ?? new ObservableCollection<GrowerInfo>(); private set => SetProperty(ref _onHoldGrowers, value); }
          public bool IsLoadingOnHoldGrowers { get => _isLoadingOnHoldGrowers; private set => SetProperty(ref _isLoadingOnHoldGrowers, value); }
+
+        // NEW: Enhanced Filter Properties
+        public decimal? MinimumWeight
+        {
+            get => _minimumWeight;
+            set => SetProperty(ref _minimumWeight, value);
+        }
+
+        public bool ShowUnpayableReceipts
+        {
+            get => _showUnpayableReceipts;
+            set => SetProperty(ref _showUnpayableReceipts, value);
+        }
+
+        public bool IncludePreviouslyPaid
+        {
+            get => _includePreviouslyPaid;
+            set => SetProperty(ref _includePreviouslyPaid, value);
+        }
+
+        public bool ShowAdvancedOptions
+        {
+            get => _showAdvancedOptions;
+            set => SetProperty(ref _showAdvancedOptions, value);
+        }
+
+
+        // Process Class Filter Properties
+        public bool IncludeFresh
+        {
+            get => _includeFresh;
+            set => SetProperty(ref _includeFresh, value);
+        }
+
+        public bool IncludeProcessed
+        {
+            get => _includeProcessed;
+            set => SetProperty(ref _includeProcessed, value);
+        }
+
+        public bool IncludeJuice
+        {
+            get => _includeJuice;
+            set => SetProperty(ref _includeJuice, value);
+        }
+
+        public bool IncludeOther
+        {
+            get => _includeOther;
+            set => SetProperty(ref _includeOther, value);
+        }
+
+        // Grade Filter Properties
+        public bool IncludeGrade1
+        {
+            get => _includeGrade1;
+            set => SetProperty(ref _includeGrade1, value);
+        }
+
+        public bool IncludeGrade2
+        {
+            get => _includeGrade2;
+            set => SetProperty(ref _includeGrade2, value);
+        }
+
+        public bool IncludeGrade3
+        {
+            get => _includeGrade3;
+            set => SetProperty(ref _includeGrade3, value);
+        }
+
+        public bool IncludeOtherGrade
+        {
+            get => _includeOtherGrade;
+            set => SetProperty(ref _includeOtherGrade, value);
+        }
+
+        // Preview/Summary Properties
+        public int PreviewReceiptCount
+        {
+            get => _previewReceiptCount;
+            private set => SetProperty(ref _previewReceiptCount, value);
+        }
+
+        public int PreviewGrowerCount
+        {
+            get => _previewGrowerCount;
+            private set => SetProperty(ref _previewGrowerCount, value);
+        }
+
+        public decimal PreviewEstimatedTotal
+        {
+            get => _previewEstimatedTotal;
+            private set => SetProperty(ref _previewEstimatedTotal, value);
+        }
+
+        public int PreviewSkippedCount
+        {
+            get => _previewSkippedCount;
+            private set => SetProperty(ref _previewSkippedCount, value);
+        }
+
+        public string PreviewSummaryText
+        {
+            get => _previewSummaryText;
+            private set => SetProperty(ref _previewSummaryText, value);
+        }
+
+        // Filter Presets
+        public ObservableCollection<FilterPreset> FilterPresets => _filterPresets;
+
+        public FilterPreset? SelectedPreset
+        {
+            get => _selectedPreset;
+            set => SetProperty(ref _selectedPreset, value);
+        }
+
+        // NEW: Selection Count Properties
+        public int SelectedProductsCount => ProductFilterItems.Count(item => item.IsSelected);
+        public int SelectedProcessesCount => ProcessFilterItems.Count(item => item.IsSelected);
+        public int SelectedGrowersCount => GrowerFilterItems.Count(item => item.IsSelected);
+        public int SelectedPayGroupsCount => PayGroupFilterItems.Count(item => item.IsSelected);
+
+        public string SelectedProductsSummary => $"{SelectedProductsCount} of {ProductFilterItems.Count} selected";
+        public string SelectedProcessesSummary => $"{SelectedProcessesCount} of {ProcessFilterItems.Count} selected";
+        public string SelectedGrowersSummary => $"{SelectedGrowersCount} of {GrowerFilterItems.Count} selected";
+        public string SelectedPayGroupsSummary => $"{SelectedPayGroupsCount} of {PayGroupFilterItems.Count} selected";
+
 
 
         public bool IsRunning
@@ -342,6 +557,9 @@ namespace WPFGrowerApp.ViewModels
             get => _runLog ?? new ObservableCollection<string>();
             private set => SetProperty(ref _runLog, value);
         }
+
+        // Property to hold selected Run Log items (used by the View)
+        public List<string> SelectedRunLogItems { get; set; } = new List<string>();
 
         public PaymentBatch? LastRunBatch
         {
@@ -412,6 +630,27 @@ namespace WPFGrowerApp.ViewModels
         public ICommand PrintStatementsCommand => new RelayCommand(async o => await PrintStatementsAsync(), o => CanPrintStatements);
         public ICommand ViewBatchDetailsCommand => new RelayCommand(async o => await ViewBatchDetailsAsync(), o => CurrentBatch != null);
 
+        // NEW: Enhanced Filter Commands
+        public ICommand PreviewCountCommand => new RelayCommand(async o => await PreviewPaymentCountAsync(), o => !IsRunning);
+        public ICommand SavePresetCommand => new RelayCommand(async o => await SaveFilterPresetAsync(), o => !IsRunning);
+        public ICommand LoadPresetCommand => new RelayCommand(async o => await LoadFilterPresetAsync(), o => !IsRunning && SelectedPreset != null);
+        public ICommand DeletePresetCommand => new RelayCommand(async o => await DeleteFilterPresetAsync(), o => !IsRunning && SelectedPreset != null);
+        public ICommand ToggleAdvancedOptionsCommand => new RelayCommand(o => ToggleAdvancedOptions());
+
+        // NEW: Checkbox-based Filter Commands
+        public ICommand SelectAllProductsCommand => new RelayCommand(o => SelectAllProducts());
+        public ICommand ClearAllProductsCommand => new RelayCommand(o => ClearAllProducts());
+        public ICommand SelectAllProcessesCommand => new RelayCommand(o => SelectAllProcesses());
+        public ICommand ClearAllProcessesCommand => new RelayCommand(o => ClearAllProcesses());
+        public ICommand SelectAllGrowersCommand => new RelayCommand(o => SelectAllGrowers());
+        public ICommand ClearAllGrowersCommand => new RelayCommand(o => ClearAllGrowers());
+        public ICommand SelectAllPayGroupsCommand => new RelayCommand(o => SelectAllPayGroups());
+        public ICommand ClearAllPayGroupsCommand => new RelayCommand(o => ClearAllPayGroups());
+        
+        // Run Log Commands
+        public ICommand CopyRunLogCommand => new RelayCommand(o => CopyRunLogToClipboard());
+        public ICommand CopySelectedRunLogCommand => new RelayCommand(o => CopySelectedRunLogToClipboard());
+
 
         // IProgress<string> implementation
         public void Report(string value)
@@ -434,10 +673,14 @@ namespace WPFGrowerApp.ViewModels
             Report($"Parameters: PaymentDate={PaymentDate:d}, CutoffDate={CutoffDate:d}, CropYear={CropYear}");
 
             // Prepare lists of IDs from selected items
-            var selectedProductIds = SelectedProducts.Select(p => p.ProductId).ToList();
-            var selectedProcessIds = SelectedProcesses.Select(p => p.ProcessId).ToList();
-            var selectedExcludeGrowerIds = SelectedExcludeGrowers.Select(g => (int)g.GrowerNumber).Where(num => num != 0).ToList();
-            var selectedExcludePayGroupIds = SelectedExcludePayGroups.Select(pg => pg.PayGroupId).ToList();
+            // For exclude parameters: pass empty list when all items are selected (meaning include all)
+            // For include parameters: pass the selected IDs
+            var selectedProductIds = ProductFilterItems.Where(p => p.IsSelected).Select(p => p.Item.ProductId).ToList();
+            var selectedProcessIds = ProcessFilterItems.Where(p => p.IsSelected).Select(p => p.Item.ProcessId).ToList();
+            var selectedExcludeGrowerIds = SelectedGrowersCount == GrowerFilterItems.Count ? new List<int>() : 
+                GrowerFilterItems.Where(g => !g.IsSelected).Select(g => g.Item.GrowerId).ToList();
+            var selectedExcludePayGroupIds = SelectedPayGroupsCount == PayGroupFilterItems.Count ? new List<string>() : 
+                PayGroupFilterItems.Where(pg => !pg.IsSelected).Select(pg => pg.Item.PayGroupId).ToList();
 
             // Log selected filters
             Report($"Filtering by Products: {(selectedProductIds.Any() ? string.Join(",", selectedProductIds) : "All")}");
@@ -448,7 +691,7 @@ namespace WPFGrowerApp.ViewModels
             try
             {
                  // ProcessAdvancePaymentRunAsync signature updated to use PaymentBatch and List<int>
-                (bool success, List<string> errors, PaymentBatch createdBatch) = 
+                (bool success, List<string> errors, PaymentBatch? createdBatch) = 
                     await _paymentService.ProcessAdvancePaymentRunAsync(
                     AdvanceNumber,
                     PaymentDate,
@@ -506,10 +749,12 @@ namespace WPFGrowerApp.ViewModels
             Report($"Parameters: PaymentDate={PaymentDate:d}, CutoffDate={CutoffDate:d}, CropYear={CropYear}");
 
             // Prepare lists of IDs from selected items (same as actual run)
-            var selectedProductIds = SelectedProducts.Select(p => p.ProductId).ToList();
-            var selectedProcessIds = SelectedProcesses.Select(p => p.ProcessId).ToList();
-            var selectedExcludeGrowerIds = SelectedExcludeGrowers.Select(g => (int)g.GrowerNumber).Where(num => num != 0).ToList();
-            var selectedExcludePayGroupIds = SelectedExcludePayGroups.Select(pg => pg.PayGroupId).ToList();
+            var selectedProductIds = ProductFilterItems.Where(p => p.IsSelected).Select(p => p.Item.ProductId).ToList();
+            var selectedProcessIds = ProcessFilterItems.Where(p => p.IsSelected).Select(p => p.Item.ProcessId).ToList();
+            var selectedExcludeGrowerIds = SelectedGrowersCount == GrowerFilterItems.Count ? new List<int>() : 
+                GrowerFilterItems.Where(g => !g.IsSelected).Select(g => g.Item.GrowerId).ToList();
+            var selectedExcludePayGroupIds = SelectedPayGroupsCount == PayGroupFilterItems.Count ? new List<string>() : 
+                PayGroupFilterItems.Where(pg => !pg.IsSelected).Select(pg => pg.Item.PayGroupId).ToList();
 
             // Log selected filters
             Report($"Filtering by Products: {(selectedProductIds.Any() ? string.Join(",", selectedProductIds) : "All")}");
@@ -631,10 +876,12 @@ namespace WPFGrowerApp.ViewModels
             Report($"Parameters: PaymentDate={PaymentDate:d}, CutoffDate={CutoffDate:d}, CropYear={CropYear}");
 
             // Prepare lists of IDs from selected items (same as actual run)
-            var selectedProductIds = SelectedProducts.Select(p => p.ProductId).ToList();
-            var selectedProcessIds = SelectedProcesses.Select(p => p.ProcessId).ToList();
-            var selectedExcludeGrowerIds = SelectedExcludeGrowers.Select(g => (int)g.GrowerNumber).Where(num => num != 0).ToList();
-            var selectedExcludePayGroupIds = SelectedExcludePayGroups.Select(pg => pg.PayGroupId).ToList();
+            var selectedProductIds = ProductFilterItems.Where(p => p.IsSelected).Select(p => p.Item.ProductId).ToList();
+            var selectedProcessIds = ProcessFilterItems.Where(p => p.IsSelected).Select(p => p.Item.ProcessId).ToList();
+            var selectedExcludeGrowerIds = SelectedGrowersCount == GrowerFilterItems.Count ? new List<int>() : 
+                GrowerFilterItems.Where(g => !g.IsSelected).Select(g => g.Item.GrowerId).ToList();
+            var selectedExcludePayGroupIds = SelectedPayGroupsCount == PayGroupFilterItems.Count ? new List<string>() : 
+                PayGroupFilterItems.Where(pg => !pg.IsSelected).Select(pg => pg.Item.PayGroupId).ToList();
 
             // Log selected filters
             Report($"Filtering by Products: {(selectedProductIds.Any() ? string.Join(",", selectedProductIds) : "All")}");
@@ -814,6 +1061,26 @@ namespace WPFGrowerApp.ViewModels
                  foreach (var g in growerList) _allGrowers.Add(g);
                  _filteredGrowersView?.Refresh(); // Refresh the view
 
+                // Initialize the new FilterItem collections for checkbox-based selection
+                InitializeFilterItems();
+                
+                // Subscribe to PropertyChanged events to keep legacy collections in sync
+                SubscribeToFilterItemChanges();
+
+                // Ensure UI gets updated after a small delay to allow all data to be processed
+                await Task.Delay(100);
+                await App.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    OnPropertyChanged(nameof(SelectedProductsCount));
+                    OnPropertyChanged(nameof(SelectedProcessesCount));
+                    OnPropertyChanged(nameof(SelectedGrowersCount));
+                    OnPropertyChanged(nameof(SelectedPayGroupsCount));
+                    OnPropertyChanged(nameof(SelectedProductsSummary));
+                    OnPropertyChanged(nameof(SelectedProcessesSummary));
+                    OnPropertyChanged(nameof(SelectedGrowersSummary));
+                    OnPropertyChanged(nameof(SelectedPayGroupsSummary));
+                });
+
             }
             catch (Exception ex)
             {
@@ -832,10 +1099,11 @@ namespace WPFGrowerApp.ViewModels
                 var onHold = await _growerService.GetOnHoldGrowersAsync();
 
                 // Apply client-side filtering based on Exclude options if needed
-                var excludedGrowerIds = SelectedExcludeGrowers.Select(g => (int)g.GrowerNumber).Where(num => num != 0).ToList();
+                var excludedGrowerIds = SelectedGrowersCount == GrowerFilterItems.Count ? new List<int>() : 
+                    GrowerFilterItems.Where(g => !g.IsSelected).Select(g => g.Item.GrowerId).ToList();
                 if (excludedGrowerIds.Any())
                 {
-                    onHold = onHold.Where(g => !excludedGrowerIds.Contains((int)g.GrowerNumber)).ToList();
+                    onHold = onHold.Where(g => !excludedGrowerIds.Contains(g.GrowerId)).ToList();
                 }
                 // TODO: Add filtering for Products, Processes, PayGroups if required by business logic
 
@@ -916,10 +1184,12 @@ namespace WPFGrowerApp.ViewModels
                     // 2. Run the actual payment processing (posts to accounts, creates allocations)
                     Report("Processing payments to accounts...");
                     
-                    var selectedProductIds = SelectedProducts.Select(p => p.ProductId).ToList();
-                    var selectedProcessIds = SelectedProcesses.Select(p => p.ProcessId).ToList();
-                    var selectedExcludeGrowerIds = SelectedExcludeGrowers.Select(g => (int)g.GrowerNumber).Where(num => num != 0).ToList();
-                    var selectedExcludePayGroupIds = SelectedExcludePayGroups.Select(pg => pg.PayGroupId).ToList();
+                    var selectedProductIds = ProductFilterItems.Where(p => p.IsSelected).Select(p => p.Item.ProductId).ToList();
+                    var selectedProcessIds = ProcessFilterItems.Where(p => p.IsSelected).Select(p => p.Item.ProcessId).ToList();
+                    var selectedExcludeGrowerIds = SelectedGrowersCount == GrowerFilterItems.Count ? new List<int>() : 
+                        GrowerFilterItems.Where(g => !g.IsSelected).Select(g => g.Item.GrowerId).ToList();
+                    var selectedExcludePayGroupIds = SelectedPayGroupsCount == PayGroupFilterItems.Count ? new List<string>() : 
+                        PayGroupFilterItems.Where(pg => !pg.IsSelected).Select(pg => pg.Item.PayGroupId).ToList();
 
                     var (success, errors, postedBatch) = await _paymentService.ProcessAdvancePaymentRunAsync(
                         AdvanceNumber,
@@ -1168,6 +1438,634 @@ namespace WPFGrowerApp.ViewModels
                 await _dialogService.ShowMessageBoxAsync($"Error loading batch details: {ex.Message}", "Error");
             }
         }
+
+        #region Enhanced Filter Commands
+
+        /// <summary>
+        /// Preview how many receipts will be included in the payment run
+        /// </summary>
+        private async Task PreviewPaymentCountAsync()
+        {
+            try
+            {
+                IsRunning = true;
+                StatusMessage = "Calculating payment preview...";
+                Report("Running preview calculation...");
+
+                // Get current filter selections
+                // For exclude parameters: pass empty list when all items are selected (meaning include all)
+                // For include parameters: pass the selected IDs
+                var selectedExcludeGrowerIds = SelectedGrowersCount == GrowerFilterItems.Count ? new List<int>() : 
+                    GrowerFilterItems.Where(g => !g.IsSelected).Select(g => g.Item.GrowerId).ToList();
+                var selectedExcludePayGroupIds = SelectedPayGroupsCount == PayGroupFilterItems.Count ? new List<string>() : 
+                    PayGroupFilterItems.Where(pg => !pg.IsSelected).Select(pg => pg.Item.PayGroupId).ToList();
+                var selectedProductIds = ProductFilterItems.Where(p => p.IsSelected).Select(p => p.Item.ProductId).ToList();
+                var selectedProcessIds = ProcessFilterItems.Where(p => p.IsSelected).Select(p => p.Item.ProcessId).ToList();
+
+                // Run test calculation to get preview data
+                var testResult = await _paymentService.PerformAdvancePaymentTestRunAsync(
+                    AdvanceNumber,
+                    PaymentDate,
+                    CutoffDate,
+                    CropYear,
+                    selectedExcludeGrowerIds,
+                    selectedExcludePayGroupIds,
+                    selectedProductIds,
+                    selectedProcessIds,
+                    this);
+
+                // Update preview properties
+                PreviewReceiptCount = testResult.GrowerPayments.Sum(gp => gp.ReceiptCount);
+                PreviewGrowerCount = testResult.GrowerPayments.Count;
+                PreviewEstimatedTotal = testResult.GrowerPayments.Sum(gp => gp.TotalCalculatedPayment);
+                PreviewSkippedCount = testResult.GrowerPayments.Sum(gp => gp.ReceiptDetails.Count(rd => !string.IsNullOrEmpty(rd.ErrorMessage)));
+
+                // Update summary text
+                PreviewSummaryText = $"Receipts: {PreviewReceiptCount} | Growers: {PreviewGrowerCount} | Est. Total: ${PreviewEstimatedTotal:N2}";
+                if (PreviewSkippedCount > 0)
+                {
+                    PreviewSummaryText += $" | Skipped: {PreviewSkippedCount}";
+                }
+
+                Report($"✓ Preview complete: {PreviewReceiptCount} receipts, {PreviewGrowerCount} growers, ${PreviewEstimatedTotal:N2}");
+                StatusMessage = $"Preview: {PreviewReceiptCount} receipts, ${PreviewEstimatedTotal:N2}";
+
+                await _dialogService.ShowMessageBoxAsync(
+                    $"Payment Preview:\n\n" +
+                    $"Receipts: {PreviewReceiptCount}\n" +
+                    $"Growers: {PreviewGrowerCount}\n" +
+                    $"Estimated Total: ${PreviewEstimatedTotal:N2}\n" +
+                    $"Skipped (no price): {PreviewSkippedCount}",
+                    "Payment Preview");
+            }
+            catch (Exception ex)
+            {
+                Report($"✗ ERROR: {ex.Message}");
+                Logger.Error("Error in preview calculation", ex);
+                await _dialogService.ShowMessageBoxAsync($"Error calculating preview: {ex.Message}", "Error");
+            }
+            finally
+            {
+                IsRunning = false;
+            }
+        }
+
+        /// <summary>
+        /// Save current filter settings as a preset
+        /// </summary>
+        private async Task SaveFilterPresetAsync()
+        {
+            try
+            {
+                // Prompt user for preset name
+                var presetName = await _dialogService.ShowInputDialogAsync(
+                    "Enter a name for this filter preset:",
+                    "Save Filter Preset",
+                    null,
+                    "e.g., Weekly Blueberry Payment");
+
+                if (string.IsNullOrWhiteSpace(presetName))
+                    return;
+
+                // Create preset from current settings
+                var preset = new FilterPreset
+                {
+                    Name = presetName.Trim(),
+                    Description = $"Saved on {DateTime.Now:yyyy-MM-dd HH:mm}",
+                    CreatedBy = "Current User", // TODO: Get actual user
+                    CreatedAt = DateTime.Now,
+
+                    // Basic Parameters
+                    AdvanceNumber = AdvanceNumber,
+                    PaymentDate = PaymentDate,
+                    CutoffDate = CutoffDate,
+                    ReceiptDateFrom = ReceiptDateFrom,
+                    CropYear = CropYear,
+
+                    // Enhanced Filters
+                    MinimumWeight = MinimumWeight,
+                    ShowUnpayableReceipts = ShowUnpayableReceipts,
+                    IncludePreviouslyPaid = IncludePreviouslyPaid,
+
+                    // Filter Modes - Removed as radio buttons are no longer used
+
+                    // Process Class Filters
+                    IncludeFresh = IncludeFresh,
+                    IncludeProcessed = IncludeProcessed,
+                    IncludeJuice = IncludeJuice,
+                    IncludeOther = IncludeOther,
+
+                    // Grade Filters
+                    IncludeGrade1 = IncludeGrade1,
+                    IncludeGrade2 = IncludeGrade2,
+                    IncludeGrade3 = IncludeGrade3,
+                    IncludeOtherGrade = IncludeOtherGrade,
+
+                    // Selected Items
+                    SelectedProductIds = ProductFilterItems.Where(p => p.IsSelected).Select(p => p.Item.ProductId).ToList(),
+                    SelectedProcessIds = ProcessFilterItems.Where(p => p.IsSelected).Select(p => p.Item.ProcessId).ToList(),
+                    SelectedGrowerIds = GrowerFilterItems.Where(g => g.IsSelected).Select(g => g.Item.GrowerId).ToList(),
+                    SelectedPayGroupIds = PayGroupFilterItems.Where(pg => pg.IsSelected).Select(pg => pg.Item.PayGroupId).ToList()
+                };
+
+                // Add to collection
+                FilterPresets.Add(preset);
+
+                Report($"✓ Saved filter preset: {presetName}");
+                StatusMessage = $"Saved preset: {presetName}";
+
+                await _dialogService.ShowMessageBoxAsync(
+                    $"Filter preset '{presetName}' saved successfully!",
+                    "Preset Saved");
+            }
+            catch (Exception ex)
+            {
+                Report($"✗ ERROR: {ex.Message}");
+                Logger.Error("Error saving filter preset", ex);
+                await _dialogService.ShowMessageBoxAsync($"Error saving preset: {ex.Message}", "Error");
+            }
+        }
+
+        /// <summary>
+        /// Load selected filter preset
+        /// </summary>
+        private async Task LoadFilterPresetAsync()
+        {
+            try
+            {
+                if (SelectedPreset == null)
+                    return;
+
+                // Confirm loading preset
+                var result = await _dialogService.ShowConfirmationDialogAsync(
+                    $"Load filter preset '{SelectedPreset.Name}'?\n\nThis will replace your current filter settings.",
+                    "Load Preset");
+
+                if (!result)
+                    return;
+
+                // Load preset values
+                AdvanceNumber = SelectedPreset.AdvanceNumber;
+                PaymentDate = SelectedPreset.PaymentDate;
+                CutoffDate = SelectedPreset.CutoffDate;
+                ReceiptDateFrom = SelectedPreset.ReceiptDateFrom;
+                CropYear = SelectedPreset.CropYear;
+
+                // Enhanced Filters
+                MinimumWeight = SelectedPreset.MinimumWeight;
+                ShowUnpayableReceipts = SelectedPreset.ShowUnpayableReceipts;
+                IncludePreviouslyPaid = SelectedPreset.IncludePreviouslyPaid;
+
+                // Filter Modes - Removed as radio buttons are no longer used
+
+                // Process Class Filters
+                IncludeFresh = SelectedPreset.IncludeFresh;
+                IncludeProcessed = SelectedPreset.IncludeProcessed;
+                IncludeJuice = SelectedPreset.IncludeJuice;
+                IncludeOther = SelectedPreset.IncludeOther;
+
+                // Grade Filters
+                IncludeGrade1 = SelectedPreset.IncludeGrade1;
+                IncludeGrade2 = SelectedPreset.IncludeGrade2;
+                IncludeGrade3 = SelectedPreset.IncludeGrade3;
+                IncludeOtherGrade = SelectedPreset.IncludeOtherGrade;
+
+                // Load selected items (this is more complex as we need to match by ID)
+                await LoadPresetSelectedItemsAsync(SelectedPreset);
+
+                Report($"✓ Loaded filter preset: {SelectedPreset.Name}");
+                StatusMessage = $"Loaded preset: {SelectedPreset.Name}";
+
+                await _dialogService.ShowMessageBoxAsync(
+                    $"Filter preset '{SelectedPreset.Name}' loaded successfully!",
+                    "Preset Loaded");
+            }
+            catch (Exception ex)
+            {
+                Report($"✗ ERROR: {ex.Message}");
+                Logger.Error("Error loading filter preset", ex);
+                await _dialogService.ShowMessageBoxAsync($"Error loading preset: {ex.Message}", "Error");
+            }
+        }
+
+        /// <summary>
+        /// Delete selected filter preset
+        /// </summary>
+        private async Task DeleteFilterPresetAsync()
+        {
+            try
+            {
+                if (SelectedPreset == null)
+                    return;
+
+                // Confirm deletion
+                var result = await _dialogService.ShowConfirmationDialogAsync(
+                    $"Delete filter preset '{SelectedPreset.Name}'?\n\nThis action cannot be undone.",
+                    "Delete Preset");
+
+                if (!result)
+                    return;
+
+                var presetName = SelectedPreset.Name;
+                FilterPresets.Remove(SelectedPreset);
+                SelectedPreset = null;
+
+                Report($"✓ Deleted filter preset: {presetName}");
+                StatusMessage = $"Deleted preset: {presetName}";
+
+                await _dialogService.ShowMessageBoxAsync(
+                    $"Filter preset '{presetName}' deleted successfully!",
+                    "Preset Deleted");
+            }
+            catch (Exception ex)
+            {
+                Report($"✗ ERROR: {ex.Message}");
+                Logger.Error("Error deleting filter preset", ex);
+                await _dialogService.ShowMessageBoxAsync($"Error deleting preset: {ex.Message}", "Error");
+            }
+        }
+
+        /// <summary>
+        /// Toggle the advanced options visibility
+        /// </summary>
+        private void ToggleAdvancedOptions()
+        {
+            ShowAdvancedOptions = !ShowAdvancedOptions;
+        }
+
+        /// <summary>
+        /// Helper method to load selected items from a preset
+        /// </summary>
+        private Task LoadPresetSelectedItemsAsync(FilterPreset preset)
+        {
+            // Clear current selections
+            SelectedProducts.Clear();
+            SelectedProcesses.Clear();
+            SelectedExcludeGrowers.Clear();
+            SelectedExcludePayGroups.Clear();
+
+            // Load products
+            foreach (var productId in preset.SelectedProductIds)
+            {
+                var product = _allProducts.FirstOrDefault(p => p.ProductId == productId);
+                if (product != null)
+                    SelectedProducts.Add(product);
+            }
+
+            // Load processes
+            foreach (var processId in preset.SelectedProcessIds)
+            {
+                var process = _allProcesses.FirstOrDefault(p => p.ProcessId == processId);
+                if (process != null)
+                    SelectedProcesses.Add(process);
+            }
+
+            // Load growers
+            foreach (var growerId in preset.SelectedGrowerIds)
+            {
+                var grower = _allGrowers.FirstOrDefault(g => (int)g.GrowerNumber == growerId);
+                if (grower != null)
+                    SelectedExcludeGrowers.Add(grower);
+            }
+
+            // Load pay groups
+            foreach (var payGroupId in preset.SelectedPayGroupIds)
+            {
+                var payGroup = _allPayGroups.FirstOrDefault(pg => pg.PayGroupId == payGroupId);
+                if (payGroup != null)
+                    SelectedExcludePayGroups.Add(payGroup);
+            }
+            
+            return Task.CompletedTask;
+        }
+
+        #endregion
+
+        #region Checkbox-based Filter Commands
+
+        /// <summary>
+        /// Select all products
+        /// </summary>
+        private void SelectAllProducts()
+        {
+            foreach (var item in ProductFilterItems)
+            {
+                item.IsSelected = true;
+            }
+            UpdateSelectedProductsFromFilterItems();
+            OnPropertyChanged(nameof(SelectedProductsCount));
+            OnPropertyChanged(nameof(SelectedProductsSummary));
+        }
+
+        /// <summary>
+        /// Clear all product selections
+        /// </summary>
+        private void ClearAllProducts()
+        {
+            foreach (var item in ProductFilterItems)
+            {
+                item.IsSelected = false;
+            }
+            UpdateSelectedProductsFromFilterItems();
+            OnPropertyChanged(nameof(SelectedProductsCount));
+            OnPropertyChanged(nameof(SelectedProductsSummary));
+        }
+
+        /// <summary>
+        /// Select all processes
+        /// </summary>
+        private void SelectAllProcesses()
+        {
+            foreach (var item in ProcessFilterItems)
+            {
+                item.IsSelected = true;
+            }
+            UpdateSelectedProcessesFromFilterItems();
+            OnPropertyChanged(nameof(SelectedProcessesCount));
+            OnPropertyChanged(nameof(SelectedProcessesSummary));
+        }
+
+        /// <summary>
+        /// Clear all process selections
+        /// </summary>
+        private void ClearAllProcesses()
+        {
+            foreach (var item in ProcessFilterItems)
+            {
+                item.IsSelected = false;
+            }
+            UpdateSelectedProcessesFromFilterItems();
+            OnPropertyChanged(nameof(SelectedProcessesCount));
+            OnPropertyChanged(nameof(SelectedProcessesSummary));
+        }
+
+        /// <summary>
+        /// Select all growers
+        /// </summary>
+        private void SelectAllGrowers()
+        {
+            foreach (var item in GrowerFilterItems)
+            {
+                item.IsSelected = true;
+            }
+            UpdateSelectedGrowersFromFilterItems();
+            OnPropertyChanged(nameof(SelectedGrowersCount));
+            OnPropertyChanged(nameof(SelectedGrowersSummary));
+        }
+
+        /// <summary>
+        /// Clear all grower selections
+        /// </summary>
+        private void ClearAllGrowers()
+        {
+            foreach (var item in GrowerFilterItems)
+            {
+                item.IsSelected = false;
+            }
+            UpdateSelectedGrowersFromFilterItems();
+            OnPropertyChanged(nameof(SelectedGrowersCount));
+            OnPropertyChanged(nameof(SelectedGrowersSummary));
+        }
+
+        /// <summary>
+        /// Select all pay groups
+        /// </summary>
+        private void SelectAllPayGroups()
+        {
+            foreach (var item in PayGroupFilterItems)
+            {
+                item.IsSelected = true;
+            }
+            UpdateSelectedPayGroupsFromFilterItems();
+            OnPropertyChanged(nameof(SelectedPayGroupsCount));
+            OnPropertyChanged(nameof(SelectedPayGroupsSummary));
+        }
+
+        /// <summary>
+        /// Clear all pay group selections
+        /// </summary>
+        private void ClearAllPayGroups()
+        {
+            foreach (var item in PayGroupFilterItems)
+            {
+                item.IsSelected = false;
+            }
+            UpdateSelectedPayGroupsFromFilterItems();
+            OnPropertyChanged(nameof(SelectedPayGroupsCount));
+            OnPropertyChanged(nameof(SelectedPayGroupsSummary));
+        }
+
+        /// <summary>
+        /// Copy all Run Log entries to clipboard
+        /// </summary>
+        private void CopyRunLogToClipboard()
+        {
+            try
+            {
+                if (RunLog?.Count > 0)
+                {
+                    string logText = string.Join(Environment.NewLine, RunLog);
+                    System.Windows.Clipboard.SetText(logText);
+                    StatusMessage = $"Copied {RunLog.Count} log entries to clipboard";
+                }
+                else
+                {
+                    StatusMessage = "No log entries to copy";
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Failed to copy log entries: {ex.Message}";
+            }
+        }
+
+        /// <summary>
+        /// Copy selected Run Log entries to clipboard
+        /// </summary>
+        private void CopySelectedRunLogToClipboard()
+        {
+            try
+            {
+                var selectedItems = SelectedRunLogItems;
+                if (selectedItems?.Count > 0)
+                {
+                    string logText = string.Join(Environment.NewLine, selectedItems);
+                    System.Windows.Clipboard.SetText(logText);
+                    StatusMessage = $"Copied {selectedItems.Count} selected log entries to clipboard";
+                }
+                else
+                {
+                    StatusMessage = "No log entries selected to copy";
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Failed to copy selected log entries: {ex.Message}";
+            }
+        }
+
+
+        #endregion
+
+        #region Helper Methods for FilterItem Synchronization
+
+        /// <summary>
+        /// Update SelectedProducts collection from ProductFilterItems
+        /// </summary>
+        private void UpdateSelectedProductsFromFilterItems()
+        {
+            SelectedProducts.Clear();
+            foreach (var item in ProductFilterItems.Where(fi => fi.IsSelected))
+            {
+                SelectedProducts.Add(item.Item);
+            }
+        }
+
+        /// <summary>
+        /// Update SelectedProcesses collection from ProcessFilterItems
+        /// </summary>
+        private void UpdateSelectedProcessesFromFilterItems()
+        {
+            SelectedProcesses.Clear();
+            foreach (var item in ProcessFilterItems.Where(fi => fi.IsSelected))
+            {
+                SelectedProcesses.Add(item.Item);
+            }
+        }
+
+        /// <summary>
+        /// Update SelectedExcludeGrowers collection from GrowerFilterItems
+        /// </summary>
+        private void UpdateSelectedGrowersFromFilterItems()
+        {
+            SelectedExcludeGrowers.Clear();
+            foreach (var item in GrowerFilterItems.Where(fi => fi.IsSelected))
+            {
+                SelectedExcludeGrowers.Add(item.Item);
+            }
+        }
+
+        /// <summary>
+        /// Update SelectedExcludePayGroups collection from PayGroupFilterItems
+        /// </summary>
+        private void UpdateSelectedPayGroupsFromFilterItems()
+        {
+            SelectedExcludePayGroups.Clear();
+            foreach (var item in PayGroupFilterItems.Where(fi => fi.IsSelected))
+            {
+                SelectedExcludePayGroups.Add(item.Item);
+            }
+        }
+
+        /// <summary>
+        /// Initialize FilterItem collections from the original collections
+        /// All items are selected by default on page load
+        /// </summary>
+        private void InitializeFilterItems()
+        {
+            // Initialize Product Filter Items - Select all by default
+            ProductFilterItems.Clear();
+            foreach (var product in _allProducts)
+            {
+                var displayText = $"{product.ProductId} - {product.Description}";
+                ProductFilterItems.Add(new FilterItem<Product>(product, displayText, true)); // Always selected by default
+            }
+
+            // Initialize Process Filter Items - Select all by default
+            ProcessFilterItems.Clear();
+            foreach (var process in _allProcesses)
+            {
+                var displayText = $"{process.ProcessId} - {process.Description}";
+                ProcessFilterItems.Add(new FilterItem<Process>(process, displayText, true)); // Always selected by default
+            }
+
+            // Initialize Grower Filter Items - Select all by default
+            GrowerFilterItems.Clear();
+            foreach (var grower in _allGrowers)
+            {
+                var displayText = $"{grower.GrowerNumber} - {grower.Name}";
+                GrowerFilterItems.Add(new FilterItem<GrowerInfo>(grower, displayText, true)); // Always selected by default
+            }
+
+            // Initialize PayGroup Filter Items - Select all by default
+            PayGroupFilterItems.Clear();
+            foreach (var payGroup in _allPayGroups)
+            {
+                var displayText = $"{payGroup.PayGroupId} - {payGroup.Description}";
+                PayGroupFilterItems.Add(new FilterItem<PayGroup>(payGroup, displayText, true)); // Always selected by default
+            }
+
+            // Update the legacy collections to reflect all items being selected
+            UpdateSelectedProductsFromFilterItems();
+            UpdateSelectedProcessesFromFilterItems();
+            UpdateSelectedGrowersFromFilterItems();
+            UpdateSelectedPayGroupsFromFilterItems();
+
+        }
+
+        #endregion
+
+        #region Event Subscription for FilterItem Changes
+
+        /// <summary>
+        /// Subscribe to PropertyChanged events on FilterItems to keep legacy collections in sync
+        /// </summary>
+        private void SubscribeToFilterItemChanges()
+        {
+            foreach (var item in ProductFilterItems)
+            {
+                item.PropertyChanged += (s, e) =>
+                {
+                    if (e.PropertyName == nameof(FilterItem<Product>.IsSelected))
+                    {
+                        UpdateSelectedProductsFromFilterItems();
+                        OnPropertyChanged(nameof(SelectedProductsCount));
+                        OnPropertyChanged(nameof(SelectedProductsSummary));
+                    }
+                };
+            }
+
+            foreach (var item in ProcessFilterItems)
+            {
+                item.PropertyChanged += (s, e) =>
+                {
+                    if (e.PropertyName == nameof(FilterItem<Process>.IsSelected))
+                    {
+                        UpdateSelectedProcessesFromFilterItems();
+                        OnPropertyChanged(nameof(SelectedProcessesCount));
+                        OnPropertyChanged(nameof(SelectedProcessesSummary));
+                    }
+                };
+            }
+
+            foreach (var item in GrowerFilterItems)
+            {
+                item.PropertyChanged += (s, e) =>
+                {
+                    if (e.PropertyName == nameof(FilterItem<GrowerInfo>.IsSelected))
+                    {
+                        UpdateSelectedGrowersFromFilterItems();
+                        OnPropertyChanged(nameof(SelectedGrowersCount));
+                        OnPropertyChanged(nameof(SelectedGrowersSummary));
+                    }
+                };
+            }
+
+            foreach (var item in PayGroupFilterItems)
+            {
+                item.PropertyChanged += (s, e) =>
+                {
+                    if (e.PropertyName == nameof(FilterItem<PayGroup>.IsSelected))
+                    {
+                        UpdateSelectedPayGroupsFromFilterItems();
+                        OnPropertyChanged(nameof(SelectedPayGroupsCount));
+                        OnPropertyChanged(nameof(SelectedPayGroupsSummary));
+                    }
+                };
+            }
+        }
+
+        #endregion
 
     }
 }

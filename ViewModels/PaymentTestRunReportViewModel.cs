@@ -74,24 +74,53 @@ namespace WPFGrowerApp.ViewModels
 
         private void PrepareChartData()
         {
-            // Example: Prepare data for Top 5 Grower Payments Pie Chart
-            TopGrowerPayments = GrowerPayments
-                .OrderByDescending(gp => gp.TotalCalculatedPayment)
-                .Take(5)
-                .Select(gp => new ChartDataPoint { Category = $"{gp.GrowerNumber} - {gp.GrowerName}", Value = (double)gp.TotalCalculatedPayment })
-                .ToList();
+            try
+            {
+                // Example: Prepare data for Top 5 Grower Payments Pie Chart
+                var growerPayments = GrowerPayments ?? new List<TestRunGrowerPayment>();
+                TopGrowerPayments = growerPayments
+                    .Where(gp => gp != null && gp.TotalCalculatedPayment > 0) // Filter out null and zero amounts
+                    .OrderByDescending(gp => gp.TotalCalculatedPayment)
+                    .Take(5)
+                    .Select(gp => new ChartDataPoint { Category = $"{gp.GrowerNumber} - {gp.GrowerName}", Value = (double)gp.TotalCalculatedPayment })
+                    .ToList();
 
-             // Example: Prepare data for Payments by Product Bar Chart
-             PaymentsByProduct = GrowerPayments
-                .SelectMany(gp => gp.ReceiptDetails.Where(rd => string.IsNullOrEmpty(rd.ErrorMessage))) // Only include non-error receipts
-                .GroupBy(rd => rd.Product)
-                .Select(g => new ChartDataPoint { Category = g.Key ?? "Unknown", Value = (double)g.Sum(rd => rd.CalculatedTotalAmount) }) // Handle potential null key
-                .OrderBy(dp => dp.Category)
-                .ToList();
+                // If no data, add a default entry to prevent chart rendering issues
+                if (!TopGrowerPayments.Any())
+                {
+                    TopGrowerPayments.Add(new ChartDataPoint { Category = "No Data", Value = 0 });
+                }
 
-            // Notify that chart data properties have changed if necessary (depends on ViewModelBase implementation)
-            OnPropertyChanged(nameof(TopGrowerPayments));
-            OnPropertyChanged(nameof(PaymentsByProduct));
+                // Example: Prepare data for Payments by Product Bar Chart
+                PaymentsByProduct = growerPayments
+                    .Where(gp => gp != null && gp.ReceiptDetails != null)
+                    .SelectMany(gp => gp.ReceiptDetails.Where(rd => rd != null && string.IsNullOrEmpty(rd.ErrorMessage))) // Only include non-error receipts
+                    .GroupBy(rd => rd.Product)
+                    .Select(g => new ChartDataPoint { Category = g.Key ?? "Unknown", Value = (double)g.Sum(rd => rd.CalculatedTotalAmount) }) // Handle potential null key
+                    .OrderBy(dp => dp.Category)
+                    .ToList();
+
+                // If no data, add a default entry to prevent chart rendering issues
+                if (!PaymentsByProduct.Any())
+                {
+                    PaymentsByProduct.Add(new ChartDataPoint { Category = "No Data", Value = 0 });
+                }
+
+                // Notify that chart data properties have changed if necessary (depends on ViewModelBase implementation)
+                OnPropertyChanged(nameof(TopGrowerPayments));
+                OnPropertyChanged(nameof(PaymentsByProduct));
+            }
+            catch (Exception ex)
+            {
+                // Log error and provide default data to prevent chart crashes
+                System.Diagnostics.Debug.WriteLine($"Error preparing chart data: {ex.Message}");
+                
+                TopGrowerPayments = new List<ChartDataPoint> { new ChartDataPoint { Category = "Error", Value = 0 } };
+                PaymentsByProduct = new List<ChartDataPoint> { new ChartDataPoint { Category = "Error", Value = 0 } };
+                
+                OnPropertyChanged(nameof(TopGrowerPayments));
+                OnPropertyChanged(nameof(PaymentsByProduct));
+            }
         }
 
 

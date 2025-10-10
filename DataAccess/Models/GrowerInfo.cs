@@ -7,6 +7,9 @@ namespace WPFGrowerApp.DataAccess.Models
     /// </summary>
     public class GrowerInfo
     {
+        // Corresponds to ID INT (Primary Key)
+        public int GrowerId { get; set; }
+
         // Corresponds to NUMBER DECIMAL(4, 0)
         public decimal GrowerNumber { get; set; }
 

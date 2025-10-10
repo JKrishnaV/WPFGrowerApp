@@ -733,7 +733,7 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    // Base query selects from Daily and joins Grower
+                    // Base query selects from Receipts and joins Growers, PaymentGroups, Products, Processes
                     var sqlBuilder = new SqlBuilder();
                     // Updated SELECT to use only columns present in Receipts and Growers tables
                     var selector = sqlBuilder.AddTemplate(@"
@@ -743,6 +743,7 @@ namespace WPFGrowerApp.DataAccess.Services
                             r.ReceiptDate,
                             r.ReceiptTime,
                             r.GrowerId,
+                            g.GrowerNumber,
                             r.ProductId,
                             p.ProductCode as Product,
                             r.ProcessId,
@@ -774,6 +775,7 @@ namespace WPFGrowerApp.DataAccess.Services
                             g.FullName as GrowerName
                         FROM Receipts r
                         LEFT JOIN Growers g ON r.GrowerId = g.GrowerId
+                        LEFT JOIN PaymentGroups pg ON g.PaymentGroupId = pg.PaymentGroupId
                         LEFT JOIN Products p ON r.ProductId = p.ProductId
                         LEFT JOIN Processes pr ON r.ProcessId = pr.ProcessId
                         LEFT JOIN ReceiptPaymentAllocations rpa 
@@ -798,17 +800,17 @@ namespace WPFGrowerApp.DataAccess.Services
 
                     // Add optional list filters using WHERE IN / NOT IN
                     if (includeGrowerIds?.Any() ?? false)
-                        sqlBuilder.Where("d.NUMBER IN @IncludeGrowerIds", new { IncludeGrowerIds = includeGrowerIds });
+                        sqlBuilder.Where("r.GrowerId IN @IncludeGrowerIds", new { IncludeGrowerIds = includeGrowerIds });
                     if (excludeGrowerIds?.Any() ?? false)
-                        sqlBuilder.Where("d.NUMBER NOT IN @ExcludeGrowerIds", new { ExcludeGrowerIds = excludeGrowerIds });
+                        sqlBuilder.Where("r.GrowerId NOT IN @ExcludeGrowerIds", new { ExcludeGrowerIds = excludeGrowerIds });
                     if (includePayGroupIds?.Any() ?? false)
-                        sqlBuilder.Where("g.PAYGRP IN @IncludePayGroupIds", new { IncludePayGroupIds = includePayGroupIds });
+                        sqlBuilder.Where("pg.GroupCode IN @IncludePayGroupIds", new { IncludePayGroupIds = includePayGroupIds });
                     if (excludePayGroupIds?.Any() ?? false)
-                        sqlBuilder.Where("g.PAYGRP NOT IN @ExcludePayGroupIds", new { ExcludePayGroupIds = excludePayGroupIds });
+                        sqlBuilder.Where("pg.GroupCode NOT IN @ExcludePayGroupIds", new { ExcludePayGroupIds = excludePayGroupIds });
                     if (productIds?.Any() ?? false)
-                        sqlBuilder.Where("d.PRODUCT IN @ProductIds", new { ProductIds = productIds });
+                        sqlBuilder.Where("r.ProductId IN @ProductIds", new { ProductIds = productIds });
                     if (processIds?.Any() ?? false)
-                        sqlBuilder.Where("d.PROCESS IN @ProcessIds", new { ProcessIds = processIds });
+                        sqlBuilder.Where("r.ProcessId IN @ProcessIds", new { ProcessIds = processIds });
 
                     // Execute query
                     var results = await connection.QueryAsync<Receipt>(selector.RawSql, selector.Parameters);
