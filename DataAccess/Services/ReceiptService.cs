@@ -845,10 +845,10 @@ namespace WPFGrowerApp.DataAccess.Services
                     var sql = @"
                         INSERT INTO ReceiptPaymentAllocations 
                             (ReceiptId, PaymentBatchId, PaymentTypeId, PriceScheduleId, 
-                             PricePerPound, QuantityPaid, AmountPaid, AllocatedAt)
+                             PricePerPound, QuantityPaid, AmountPaid, AllocatedAt, Status)
                         VALUES 
                             (@ReceiptId, @PaymentBatchId, @PaymentTypeId, @PriceScheduleId,
-                             @PricePerPound, @QuantityPaid, @AmountPaid, @AllocatedAt);";
+                             @PricePerPound, @QuantityPaid, @AmountPaid, @AllocatedAt, @Status);";
                     
                     await connection.ExecuteAsync(sql, allocation);
                     Logger.Info($"Created payment allocation for Receipt {allocation.ReceiptId}, Batch {allocation.PaymentBatchId}");
@@ -857,6 +857,32 @@ namespace WPFGrowerApp.DataAccess.Services
             catch (Exception ex)
             {
                 Logger.Error($"Error creating payment allocation for Receipt {allocation.ReceiptId}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        // Transaction-aware overload for CreateReceiptPaymentAllocationAsync
+        public async Task CreateReceiptPaymentAllocationAsync(
+            ReceiptPaymentAllocation allocation,
+            SqlConnection connection,
+            SqlTransaction transaction)
+        {
+            try
+            {
+                var sql = @"
+                    INSERT INTO ReceiptPaymentAllocations 
+                        (ReceiptId, PaymentBatchId, PaymentTypeId, PriceScheduleId, 
+                         PricePerPound, QuantityPaid, AmountPaid, AllocatedAt, Status)
+                    VALUES 
+                        (@ReceiptId, @PaymentBatchId, @PaymentTypeId, @PriceScheduleId,
+                         @PricePerPound, @QuantityPaid, @AmountPaid, @AllocatedAt, @Status);";
+                
+                await connection.ExecuteAsync(sql, allocation, transaction: transaction);
+                Logger.Info($"Created payment allocation (in transaction) for Receipt {allocation.ReceiptId}, Batch {allocation.PaymentBatchId}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error creating payment allocation in transaction for Receipt {allocation.ReceiptId}: {ex.Message}", ex);
                 throw;
             }
         }

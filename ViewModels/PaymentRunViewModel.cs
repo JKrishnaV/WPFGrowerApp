@@ -668,13 +668,11 @@ namespace WPFGrowerApp.ViewModels
             RunLog.Clear();
             LastRunErrors.Clear();
             LastRunBatch = null;
-            StatusMessage = "Starting payment run...";
-            Report($"Initiating Advance {AdvanceNumber} payment run...");
+            StatusMessage = "Creating payment draft...";
+            Report($"Creating Advance {AdvanceNumber} payment draft...");
             Report($"Parameters: PaymentDate={PaymentDate:d}, CutoffDate={CutoffDate:d}, CropYear={CropYear}");
 
             // Prepare lists of IDs from selected items
-            // For exclude parameters: pass empty list when all items are selected (meaning include all)
-            // For include parameters: pass the selected IDs
             var selectedProductIds = ProductFilterItems.Where(p => p.IsSelected).Select(p => p.Item.ProductId).ToList();
             var selectedProcessIds = ProcessFilterItems.Where(p => p.IsSelected).Select(p => p.Item.ProcessId).ToList();
             var selectedExcludeGrowerIds = SelectedGrowersCount == GrowerFilterItems.Count ? new List<int>() : 
@@ -690,28 +688,89 @@ namespace WPFGrowerApp.ViewModels
 
             try
             {
-                 // ProcessAdvancePaymentRunAsync signature updated to use PaymentBatch and List<int>
-                (bool success, List<string> errors, PaymentBatch? createdBatch) = 
-                    await _paymentService.ProcessAdvancePaymentRunAsync(
+                // NEW: Only create draft and calculate preview - with validation
+                (bool success, List<string> errors, PaymentBatch? createdBatch, TestRunResult? previewResult, PaymentValidationResult? validationResult) = 
+                    await _paymentService.CreatePaymentDraftAsync(
                     AdvanceNumber,
                     PaymentDate,
                     CutoffDate,
                     CropYear,
-                    // Removed the two null placeholders for includeGrowerId/includePayGroup
-                    selectedExcludeGrowerIds, // Pass list of excluded grower IDs
-                    selectedExcludePayGroupIds, // Pass list of excluded paygroup IDs
-                    selectedProductIds, // Pass list of product IDs (assuming this means *include* only these)
-                    selectedProcessIds, // Pass list of process IDs (assuming this means *include* only these)
+                    selectedExcludeGrowerIds,
+                    selectedExcludePayGroupIds,
+                    selectedProductIds,
+                    selectedProcessIds,
                     this);
 
                 LastRunBatch = createdBatch;
                 LastRunErrors = errors ?? new List<string>();
 
-                if (success)
+                // Check if validation issues require user confirmation
+                if (validationResult != null && (validationResult.HasErrors || validationResult.HasWarnings))
                 {
-                    StatusMessage = $"Payment run completed successfully for Batch {createdBatch?.PaymentBatchId}.";
-                    Report("Payment run finished successfully.");
-                    await _dialogService.ShowMessageBoxAsync($"Advance {AdvanceNumber} payment run completed successfully for Batch {createdBatch?.PaymentBatchId}.", "Payment Run Complete"); // Use async
+                    // Build detailed message for user
+                    var confirmMessage = BuildValidationConfirmationMessage(validationResult);
+                    
+                    // Ask user if they want to proceed despite issues
+                    var userConfirmed = await _dialogService.ShowConfirmationAsync(
+                        confirmMessage,
+                        "Payment Validation Issues Detected");
+                    
+                    if (userConfirmed != true)
+                    {
+                        StatusMessage = "Payment draft creation cancelled by user due to validation issues.";
+                        Report("User cancelled draft creation due to validation issues.");
+                        IsRunning = false;
+                        return;
+                    }
+                    
+                    // User confirmed - proceed with database writes
+                    Report("User confirmed to proceed despite validation issues. Creating draft...");
+                    
+                    // Ensure previewResult is not null before proceeding
+                    if (previewResult == null)
+                    {
+                        StatusMessage = "Payment draft creation failed - no calculation results.";
+                        Report("ERROR: No calculation results available.");
+                        IsRunning = false;
+                        return;
+                    }
+                    
+                    // Call a new method that skips validation and creates the batch
+                    (success, errors, createdBatch, previewResult) = 
+                        await _paymentService.CreatePaymentDraftConfirmedAsync(
+                            AdvanceNumber, PaymentDate, CutoffDate, CropYear,
+                            selectedExcludeGrowerIds, selectedExcludePayGroupIds,
+                            selectedProductIds, selectedProcessIds, 
+                            previewResult, // Pass existing calculation
+                            this);
+                    
+                    LastRunBatch = createdBatch;
+                    LastRunErrors = errors ?? new List<string>();
+                }
+
+                if (success && createdBatch != null)
+                {
+                    StatusMessage = $"Payment draft created successfully: Batch {createdBatch.PaymentBatchId}";
+                    Report($"Payment draft created: {createdBatch.BatchNumber}");
+                    Report($"Status: {createdBatch.Status} - Ready for review and approval");
+                    
+                    // Show preview summary
+                    if (previewResult != null)
+                    {
+                        var summary = $"Payment Draft Created Successfully!\n\n" +
+                                    $"Batch Number: {createdBatch.BatchNumber}\n" +
+                                    $"Status: Draft (Ready for Review)\n\n" +
+                                    $"Preview Summary:\n" +
+                                    $"• Growers: {previewResult.GrowerPayments.Count}\n" +
+                                    $"• Total Amount: ${previewResult.GrowerPayments.Sum(gp => gp.TotalCalculatedPayment):N2}\n" +
+                                    $"• Receipts: {previewResult.GrowerPayments.Sum(gp => gp.ReceiptCount)}\n\n" +
+                                    $"Next Steps:\n" +
+                                    $"1. Go to Payment Batches to review the draft\n" +
+                                    $"2. Approve the batch to post it\n" +
+                                    $"3. Process payments to finalize";
+                        
+                        await _dialogService.ShowMessageBoxAsync(summary, "Draft Created");
+                    }
                 }
                 else
                 {
@@ -2063,6 +2122,47 @@ namespace WPFGrowerApp.ViewModels
                     }
                 };
             }
+        }
+
+        /// <summary>
+        /// Builds a detailed validation confirmation message for user review
+        /// </summary>
+        private string BuildValidationConfirmationMessage(PaymentValidationResult validation)
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("Payment validation found the following issues:\n");
+            
+            if (validation.HasErrors)
+            {
+                sb.AppendLine($"ERRORS ({validation.Errors.Count}):");
+                var errorGroups = validation.Errors.GroupBy(e => e.IssueType);
+                foreach (var group in errorGroups)
+                {
+                    sb.AppendLine($"  • {group.Key}: {group.Count()} receipt(s)");
+                }
+                sb.AppendLine();
+            }
+            
+            if (validation.HasWarnings)
+            {
+                sb.AppendLine($"WARNINGS ({validation.Warnings.Count}):");
+                var warningGroups = validation.Warnings.GroupBy(w => w.IssueType);
+                foreach (var group in warningGroups)
+                {
+                    sb.AppendLine($"  • {group.Key}: {group.Count()} receipt(s)");
+                }
+                sb.AppendLine();
+            }
+            
+            sb.AppendLine($"Summary:");
+            sb.AppendLine($"  • Total Receipts: {validation.TotalReceipts}");
+            sb.AppendLine($"  • Valid Receipts: {validation.ValidReceipts}");
+            sb.AppendLine($"  • Invalid Receipts: {validation.InvalidReceipts}");
+            sb.AppendLine();
+            sb.AppendLine("Do you want to proceed with creating the payment draft?");
+            sb.AppendLine("(Only valid receipts will be included in the payment.)");
+            
+            return sb.ToString();
         }
 
         #endregion

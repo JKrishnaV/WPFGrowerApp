@@ -200,7 +200,7 @@ namespace WPFGrowerApp.DataAccess.Services
                             ChargeGST = @ChargeGST,
                             DefaultPriceClassId = @DefaultPriceClassId,
                             ModifiedAt = GETDATE(),
-                            ModifiedBy = SYSTEM_USER
+                            ModifiedBy = @ModifiedBy
                     WHEN NOT MATCHED THEN
                         INSERT (
                             GrowerNumber, CheckPayeeName, FullName, Address, City, Province, PostalCode, PhoneNumber,
@@ -213,8 +213,9 @@ namespace WPFGrowerApp.DataAccess.Services
                             CASE WHEN @Currency = 'C' THEN 'CAD' WHEN @Currency = 'U' THEN 'USD' ELSE 'CAD' END,
                             (SELECT PaymentGroupId FROM PaymentGroups WHERE GroupCode = @PayGroup),
                             @OnHold, @PhoneAdditional1, @ChargeGST,
-                            @DefaultPriceClassId, 1, GETDATE(), SYSTEM_USER, 1
+                            @DefaultPriceClassId, 1, GETDATE(), @CreatedBy, 1
                         );";
+                    var currentUser = App.CurrentUser?.Username ?? "SYSTEM";
                     var parameters = new
                     {
                         grower.GrowerNumber,
@@ -239,7 +240,9 @@ namespace WPFGrowerApp.DataAccess.Services
                         grower.LYOther,
                         grower.Certified,
                         grower.ChargeGST,
-                        grower.DefaultPriceClassId
+                        grower.DefaultPriceClassId,
+                        ModifiedBy = currentUser,
+                        CreatedBy = currentUser
                     };
                     int rowsAffected = await connection.ExecuteAsync(sql, parameters);
                     return rowsAffected > 0;

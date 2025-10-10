@@ -1,5 +1,6 @@
-﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
+using Microsoft.Data.SqlClient;
 using System.Threading.Tasks;
 using WPFGrowerApp.DataAccess.Models;
 
@@ -81,6 +82,11 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// Creates a payment allocation record linking a receipt to a payment batch.
         /// </summary>
         Task CreateReceiptPaymentAllocationAsync(ReceiptPaymentAllocation allocation);
+
+        /// <summary>
+        /// Creates a payment allocation record (transaction-aware overload).
+        /// </summary>
+        Task CreateReceiptPaymentAllocationAsync(ReceiptPaymentAllocation allocation, SqlConnection connection, SqlTransaction transaction);
 
         /// <summary>
         /// Gets all payment allocations for a specific receipt.

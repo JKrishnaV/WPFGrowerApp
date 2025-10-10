@@ -130,7 +130,7 @@ namespace WPFGrowerApp.DataAccess.Services
                                 ACCT_UNIQ = @AcctUniq,
                                 QED_DATE = GETDATE(),
                                 QED_TIME = CONVERT(varchar(8), GETDATE(), 108),
-                                QED_OP = SYSTEM_USER
+                                QED_OP = @ModifiedBy
                         WHEN NOT MATCHED THEN
                             INSERT (
                                 DAY_UNIQ, ACCT_UNIQ, QADD_DATE, QADD_TIME, QADD_OP
@@ -138,13 +138,16 @@ namespace WPFGrowerApp.DataAccess.Services
                             VALUES (
                                 @DayUniq, @AcctUniq,
                                 GETDATE(), CONVERT(varchar(8), GETDATE(), 108),
-                                SYSTEM_USER
+                                @CreatedBy
                             );";
 
+                    var currentUser = App.CurrentUser?.Username ?? "SYSTEM";
                     var parameters = new
                     {
                         audit.DayUniq,
-                        audit.AcctUniq
+                        audit.AcctUniq,
+                        ModifiedBy = currentUser,
+                        CreatedBy = currentUser
                     };
 
                     int rowsAffected = await connection.ExecuteAsync(sql, parameters);

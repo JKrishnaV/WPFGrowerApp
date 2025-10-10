@@ -341,6 +341,141 @@ namespace WPFGrowerApp.DataAccess.Services
         }
 
         /// <summary>
+        /// Approve a payment batch (Draft → Posted)
+        /// </summary>
+        public async Task<bool> ApproveBatchAsync(int paymentBatchId, string approvedBy)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    
+                    var sql = @"
+                        UPDATE PaymentBatches
+                        SET 
+                            Status = 'Posted',
+                            ProcessedAt = @ProcessedAt,
+                            ProcessedBy = @ProcessedBy,
+                            ModifiedAt = @ModifiedAt,
+                            ModifiedBy = @ModifiedBy
+                        WHERE PaymentBatchId = @PaymentBatchId AND Status = 'Draft'";
+
+                    var rowsAffected = await connection.ExecuteAsync(sql, new
+                    {
+                        PaymentBatchId = paymentBatchId,
+                        ProcessedAt = DateTime.Now,
+                        ProcessedBy = approvedBy,
+                        ModifiedAt = DateTime.Now,
+                        ModifiedBy = approvedBy
+                    });
+
+                    Logger.Info($"Approved payment batch {paymentBatchId} by {approvedBy}");
+                    return rowsAffected > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error approving payment batch {paymentBatchId}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Process payments for a batch (Posted → Finalized)
+        /// </summary>
+        public async Task<bool> ProcessPaymentsAsync(int paymentBatchId, string processedBy)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    
+                    var sql = @"
+                        UPDATE PaymentBatches
+                        SET 
+                            Status = 'Finalized',
+                            ProcessedAt = @ProcessedAt,
+                            ProcessedBy = @ProcessedBy,
+                            ModifiedAt = @ModifiedAt,
+                            ModifiedBy = @ModifiedBy
+                        WHERE PaymentBatchId = @PaymentBatchId AND Status = 'Posted'";
+
+                    var rowsAffected = await connection.ExecuteAsync(sql, new
+                    {
+                        PaymentBatchId = paymentBatchId,
+                        ProcessedAt = DateTime.Now,
+                        ProcessedBy = processedBy,
+                        ModifiedAt = DateTime.Now,
+                        ModifiedBy = processedBy
+                    });
+
+                    Logger.Info($"Processed payments for batch {paymentBatchId} by {processedBy}");
+                    return rowsAffected > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error processing payments for batch {paymentBatchId}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Rollback/undo a Draft or Posted batch - voids allocations and marks batch as voided
+        /// </summary>
+        public async Task<bool> RollbackBatchAsync(int paymentBatchId, string reason, string rolledBackBy)
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                using (var transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        // 1. Update all allocations to Voided
+                        var updateAllocations = @"
+                            UPDATE ReceiptPaymentAllocations
+                            SET Status = 'Voided',
+                                ModifiedAt = GETDATE(),
+                                ModifiedBy = @RolledBackBy
+                            WHERE PaymentBatchId = @PaymentBatchId";
+                        
+                        var allocationsUpdated = await connection.ExecuteAsync(updateAllocations, 
+                            new { PaymentBatchId = paymentBatchId, RolledBackBy = rolledBackBy },
+                            transaction: transaction);
+                        
+                        // 2. Void the batch
+                        var updateBatch = @"
+                            UPDATE PaymentBatches
+                            SET Status = 'Voided',
+                                Notes = ISNULL(Notes, '') + CHAR(13) + CHAR(10) + 
+                                       'ROLLED BACK: ' + @Reason + ' by ' + @RolledBackBy + 
+                                       ' on ' + CONVERT(NVARCHAR, GETDATE(), 120),
+                                ModifiedAt = GETDATE(),
+                                ModifiedBy = @RolledBackBy
+                            WHERE PaymentBatchId = @PaymentBatchId";
+                        
+                        await connection.ExecuteAsync(updateBatch,
+                            new { PaymentBatchId = paymentBatchId, Reason = reason, RolledBackBy = rolledBackBy },
+                            transaction: transaction);
+                        
+                        transaction.Commit();
+                        Logger.Info($"Successfully rolled back batch {paymentBatchId} - voided {allocationsUpdated} allocations");
+                        return true;
+                    }
+                    catch (Exception ex)
+                    {
+                        transaction.Rollback();
+                        Logger.Error($"Failed to rollback batch {paymentBatchId}, transaction rolled back", ex);
+                        throw;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Void a payment batch (soft delete)
         /// </summary>
         public async Task<bool> VoidBatchAsync(

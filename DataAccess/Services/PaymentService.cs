@@ -1,6 +1,7 @@
 // Duplicate removed
 using System;
 using System.Collections.Generic;
+using Microsoft.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
 using WPFGrowerApp.DataAccess.Interfaces;
@@ -43,6 +44,319 @@ namespace WPFGrowerApp.DataAccess.Services
             _processClassificationService = processClassificationService ?? throw new ArgumentNullException(nameof(processClassificationService));
         }
 
+        // --- Payment Validation (NEW: Pre-flight checks) ---
+        /// <summary>
+        /// Validates receipts before creating payment draft - checks for missing data and calculation errors
+        /// </summary>
+        private async Task<PaymentValidationResult> ValidatePaymentCalculationAsync(
+            TestRunResult calculationResult,
+            IProgress<string>? progress = null)
+        {
+            var validationResult = new PaymentValidationResult
+            {
+                TotalReceipts = calculationResult.GrowerPayments.Sum(gp => gp.ReceiptCount)
+            };
+
+            foreach (var growerPayment in calculationResult.GrowerPayments)
+            {
+                foreach (var receiptDetail in growerPayment.ReceiptDetails)
+                {
+                    // Check for errors in receipt calculation
+                    if (!string.IsNullOrEmpty(receiptDetail.ErrorMessage))
+                    {
+                        validationResult.Errors.Add(new ValidationIssue
+                        {
+                            ReceiptNumber = receiptDetail.ReceiptNumber.ToString(),
+                            GrowerNumber = growerPayment.GrowerNumber,
+                            GrowerName = growerPayment.GrowerName,
+                            IssueType = DetermineIssueType(receiptDetail.ErrorMessage),
+                            Message = receiptDetail.ErrorMessage,
+                            Details = $"Product: {receiptDetail.Product}, Process: {receiptDetail.Process}"
+                        });
+                        validationResult.InvalidReceipts++;
+                    }
+                    
+                    // Check for missing price schedule
+                    if (receiptDetail.PriceRecordId <= 0 && string.IsNullOrEmpty(receiptDetail.ErrorMessage))
+                    {
+                        validationResult.Errors.Add(new ValidationIssue
+                        {
+                            ReceiptNumber = receiptDetail.ReceiptNumber.ToString(),
+                            GrowerNumber = growerPayment.GrowerNumber,
+                            GrowerName = growerPayment.GrowerName,
+                            IssueType = ValidationIssueType.MissingPriceSchedule,
+                            Message = "No price schedule found",
+                            Details = $"Product: {receiptDetail.Product}, Process: {receiptDetail.Process}"
+                        });
+                        validationResult.InvalidReceipts++;
+                    }
+                    
+                    // Check for zero or negative calculated amount (warning)
+                    if (receiptDetail.CalculatedAdvanceAmount <= 0 && string.IsNullOrEmpty(receiptDetail.ErrorMessage))
+                    {
+                        validationResult.Warnings.Add(new ValidationIssue
+                        {
+                            ReceiptNumber = receiptDetail.ReceiptNumber.ToString(),
+                            GrowerNumber = growerPayment.GrowerNumber,
+                            GrowerName = growerPayment.GrowerName,
+                            IssueType = ValidationIssueType.CalculationError,
+                            Message = "Calculated amount is zero or negative",
+                            Details = $"Amount: ${receiptDetail.CalculatedAdvanceAmount:N2}"
+                        });
+                    }
+                }
+            }
+
+            validationResult.ValidReceipts = validationResult.TotalReceipts - validationResult.InvalidReceipts;
+            validationResult.HasErrors = validationResult.Errors.Any();
+            validationResult.HasWarnings = validationResult.Warnings.Any();
+
+            return validationResult;
+        }
+
+        private ValidationIssueType DetermineIssueType(string errorMessage)
+        {
+            if (errorMessage.Contains("product", StringComparison.OrdinalIgnoreCase))
+                return ValidationIssueType.MissingProduct;
+            if (errorMessage.Contains("process", StringComparison.OrdinalIgnoreCase))
+                return ValidationIssueType.MissingProcess;
+            if (errorMessage.Contains("price", StringComparison.OrdinalIgnoreCase))
+                return ValidationIssueType.MissingPriceSchedule;
+            return ValidationIssueType.Other;
+        }
+
+        // --- Create Payment Draft (NEW: Split Workflow) ---
+        public async Task<(bool Success, List<string> Errors, PaymentBatch? CreatedBatch, TestRunResult? PreviewResult, PaymentValidationResult? ValidationResult)> CreatePaymentDraftAsync(
+            int advanceNumber,
+            DateTime paymentDate,
+            DateTime cutoffDate,
+            int cropYear,
+            List<int>? excludeGrowerIds = null,
+            List<string>? excludePayGroupIds = null,
+            List<int>? productIds = null,
+            List<int>? processIds = null,
+            IProgress<string>? progress = null)
+        {
+            var errors = new List<string>();
+            PaymentBatch? createdBatch = null;
+            TestRunResult? previewResult = null;
+            PaymentValidationResult? validation = null;
+
+            try
+            {
+                progress?.Report("Calculating payment details...");
+                LogAnEvent(EVT_TYPE_START_ADVANCE_DETERMINE, $"Advance {advanceNumber} draft creation started.");
+
+                // 1. Perform Calculation FIRST (before any database writes)
+                progress?.Report("Calculating payment details...");
+                var parameters = new TestRunInputParameters
+                {
+                    AdvanceNumber = advanceNumber,
+                    PaymentDate = paymentDate,
+                    CutoffDate = cutoffDate,
+                    CropYear = cropYear,
+                    ExcludeGrowerIds = excludeGrowerIds,
+                    ExcludePayGroupIds = excludePayGroupIds,
+                    ProductIds = productIds,
+                    ProcessIds = processIds
+                };
+                previewResult = await CalculateAdvancePaymentDetailsAsync(parameters, progress);
+
+                if (!previewResult.GrowerPayments.Any())
+                {
+                    errors.Add("No eligible growers found for payment calculation.");
+                    return (false, errors, null, previewResult, null);
+                }
+
+                // 2. Validate calculation results BEFORE any database writes (NEW)
+                progress?.Report("Validating payment calculations...");
+                validation = await ValidatePaymentCalculationAsync(previewResult, progress);
+
+                if (validation.HasErrors || validation.HasWarnings)
+                {
+                    // Return validation results to UI for user confirmation
+                    // Don't create batch or allocations yet - wait for user confirmation
+                    var validationSummary = $"Validation found {validation.Errors.Count} errors and {validation.Warnings.Count} warnings.\n" +
+                                           $"Valid receipts: {validation.ValidReceipts}/{validation.TotalReceipts}";
+                    progress?.Report(validationSummary);
+                    
+                    // Add validation issues to errors list for UI display
+                    errors.AddRange(validation.Errors.Select(e => $"{e.ReceiptNumber} ({e.GrowerName}): {e.Message}"));
+                    if (validation.HasWarnings)
+                    {
+                        errors.AddRange(validation.Warnings.Select(w => $"WARNING - {w.ReceiptNumber}: {w.Message}"));
+                    }
+                    
+                    // Return with validation flag - UI will show confirmation dialog
+                    Logger.Info($"Payment validation found {validation.Errors.Count} errors, {validation.Warnings.Count} warnings. Awaiting user confirmation.");
+                    return (false, errors, null, previewResult, validation);
+                }
+
+                // 3. Validation passed - create batch with allocations using transaction
+                // Delegate to CreatePaymentDraftConfirmedAsync for consistent transaction-based creation
+                progress?.Report("Validation passed. Creating draft with allocations...");
+                
+                (bool draftSuccess, List<string> draftErrors, PaymentBatch? finalBatch, TestRunResult? finalResult) = 
+                    await CreatePaymentDraftConfirmedAsync(
+                        advanceNumber, paymentDate, cutoffDate, cropYear,
+                        excludeGrowerIds, excludePayGroupIds, productIds, processIds,
+                        previewResult, // Use the calculated result
+                        progress);
+
+                return (draftSuccess, draftErrors, finalBatch, finalResult, null); // No validation issues
+            }
+            catch (Exception ex)
+            {
+                errors.Add($"Critical error during draft creation: {ex.Message}");
+                Logger.Error($"Critical error during draft creation Advance {advanceNumber}", ex);
+                return (false, errors, createdBatch, previewResult, validation);
+            }
+        }
+
+        // --- Create Payment Draft (Confirmed - After User Validation) ---
+        /// <summary>
+        /// Creates payment draft after user confirmation - skips validation, uses existing calculation
+        /// </summary>
+        public async Task<(bool Success, List<string> Errors, PaymentBatch? CreatedBatch, TestRunResult? PreviewResult)> CreatePaymentDraftConfirmedAsync(
+            int advanceNumber,
+            DateTime paymentDate,
+            DateTime cutoffDate,
+            int cropYear,
+            List<int>? excludeGrowerIds,
+            List<string>? excludePayGroupIds,
+            List<int>? productIds,
+            List<int>? processIds,
+            TestRunResult existingCalculation,
+            IProgress<string>? progress = null)
+        {
+            var errors = new List<string>();
+            PaymentBatch? createdBatch = null;
+
+            try
+            {
+                progress?.Report("Creating payment draft (user confirmed)...");
+                LogAnEvent(EVT_TYPE_START_ADVANCE_DETERMINE, $"Advance {advanceNumber} confirmed draft creation started.");
+                
+                // Filter to only VALID receipts (those without errors)
+                var validGrowers = existingCalculation.GrowerPayments
+                    .Where(gp => gp.ReceiptDetails.Any(rd => string.IsNullOrEmpty(rd.ErrorMessage)))
+                    .ToList();
+
+                if (!validGrowers.Any())
+                {
+                    errors.Add("No valid receipts found after filtering errors.");
+                    return (false, errors, null, existingCalculation);
+                }
+
+                // Calculate totals from VALID receipts only
+                decimal totalAmount = validGrowers.Sum(gp => 
+                    gp.ReceiptDetails
+                        .Where(rd => string.IsNullOrEmpty(rd.ErrorMessage))
+                        .Sum(rd => rd.CalculatedAdvanceAmount));
+                
+                int totalGrowersProcessed = validGrowers.Count;
+                int totalReceiptsProcessed = validGrowers.Sum(gp => 
+                    gp.ReceiptDetails.Count(rd => string.IsNullOrEmpty(rd.ErrorMessage)));
+
+                // Wrap ALL database operations in a single transaction
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    using (var transaction = connection.BeginTransaction())
+                    {
+                        try
+                        {
+                            int paymentTypeId = advanceNumber;
+                            
+                            // 1. Create Payment Batch (with transaction)
+                            createdBatch = await _paymentBatchService.CreatePaymentBatchAsync(
+                                paymentTypeId, 
+                                paymentDate, 
+                                cropYear,
+                                $"Advance {advanceNumber} Payment Draft (User Confirmed)",
+                                connection,
+                                transaction);
+                            progress?.Report($"Created Payment Draft: {createdBatch.BatchNumber}");
+
+                            // 2. Update batch totals (with transaction)
+                            await _paymentBatchService.UpdatePaymentBatchTotalsOnlyAsync(
+                                createdBatch.PaymentBatchId,
+                                totalGrowersProcessed,
+                                totalReceiptsProcessed,
+                                totalAmount,
+                                connection,
+                                transaction);
+
+                            progress?.Report($"Draft totals: {totalGrowersProcessed} growers, {totalReceiptsProcessed} receipts, ${totalAmount:N2}");
+
+                            // 3. Create Receipt Payment Allocations for VALID receipts only (with transaction)
+                            progress?.Report("Creating receipt allocations...");
+                            int allocationCount = 0;
+                            
+                            foreach (var growerPayment in validGrowers)
+                            {
+                                // Only process receipts WITHOUT errors
+                                foreach (var receiptDetail in growerPayment.ReceiptDetails.Where(rd => string.IsNullOrEmpty(rd.ErrorMessage)))
+                                {
+                                    var receipt = await _receiptService.GetReceiptByNumberAsync(receiptDetail.ReceiptNumber);
+                                    if (receipt == null)
+                                    {
+                                        errors.Add($"Receipt {receiptDetail.ReceiptNumber} not found.");
+                                        continue;
+                                    }
+
+                                    var allocation = new ReceiptPaymentAllocation
+                                    {
+                                        ReceiptId = receipt.ReceiptId,
+                                        PaymentBatchId = createdBatch.PaymentBatchId,
+                                        PaymentTypeId = paymentTypeId,
+                                        PriceScheduleId = (int)receiptDetail.PriceRecordId,
+                                        PricePerPound = receiptDetail.CalculatedAdvancePrice,
+                                        QuantityPaid = receiptDetail.NetWeight,
+                                        AmountPaid = receiptDetail.CalculatedAdvanceAmount,
+                                        Status = "Pending", // Matches Draft batch status
+                                        AllocatedAt = DateTime.Now
+                                    };
+                                    
+                                    await _receiptService.CreateReceiptPaymentAllocationAsync(allocation, connection, transaction);
+                                    allocationCount++;
+                                }
+                            }
+                            
+                            progress?.Report($"Created {allocationCount} receipt allocations");
+
+                            // Commit the transaction - all or nothing!
+                            transaction.Commit();
+                            progress?.Report("All database operations committed successfully.");
+
+                            bool overallSuccess = !errors.Any();
+                            if (createdBatch != null)
+                            {
+                                LogAnEvent(EVT_TYPE_ADVANCE_DETERMINE_COMPLETE, 
+                                    $"Advance {advanceNumber} confirmed draft created. Batch: {createdBatch.PaymentBatchId}, " +
+                                    $"Allocations: {allocationCount}, Success: {overallSuccess}");
+                            }
+
+                            return (overallSuccess, errors, createdBatch, existingCalculation);
+                        }
+                        catch (Exception transactionEx)
+                        {
+                            transaction.Rollback();
+                            errors.Add($"Transaction rolled back: {transactionEx.Message}");
+                            Logger.Error("Payment draft creation failed, all changes rolled back", transactionEx);
+                            return (false, errors, null, existingCalculation);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                errors.Add($"Critical error: {ex.Message}");
+                Logger.Error($"Error creating confirmed draft for Advance {advanceNumber}", ex);
+                return (false, errors, null, existingCalculation);
+            }
+        }
+
         // --- Actual Payment Run ---
         public async Task<(bool Success, List<string> Errors, PaymentBatch? CreatedBatch)> ProcessAdvancePaymentRunAsync(
             int advanceNumber,
@@ -70,6 +384,7 @@ namespace WPFGrowerApp.DataAccess.Services
                 createdBatch = await _paymentBatchService.CreatePaymentBatchAsync(
                     paymentTypeId, 
                     paymentDate, 
+                    cropYear,
                     $"Advance {advanceNumber} Payment Run");
                 progress?.Report($"Created Payment Batch: {createdBatch.PaymentBatchId}");
 

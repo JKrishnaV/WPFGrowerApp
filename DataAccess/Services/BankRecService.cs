@@ -138,7 +138,7 @@ namespace WPFGrowerApp.DataAccess.Services
                                 AMOUNT = @Amount,
                                 QED_DATE = GETDATE(),
                                 QED_TIME = CONVERT(varchar(8), GETDATE(), 108),
-                                QED_OP = SYSTEM_USER
+                                QED_OP = @ModifiedBy
                         WHEN NOT MATCHED THEN
                             INSERT (
                                 ACCT_DATE, DATE_DONE, NOTE, AMOUNT,
@@ -147,15 +147,18 @@ namespace WPFGrowerApp.DataAccess.Services
                             VALUES (
                                 @AcctDate, @DateDone, @Note, @Amount,
                                 GETDATE(), CONVERT(varchar(8), GETDATE(), 108),
-                                SYSTEM_USER
+                                @CreatedBy
                             );";
 
+                    var currentUser = App.CurrentUser?.Username ?? "SYSTEM";
                     var parameters = new
                     {
                         bankRec.AcctDate,
                         bankRec.DateDone,
                         bankRec.Note,
-                        bankRec.Amount
+                        bankRec.Amount,
+                        ModifiedBy = currentUser,
+                        CreatedBy = currentUser
                     };
 
                     int rowsAffected = await connection.ExecuteAsync(sql, parameters);

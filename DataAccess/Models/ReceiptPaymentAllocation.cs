@@ -82,11 +82,32 @@ namespace WPFGrowerApp.DataAccess.Models
         // ======================================================================
         
         private DateTime _allocatedAt;
+        private string _status = "Pending";
+        private DateTime? _modifiedAt;
+        private string? _modifiedBy;
 
         public DateTime AllocatedAt
         {
             get => _allocatedAt;
             set => SetProperty(ref _allocatedAt, value);
+        }
+
+        public string Status
+        {
+            get => _status;
+            set => SetProperty(ref _status, value);
+        }
+
+        public DateTime? ModifiedAt
+        {
+            get => _modifiedAt;
+            set => SetProperty(ref _modifiedAt, value);
+        }
+
+        public string? ModifiedBy
+        {
+            get => _modifiedBy;
+            set => SetProperty(ref _modifiedBy, value);
         }
 
         // ======================================================================

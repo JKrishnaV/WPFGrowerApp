@@ -20,6 +20,7 @@
             </ResourceDictionary.MergedDictionaries>
             
             <converters:BoolToVisibilityConverter x:Key="BoolToVisConverter"/>
+            <converters:StatusToVisibilityConverter x:Key="StatusToVisibilityConverter"/>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -235,7 +236,7 @@
                     <DataGridTextColumn Header="Created By" Binding="{Binding CreatedBy}" Width="100"/>
 
                     <!-- Actions -->
-                    <DataGridTemplateColumn Header="Actions" Width="120">
+                    <DataGridTemplateColumn Header="Actions" Width="240">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
@@ -245,6 +246,32 @@
                                             ToolTip="View Details"
                                             Width="30" Height="30">
                                         <materialDesign:PackIcon Kind="Eye" Width="16" Height="16"/>
+                                    </Button>
+                                    <Button Style="{StaticResource MaterialDesignIconButton}"
+                                            Command="{Binding DataContext.ApproveBatchCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            CommandParameter="{Binding}"
+                                            ToolTip="Approve Batch"
+                                            Width="30" Height="30"
+                                            Foreground="Green"
+                                            Visibility="{Binding Status, Converter={StaticResource StatusToVisibilityConverter}, ConverterParameter='Draft'}">
+                                        <materialDesign:PackIcon Kind="CheckCircle" Width="16" Height="16"/>
+                                    </Button>
+                                    <Button Style="{StaticResource MaterialDesignIconButton}"
+                                            Command="{Binding DataContext.ProcessPaymentsCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            CommandParameter="{Binding}"
+                                            ToolTip="Process Payments"
+                                            Width="30" Height="30"
+                                            Foreground="Blue"
+                                            Visibility="{Binding Status, Converter={StaticResource StatusToVisibilityConverter}, ConverterParameter='Posted'}">
+                                        <materialDesign:PackIcon Kind="CashMultiple" Width="16" Height="16"/>
+                                    </Button>
+                                    <Button Style="{StaticResource MaterialDesignIconButton}"
+                                            Command="{Binding DataContext.RollbackBatchCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            CommandParameter="{Binding}"
+                                            ToolTip="Rollback Batch (Undo)"
+                                            Width="30" Height="30"
+                                            Foreground="Orange">
+                                        <materialDesign:PackIcon Kind="Undo" Width="16" Height="16"/>
                                     </Button>
                                     <Button Style="{StaticResource MaterialDesignIconButton}"
                                             Command="{Binding DataContext.VoidBatchCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"

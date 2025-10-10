@@ -300,7 +300,7 @@ namespace WPFGrowerApp.DataAccess.Services
                             )
                             BEGIN
                                 INSERT INTO PriceScheduleLocks (PriceScheduleId, AdvanceNumber, LockedAt, LockedBy)
-                                VALUES (@PriceId, @AdvanceNumber, GETDATE(), SYSTEM_USER);
+                                VALUES (@PriceId, @AdvanceNumber, GETDATE(), @LockedBy);
                                 SELECT 1;
                             END
                             ELSE
@@ -312,10 +312,12 @@ namespace WPFGrowerApp.DataAccess.Services
                             SELECT 1;
                         END";
                     
+                    var lockedBy = App.CurrentUser?.Username ?? "SYSTEM";
                     var result = await connection.ExecuteScalarAsync<int>(sql, new
                     {
                         PriceId = priceId,
-                        AdvanceNumber = advanceNumber
+                        AdvanceNumber = advanceNumber,
+                        LockedBy = lockedBy
                     });
                     
                     if (result > 0)
@@ -398,8 +400,8 @@ namespace WPFGrowerApp.DataAccess.Services
                 var schedulesSql = @"
                     SELECT 
                         ps.PriceScheduleId AS PriceID,
-                        ps.ProductId AS ProductId,
-                        ps.ProcessId AS ProcessId,
+                        ps.ProductId,
+                        ps.ProcessId,
                         p.ProductCode AS Product,
                         pr.ProcessCode AS Process,
                         ps.EffectiveFrom AS [From],
@@ -479,6 +481,8 @@ namespace WPFGrowerApp.DataAccess.Services
                 var scheduleSql = @"
                     SELECT 
                         ps.PriceScheduleId AS PriceID,
+                        ps.ProductId,
+                        ps.ProcessId,
                         p.ProductCode AS Product,
                         pr.ProcessCode AS Process,
                         ps.EffectiveFrom AS [From],
@@ -653,32 +657,17 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     try
                     {
-                        // Get Product and Process IDs
-                        var idsSql = @"
-                            SELECT 
-                                p.ProductId,
-                                pr.ProcessId
-                            FROM 
-                                (SELECT 1 AS Dummy) d
-                            LEFT JOIN Products p ON p.ProductCode = @ProductCode
-                            LEFT JOIN Processes pr ON pr.ProcessCode = @ProcessCode";
-                        
-                        var ids = await connection.QuerySingleOrDefaultAsync<dynamic>(
-                            idsSql,
-                            new { ProductCode = price.Product, ProcessCode = price.Process },
-                            transaction);
-                        
-                        if (ids?.ProductId == null || ids?.ProcessId == null)
+                        // Validate that ProductId and ProcessId are set (should be loaded from GetByIdAsync)
+                        if (price.ProductId <= 0 || price.ProcessId <= 0)
                         {
-                            throw new Exception($"Invalid Product ({price.Product}) or Process ({price.Process})");
+                            throw new Exception($"Invalid ProductId ({price.ProductId}) or ProcessId ({price.ProcessId}). Price object must be loaded from database first.");
                         }
                         
                         // Update the price schedule header
+                        // Note: ProductId and ProcessId are NOT updated - they are immutable for a price schedule
                         var scheduleSql = @"
                             UPDATE PriceSchedules
-                            SET ProductId = @ProductId,
-                                ProcessId = @ProcessId,
-                                EffectiveFrom = @EffectiveFrom,
+                            SET EffectiveFrom = @EffectiveFrom,
                                 TimePremiumEnabled = @TimePremiumEnabled,
                                 PremiumCutoffTime = @PremiumCutoffTime,
                                 CanadianPremiumAmount = @CanadianPremiumAmount,
@@ -700,8 +689,6 @@ namespace WPFGrowerApp.DataAccess.Services
                         await connection.ExecuteAsync(scheduleSql, new
                         {
                             PriceScheduleId = price.PriceID,
-                            ProductId = (int)ids.ProductId,
-                            ProcessId = (int)ids.ProcessId,
                             EffectiveFrom = price.From,
                             TimePremiumEnabled = price.TimePrem,
                             PremiumCutoffTime = cutoffTime,

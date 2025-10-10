@@ -77,6 +77,31 @@ namespace WPFGrowerApp.DataAccess.Interfaces
             string postedBy);
 
         /// <summary>
+        /// Approve a payment batch (Draft → Posted)
+        /// </summary>
+        /// <param name="paymentBatchId">Batch ID</param>
+        /// <param name="approvedBy">User approving the batch</param>
+        /// <returns>True if successful</returns>
+        Task<bool> ApproveBatchAsync(int paymentBatchId, string approvedBy);
+
+        /// <summary>
+        /// Process payments for a batch (Posted → Finalized)
+        /// </summary>
+        /// <param name="paymentBatchId">Batch ID</param>
+        /// <param name="processedBy">User processing the payments</param>
+        /// <returns>True if successful</returns>
+        Task<bool> ProcessPaymentsAsync(int paymentBatchId, string processedBy);
+
+        /// <summary>
+        /// Rollback/undo a Draft or Posted batch - voids allocations and marks batch as voided (with transaction)
+        /// </summary>
+        /// <param name="paymentBatchId">Batch ID</param>
+        /// <param name="reason">Reason for rollback</param>
+        /// <param name="rolledBackBy">User performing rollback</param>
+        /// <returns>True if successful</returns>
+        Task<bool> RollbackBatchAsync(int paymentBatchId, string reason, string rolledBackBy);
+
+        /// <summary>
         /// Void a payment batch (soft delete)
         /// </summary>
         /// <param name="paymentBatchId">Batch ID</param>

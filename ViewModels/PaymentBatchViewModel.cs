@@ -136,6 +136,9 @@ namespace WPFGrowerApp.ViewModels
         public ICommand VoidBatchCommand { get; }
         public ICommand ExportBatchCommand { get; }
         public ICommand ClearFiltersCommand { get; }
+        public ICommand ApproveBatchCommand { get; }
+        public ICommand ProcessPaymentsCommand { get; }
+        public ICommand RollbackBatchCommand { get; }
 
         public PaymentBatchViewModel(
             IPaymentBatchManagementService batchService,
@@ -158,6 +161,9 @@ namespace WPFGrowerApp.ViewModels
             VoidBatchCommand = new RelayCommand(async o => await VoidBatchAsync(), o => CanVoidBatch());
             ExportBatchCommand = new RelayCommand(async o => await ExportBatchAsync(), o => SelectedBatch != null);
             ClearFiltersCommand = new RelayCommand(o => ClearFilters());
+            ApproveBatchCommand = new RelayCommand(async o => await ApproveBatchAsync(), o => CanApproveBatch());
+            ProcessPaymentsCommand = new RelayCommand(async o => await ProcessPaymentsAsync(), o => CanProcessPayments());
+            RollbackBatchCommand = new RelayCommand(async o => await RollbackBatchAsync(), o => CanRollbackBatch());
 
             // Initialize filters
             InitializeFilters();
@@ -440,10 +446,191 @@ namespace WPFGrowerApp.ViewModels
         // HELPER METHODS
         // ==============================================================
 
-        private bool CanVoidBatch()
+        private async Task ApproveBatchAsync()
+        {
+            if (SelectedBatch == null)
+                return;
+
+            try
+            {
+                // Confirm approval
+                var confirm = await _dialogService.ShowConfirmationAsync(
+                    $"This will approve and post the batch for payment processing.\n\n" +
+                    $"Batch: {SelectedBatch.BatchNumber}\n" +
+                    $"Amount: ${SelectedBatch.TotalAmount:N2}\n" +
+                    $"Growers: {SelectedBatch.TotalGrowers}\n\n" +
+                    $"Continue with approval?",
+                    $"Approve Batch {SelectedBatch.BatchNumber}?");
+
+                if (confirm != true)
+                    return;
+
+                IsLoading = true;
+
+                // Approve the batch (Draft → Posted)
+                var approvedBy = App.CurrentUser?.Username ?? "SYSTEM";
+                var success = await _batchService.ApproveBatchAsync(
+                    SelectedBatch.PaymentBatchId,
+                    approvedBy);
+
+                if (success)
+                {
+                    await _dialogService.ShowMessageBoxAsync(
+                        $"Batch {SelectedBatch.BatchNumber} has been approved and posted.\n\n" +
+                        $"Status: Posted (Ready for payment processing)",
+                        "Batch Approved");
+
+                    // Refresh list
+                    await LoadBatchesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error approving batch", ex);
+                await _dialogService.ShowMessageBoxAsync($"Error approving batch: {ex.Message}", "Error");
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        private async Task ProcessPaymentsAsync()
+        {
+            if (SelectedBatch == null)
+                return;
+
+            try
+            {
+                // Confirm processing
+                var confirm = await _dialogService.ShowConfirmationAsync(
+                    $"This will finalize the batch and process all payments.\n\n" +
+                    $"Batch: {SelectedBatch.BatchNumber}\n" +
+                    $"Amount: ${SelectedBatch.TotalAmount:N2}\n" +
+                    $"Growers: {SelectedBatch.TotalGrowers}\n\n" +
+                    $"This action cannot be undone. Continue?",
+                    $"Process Payments for Batch {SelectedBatch.BatchNumber}?");
+
+                if (confirm != true)
+                    return;
+
+                IsLoading = true;
+
+                // Process payments (Posted → Finalized)
+                var processedBy = App.CurrentUser?.Username ?? "SYSTEM";
+                var success = await _batchService.ProcessPaymentsAsync(
+                    SelectedBatch.PaymentBatchId,
+                    processedBy);
+
+                if (success)
+                {
+                    await _dialogService.ShowMessageBoxAsync(
+                        $"Payments for batch {SelectedBatch.BatchNumber} have been processed successfully.\n\n" +
+                        $"Status: Finalized (Payments completed)",
+                        "Payments Processed");
+
+                    // Refresh list
+                    await LoadBatchesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error processing payments", ex);
+                await _dialogService.ShowMessageBoxAsync($"Error processing payments: {ex.Message}", "Error");
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        private bool CanApproveBatch()
+        {
+            return SelectedBatch != null &&
+                   SelectedBatch.Status == "Draft" &&
+                   !SelectedBatch.IsDeleted;
+        }
+
+        private bool CanProcessPayments()
         {
             return SelectedBatch != null &&
                    SelectedBatch.Status == "Posted" &&
+                   !SelectedBatch.IsDeleted;
+        }
+
+        private async Task RollbackBatchAsync()
+        {
+            if (SelectedBatch == null)
+                return;
+
+            try
+            {
+                // Confirm rollback
+                var confirm = await _dialogService.ShowConfirmationAsync(
+                    $"This will rollback and void the batch and all its allocations.\n\n" +
+                    $"Batch: {SelectedBatch.BatchNumber}\n" +
+                    $"Status: {SelectedBatch.Status}\n" +
+                    $"Amount: ${SelectedBatch.TotalAmount:N2}\n" +
+                    $"Growers: {SelectedBatch.TotalGrowers}\n\n" +
+                    $"This action cannot be undone. Continue?",
+                    $"Rollback Batch {SelectedBatch.BatchNumber}?");
+
+                if (confirm != true)
+                    return;
+
+                // Get reason
+                var reason = await _dialogService.ShowInputDialogAsync(
+                    "Enter reason for rolling back this batch:",
+                    "Rollback Reason");
+
+                if (string.IsNullOrWhiteSpace(reason))
+                {
+                    await _dialogService.ShowMessageBoxAsync("Rollback reason is required.", "Required");
+                    return;
+                }
+
+                IsLoading = true;
+
+                // Rollback the batch
+                var rolledBackBy = App.CurrentUser?.Username ?? "SYSTEM";
+                var success = await _batchService.RollbackBatchAsync(
+                    SelectedBatch.PaymentBatchId,
+                    reason,
+                    rolledBackBy);
+
+                if (success)
+                {
+                    await _dialogService.ShowMessageBoxAsync(
+                        $"Batch {SelectedBatch.BatchNumber} has been rolled back and voided.\n\n" +
+                        $"All allocations have been voided.",
+                        "Batch Rolled Back");
+
+                    // Refresh list
+                    await LoadBatchesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error rolling back batch", ex);
+                await _dialogService.ShowMessageBoxAsync($"Error rolling back batch: {ex.Message}", "Error");
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        private bool CanRollbackBatch()
+        {
+            return SelectedBatch != null &&
+                   (SelectedBatch.Status == "Draft" || SelectedBatch.Status == "Posted") &&
+                   !SelectedBatch.IsDeleted;
+        }
+
+        private bool CanVoidBatch()
+        {
+            return SelectedBatch != null &&
+                   (SelectedBatch.Status == "Draft" || SelectedBatch.Status == "Posted") &&
                    !SelectedBatch.IsDeleted;
         }
     }

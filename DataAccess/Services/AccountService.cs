@@ -147,7 +147,7 @@ namespace WPFGrowerApp.DataAccess.Services
                                 FIN_BAT = @FinBat,
                                 QED_DATE = GETDATE(),
                                 QED_TIME = CONVERT(varchar(8), GETDATE(), 108),
-                                QED_OP = SYSTEM_USER
+                                QED_OP = @ModifiedBy
                         WHEN NOT MATCHED THEN
                             INSERT (
                                 NUMBER, DATE, TYPE, CLASS, PRODUCT, PROCESS, GRADE,
@@ -163,9 +163,10 @@ namespace WPFGrowerApp.DataAccess.Services
                                 @AcctUnique, @Currency, @ChgGst, @GstRate,
                                 @GstEst, @NonGstEst, @AdvNo, @AdvBat, @FinBat,
                                 GETDATE(), CONVERT(varchar(8), GETDATE(), 108),
-                                SYSTEM_USER
+                                @CreatedBy
                             );";
 
+                    var currentUser = App.CurrentUser?.Username ?? "SYSTEM";
                     var parameters = new
                     {
                         account.Number,
@@ -192,7 +193,9 @@ namespace WPFGrowerApp.DataAccess.Services
                         account.NonGstEst,
                         account.AdvNo,
                         account.AdvBat,
-                        account.FinBat
+                        account.FinBat,
+                        ModifiedBy = currentUser,
+                        CreatedBy = currentUser
                     };
 
                     int rowsAffected = await connection.ExecuteAsync(sql, parameters);
