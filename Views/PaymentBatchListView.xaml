@@ -153,12 +153,14 @@
 
         <!-- Main Content - Batch List -->
         <materialDesign:Card Grid.Row="4" Style="{StaticResource MainContentAreaStyle}">
-            <DataGrid ItemsSource="{Binding PaymentBatches}"
+            <DataGrid x:Name="BatchesDataGrid"
+                      ItemsSource="{Binding PaymentBatches}"
                       SelectedItem="{Binding SelectedBatch}"
                       AutoGenerateColumns="False"
                       IsReadOnly="True"
                       CanUserAddRows="False"
                       SelectionMode="Single"
+                      MouseDoubleClick="BatchesDataGrid_MouseDoubleClick"
                       materialDesign:DataGridAssist.CellPadding="13 8 8 8"
                       materialDesign:DataGridAssist.ColumnHeaderPadding="13 10 8 10">
 

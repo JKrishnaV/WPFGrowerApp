@@ -340,7 +340,13 @@ namespace WPFGrowerApp.ViewModels
 
         private async Task ViewBatchDetailsAsync()
         {
-            if (SelectedBatch == null || BatchSummary == null)
+            if (SelectedBatch == null)
+                return;
+
+            // Ensure batch details are loaded (in case item was already selected when double-clicked)
+            await LoadBatchDetailsAsync();
+
+            if (BatchSummary == null)
                 return;
 
             var message = $"Batch Details:\n\n" +
