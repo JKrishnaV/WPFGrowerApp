@@ -219,7 +219,13 @@ namespace WPFGrowerApp.DataAccess.Services
                             pt.TypeName as PaymentTypeName
                         FROM PaymentBatches pb
                         INNER JOIN PaymentTypes pt ON pb.PaymentTypeId = pt.PaymentTypeId
-                        WHERE pb.DeletedAt IS NULL
+                        WHERE 
+                            -- Handle soft delete based on status filter
+                            (
+                                (@Status = 'Voided' AND pb.DeletedAt IS NOT NULL) OR
+                                (@Status != 'Voided' AND @Status IS NOT NULL AND pb.DeletedAt IS NULL) OR
+                                (@Status IS NULL)
+                            )
                           AND (@CropYear IS NULL OR pb.CropYear = @CropYear)
                           AND (@Status IS NULL OR pb.Status = @Status)
                           AND (@PaymentTypeId IS NULL OR pb.PaymentTypeId = @PaymentTypeId)
@@ -423,9 +429,12 @@ namespace WPFGrowerApp.DataAccess.Services
         }
 
         /// <summary>
-        /// Rollback/undo a Draft or Posted batch - voids allocations and marks batch as voided
+        /// Void a payment batch - voids the batch, all allocations, and all cheques in a transaction
         /// </summary>
-        public async Task<bool> RollbackBatchAsync(int paymentBatchId, string reason, string rolledBackBy)
+        public async Task<bool> VoidBatchAsync(
+            int paymentBatchId,
+            string reason,
+            string voidedBy)
         {
             using (var connection = new SqlConnection(_connectionString))
             {
@@ -434,89 +443,60 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     try
                     {
-                        // 1. Update all allocations to Voided
-                        var updateAllocations = @"
+                        // 1. Void all allocations
+                        var voidAllocations = @"
                             UPDATE ReceiptPaymentAllocations
                             SET Status = 'Voided',
                                 ModifiedAt = GETDATE(),
-                                ModifiedBy = @RolledBackBy
-                            WHERE PaymentBatchId = @PaymentBatchId";
+                                ModifiedBy = @VoidedBy
+                            WHERE PaymentBatchId = @PaymentBatchId
+                              AND Status != 'Voided'";
                         
-                        var allocationsUpdated = await connection.ExecuteAsync(updateAllocations, 
-                            new { PaymentBatchId = paymentBatchId, RolledBackBy = rolledBackBy },
+                        var allocationsVoided = await connection.ExecuteAsync(voidAllocations, 
+                            new { PaymentBatchId = paymentBatchId, VoidedBy = voidedBy },
                             transaction: transaction);
                         
-                        // 2. Void the batch
-                        var updateBatch = @"
+                        // 2. Void all cheques for this batch
+                        var voidCheques = @"
+                            UPDATE Cheques
+                            SET Status = 'Voided',
+                                ModifiedAt = GETDATE(),
+                                ModifiedBy = @VoidedBy
+                            WHERE PaymentBatchId = @PaymentBatchId
+                              AND Status != 'Voided'";
+                        
+                        var chequesVoided = await connection.ExecuteAsync(voidCheques,
+                            new { PaymentBatchId = paymentBatchId, VoidedBy = voidedBy },
+                            transaction: transaction);
+                        
+                        // 3. Void the batch with soft delete
+                        var voidBatch = @"
                             UPDATE PaymentBatches
                             SET Status = 'Voided',
+                                DeletedAt = GETDATE(),
+                                DeletedBy = @VoidedBy,
                                 Notes = ISNULL(Notes, '') + CHAR(13) + CHAR(10) + 
-                                       'ROLLED BACK: ' + @Reason + ' by ' + @RolledBackBy + 
+                                       'VOIDED: ' + @Reason + ' by ' + @VoidedBy + 
                                        ' on ' + CONVERT(NVARCHAR, GETDATE(), 120),
                                 ModifiedAt = GETDATE(),
-                                ModifiedBy = @RolledBackBy
+                                ModifiedBy = @VoidedBy
                             WHERE PaymentBatchId = @PaymentBatchId";
                         
-                        await connection.ExecuteAsync(updateBatch,
-                            new { PaymentBatchId = paymentBatchId, Reason = reason, RolledBackBy = rolledBackBy },
+                        await connection.ExecuteAsync(voidBatch,
+                            new { PaymentBatchId = paymentBatchId, Reason = reason, VoidedBy = voidedBy },
                             transaction: transaction);
                         
                         transaction.Commit();
-                        Logger.Info($"Successfully rolled back batch {paymentBatchId} - voided {allocationsUpdated} allocations");
+                        Logger.Info($"Successfully voided batch {paymentBatchId} - voided {allocationsVoided} allocations and {chequesVoided} cheques");
                         return true;
                     }
                     catch (Exception ex)
                     {
                         transaction.Rollback();
-                        Logger.Error($"Failed to rollback batch {paymentBatchId}, transaction rolled back", ex);
+                        Logger.Error($"Failed to void batch {paymentBatchId}, transaction rolled back", ex);
                         throw;
                     }
                 }
-            }
-        }
-
-        /// <summary>
-        /// Void a payment batch (soft delete)
-        /// </summary>
-        public async Task<bool> VoidBatchAsync(
-            int paymentBatchId,
-            string reason,
-            string voidedBy)
-        {
-            try
-            {
-                using (var connection = new SqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
-                    
-                    var sql = @"
-                        UPDATE PaymentBatches
-                        SET 
-                            Status = 'Voided',
-                            DeletedAt = @DeletedAt,
-                            DeletedBy = @DeletedBy,
-                            Notes = ISNULL(Notes, '') + CHAR(13) + CHAR(10) + 
-                                   'VOIDED: ' + @Reason + ' by ' + @VoidedBy + ' on ' + 
-                                   CONVERT(NVARCHAR, @DeletedAt, 120)
-                        WHERE PaymentBatchId = @PaymentBatchId";
-
-                    var rowsAffected = await connection.ExecuteAsync(sql, new
-                    {
-                        PaymentBatchId = paymentBatchId,
-                        DeletedAt = DateTime.Now,
-                        DeletedBy = voidedBy,
-                        Reason = reason,
-                        VoidedBy = voidedBy
-                    });
-
-                    Logger.Info($"Voided batch {paymentBatchId}: {reason} by {voidedBy}");
-                    return rowsAffected > 0;
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Error voiding batch: {ex.Message}", ex);
-                throw;
             }
         }
 

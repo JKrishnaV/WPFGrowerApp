@@ -781,6 +781,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         LEFT JOIN ReceiptPaymentAllocations rpa 
                             ON r.ReceiptId = rpa.ReceiptId 
                             AND rpa.PaymentTypeId = @PaymentTypeId
+                            AND (rpa.Status IS NULL OR rpa.Status != 'Voided')
                         /**where**/
                         ORDER BY r.GrowerId, r.ReceiptDate, r.ReceiptNumber"
                     );
@@ -789,7 +790,7 @@ namespace WPFGrowerApp.DataAccess.Services
                 sqlBuilder.Where("r.ReceiptDate <= @CutoffDate", new { CutoffDate = cutoffDate });
                 sqlBuilder.Where("r.IsVoided = 0"); // Not voided
                 sqlBuilder.Where("r.NetWeight > 0"); // for payment , net should be >0
-                sqlBuilder.Where("rpa.AllocationId IS NULL"); // Exclude receipts already paid for this advance
+                sqlBuilder.Where("rpa.AllocationId IS NULL"); // Exclude receipts already paid for this advance (ignores voided allocations)
                 // Add PaymentTypeId parameter for the LEFT JOIN
                 sqlBuilder.AddParameters(new { PaymentTypeId = advanceNumber });
                 if (cropYear.HasValue) // Add Crop Year filter using YEAR() function

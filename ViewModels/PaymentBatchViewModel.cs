@@ -13,7 +13,7 @@ using WPFGrowerApp.Services;
 namespace WPFGrowerApp.ViewModels
 {
     /// <summary>
-    /// ViewModel for managing payment batches (view, filter, void)
+    /// ViewModel for managing payment batches (view, filter, approve, process, void)
     /// </summary>
     public class PaymentBatchViewModel : ViewModelBase
     {
@@ -141,7 +141,6 @@ namespace WPFGrowerApp.ViewModels
         public ICommand ClearFiltersCommand { get; }
         public ICommand ApproveBatchCommand { get; }
         public ICommand ProcessPaymentsCommand { get; }
-        public ICommand RollbackBatchCommand { get; }
         public ICommand NavigateToDashboardCommand { get; }
 
         public PaymentBatchViewModel(
@@ -173,7 +172,6 @@ namespace WPFGrowerApp.ViewModels
             ClearFiltersCommand = new RelayCommand(o => ClearFilters());
             ApproveBatchCommand = new RelayCommand(async o => await ApproveBatchAsync(), o => CanApproveBatch());
             ProcessPaymentsCommand = new RelayCommand(async o => await ProcessPaymentsAsync(), o => CanProcessPayments());
-            RollbackBatchCommand = new RelayCommand(async o => await RollbackBatchAsync(), o => CanRollbackBatch());
             NavigateToDashboardCommand = new RelayCommand(NavigateToDashboardExecute);
 
             // Initialize filters
@@ -390,12 +388,18 @@ namespace WPFGrowerApp.ViewModels
 
             try
             {
-                // Confirm
+                // Confirm with comprehensive details
                 var confirm = await _dialogService.ShowConfirmationAsync(
-                    $"This will mark the batch as voided and prevent it from being used.\n\n" +
+                    $"This will void the batch and all associated data:\n\n" +
+                    $"✓ Batch will be marked as Voided\n" +
+                    $"✓ All payment allocations will be voided\n" +
+                    $"✓ All cheques will be cancelled\n" +
+                    $"✓ Receipts will become available for future batches\n\n" +
                     $"Batch: {SelectedBatch.BatchNumber}\n" +
-                    $"Amount: ${SelectedBatch.TotalAmount:N2}\n\n" +
-                    $"Continue?",
+                    $"Status: {SelectedBatch.Status}\n" +
+                    $"Amount: ${SelectedBatch.TotalAmount:N2}\n" +
+                    $"Growers: {SelectedBatch.TotalGrowers}\n\n" +
+                    $"This action cannot be undone. Continue?",
                     $"Void Batch {SelectedBatch.BatchNumber}?");
 
                 if (confirm != true)
@@ -424,7 +428,8 @@ namespace WPFGrowerApp.ViewModels
                 if (success)
                 {
                     await _dialogService.ShowMessageBoxAsync(
-                        $"Batch {SelectedBatch.BatchNumber} has been voided.",
+                        $"Batch {SelectedBatch.BatchNumber} has been voided.\n\n" +
+                        $"All allocations and cheques have been cancelled.",
                         "Batch Voided");
 
                     // Refresh list
@@ -569,75 +574,6 @@ namespace WPFGrowerApp.ViewModels
         {
             return SelectedBatch != null &&
                    SelectedBatch.Status == "Posted" &&
-                   !SelectedBatch.IsDeleted;
-        }
-
-        private async Task RollbackBatchAsync()
-        {
-            if (SelectedBatch == null)
-                return;
-
-            try
-            {
-                // Confirm rollback
-                var confirm = await _dialogService.ShowConfirmationAsync(
-                    $"This will rollback and void the batch and all its allocations.\n\n" +
-                    $"Batch: {SelectedBatch.BatchNumber}\n" +
-                    $"Status: {SelectedBatch.Status}\n" +
-                    $"Amount: ${SelectedBatch.TotalAmount:N2}\n" +
-                    $"Growers: {SelectedBatch.TotalGrowers}\n\n" +
-                    $"This action cannot be undone. Continue?",
-                    $"Rollback Batch {SelectedBatch.BatchNumber}?");
-
-                if (confirm != true)
-                    return;
-
-                // Get reason
-                var reason = await _dialogService.ShowInputDialogAsync(
-                    "Enter reason for rolling back this batch:",
-                    "Rollback Reason");
-
-                if (string.IsNullOrWhiteSpace(reason))
-                {
-                    await _dialogService.ShowMessageBoxAsync("Rollback reason is required.", "Required");
-                    return;
-                }
-
-                IsLoading = true;
-
-                // Rollback the batch
-                var rolledBackBy = App.CurrentUser?.Username ?? "SYSTEM";
-                var success = await _batchService.RollbackBatchAsync(
-                    SelectedBatch.PaymentBatchId,
-                    reason,
-                    rolledBackBy);
-
-                if (success)
-                {
-                    await _dialogService.ShowMessageBoxAsync(
-                        $"Batch {SelectedBatch.BatchNumber} has been rolled back and voided.\n\n" +
-                        $"All allocations have been voided.",
-                        "Batch Rolled Back");
-
-                    // Refresh list
-                    await LoadBatchesAsync();
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Error rolling back batch", ex);
-                await _dialogService.ShowMessageBoxAsync($"Error rolling back batch: {ex.Message}", "Error");
-            }
-            finally
-            {
-                IsLoading = false;
-            }
-        }
-
-        private bool CanRollbackBatch()
-        {
-            return SelectedBatch != null &&
-                   (SelectedBatch.Status == "Draft" || SelectedBatch.Status == "Posted") &&
                    !SelectedBatch.IsDeleted;
         }
 

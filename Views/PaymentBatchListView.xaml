@@ -162,7 +162,13 @@
                       SelectionMode="Single"
                       MouseDoubleClick="BatchesDataGrid_MouseDoubleClick"
                       materialDesign:DataGridAssist.CellPadding="13 8 8 8"
-                      materialDesign:DataGridAssist.ColumnHeaderPadding="13 10 8 10">
+                      materialDesign:DataGridAssist.ColumnHeaderPadding="13 10 8 10"
+                      EnableRowVirtualization="True"
+                      VirtualizingPanel.IsVirtualizing="True"
+                      VirtualizingPanel.VirtualizationMode="Recycling"
+                      ScrollViewer.CanContentScroll="True"
+                      ScrollViewer.VerticalScrollBarVisibility="Auto"
+                      ScrollViewer.HorizontalScrollBarVisibility="Auto">
 
                 <DataGrid.Columns>
                     <!-- Batch Number -->
@@ -271,17 +277,9 @@
                                         <materialDesign:PackIcon Kind="CashMultiple" Width="16" Height="16"/>
                                     </Button>
                                     <Button Style="{StaticResource MaterialDesignIconButton}"
-                                            Command="{Binding DataContext.RollbackBatchCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                            CommandParameter="{Binding}"
-                                            ToolTip="Rollback Batch (Undo)"
-                                            Width="30" Height="30"
-                                            Foreground="Orange">
-                                        <materialDesign:PackIcon Kind="Undo" Width="16" Height="16"/>
-                                    </Button>
-                                    <Button Style="{StaticResource MaterialDesignIconButton}"
                                             Command="{Binding DataContext.VoidBatchCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                             CommandParameter="{Binding}"
-                                            ToolTip="Void Batch"
+                                            ToolTip="Void Batch (Cancel batch, allocations, and cheques)"
                                             Width="30" Height="30"
                                             Foreground="IndianRed">
                                         <materialDesign:PackIcon Kind="Cancel" Width="16" Height="16"/>
