@@ -114,10 +114,17 @@ namespace WPFGrowerApp.DataAccess.Models
         // NAVIGATION PROPERTIES (Not mapped to database)
         // ======================================================================
         
+        private int? _growerId;
         private string? _receiptNumber;
         private string? _growerName;
         private string? _paymentTypeName;
         private string? _batchNumber;
+
+        public int? GrowerId
+        {
+            get => _growerId;
+            set => SetProperty(ref _growerId, value);
+        }
 
         public string? ReceiptNumber
         {

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using WPFGrowerApp.DataAccess.Models; // Assuming models like Grower, PostBatch etc. might be needed
-using WPFGrowerApp.Models; // Added for TestRunResult
+using WPFGrowerApp.Models; // Added for TestRunResult, GrowerPaymentSummary
 
 namespace WPFGrowerApp.DataAccess.Interfaces
 {
@@ -117,5 +117,20 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         // Add other payment-related methods as needed, e.g.:
         // Task<List<PaymentDetail>> GetPaymentDetailsForChequeAsync(decimal chequeNumber, string series);
         // Task<bool> ReversePaymentBatchAsync(decimal batchNumber);
+
+        /// <summary>
+        /// Gets grower-level payment summary for a specific payment batch
+        /// </summary>
+        Task<List<GrowerPaymentSummary>> GetGrowerPaymentsForBatchAsync(int batchId);
+
+        /// <summary>
+        /// Gets all receipt allocations for a specific payment batch with full details
+        /// </summary>
+        Task<List<ReceiptPaymentAllocation>> GetBatchAllocationsAsync(int batchId);
+
+        /// <summary>
+        /// Calculate analytics and statistics for a payment batch
+        /// </summary>
+        Task<PaymentBatchAnalytics> CalculateBatchAnalyticsAsync(int batchId);
     }
 }

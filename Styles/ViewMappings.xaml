@@ -105,6 +105,10 @@
         <views:PaymentBatchListView />
     </DataTemplate>
     
+    <DataTemplate DataType="{x:Type viewmodels:PaymentBatchDetailViewModel}">
+        <views:PaymentBatchDetailView />
+    </DataTemplate>
+    
     <DataTemplate DataType="{x:Type viewmodels:ChequeManagementViewModel}">
         <views:ChequeManagementView />
     </DataTemplate>

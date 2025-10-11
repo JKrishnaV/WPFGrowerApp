@@ -1,6 +1,7 @@
 // Duplicate removed
 using System;
 using System.Collections.Generic;
+using Dapper;
 using Microsoft.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
@@ -1014,6 +1015,382 @@ namespace WPFGrowerApp.DataAccess.Services
         private const string EVT_TYPE_ADVANCE_ACCOUNT_SAVE_FAIL = "ADV_ACCTSAVEFAIL";
         private const string EVT_TYPE_ADVANCE_GROWER_FAIL = "ADV_GROWFAIL";
         private const string EVT_TYPE_ADVANCE_DETERMINE_COMPLETE = "ADV_COMPLETE";
+
+        // ======================================================================
+        // BATCH DETAIL METHODS
+        // ======================================================================
+
+        /// <summary>
+        /// Gets grower-level payment summary for a specific payment batch
+        /// </summary>
+        public async Task<List<GrowerPaymentSummary>> GetGrowerPaymentsForBatchAsync(int batchId)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+
+                    var sql = @"
+                        SELECT 
+                            g.GrowerId,
+                            g.GrowerNumber,
+                            g.FullName AS GrowerName,
+                            COUNT(DISTINCT rpa.ReceiptId) AS ReceiptCount,
+                            SUM(rpa.QuantityPaid) AS TotalWeight,
+                            SUM(rpa.AmountPaid) AS TotalAmount,
+                            ISNULL(CONCAT(cs.SeriesCode, '-', c.ChequeNumber), 'Not Generated') AS ChequeNumber,
+                            g.IsOnHold,
+                            g.PaymentMethodId,
+                            ISNULL(pm.MethodName, 'Cheque') AS PaymentMethodName
+                        FROM ReceiptPaymentAllocations rpa
+                        INNER JOIN Receipts r ON rpa.ReceiptId = r.ReceiptId
+                        INNER JOIN Growers g ON r.GrowerId = g.GrowerId
+                        LEFT JOIN PaymentMethods pm ON g.PaymentMethodId = pm.PaymentMethodId
+                        LEFT JOIN Cheques c ON c.PaymentBatchId = rpa.PaymentBatchId AND c.GrowerId = g.GrowerId
+                        LEFT JOIN ChequeSeries cs ON c.ChequeSeriesId = cs.ChequeSeriesId
+                        WHERE rpa.PaymentBatchId = @BatchId 
+                            AND (c.Status IS NULL OR c.Status != 'Voided')
+                        GROUP BY 
+                            g.GrowerId, g.GrowerNumber, g.FullName, g.IsOnHold, 
+                            g.PaymentMethodId, pm.MethodName, cs.SeriesCode, c.ChequeNumber
+                        ORDER BY g.GrowerNumber";
+
+                    var parameters = new { BatchId = batchId };
+                    var result = (await connection.QueryAsync<GrowerPaymentSummary>(sql, parameters)).ToList();
+
+                    Logger.Info($"Retrieved {result.Count} grower payment summaries for batch {batchId}");
+                    return result;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting grower payments for batch {batchId}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets all receipt allocations for a specific payment batch with full details
+        /// </summary>
+        public async Task<List<ReceiptPaymentAllocation>> GetBatchAllocationsAsync(int batchId)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+
+                    var sql = @"
+                        SELECT 
+                            rpa.AllocationId,
+                            rpa.ReceiptId,
+                            rpa.PaymentBatchId,
+                            rpa.PaymentTypeId,
+                            rpa.PriceScheduleId,
+                            rpa.PricePerPound,
+                            rpa.QuantityPaid,
+                            rpa.AmountPaid,
+                            rpa.AllocatedAt,
+                            rpa.Status,
+                            rpa.ModifiedAt,
+                            rpa.ModifiedBy,
+                            r.ReceiptNumber,
+                            r.ReceiptDate,
+                            r.FinalWeight,
+                            r.Grade,
+                            g.GrowerId,
+                            g.FullName AS GrowerName,
+                            g.GrowerNumber,
+                            p.ProductName,
+                            pr.ProcessName,
+                            pt.TypeName AS PaymentTypeName,
+                            pb.BatchNumber
+                        FROM ReceiptPaymentAllocations rpa
+                        INNER JOIN Receipts r ON rpa.ReceiptId = r.ReceiptId
+                        INNER JOIN Growers g ON r.GrowerId = g.GrowerId
+                        LEFT JOIN Products p ON r.ProductId = p.ProductId
+                        LEFT JOIN Processes pr ON r.ProcessId = pr.ProcessId
+                        INNER JOIN PaymentTypes pt ON rpa.PaymentTypeId = pt.PaymentTypeId
+                        INNER JOIN PaymentBatches pb ON rpa.PaymentBatchId = pb.PaymentBatchId
+                        WHERE rpa.PaymentBatchId = @BatchId
+                        ORDER BY g.GrowerNumber, r.ReceiptDate, r.ReceiptNumber";
+
+                    var parameters = new { BatchId = batchId };
+                    var result = (await connection.QueryAsync<ReceiptPaymentAllocation>(sql, parameters)).ToList();
+
+                    Logger.Info($"Retrieved {result.Count} receipt allocations for batch {batchId}");
+                    return result;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting batch allocations for batch {batchId}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Calculate analytics for a payment batch
+        /// </summary>
+        public async Task<PaymentBatchAnalytics> CalculateBatchAnalyticsAsync(int batchId)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+
+                    // Get grower payment summaries for analytics
+                    var growerPayments = await GetGrowerPaymentsForBatchAsync(batchId);
+                    
+                    if (!growerPayments.Any())
+                    {
+                        Logger.Warn($"No grower payments found for batch {batchId}");
+                        return new PaymentBatchAnalytics();
+                    }
+
+                    var analytics = new PaymentBatchAnalytics();
+
+                    // Calculate basic statistics
+                    var payments = growerPayments.Where(gp => gp.TotalAmount > 0).ToList();
+                    
+                    if (payments.Any())
+                    {
+                        analytics.AveragePaymentPerGrower = payments.Average(p => p.TotalAmount);
+                        analytics.LargestPayment = payments.Max(p => p.TotalAmount);
+                        analytics.TotalWeight = payments.Sum(p => p.TotalWeight);
+                        
+                        var minPayment = payments.Min(p => p.TotalAmount);
+                        analytics.PaymentRange = $"${minPayment:N2} - ${analytics.LargestPayment:N2}";
+                    }
+
+                    // Calculate payment distribution buckets
+                    analytics.PaymentDistribution = CalculatePaymentDistribution(payments);
+
+                    // Calculate product breakdown
+                    analytics.ProductBreakdown = await CalculateProductBreakdownAsync(batchId);
+
+                    // Calculate payment range buckets
+                    analytics.PaymentRangeBuckets = CalculatePaymentRangeBuckets(payments);
+
+                    // Calculate anomalies
+                    analytics.AnomalyCount = CalculateAnomalies(payments);
+
+                    // Add comparison note
+                    analytics.ComparisonNote = await GetComparisonNoteAsync(batchId, analytics);
+
+                    Logger.Info($"Calculated analytics for batch {batchId}: {payments.Count} growers, ${analytics.AveragePaymentPerGrower:N2} avg payment");
+                    return analytics;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error calculating analytics for batch {batchId}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Calculate payment distribution buckets for charting
+        /// </summary>
+        private List<PaymentDistributionBucket> CalculatePaymentDistribution(List<GrowerPaymentSummary> payments)
+        {
+            if (!payments.Any()) return new List<PaymentDistributionBucket>();
+
+            var buckets = new List<PaymentDistributionBucket>();
+            var totalAmount = payments.Sum(p => p.TotalAmount);
+
+            // Define payment ranges
+            var ranges = new[]
+            {
+                (0m, 100m, "Under $100"),
+                (100m, 500m, "$100 - $500"),
+                (500m, 1000m, "$500 - $1,000"),
+                (1000m, 2500m, "$1,000 - $2,500"),
+                (2500m, 5000m, "$2,500 - $5,000"),
+                (5000m, decimal.MaxValue, "Over $5,000")
+            };
+
+            foreach (var (min, max, label) in ranges)
+            {
+                var bucketPayments = payments.Where(p => p.TotalAmount >= min && p.TotalAmount < max).ToList();
+                if (bucketPayments.Any())
+                {
+                    buckets.Add(new PaymentDistributionBucket
+                    {
+                        Range = label,
+                        GrowerCount = bucketPayments.Count,
+                        TotalAmount = bucketPayments.Sum(p => p.TotalAmount),
+                        Percentage = totalAmount > 0 ? (bucketPayments.Sum(p => p.TotalAmount) / totalAmount) * 100 : 0
+                    });
+                }
+            }
+
+            return buckets;
+        }
+
+        /// <summary>
+        /// Calculate product breakdown for the batch
+        /// </summary>
+        private async Task<List<ProductBreakdown>> CalculateProductBreakdownAsync(int batchId)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+
+                    var sql = @"
+                        SELECT 
+                            ISNULL(p.ProductName, 'Unknown Product') AS ProductName,
+                            SUM(rpa.QuantityPaid) AS Weight,
+                            SUM(rpa.AmountPaid) AS Amount,
+                            COUNT(DISTINCT rpa.ReceiptId) AS ReceiptCount
+                        FROM ReceiptPaymentAllocations rpa
+                        INNER JOIN Receipts r ON rpa.ReceiptId = r.ReceiptId
+                        LEFT JOIN Products p ON r.ProductId = p.ProductId
+                        WHERE rpa.PaymentBatchId = @BatchId
+                        GROUP BY ISNULL(p.ProductName, 'Unknown Product')
+                        ORDER BY Amount DESC";
+
+                    var parameters = new { BatchId = batchId };
+                    var result = (await connection.QueryAsync<ProductBreakdown>(sql, parameters)).ToList();
+
+                    // Calculate percentages
+                    var totalAmount = result.Sum(r => r.Amount);
+                    foreach (var item in result)
+                    {
+                        item.Percentage = totalAmount > 0 ? (item.Amount / totalAmount) * 100 : 0;
+                    }
+
+                    return result;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error calculating product breakdown for batch {batchId}: {ex.Message}", ex);
+                return new List<ProductBreakdown>();
+            }
+        }
+
+        /// <summary>
+        /// Calculate payment range buckets for grower distribution
+        /// </summary>
+        private List<PaymentRangeBucket> CalculatePaymentRangeBuckets(List<GrowerPaymentSummary> payments)
+        {
+            if (!payments.Any()) return new List<PaymentRangeBucket>();
+
+            var buckets = new List<PaymentRangeBucket>();
+            var totalGrowers = payments.Count;
+
+            // Define grower count ranges
+            var ranges = new[]
+            {
+                (0m, 100m, "$0 - $100"),
+                (100m, 500m, "$100 - $500"),
+                (500m, 1000m, "$500 - $1,000"),
+                (1000m, 2500m, "$1,000 - $2,500"),
+                (2500m, 5000m, "$2,500 - $5,000"),
+                (5000m, decimal.MaxValue, "Over $5,000")
+            };
+
+            foreach (var (min, max, label) in ranges)
+            {
+                var count = payments.Count(p => p.TotalAmount >= min && p.TotalAmount < max);
+                if (count > 0)
+                {
+                    buckets.Add(new PaymentRangeBucket
+                    {
+                        RangeLabel = label,
+                        MinAmount = min,
+                        MaxAmount = max == decimal.MaxValue ? decimal.MaxValue : max,
+                        GrowerCount = count,
+                        Percentage = (count / (decimal)totalGrowers) * 100
+                    });
+                }
+            }
+
+            return buckets;
+        }
+
+        /// <summary>
+        /// Calculate anomalies in payment data
+        /// </summary>
+        private int CalculateAnomalies(List<GrowerPaymentSummary> payments)
+        {
+            if (payments.Count < 3) return 0; // Need at least 3 payments for statistical analysis
+
+            var amounts = payments.Select(p => p.TotalAmount).ToList();
+            var mean = amounts.Average();
+            var standardDeviation = CalculateStandardDeviation(amounts, mean);
+            var threshold = mean + (2 * standardDeviation); // 2 standard deviations
+
+            return payments.Count(p => p.TotalAmount > threshold);
+        }
+
+        /// <summary>
+        /// Calculate standard deviation
+        /// </summary>
+        private decimal CalculateStandardDeviation(List<decimal> values, decimal mean)
+        {
+            var variance = values.Sum(v => (v - mean) * (v - mean)) / values.Count;
+            return (decimal)Math.Sqrt((double)variance);
+        }
+
+        /// <summary>
+        /// Get comparison note with previous batch
+        /// </summary>
+        private async Task<string> GetComparisonNoteAsync(int batchId, PaymentBatchAnalytics analytics)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+
+                    var sql = @"
+                        SELECT TOP 1 
+                            BatchNumber,
+                            TotalAmount,
+                            COUNT(DISTINCT g.GrowerId) AS GrowerCount
+                        FROM PaymentBatches pb
+                        LEFT JOIN ReceiptPaymentAllocations rpa ON pb.PaymentBatchId = rpa.PaymentBatchId
+                        LEFT JOIN Receipts r ON rpa.ReceiptId = r.ReceiptId
+                        LEFT JOIN Growers g ON r.GrowerId = g.GrowerId
+                        WHERE pb.PaymentBatchId < @BatchId
+                        GROUP BY pb.PaymentBatchId, pb.BatchNumber, pb.TotalAmount
+                        ORDER BY pb.PaymentBatchId DESC";
+
+                    var parameters = new { BatchId = batchId };
+                    var prevBatch = await connection.QueryFirstOrDefaultAsync<dynamic>(sql, parameters);
+
+                    if (prevBatch != null)
+                    {
+                        decimal prevAmount = prevBatch.TotalAmount ?? 0m;
+                        int prevGrowerCount = prevBatch.GrowerCount ?? 0;
+                        string prevBatchNumber = prevBatch.BatchNumber ?? "";
+
+                        var currentAmount = analytics.PaymentDistribution.Sum(p => p.TotalAmount);
+                        var currentGrowerCount = analytics.PaymentDistribution.Sum(p => p.GrowerCount);
+
+                        var amountChange = prevAmount > 0 ? ((currentAmount - prevAmount) / prevAmount) * 100 : 0;
+                        var growerChange = prevGrowerCount > 0 ? ((currentGrowerCount - prevGrowerCount) / (decimal)prevGrowerCount) * 100 : 0;
+
+                        return $"Compared to {prevBatchNumber}: " +
+                               $"{(amountChange >= 0 ? "+" : "")}{amountChange:F1}% amount, " +
+                               $"{(growerChange >= 0 ? "+" : "")}{growerChange:F1}% growers";
+                    }
+
+                    return "No previous batch data available for comparison";
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting comparison note for batch {batchId}: {ex.Message}", ex);
+                return "Unable to compare with previous batches";
+            }
+        }
 
     }
 }

@@ -51,6 +51,7 @@ namespace WPFGrowerApp
             services.AddTransient<IChequePrintingService, ChequePrintingService>(); // Added for cheque printing
             services.AddTransient<IStatementPrintingService, StatementPrintingService>(); // Added for statement printing
             services.AddTransient<IPaymentService, PaymentService>();
+            services.AddTransient<IPaymentBatchExportService, PaymentBatchExportService>(); // Phase 3 - Export Service
             services.AddTransient<IDepotService, DepotService>();
             services.AddTransient<IProductService, ProductService>(); 
             services.AddTransient<IProcessService, ProcessService>(); // Already added, confirming

@@ -18,6 +18,9 @@ namespace WPFGrowerApp.ViewModels
         private readonly IServiceProvider _serviceProvider;
         private readonly IDialogService _dialogService;
         private readonly IThemeService _themeService;
+        
+        // Store current PaymentBatchViewModel instance to preserve state during navigation
+        private PaymentBatchViewModel _paymentBatchViewModel;
 
         // Inject IServiceProvider, IDialogService, and IThemeService
         public MainViewModel(IServiceProvider serviceProvider, IDialogService dialogService, IThemeService themeService) 
@@ -103,7 +106,27 @@ namespace WPFGrowerApp.ViewModels
 
             try
             {
-                CurrentViewModel = _serviceProvider.GetRequiredService<TViewModel>();
+                var viewModel = _serviceProvider.GetRequiredService<TViewModel>();
+                
+                // Store PaymentBatchViewModel instance for state preservation
+                if (viewModel is PaymentBatchViewModel paymentBatchVm)
+                {
+                    // Reuse existing instance if available, otherwise use the new one
+                    if (_paymentBatchViewModel != null)
+                    {
+                        CurrentViewModel = _paymentBatchViewModel;
+                    }
+                    else
+                    {
+                        _paymentBatchViewModel = paymentBatchVm;
+                        CurrentViewModel = paymentBatchVm;
+                    }
+                }
+                else
+                {
+                    CurrentViewModel = viewModel;
+                }
+                
                 IsMenuOpen = false; // Close menu after navigation
                 // TODO: Consider if InitializeAsync pattern is needed for other ViewModels like Import/Reports
             }
@@ -263,6 +286,20 @@ namespace WPFGrowerApp.ViewModels
                     OnPropertyChanged(); // Assuming OnPropertyChanged is in ViewModelBase
                 }
             }
+        }
+        
+        // Public property to access/store PaymentBatchViewModel for state preservation
+        public PaymentBatchViewModel PaymentBatchViewModel
+        {
+            get => _paymentBatchViewModel;
+            set => SetProperty(ref _paymentBatchViewModel, value);
+        }
+        
+        // Alias property for compatibility with detail view navigation
+        public object CurrentView
+        {
+            get => CurrentViewModel;
+            set => CurrentViewModel = value;
         }
 
         // --- Header Features ---

@@ -20,7 +20,10 @@ namespace WPFGrowerApp.ViewModels
         private readonly IPaymentBatchManagementService _batchService;
         private readonly IPaymentTypeService _paymentTypeService;
         private readonly IChequeGenerationService _chequeService;
+        private readonly IPaymentService _paymentService;
         private readonly IDialogService _dialogService;
+        private readonly IHelpContentProvider _helpContentProvider;
+        private readonly IPaymentBatchExportService _exportService;
 
         // Properties
         private ObservableCollection<PaymentBatch> _paymentBatches;
@@ -139,17 +142,24 @@ namespace WPFGrowerApp.ViewModels
         public ICommand ApproveBatchCommand { get; }
         public ICommand ProcessPaymentsCommand { get; }
         public ICommand RollbackBatchCommand { get; }
+        public ICommand NavigateToDashboardCommand { get; }
 
         public PaymentBatchViewModel(
             IPaymentBatchManagementService batchService,
             IPaymentTypeService paymentTypeService,
             IChequeGenerationService chequeService,
-            IDialogService dialogService)
+            IPaymentService paymentService,
+            IDialogService dialogService,
+            IHelpContentProvider helpContentProvider,
+            IPaymentBatchExportService exportService)
         {
             _batchService = batchService ?? throw new ArgumentNullException(nameof(batchService));
             _paymentTypeService = paymentTypeService ?? throw new ArgumentNullException(nameof(paymentTypeService));
             _chequeService = chequeService ?? throw new ArgumentNullException(nameof(chequeService));
+            _paymentService = paymentService ?? throw new ArgumentNullException(nameof(paymentService));
             _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
+            _helpContentProvider = helpContentProvider ?? throw new ArgumentNullException(nameof(helpContentProvider));
+            _exportService = exportService ?? throw new ArgumentNullException(nameof(exportService));
 
             _paymentBatches = new ObservableCollection<PaymentBatch>();
             _batchCheques = new ObservableCollection<Cheque>();
@@ -164,6 +174,7 @@ namespace WPFGrowerApp.ViewModels
             ApproveBatchCommand = new RelayCommand(async o => await ApproveBatchAsync(), o => CanApproveBatch());
             ProcessPaymentsCommand = new RelayCommand(async o => await ProcessPaymentsAsync(), o => CanProcessPayments());
             RollbackBatchCommand = new RelayCommand(async o => await RollbackBatchAsync(), o => CanRollbackBatch());
+            NavigateToDashboardCommand = new RelayCommand(NavigateToDashboardExecute);
 
             // Initialize filters
             InitializeFilters();
@@ -343,36 +354,33 @@ namespace WPFGrowerApp.ViewModels
             if (SelectedBatch == null)
                 return;
 
-            // Ensure batch details are loaded (in case item was already selected when double-clicked)
-            await LoadBatchDetailsAsync();
-
-            if (BatchSummary == null)
-                return;
-
-            var message = $"Batch Details:\n\n" +
-                         $"Batch Number: {BatchSummary.BatchNumber}\n" +
-                         $"Payment Type: {BatchSummary.PaymentTypeName}\n" +
-                         $"Batch Date: {BatchSummary.BatchDate:yyyy-MM-dd}\n" +
-                         $"Crop Year: {BatchSummary.CropYear}\n" +
-                         $"Status: {BatchSummary.Status}\n\n" +
-                         $"Totals:\n" +
-                         $"  Growers: {BatchSummary.TotalGrowers}\n" +
-                         $"  Receipts: {BatchSummary.TotalReceipts}\n" +
-                         $"  Amount: ${BatchSummary.TotalAmount:N2}\n" +
-                         $"  Cheques: {BatchSummary.ChequesGenerated}\n\n" +
-                         $"Created: {BatchSummary.CreatedAt:g} by {BatchSummary.CreatedBy}";
-
-            if (BatchSummary.PostedAt.HasValue)
+            try
             {
-                message += $"\nPosted: {BatchSummary.PostedAt:g} by {BatchSummary.PostedBy}";
-            }
+                // Create detail view ViewModel
+                var detailViewModel = new PaymentBatchDetailViewModel(
+                    SelectedBatch,
+                    _batchService,
+                    _paymentService,
+                    _chequeService,
+                    _dialogService,
+                    _helpContentProvider,
+                    _exportService);
 
-            if (!string.IsNullOrWhiteSpace(BatchSummary.Notes))
+                // Navigate to detail view through MainViewModel
+                if (System.Windows.Application.Current?.MainWindow?.DataContext is MainViewModel mainViewModel)
+                {
+                    // Store reference to this ViewModel so navigation back preserves state
+                    mainViewModel.PaymentBatchViewModel = this;
+                    
+                    // Navigate to detail view - MainWindow's ContentControl will create the view
+                    mainViewModel.CurrentView = detailViewModel;
+                }
+            }
+            catch (Exception ex)
             {
-                message += $"\n\nNotes: {BatchSummary.Notes}";
+                Logger.Error("Error showing batch details", ex);
+                await _dialogService.ShowMessageBoxAsync($"Error showing batch details: {ex.Message}", "Error");
             }
-
-            await _dialogService.ShowMessageBoxAsync(message, "Batch Details");
         }
 
         private async Task VoidBatchAsync()
@@ -638,6 +646,25 @@ namespace WPFGrowerApp.ViewModels
             return SelectedBatch != null &&
                    (SelectedBatch.Status == "Draft" || SelectedBatch.Status == "Posted") &&
                    !SelectedBatch.IsDeleted;
+        }
+
+        private void NavigateToDashboardExecute(object? parameter)
+        {
+            try
+            {
+                if (System.Windows.Application.Current?.MainWindow?.DataContext is MainViewModel mainViewModel)
+                {
+                    // Execute the dashboard navigation command
+                    if (mainViewModel.NavigateToDashboardCommand?.CanExecute(null) == true)
+                    {
+                        mainViewModel.NavigateToDashboardCommand.Execute(null);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error navigating to Dashboard", ex);
+            }
         }
     }
 }
