@@ -22,18 +22,67 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    // Map database columns to model properties
-                    // Ensure QDEL_DATE is NULL for active records
-                    var sql = @"
+                    
+                    // First try to get from modern Processes table
+                    var modernSql = @"
                         SELECT
                             ProcessId,
+                            ProcessCode,
                             ProcessName as Description,
-                            0 as DefGrade,
-                            0 as ProcClass
+                            ISNULL(DefaultGrade, 0) as DefGrade,
+                            ISNULL(ProcessClass, 0) as ProcClass
                         FROM Processes
                         WHERE IsActive = 1
-                        ORDER BY ProcessName"; // Order alphabetically
-                    return await connection.QueryAsync<Process>(sql); // Return IEnumerable
+                        ORDER BY ProcessName";
+                    
+                    var modernProcesses = await connection.QueryAsync<Process>(modernSql);
+                    
+                    // If we got results, return them
+                    if (modernProcesses.Any())
+                    {
+                        Logger.Info($"Found {modernProcesses.Count()} processes from modern Processes table");
+                        foreach (var process in modernProcesses)
+                        {
+                            Logger.Info($"Process: ID={process.ProcessId}, Code={process.ProcessCode}, Name={process.Description}");
+                        }
+                        return modernProcesses;
+                    }
+                    else
+                    {
+                        Logger.Warn("No processes found in modern Processes table");
+                    }
+                    
+                    // If no results from modern table, try legacy Process table
+                    var legacySql = @"
+                        SELECT
+                            ROW_NUMBER() OVER (ORDER BY PROCESS) as ProcessId,
+                            PROCESS as ProcessCode,
+                            Description,
+                            ISNULL(DEF_GRADE, 0) as DefGrade,
+                            ISNULL(PROC_CLASS, 0) as ProcClass
+                        FROM Process
+                        WHERE QDEL_DATE IS NULL
+                        ORDER BY PROCESS";
+                    
+                    var legacyProcesses = await connection.QueryAsync<Process>(legacySql);
+                    
+                    if (legacyProcesses.Any())
+                    {
+                        Logger.Info($"Using legacy Process table - found {legacyProcesses.Count()} processes");
+                        foreach (var process in legacyProcesses)
+                        {
+                            Logger.Info($"Legacy Process: ID={process.ProcessId}, Code={process.ProcessCode}, Name={process.Description}");
+                        }
+                        return legacyProcesses;
+                    }
+                    else
+                    {
+                        Logger.Warn("No processes found in legacy Process table either");
+                    }
+                    
+                    // If still no results, return empty collection
+                    Logger.Warn("No processes found in either modern Processes table or legacy Process table");
+                    return new List<Process>();
                 }
             }
             catch (Exception ex)
@@ -55,8 +104,8 @@ namespace WPFGrowerApp.DataAccess.Services
                             ProcessId,
                             ProcessCode,
                             ProcessName as Description,
-                            0 as DefGrade,
-                            0 as ProcClass
+                            ISNULL(DefaultGrade, 0) as DefGrade,
+                            ISNULL(ProcessClass, 0) as ProcClass
                         FROM Processes
                         WHERE ProcessId = @ProcessId AND IsActive = 1";
                     return await connection.QueryFirstOrDefaultAsync<Process>(sql, new { ProcessId = processId });
@@ -81,8 +130,8 @@ namespace WPFGrowerApp.DataAccess.Services
                             ProcessId,
                             ProcessCode,
                             ProcessName as Description,
-                            0 as DefGrade,
-                            0 as ProcClass
+                            ISNULL(DefaultGrade, 0) as DefGrade,
+                            ISNULL(ProcessClass, 0) as ProcClass
                         FROM Processes
                         WHERE ProcessCode = @ProcessCode AND IsActive = 1";
                     return await connection.QueryFirstOrDefaultAsync<Process>(sql, new { ProcessCode = processCode });
@@ -107,10 +156,10 @@ namespace WPFGrowerApp.DataAccess.Services
                     var sql = @"
                         INSERT INTO Processes (
                             ProcessCode, ProcessName, Description, IsActive, DisplayOrder,
-                            CreatedAt, CreatedBy
+                            CreatedAt, CreatedBy, DefaultGrade, ProcessClass
                         ) VALUES (
                             @ProcessCode, @Description, @Description, 1, 0,
-                            GETDATE(), @OperatorInitials
+                            GETDATE(), @OperatorInitials, @DefGrade, @ProcClass
                         );
                         SELECT CAST(SCOPE_IDENTITY() as int);";
 
@@ -118,6 +167,8 @@ namespace WPFGrowerApp.DataAccess.Services
                     {
                         process.ProcessCode,
                         process.Description,
+                        process.DefGrade,
+                        process.ProcClass,
                         OperatorInitials = GetCurrentUserInitials()
                     };
 
@@ -146,11 +197,13 @@ namespace WPFGrowerApp.DataAccess.Services
                         UPDATE Processes SET
                             ProcessName = @Description,
                             Description = @Description,
+                            DefaultGrade = @DefGrade,
+                            ProcessClass = @ProcClass,
                             ModifiedAt = GETDATE(),
                             ModifiedBy = @OperatorInitials
                         WHERE ProcessId = @ProcessId AND IsActive = 1";
 
-                    int affectedRows = await connection.ExecuteAsync(sql, new { process.Description, process.ProcessId, OperatorInitials = GetCurrentUserInitials() });
+                    int affectedRows = await connection.ExecuteAsync(sql, new { process.Description, process.DefGrade, process.ProcClass, process.ProcessId, OperatorInitials = GetCurrentUserInitials() });
                     return affectedRows > 0;
                 }
             }

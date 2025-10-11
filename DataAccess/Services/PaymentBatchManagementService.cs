@@ -429,13 +429,141 @@ namespace WPFGrowerApp.DataAccess.Services
         }
 
         /// <summary>
-        /// Void a payment batch - voids the batch, all allocations, and all cheques in a transaction
+        /// Validate if a batch can be safely voided without breaking payment sequence integrity.
+        /// Checks if any receipts in the batch have received subsequent advance payments.
         /// </summary>
+        /// <param name="paymentBatchId">Batch ID to validate</param>
+        /// <returns>Tuple of (CanVoid: true if safe to void, Reasons: list of conflicts if any)</returns>
+        public async Task<(bool CanVoid, List<string> Reasons)> ValidateCanVoidBatchAsync(int paymentBatchId)
+        {
+            var reasons = new List<string>();
+            
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    
+                    // Get the batch to check its payment type
+                    var batch = await GetPaymentBatchByIdAsync(paymentBatchId);
+                    if (batch == null)
+                    {
+                        reasons.Add("Batch not found.");
+                        return (false, reasons);
+                    }
+                    
+                    // Check if batch is already voided
+                    if (batch.Status == "Voided")
+                    {
+                        reasons.Add("Batch is already voided.");
+                        return (false, reasons);
+                    }
+                    
+                    // Check for subsequent advance payments on ANY receipt in this batch
+                    // This ensures payment sequence integrity - can't void Advance 1 if Advance 2 exists
+                    var sql = @"
+                        SELECT 
+                            r.ReceiptNumber,
+                            g.GrowerNumber,
+                            g.FullName AS GrowerName,
+                            rpa1.PaymentTypeId AS CurrentAdvanceNumber,
+                            rpa2.PaymentTypeId AS LaterAdvanceNumber,
+                            pb2.BatchNumber AS LaterBatchNumber,
+                            pb2.PaymentBatchId AS LaterBatchId,
+                            rpa2.Status AS LaterPaymentStatus,
+                            pt2.TypeName AS LaterPaymentTypeName
+                        FROM ReceiptPaymentAllocations rpa1
+                        INNER JOIN Receipts r ON rpa1.ReceiptId = r.ReceiptId
+                        INNER JOIN Growers g ON r.GrowerId = g.GrowerId
+                        INNER JOIN ReceiptPaymentAllocations rpa2 
+                            ON rpa1.ReceiptId = rpa2.ReceiptId
+                        INNER JOIN PaymentBatches pb2 ON rpa2.PaymentBatchId = pb2.PaymentBatchId
+                        INNER JOIN PaymentTypes pt2 ON rpa2.PaymentTypeId = pt2.PaymentTypeId
+                        WHERE rpa1.PaymentBatchId = @PaymentBatchId
+                          AND rpa2.PaymentTypeId > rpa1.PaymentTypeId
+                          AND rpa2.Status != 'Voided'
+                        ORDER BY r.ReceiptNumber, rpa2.PaymentTypeId";
+                    
+                    var conflicts = (await connection.QueryAsync<dynamic>(sql, 
+                        new { PaymentBatchId = paymentBatchId })).ToList();
+                    
+                    if (conflicts.Any())
+                    {
+                        // Group by batch to show clear message
+                        var batchGroups = conflicts.GroupBy(c => (string)c.LaterBatchNumber);
+                        
+                        reasons.Add($"Cannot void batch {batch.BatchNumber} - Payment sequence integrity violation:");
+                        reasons.Add("");
+                        reasons.Add("The following receipts have received later advance payments that depend on this batch:");
+                        reasons.Add("");
+                        
+                        foreach (var batchGroup in batchGroups)
+                        {
+                            var firstInGroup = batchGroup.First();
+                            reasons.Add($"  → Later Batch: {firstInGroup.LaterBatchNumber} ({firstInGroup.LaterPaymentTypeName})");
+                            
+                            foreach (var conflict in batchGroup.Take(5)) // Show first 5 receipts
+                            {
+                                reasons.Add($"     • Receipt {conflict.ReceiptNumber} - {conflict.GrowerName} (Grower {conflict.GrowerNumber})");
+                            }
+                            
+                            if (batchGroup.Count() > 5)
+                            {
+                                reasons.Add($"     ... and {batchGroup.Count() - 5} more receipts");
+                            }
+                            reasons.Add("");
+                        }
+                        
+                        reasons.Add("TO FIX: You must void later payment batches first (in reverse chronological order):");
+                        var batchesToVoidFirst = conflicts
+                            .Select(c => new { BatchId = (int)c.LaterBatchId, BatchNumber = (string)c.LaterBatchNumber, TypeName = (string)c.LaterPaymentTypeName })
+                            .Distinct()
+                            .OrderByDescending(b => b.BatchId)
+                            .ToList();
+                        
+                        for (int i = 0; i < batchesToVoidFirst.Count; i++)
+                        {
+                            var b = batchesToVoidFirst[i];
+                            reasons.Add($"  {i + 1}. Void Batch {b.BatchNumber} ({b.TypeName})");
+                        }
+                        reasons.Add($"  {batchesToVoidFirst.Count + 1}. Then void Batch {batch.BatchNumber}");
+                        
+                        return (false, reasons);
+                    }
+                    
+                    // No conflicts found - safe to void
+                    return (true, new List<string> { "Batch can be safely voided." });
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error validating batch void for batch {paymentBatchId}: {ex.Message}", ex);
+                reasons.Add($"Validation error: {ex.Message}");
+                return (false, reasons);
+            }
+        }
+
+        /// <summary>
+        /// Void a payment batch - voids the batch, all allocations, and all cheques in a transaction.
+        /// Validates payment sequence integrity before voiding to prevent breaking later advance payments.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">Thrown if batch cannot be voided due to payment sequence conflicts</exception>
         public async Task<bool> VoidBatchAsync(
             int paymentBatchId,
             string reason,
             string voidedBy)
         {
+            // STEP 1: VALIDATE - Check for payment sequence conflicts
+            var (canVoid, validationReasons) = await ValidateCanVoidBatchAsync(paymentBatchId);
+            
+            if (!canVoid)
+            {
+                var errorMessage = string.Join("\n", validationReasons);
+                Logger.Warn($"Void batch {paymentBatchId} blocked due to validation failure:\n{errorMessage}");
+                throw new InvalidOperationException(errorMessage);
+            }
+            
+            // STEP 2: PROCEED WITH VOID - Validation passed
             using (var connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync();

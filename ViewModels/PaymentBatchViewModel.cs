@@ -388,7 +388,23 @@ namespace WPFGrowerApp.ViewModels
 
             try
             {
-                // Confirm with comprehensive details
+                IsLoading = true;
+
+                // STEP 1: VALIDATE - Check if batch can be voided
+                var (canVoid, validationReasons) = await _batchService.ValidateCanVoidBatchAsync(
+                    SelectedBatch.PaymentBatchId);
+
+                if (!canVoid)
+                {
+                    // Show validation error with detailed explanation
+                    var errorMessage = string.Join("\n", validationReasons);
+                    await _dialogService.ShowMessageBoxAsync(
+                        errorMessage,
+                        "⚠️ Cannot Void Batch - Payment Sequence Conflict");
+                    return;
+                }
+
+                // STEP 2: CONFIRM - Validation passed, now confirm with user
                 var confirm = await _dialogService.ShowConfirmationAsync(
                     $"This will void the batch and all associated data:\n\n" +
                     $"✓ Batch will be marked as Voided\n" +
@@ -405,7 +421,7 @@ namespace WPFGrowerApp.ViewModels
                 if (confirm != true)
                     return;
 
-                // Get reason
+                // STEP 3: GET REASON - Ask for void reason
                 var reason = await _dialogService.ShowInputDialogAsync(
                     "Enter reason for voiding this batch:",
                     "Void Reason");
@@ -416,9 +432,7 @@ namespace WPFGrowerApp.ViewModels
                     return;
                 }
 
-                IsLoading = true;
-
-                // Void the batch
+                // STEP 4: EXECUTE VOID - Proceed with void operation
                 var voidedBy = App.CurrentUser?.Username ?? "SYSTEM";
                 var success = await _batchService.VoidBatchAsync(
                     SelectedBatch.PaymentBatchId,
@@ -428,18 +442,29 @@ namespace WPFGrowerApp.ViewModels
                 if (success)
                 {
                     await _dialogService.ShowMessageBoxAsync(
-                        $"Batch {SelectedBatch.BatchNumber} has been voided.\n\n" +
-                        $"All allocations and cheques have been cancelled.",
-                        "Batch Voided");
+                        $"✓ Batch {SelectedBatch.BatchNumber} has been voided.\n\n" +
+                        $"All allocations and cheques have been cancelled.\n" +
+                        $"Receipts are now available for future payment runs.",
+                        "Batch Voided Successfully");
 
                     // Refresh list
                     await LoadBatchesAsync();
                 }
             }
+            catch (InvalidOperationException ex)
+            {
+                // This handles validation errors that were caught by the service
+                Logger.Warn($"Void batch blocked: {ex.Message}");
+                await _dialogService.ShowMessageBoxAsync(
+                    ex.Message,
+                    "⚠️ Cannot Void Batch");
+            }
             catch (Exception ex)
             {
                 Logger.Error("Error voiding batch", ex);
-                await _dialogService.ShowMessageBoxAsync($"Error voiding batch: {ex.Message}", "Error");
+                await _dialogService.ShowMessageBoxAsync(
+                    $"An unexpected error occurred while voiding the batch:\n\n{ex.Message}",
+                    "Error");
             }
             finally
             {

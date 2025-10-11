@@ -93,12 +93,21 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         Task<bool> ProcessPaymentsAsync(int paymentBatchId, string processedBy);
 
         /// <summary>
+        /// Validate if a batch can be safely voided without breaking payment sequence integrity
+        /// </summary>
+        /// <param name="paymentBatchId">Batch ID to validate</param>
+        /// <returns>Tuple of (CanVoid, List of validation reasons/conflicts)</returns>
+        Task<(bool CanVoid, List<string> Reasons)> ValidateCanVoidBatchAsync(int paymentBatchId);
+
+        /// <summary>
         /// Void a payment batch - voids the batch, all allocations, and all cheques in a transaction
+        /// Validates payment sequence integrity before voiding to prevent breaking later advance payments
         /// </summary>
         /// <param name="paymentBatchId">Batch ID</param>
         /// <param name="reason">Reason for voiding</param>
         /// <param name="voidedBy">User voiding the batch</param>
         /// <returns>True if successful</returns>
+        /// <exception cref="InvalidOperationException">Thrown if batch cannot be voided due to payment sequence conflicts</exception>
         Task<bool> VoidBatchAsync(
             int paymentBatchId,
             string reason,

@@ -244,36 +244,84 @@
 
                                 <!-- Grade 1 -->
                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="Grade 1" Style="{StaticResource GradeTextStyle}"/>
-                                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding CL1G1A1, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource PriceTextBoxStyle}"/>
-                                <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding CL1G1A2, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource PriceTextBoxStyle}"/>
-                                <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding CL1G1A3, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource PriceTextBoxStyle}"/>
+                                <TextBox Grid.Row="1" Grid.Column="1" 
+                                         Text="{Binding CL1G1A1, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL1G1A1Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                <TextBox Grid.Row="1" Grid.Column="2" 
+                                         Text="{Binding CL1G1A2, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL1G1A2Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                <TextBox Grid.Row="1" Grid.Column="3" 
+                                         Text="{Binding CL1G1A3, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL1G1A3Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
                                 <TextBox Grid.Row="1" Grid.Column="4" 
                                          Text="{Binding CL1G1FN, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                                          Style="{StaticResource FinalPriceTextBoxStyle}"
                                          BorderBrush="{Binding HasL1G1FNError, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
-                                         BorderThickness="2"/>
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
 
                                 <!-- Grade 2 -->
                                 <TextBlock Grid.Row="2" Grid.Column="0" Text="Grade 2" Style="{StaticResource GradeTextStyle}"/>
-                                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding CL1G2A1, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
-                                <TextBox Grid.Row="2" Grid.Column="2" Text="{Binding CL1G2A2, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
-                                <TextBox Grid.Row="2" Grid.Column="3" Text="{Binding CL1G2A3, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
+                                <TextBox Grid.Row="2" Grid.Column="1" 
+                                         Text="{Binding CL1G2A1, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL1G2A1Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                <TextBox Grid.Row="2" Grid.Column="2" 
+                                         Text="{Binding CL1G2A2, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL1G2A2Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                <TextBox Grid.Row="2" Grid.Column="3" 
+                                         Text="{Binding CL1G2A3, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL1G2A3Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
                                 <TextBox Grid.Row="2" Grid.Column="4" 
-                                         Text="{Binding CL1G2FN, StringFormat=F2}" 
+                                         Text="{Binding CL1G2FN, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                                          Style="{StaticResource FinalPriceTextBoxStyle}"
                                          BorderBrush="{Binding HasL1G2FNError, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
-                                         BorderThickness="2"/>
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
 
                                 <!-- Grade 3 -->
                                 <TextBlock Grid.Row="3" Grid.Column="0" Text="Grade 3" Style="{StaticResource GradeTextStyle}"/>
-                                <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding CL1G3A1, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
-                                <TextBox Grid.Row="3" Grid.Column="2" Text="{Binding CL1G3A2, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
-                                <TextBox Grid.Row="3" Grid.Column="3" Text="{Binding CL1G3A3, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
+                                <TextBox Grid.Row="3" Grid.Column="1" 
+                                         Text="{Binding CL1G3A1, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL1G3A1Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                <TextBox Grid.Row="3" Grid.Column="2" 
+                                         Text="{Binding CL1G3A2, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL1G3A2Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                <TextBox Grid.Row="3" Grid.Column="3" 
+                                         Text="{Binding CL1G3A3, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL1G3A3Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
                                 <TextBox Grid.Row="3" Grid.Column="4" 
-                                         Text="{Binding CL1G3FN, StringFormat=F2}" 
+                                         Text="{Binding CL1G3FN, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                                          Style="{StaticResource FinalPriceTextBoxStyle}"
                                          BorderBrush="{Binding HasL1G3FNError, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
-                                         BorderThickness="2"/>
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
                             </Grid>
                         </Grid>
                     </ScrollViewer>
@@ -320,36 +368,84 @@
 
                                 <!-- Grade 1 -->
                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="Grade 1" Style="{StaticResource GradeTextStyle}"/>
-                                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding CL2G1A1, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
-                                <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding CL2G1A2, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
-                                <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding CL2G1A3, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
+                                <TextBox Grid.Row="1" Grid.Column="1" 
+                                         Text="{Binding CL2G1A1, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL2G1A1Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                <TextBox Grid.Row="1" Grid.Column="2" 
+                                         Text="{Binding CL2G1A2, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL2G1A2Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                <TextBox Grid.Row="1" Grid.Column="3" 
+                                         Text="{Binding CL2G1A3, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL2G1A3Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
                                 <TextBox Grid.Row="1" Grid.Column="4" 
-                                         Text="{Binding CL2G1FN, StringFormat=F2}" 
+                                         Text="{Binding CL2G1FN, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                                          Style="{StaticResource FinalPriceTextBoxStyle}"
                                          BorderBrush="{Binding HasL2G1FNError, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
-                                         BorderThickness="2"/>
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
 
                                 <!-- Grade 2 -->
                                 <TextBlock Grid.Row="2" Grid.Column="0" Text="Grade 2" Style="{StaticResource GradeTextStyle}"/>
-                                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding CL2G2A1, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
-                                <TextBox Grid.Row="2" Grid.Column="2" Text="{Binding CL2G2A2, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
-                                <TextBox Grid.Row="2" Grid.Column="3" Text="{Binding CL2G2A3, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
+                                <TextBox Grid.Row="2" Grid.Column="1" 
+                                         Text="{Binding CL2G2A1, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL2G2A1Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                <TextBox Grid.Row="2" Grid.Column="2" 
+                                         Text="{Binding CL2G2A2, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL2G2A2Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                <TextBox Grid.Row="2" Grid.Column="3" 
+                                         Text="{Binding CL2G2A3, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL2G2A3Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
                                 <TextBox Grid.Row="2" Grid.Column="4" 
-                                         Text="{Binding CL2G2FN, StringFormat=F2}" 
+                                         Text="{Binding CL2G2FN, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                                          Style="{StaticResource FinalPriceTextBoxStyle}"
                                          BorderBrush="{Binding HasL2G2FNError, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
-                                         BorderThickness="2"/>
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
 
                                 <!-- Grade 3 -->
                                 <TextBlock Grid.Row="3" Grid.Column="0" Text="Grade 3" Style="{StaticResource GradeTextStyle}"/>
-                                <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding CL2G3A1, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
-                                <TextBox Grid.Row="3" Grid.Column="2" Text="{Binding CL2G3A2, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
-                                <TextBox Grid.Row="3" Grid.Column="3" Text="{Binding CL2G3A3, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
+                                <TextBox Grid.Row="3" Grid.Column="1" 
+                                         Text="{Binding CL2G3A1, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL2G3A1Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                <TextBox Grid.Row="3" Grid.Column="2" 
+                                         Text="{Binding CL2G3A2, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL2G3A2Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                <TextBox Grid.Row="3" Grid.Column="3" 
+                                         Text="{Binding CL2G3A3, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL2G3A3Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
                                 <TextBox Grid.Row="3" Grid.Column="4" 
-                                         Text="{Binding CL2G3FN, StringFormat=F2}" 
+                                         Text="{Binding CL2G3FN, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                                          Style="{StaticResource FinalPriceTextBoxStyle}"
                                          BorderBrush="{Binding HasL2G3FNError, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
-                                         BorderThickness="2"/>
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
                             </Grid>
                         </Grid>
                     </ScrollViewer>
@@ -396,36 +492,84 @@
 
                                 <!-- Grade 1 -->
                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="Grade 1" Style="{StaticResource GradeTextStyle}"/>
-                                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding CL3G1A1, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
-                                <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding CL3G1A2, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
-                                <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding CL3G1A3, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
+                                <TextBox Grid.Row="1" Grid.Column="1" 
+                                         Text="{Binding CL3G1A1, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL3G1A1Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                <TextBox Grid.Row="1" Grid.Column="2" 
+                                         Text="{Binding CL3G1A2, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL3G1A2Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                <TextBox Grid.Row="1" Grid.Column="3" 
+                                         Text="{Binding CL3G1A3, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL3G1A3Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
                                 <TextBox Grid.Row="1" Grid.Column="4" 
-                                         Text="{Binding CL3G1FN, StringFormat=F2}" 
+                                         Text="{Binding CL3G1FN, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                                          Style="{StaticResource FinalPriceTextBoxStyle}"
                                          BorderBrush="{Binding HasL3G1FNError, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
-                                         BorderThickness="2"/>
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
 
                                 <!-- Grade 2 -->
                                 <TextBlock Grid.Row="2" Grid.Column="0" Text="Grade 2" Style="{StaticResource GradeTextStyle}"/>
-                                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding CL3G2A1, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
-                                <TextBox Grid.Row="2" Grid.Column="2" Text="{Binding CL3G2A2, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
-                                <TextBox Grid.Row="2" Grid.Column="3" Text="{Binding CL3G2A3, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
+                                <TextBox Grid.Row="2" Grid.Column="1" 
+                                         Text="{Binding CL3G2A1, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL3G2A1Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                <TextBox Grid.Row="2" Grid.Column="2" 
+                                         Text="{Binding CL3G2A2, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL3G2A2Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                <TextBox Grid.Row="2" Grid.Column="3" 
+                                         Text="{Binding CL3G2A3, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL3G2A3Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
                                 <TextBox Grid.Row="2" Grid.Column="4" 
-                                         Text="{Binding CL3G2FN, StringFormat=F2}" 
+                                         Text="{Binding CL3G2FN, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                                          Style="{StaticResource FinalPriceTextBoxStyle}"
                                          BorderBrush="{Binding HasL3G2FNError, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
-                                         BorderThickness="2"/>
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
 
                                 <!-- Grade 3 -->
                                 <TextBlock Grid.Row="3" Grid.Column="0" Text="Grade 3" Style="{StaticResource GradeTextStyle}"/>
-                                <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding CL3G3A1, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
-                                <TextBox Grid.Row="3" Grid.Column="2" Text="{Binding CL3G3A2, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
-                                <TextBox Grid.Row="3" Grid.Column="3" Text="{Binding CL3G3A3, StringFormat=F2}" Style="{StaticResource PriceTextBoxStyle}"/>
+                                <TextBox Grid.Row="3" Grid.Column="1" 
+                                         Text="{Binding CL3G3A1, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL3G3A1Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                <TextBox Grid.Row="3" Grid.Column="2" 
+                                         Text="{Binding CL3G3A2, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL3G3A2Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                <TextBox Grid.Row="3" Grid.Column="3" 
+                                         Text="{Binding CL3G3A3, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource PriceTextBoxStyle}"
+                                         BorderBrush="{Binding HasL3G3A3Error, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
                                 <TextBox Grid.Row="3" Grid.Column="4" 
-                                         Text="{Binding CL3G3FN, StringFormat=F2}" 
+                                         Text="{Binding CL3G3FN, StringFormat=F2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
                                          Style="{StaticResource FinalPriceTextBoxStyle}"
                                          BorderBrush="{Binding HasL3G3FNError, Converter={StaticResource ValidationErrorToBorderBrushConverter}}"
-                                         BorderThickness="2"/>
+                                         BorderThickness="2"
+                                         PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
                             </Grid>
                         </Grid>
                     </ScrollViewer>

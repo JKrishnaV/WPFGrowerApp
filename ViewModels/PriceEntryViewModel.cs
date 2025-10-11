@@ -144,70 +144,99 @@ namespace WPFGrowerApp.ViewModels
         private bool _isReadOnly;
 
         // Validation error flags for red border styling (not ObservableProperty to allow ref)
-        private bool _hasL1G1FNError;
-        public bool HasL1G1FNError
-        {
-            get => _hasL1G1FNError;
-            set => SetProperty(ref _hasL1G1FNError, value);
-        }
+        
+        // Level 1 Grade 1 errors
+        private bool _hasL1G1A1Error, _hasL1G1A2Error, _hasL1G1A3Error, _hasL1G1FNError;
+        public bool HasL1G1A1Error { get => _hasL1G1A1Error; set => SetProperty(ref _hasL1G1A1Error, value); }
+        public bool HasL1G1A2Error { get => _hasL1G1A2Error; set => SetProperty(ref _hasL1G1A2Error, value); }
+        public bool HasL1G1A3Error { get => _hasL1G1A3Error; set => SetProperty(ref _hasL1G1A3Error, value); }
+        public bool HasL1G1FNError { get => _hasL1G1FNError; set => SetProperty(ref _hasL1G1FNError, value); }
 
-        private bool _hasL1G2FNError;
-        public bool HasL1G2FNError
-        {
-            get => _hasL1G2FNError;
-            set => SetProperty(ref _hasL1G2FNError, value);
-        }
+        // Level 1 Grade 2 errors
+        private bool _hasL1G2A1Error, _hasL1G2A2Error, _hasL1G2A3Error, _hasL1G2FNError;
+        public bool HasL1G2A1Error { get => _hasL1G2A1Error; set => SetProperty(ref _hasL1G2A1Error, value); }
+        public bool HasL1G2A2Error { get => _hasL1G2A2Error; set => SetProperty(ref _hasL1G2A2Error, value); }
+        public bool HasL1G2A3Error { get => _hasL1G2A3Error; set => SetProperty(ref _hasL1G2A3Error, value); }
+        public bool HasL1G2FNError { get => _hasL1G2FNError; set => SetProperty(ref _hasL1G2FNError, value); }
 
-        private bool _hasL1G3FNError;
-        public bool HasL1G3FNError
-        {
-            get => _hasL1G3FNError;
-            set => SetProperty(ref _hasL1G3FNError, value);
-        }
+        // Level 1 Grade 3 errors
+        private bool _hasL1G3A1Error, _hasL1G3A2Error, _hasL1G3A3Error, _hasL1G3FNError;
+        public bool HasL1G3A1Error { get => _hasL1G3A1Error; set => SetProperty(ref _hasL1G3A1Error, value); }
+        public bool HasL1G3A2Error { get => _hasL1G3A2Error; set => SetProperty(ref _hasL1G3A2Error, value); }
+        public bool HasL1G3A3Error { get => _hasL1G3A3Error; set => SetProperty(ref _hasL1G3A3Error, value); }
+        public bool HasL1G3FNError { get => _hasL1G3FNError; set => SetProperty(ref _hasL1G3FNError, value); }
 
-        private bool _hasL2G1FNError;
-        public bool HasL2G1FNError
-        {
-            get => _hasL2G1FNError;
-            set => SetProperty(ref _hasL2G1FNError, value);
-        }
+        // Level 2 Grade 1 errors
+        private bool _hasL2G1A1Error, _hasL2G1A2Error, _hasL2G1A3Error, _hasL2G1FNError;
+        public bool HasL2G1A1Error { get => _hasL2G1A1Error; set => SetProperty(ref _hasL2G1A1Error, value); }
+        public bool HasL2G1A2Error { get => _hasL2G1A2Error; set => SetProperty(ref _hasL2G1A2Error, value); }
+        public bool HasL2G1A3Error { get => _hasL2G1A3Error; set => SetProperty(ref _hasL2G1A3Error, value); }
+        public bool HasL2G1FNError { get => _hasL2G1FNError; set => SetProperty(ref _hasL2G1FNError, value); }
 
-        private bool _hasL2G2FNError;
-        public bool HasL2G2FNError
-        {
-            get => _hasL2G2FNError;
-            set => SetProperty(ref _hasL2G2FNError, value);
-        }
+        // Level 2 Grade 2 errors
+        private bool _hasL2G2A1Error, _hasL2G2A2Error, _hasL2G2A3Error, _hasL2G2FNError;
+        public bool HasL2G2A1Error { get => _hasL2G2A1Error; set => SetProperty(ref _hasL2G2A1Error, value); }
+        public bool HasL2G2A2Error { get => _hasL2G2A2Error; set => SetProperty(ref _hasL2G2A2Error, value); }
+        public bool HasL2G2A3Error { get => _hasL2G2A3Error; set => SetProperty(ref _hasL2G2A3Error, value); }
+        public bool HasL2G2FNError { get => _hasL2G2FNError; set => SetProperty(ref _hasL2G2FNError, value); }
 
-        private bool _hasL2G3FNError;
-        public bool HasL2G3FNError
-        {
-            get => _hasL2G3FNError;
-            set => SetProperty(ref _hasL2G3FNError, value);
-        }
+        // Level 2 Grade 3 errors
+        private bool _hasL2G3A1Error, _hasL2G3A2Error, _hasL2G3A3Error, _hasL2G3FNError;
+        public bool HasL2G3A1Error { get => _hasL2G3A1Error; set => SetProperty(ref _hasL2G3A1Error, value); }
+        public bool HasL2G3A2Error { get => _hasL2G3A2Error; set => SetProperty(ref _hasL2G3A2Error, value); }
+        public bool HasL2G3A3Error { get => _hasL2G3A3Error; set => SetProperty(ref _hasL2G3A3Error, value); }
+        public bool HasL2G3FNError { get => _hasL2G3FNError; set => SetProperty(ref _hasL2G3FNError, value); }
 
-        private bool _hasL3G1FNError;
-        public bool HasL3G1FNError
-        {
-            get => _hasL3G1FNError;
-            set => SetProperty(ref _hasL3G1FNError, value);
-        }
+        // Level 3 Grade 1 errors
+        private bool _hasL3G1A1Error, _hasL3G1A2Error, _hasL3G1A3Error, _hasL3G1FNError;
+        public bool HasL3G1A1Error { get => _hasL3G1A1Error; set => SetProperty(ref _hasL3G1A1Error, value); }
+        public bool HasL3G1A2Error { get => _hasL3G1A2Error; set => SetProperty(ref _hasL3G1A2Error, value); }
+        public bool HasL3G1A3Error { get => _hasL3G1A3Error; set => SetProperty(ref _hasL3G1A3Error, value); }
+        public bool HasL3G1FNError { get => _hasL3G1FNError; set => SetProperty(ref _hasL3G1FNError, value); }
 
-        private bool _hasL3G2FNError;
-        public bool HasL3G2FNError
-        {
-            get => _hasL3G2FNError;
-            set => SetProperty(ref _hasL3G2FNError, value);
-        }
+        // Level 3 Grade 2 errors
+        private bool _hasL3G2A1Error, _hasL3G2A2Error, _hasL3G2A3Error, _hasL3G2FNError;
+        public bool HasL3G2A1Error { get => _hasL3G2A1Error; set => SetProperty(ref _hasL3G2A1Error, value); }
+        public bool HasL3G2A2Error { get => _hasL3G2A2Error; set => SetProperty(ref _hasL3G2A2Error, value); }
+        public bool HasL3G2A3Error { get => _hasL3G2A3Error; set => SetProperty(ref _hasL3G2A3Error, value); }
+        public bool HasL3G2FNError { get => _hasL3G2FNError; set => SetProperty(ref _hasL3G2FNError, value); }
 
-        private bool _hasL3G3FNError;
-        public bool HasL3G3FNError
-        {
-            get => _hasL3G3FNError;
-            set => SetProperty(ref _hasL3G3FNError, value);
-        }
+        // Level 3 Grade 3 errors
+        private bool _hasL3G3A1Error, _hasL3G3A2Error, _hasL3G3A3Error, _hasL3G3FNError;
+        public bool HasL3G3A1Error { get => _hasL3G3A1Error; set => SetProperty(ref _hasL3G3A1Error, value); }
+        public bool HasL3G3A2Error { get => _hasL3G3A2Error; set => SetProperty(ref _hasL3G3A2Error, value); }
+        public bool HasL3G3A3Error { get => _hasL3G3A3Error; set => SetProperty(ref _hasL3G3A3Error, value); }
+        public bool HasL3G3FNError { get => _hasL3G3FNError; set => SetProperty(ref _hasL3G3FNError, value); }
 
         public bool DialogResult { get; private set; }
+
+        // Public methods for real-time validation from XAML LostFocus events
+        [RelayCommand]
+        public void ValidateL1G1() => ValidateLevelGradeRealtime(1, 1);
+        
+        [RelayCommand]
+        public void ValidateL1G2() => ValidateLevelGradeRealtime(1, 2);
+        
+        [RelayCommand]
+        public void ValidateL1G3() => ValidateLevelGradeRealtime(1, 3);
+        
+        [RelayCommand]
+        public void ValidateL2G1() => ValidateLevelGradeRealtime(2, 1);
+        
+        [RelayCommand]
+        public void ValidateL2G2() => ValidateLevelGradeRealtime(2, 2);
+        
+        [RelayCommand]
+        public void ValidateL2G3() => ValidateLevelGradeRealtime(2, 3);
+        
+        [RelayCommand]
+        public void ValidateL3G1() => ValidateLevelGradeRealtime(3, 1);
+        
+        [RelayCommand]
+        public void ValidateL3G2() => ValidateLevelGradeRealtime(3, 2);
+        
+        [RelayCommand]
+        public void ValidateL3G3() => ValidateLevelGradeRealtime(3, 3);
 
         public PriceEntryViewModel(
             IPriceService priceService,
@@ -243,8 +272,12 @@ namespace WPFGrowerApp.ViewModels
                 var products = await _productService.GetAllProductsAsync();
                 var processes = await _processService.GetAllProcessesAsync();
 
+                Infrastructure.Logging.Logger.Info($"Loaded {products.Count()} products and {processes.Count()} processes");
+                
                 Products = new ObservableCollection<Product>(products);
                 Processes = new ObservableCollection<Process>(processes);
+                
+                Infrastructure.Logging.Logger.Info($"ObservableCollections created - Products: {Products.Count}, Processes: {Processes.Count}");
 
                 // If editing, populate fields
                 if (_isEditMode && _originalPrice != null)
@@ -261,15 +294,31 @@ namespace WPFGrowerApp.ViewModels
 
         private void LoadPriceData(Price price)
         {
+            Infrastructure.Logging.Logger.Info($"Loading price data - Product: '{price.Product}', Process: '{price.Process}'");
+            
             // Set product and process
             if (int.TryParse(price.Product, out int prodId))
+            {
                 SelectedProduct = Products?.FirstOrDefault(p => p.ProductId == prodId) ?? Products?.FirstOrDefault()!;
+                Infrastructure.Logging.Logger.Info($"Selected product by ID {prodId}: {SelectedProduct?.ProductId} - {SelectedProduct?.Description}");
+            }
             else
+            {
                 SelectedProduct = Products?.FirstOrDefault()!;
-            if (int.TryParse(price.Process, out int procId))
-                SelectedProcess = Processes?.FirstOrDefault(p => p.ProcessId == procId) ?? Processes?.FirstOrDefault()!;
+                Infrastructure.Logging.Logger.Info($"Selected first product: {SelectedProduct?.ProductId} - {SelectedProduct?.Description}");
+            }
+            
+            // Match by process code instead of ID since Price.Process contains the code (e.g., "Bluecrop")
+            if (!string.IsNullOrEmpty(price.Process))
+            {
+                SelectedProcess = Processes?.FirstOrDefault(p => p.ProcessCode == price.Process) ?? Processes?.FirstOrDefault()!;
+                Infrastructure.Logging.Logger.Info($"Selected process by code '{price.Process}': {SelectedProcess?.ProcessId} - {SelectedProcess?.ProcessCode} - {SelectedProcess?.Description}");
+            }
             else
+            {
                 SelectedProcess = Processes?.FirstOrDefault()!;
+                Infrastructure.Logging.Logger.Info($"Selected first process: {SelectedProcess?.ProcessId} - {SelectedProcess?.ProcessCode} - {SelectedProcess?.Description}");
+            }
             EffectiveDate = price.From;
 
             // Time premium
@@ -472,40 +521,66 @@ namespace WPFGrowerApp.ViewModels
                 return false;
             }
 
-            // Validate Final price must be >= Sum of advances for each level/grade
-            // Business logic: Final payment cannot be less than the sum of advance payments
+            // Validate Final price must be >= Highest cumulative advance for each level/grade
+            // Business logic: Advances are cumulative (A2 includes A1, A3 includes A1+A2)
+            // Final payment cannot be less than the highest cumulative advance payment
             var validationErrors = new List<string>();
 
             // Clear all error flags first
-            HasL1G1FNError = HasL1G2FNError = HasL1G3FNError = false;
-            HasL2G1FNError = HasL2G2FNError = HasL2G3FNError = false;
-            HasL3G1FNError = HasL3G2FNError = HasL3G3FNError = false;
+            // Level 1
+            HasL1G1A1Error = HasL1G1A2Error = HasL1G1A3Error = HasL1G1FNError = false;
+            HasL1G2A1Error = HasL1G2A2Error = HasL1G2A3Error = HasL1G2FNError = false;
+            HasL1G3A1Error = HasL1G3A2Error = HasL1G3A3Error = HasL1G3FNError = false;
+            
+            // Level 2
+            HasL2G1A1Error = HasL2G1A2Error = HasL2G1A3Error = HasL2G1FNError = false;
+            HasL2G2A1Error = HasL2G2A2Error = HasL2G2A3Error = HasL2G2FNError = false;
+            HasL2G3A1Error = HasL2G3A2Error = HasL2G3A3Error = HasL2G3FNError = false;
+            
+            // Level 3
+            HasL3G1A1Error = HasL3G1A2Error = HasL3G1A3Error = HasL3G1FNError = false;
+            HasL3G2A1Error = HasL3G2A2Error = HasL3G2A3Error = HasL3G2FNError = false;
+            HasL3G3A1Error = HasL3G3A2Error = HasL3G3A3Error = HasL3G3FNError = false;
 
             // Level 1
-            ValidateFinalPrice(1, 1, CL1G1A1, CL1G1A2, CL1G1A3, CL1G1FN, validationErrors, ref _hasL1G1FNError);
-            ValidateFinalPrice(1, 2, CL1G2A1, CL1G2A2, CL1G2A3, CL1G2FN, validationErrors, ref _hasL1G2FNError);
-            ValidateFinalPrice(1, 3, CL1G3A1, CL1G3A2, CL1G3A3, CL1G3FN, validationErrors, ref _hasL1G3FNError);
+            ValidateFinalPrice(1, 1, CL1G1A1, CL1G1A2, CL1G1A3, CL1G1FN, validationErrors, 
+                ref _hasL1G1A1Error, ref _hasL1G1A2Error, ref _hasL1G1A3Error, ref _hasL1G1FNError);
+            ValidateFinalPrice(1, 2, CL1G2A1, CL1G2A2, CL1G2A3, CL1G2FN, validationErrors, 
+                ref _hasL1G2A1Error, ref _hasL1G2A2Error, ref _hasL1G2A3Error, ref _hasL1G2FNError);
+            ValidateFinalPrice(1, 3, CL1G3A1, CL1G3A2, CL1G3A3, CL1G3FN, validationErrors, 
+                ref _hasL1G3A1Error, ref _hasL1G3A2Error, ref _hasL1G3A3Error, ref _hasL1G3FNError);
 
             // Level 2
-            ValidateFinalPrice(2, 1, CL2G1A1, CL2G1A2, CL2G1A3, CL2G1FN, validationErrors, ref _hasL2G1FNError);
-            ValidateFinalPrice(2, 2, CL2G2A1, CL2G2A2, CL2G2A3, CL2G2FN, validationErrors, ref _hasL2G2FNError);
-            ValidateFinalPrice(2, 3, CL2G3A1, CL2G3A2, CL2G3A3, CL2G3FN, validationErrors, ref _hasL2G3FNError);
+            ValidateFinalPrice(2, 1, CL2G1A1, CL2G1A2, CL2G1A3, CL2G1FN, validationErrors, 
+                ref _hasL2G1A1Error, ref _hasL2G1A2Error, ref _hasL2G1A3Error, ref _hasL2G1FNError);
+            ValidateFinalPrice(2, 2, CL2G2A1, CL2G2A2, CL2G2A3, CL2G2FN, validationErrors, 
+                ref _hasL2G2A1Error, ref _hasL2G2A2Error, ref _hasL2G2A3Error, ref _hasL2G2FNError);
+            ValidateFinalPrice(2, 3, CL2G3A1, CL2G3A2, CL2G3A3, CL2G3FN, validationErrors, 
+                ref _hasL2G3A1Error, ref _hasL2G3A2Error, ref _hasL2G3A3Error, ref _hasL2G3FNError);
 
             // Level 3
-            ValidateFinalPrice(3, 1, CL3G1A1, CL3G1A2, CL3G1A3, CL3G1FN, validationErrors, ref _hasL3G1FNError);
-            ValidateFinalPrice(3, 2, CL3G2A1, CL3G2A2, CL3G2A3, CL3G2FN, validationErrors, ref _hasL3G2FNError);
-            ValidateFinalPrice(3, 3, CL3G3A1, CL3G3A2, CL3G3A3, CL3G3FN, validationErrors, ref _hasL3G3FNError);
+            ValidateFinalPrice(3, 1, CL3G1A1, CL3G1A2, CL3G1A3, CL3G1FN, validationErrors, 
+                ref _hasL3G1A1Error, ref _hasL3G1A2Error, ref _hasL3G1A3Error, ref _hasL3G1FNError);
+            ValidateFinalPrice(3, 2, CL3G2A1, CL3G2A2, CL3G2A3, CL3G2FN, validationErrors, 
+                ref _hasL3G2A1Error, ref _hasL3G2A2Error, ref _hasL3G2A3Error, ref _hasL3G2FNError);
+            ValidateFinalPrice(3, 3, CL3G3A1, CL3G3A2, CL3G3A3, CL3G3FN, validationErrors, 
+                ref _hasL3G3A1Error, ref _hasL3G3A2Error, ref _hasL3G3A3Error, ref _hasL3G3FNError);
 
-            // Trigger property change notifications for error flags
-            OnPropertyChanged(nameof(HasL1G1FNError));
-            OnPropertyChanged(nameof(HasL1G2FNError));
-            OnPropertyChanged(nameof(HasL1G3FNError));
-            OnPropertyChanged(nameof(HasL2G1FNError));
-            OnPropertyChanged(nameof(HasL2G2FNError));
-            OnPropertyChanged(nameof(HasL2G3FNError));
-            OnPropertyChanged(nameof(HasL3G1FNError));
-            OnPropertyChanged(nameof(HasL3G2FNError));
-            OnPropertyChanged(nameof(HasL3G3FNError));
+            // Trigger property change notifications for all error flags
+            // Level 1
+            OnPropertyChanged(nameof(HasL1G1A1Error)); OnPropertyChanged(nameof(HasL1G1A2Error)); OnPropertyChanged(nameof(HasL1G1A3Error)); OnPropertyChanged(nameof(HasL1G1FNError));
+            OnPropertyChanged(nameof(HasL1G2A1Error)); OnPropertyChanged(nameof(HasL1G2A2Error)); OnPropertyChanged(nameof(HasL1G2A3Error)); OnPropertyChanged(nameof(HasL1G2FNError));
+            OnPropertyChanged(nameof(HasL1G3A1Error)); OnPropertyChanged(nameof(HasL1G3A2Error)); OnPropertyChanged(nameof(HasL1G3A3Error)); OnPropertyChanged(nameof(HasL1G3FNError));
+            
+            // Level 2
+            OnPropertyChanged(nameof(HasL2G1A1Error)); OnPropertyChanged(nameof(HasL2G1A2Error)); OnPropertyChanged(nameof(HasL2G1A3Error)); OnPropertyChanged(nameof(HasL2G1FNError));
+            OnPropertyChanged(nameof(HasL2G2A1Error)); OnPropertyChanged(nameof(HasL2G2A2Error)); OnPropertyChanged(nameof(HasL2G2A3Error)); OnPropertyChanged(nameof(HasL2G2FNError));
+            OnPropertyChanged(nameof(HasL2G3A1Error)); OnPropertyChanged(nameof(HasL2G3A2Error)); OnPropertyChanged(nameof(HasL2G3A3Error)); OnPropertyChanged(nameof(HasL2G3FNError));
+            
+            // Level 3
+            OnPropertyChanged(nameof(HasL3G1A1Error)); OnPropertyChanged(nameof(HasL3G1A2Error)); OnPropertyChanged(nameof(HasL3G1A3Error)); OnPropertyChanged(nameof(HasL3G1FNError));
+            OnPropertyChanged(nameof(HasL3G2A1Error)); OnPropertyChanged(nameof(HasL3G2A2Error)); OnPropertyChanged(nameof(HasL3G2A3Error)); OnPropertyChanged(nameof(HasL3G2FNError));
+            OnPropertyChanged(nameof(HasL3G3A1Error)); OnPropertyChanged(nameof(HasL3G3A2Error)); OnPropertyChanged(nameof(HasL3G3A3Error)); OnPropertyChanged(nameof(HasL3G3FNError));
 
             if (validationErrors.Any())
             {
@@ -534,27 +609,163 @@ namespace WPFGrowerApp.ViewModels
             return true;
         }
 
-        private void ValidateFinalPrice(int level, int grade, decimal adv1, decimal adv2, decimal adv3, decimal final, List<string> errors, ref bool hasError)
+        private void ValidateFinalPrice(int level, int grade, decimal adv1, decimal adv2, decimal adv3, decimal final, 
+            List<string> errors, ref bool hasA1Error, ref bool hasA2Error, ref bool hasA3Error, ref bool hasFinalError)
         {
+            // Reset all error flags for this level/grade
+            hasA1Error = hasA2Error = hasA3Error = hasFinalError = false;
+            
             // Skip validation if all values are 0 (not set)
             if (adv1 == 0 && adv2 == 0 && adv3 == 0 && final == 0)
             {
-                hasError = false;
                 return;
             }
 
-            var sumAdvances = adv1 + adv2 + adv3;
-            
-            // Final price should be greater than or equal to sum of advances
-            // You cannot have the final payment be less than what's already been paid in advances
-            if (sumAdvances > 0 && final < sumAdvances)
+            // Validate cumulative progression
+            // A2 cannot be less than A1 (if A2 is provided and A1 is provided)
+            if (adv1 > 0 && adv2 > 0 && adv2 < adv1)
             {
-                errors.Add($"Level {level}, Grade {grade}: Sum of advances (${sumAdvances:F2}) exceeds final price (${final:F2})");
-                hasError = true;
+                errors.Add($"Level {level}, Grade {grade}: Advance 2 (${adv2:F2}) cannot be less than Advance 1 (${adv1:F2})");
+                hasA2Error = true;
             }
-            else
+
+            // A3 cannot be less than A2 (if A3 is provided and A2 is provided)
+            if (adv2 > 0 && adv3 > 0 && adv3 < adv2)
             {
-                hasError = false;
+                errors.Add($"Level {level}, Grade {grade}: Advance 3 (${adv3:F2}) cannot be less than Advance 2 (${adv2:F2})");
+                hasA3Error = true;
+            }
+
+            // Final price validation: Final >= max(A1, A2, A3)
+            var maxAdvance = Math.Max(Math.Max(adv1, adv2), adv3);
+            
+            if (maxAdvance > 0 && final < maxAdvance)
+            {
+                errors.Add($"Level {level}, Grade {grade}: Highest cumulative advance (${maxAdvance:F2}) exceeds final price (${final:F2})");
+                hasFinalError = true;
+            }
+        }
+
+        // Real-time validation methods for individual field validation
+        private void ValidateLevelGradeRealtime(int level, int grade)
+        {
+            // Get the current values for this level/grade
+            decimal adv1, adv2, adv3, final;
+            bool hasA1Error, hasA2Error, hasA3Error, hasFinalError;
+
+            switch (level)
+            {
+                case 1:
+                    switch (grade)
+                    {
+                        case 1:
+                            adv1 = CL1G1A1; adv2 = CL1G1A2; adv3 = CL1G1A3; final = CL1G1FN;
+                            hasA1Error = _hasL1G1A1Error; hasA2Error = _hasL1G1A2Error; hasA3Error = _hasL1G1A3Error; hasFinalError = _hasL1G1FNError;
+                            break;
+                        case 2:
+                            adv1 = CL1G2A1; adv2 = CL1G2A2; adv3 = CL1G2A3; final = CL1G2FN;
+                            hasA1Error = _hasL1G2A1Error; hasA2Error = _hasL1G2A2Error; hasA3Error = _hasL1G2A3Error; hasFinalError = _hasL1G2FNError;
+                            break;
+                        case 3:
+                            adv1 = CL1G3A1; adv2 = CL1G3A2; adv3 = CL1G3A3; final = CL1G3FN;
+                            hasA1Error = _hasL1G3A1Error; hasA2Error = _hasL1G3A2Error; hasA3Error = _hasL1G3A3Error; hasFinalError = _hasL1G3FNError;
+                            break;
+                        default: return;
+                    }
+                    break;
+                case 2:
+                    switch (grade)
+                    {
+                        case 1:
+                            adv1 = CL2G1A1; adv2 = CL2G1A2; adv3 = CL2G1A3; final = CL2G1FN;
+                            hasA1Error = _hasL2G1A1Error; hasA2Error = _hasL2G1A2Error; hasA3Error = _hasL2G1A3Error; hasFinalError = _hasL2G1FNError;
+                            break;
+                        case 2:
+                            adv1 = CL2G2A1; adv2 = CL2G2A2; adv3 = CL2G2A3; final = CL2G2FN;
+                            hasA1Error = _hasL2G2A1Error; hasA2Error = _hasL2G2A2Error; hasA3Error = _hasL2G2A3Error; hasFinalError = _hasL2G2FNError;
+                            break;
+                        case 3:
+                            adv1 = CL2G3A1; adv2 = CL2G3A2; adv3 = CL2G3A3; final = CL2G3FN;
+                            hasA1Error = _hasL2G3A1Error; hasA2Error = _hasL2G3A2Error; hasA3Error = _hasL2G3A3Error; hasFinalError = _hasL2G3FNError;
+                            break;
+                        default: return;
+                    }
+                    break;
+                case 3:
+                    switch (grade)
+                    {
+                        case 1:
+                            adv1 = CL3G1A1; adv2 = CL3G1A2; adv3 = CL3G1A3; final = CL3G1FN;
+                            hasA1Error = _hasL3G1A1Error; hasA2Error = _hasL3G1A2Error; hasA3Error = _hasL3G1A3Error; hasFinalError = _hasL3G1FNError;
+                            break;
+                        case 2:
+                            adv1 = CL3G2A1; adv2 = CL3G2A2; adv3 = CL3G2A3; final = CL3G2FN;
+                            hasA1Error = _hasL3G2A1Error; hasA2Error = _hasL3G2A2Error; hasA3Error = _hasL3G2A3Error; hasFinalError = _hasL3G2FNError;
+                            break;
+                        case 3:
+                            adv1 = CL3G3A1; adv2 = CL3G3A2; adv3 = CL3G3A3; final = CL3G3FN;
+                            hasA1Error = _hasL3G3A1Error; hasA2Error = _hasL3G3A2Error; hasA3Error = _hasL3G3A3Error; hasFinalError = _hasL3G3FNError;
+                            break;
+                        default: return;
+                    }
+                    break;
+                default: return;
+            }
+
+            // Perform real-time validation (without error messages, just set flags)
+            var errors = new List<string>();
+            ValidateFinalPrice(level, grade, adv1, adv2, adv3, final, errors, ref hasA1Error, ref hasA2Error, ref hasA3Error, ref hasFinalError);
+
+            // Update the error flags and trigger property change notifications
+            UpdateErrorFlags(level, grade, hasA1Error, hasA2Error, hasA3Error, hasFinalError);
+        }
+
+        private void UpdateErrorFlags(int level, int grade, bool hasA1Error, bool hasA2Error, bool hasA3Error, bool hasFinalError)
+        {
+            switch (level)
+            {
+                case 1:
+                    switch (grade)
+                    {
+                        case 1:
+                            HasL1G1A1Error = hasA1Error; HasL1G1A2Error = hasA2Error; HasL1G1A3Error = hasA3Error; HasL1G1FNError = hasFinalError;
+                            break;
+                        case 2:
+                            HasL1G2A1Error = hasA1Error; HasL1G2A2Error = hasA2Error; HasL1G2A3Error = hasA3Error; HasL1G2FNError = hasFinalError;
+                            break;
+                        case 3:
+                            HasL1G3A1Error = hasA1Error; HasL1G3A2Error = hasA2Error; HasL1G3A3Error = hasA3Error; HasL1G3FNError = hasFinalError;
+                            break;
+                    }
+                    break;
+                case 2:
+                    switch (grade)
+                    {
+                        case 1:
+                            HasL2G1A1Error = hasA1Error; HasL2G1A2Error = hasA2Error; HasL2G1A3Error = hasA3Error; HasL2G1FNError = hasFinalError;
+                            break;
+                        case 2:
+                            HasL2G2A1Error = hasA1Error; HasL2G2A2Error = hasA2Error; HasL2G2A3Error = hasA3Error; HasL2G2FNError = hasFinalError;
+                            break;
+                        case 3:
+                            HasL2G3A1Error = hasA1Error; HasL2G3A2Error = hasA2Error; HasL2G3A3Error = hasA3Error; HasL2G3FNError = hasFinalError;
+                            break;
+                    }
+                    break;
+                case 3:
+                    switch (grade)
+                    {
+                        case 1:
+                            HasL3G1A1Error = hasA1Error; HasL3G1A2Error = hasA2Error; HasL3G1A3Error = hasA3Error; HasL3G1FNError = hasFinalError;
+                            break;
+                        case 2:
+                            HasL3G2A1Error = hasA1Error; HasL3G2A2Error = hasA2Error; HasL3G2A3Error = hasA3Error; HasL3G2FNError = hasFinalError;
+                            break;
+                        case 3:
+                            HasL3G3A1Error = hasA1Error; HasL3G3A2Error = hasA2Error; HasL3G3A3Error = hasA3Error; HasL3G3FNError = hasFinalError;
+                            break;
+                    }
+                    break;
             }
         }
     }
