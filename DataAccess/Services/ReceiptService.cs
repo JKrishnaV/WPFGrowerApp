@@ -912,6 +912,7 @@ namespace WPFGrowerApp.DataAccess.Services
                             AllocatedAt
                         FROM ReceiptPaymentAllocations
                         WHERE ReceiptId = @ReceiptId
+                          AND (Status IS NULL OR Status != 'Voided')
                         ORDER BY PaymentTypeId;";
                     
                     var result = await connection.QueryAsync<ReceiptPaymentAllocation>(sql, new { ReceiptId = receiptId });
@@ -947,7 +948,8 @@ namespace WPFGrowerApp.DataAccess.Services
                             CAST(MAX(CASE WHEN PaymentTypeId = 3 THEN 1 ELSE 0 END) AS BIT) as HasAdvance3,
                             MAX(AllocatedAt) as LastPaymentDate
                         FROM ReceiptPaymentAllocations
-                        WHERE ReceiptId = @ReceiptId;";
+                        WHERE ReceiptId = @ReceiptId
+                          AND (Status IS NULL OR Status != 'Voided');";
                     
                     return await connection.QueryFirstOrDefaultAsync<ReceiptPaymentSummary>(sql, new { ReceiptId = receiptId });
                 }

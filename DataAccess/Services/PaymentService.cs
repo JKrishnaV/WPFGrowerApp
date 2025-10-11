@@ -1050,6 +1050,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         LEFT JOIN Cheques c ON c.PaymentBatchId = rpa.PaymentBatchId AND c.GrowerId = g.GrowerId
                         LEFT JOIN ChequeSeries cs ON c.ChequeSeriesId = cs.ChequeSeriesId
                         WHERE rpa.PaymentBatchId = @BatchId 
+                            AND (rpa.Status IS NULL OR rpa.Status != 'Voided')
                             AND (c.Status IS NULL OR c.Status != 'Voided')
                         GROUP BY 
                             g.GrowerId, g.GrowerNumber, g.FullName, g.IsOnHold, 
@@ -1114,6 +1115,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         INNER JOIN PaymentTypes pt ON rpa.PaymentTypeId = pt.PaymentTypeId
                         INNER JOIN PaymentBatches pb ON rpa.PaymentBatchId = pb.PaymentBatchId
                         WHERE rpa.PaymentBatchId = @BatchId
+                          AND (rpa.Status IS NULL OR rpa.Status != 'Voided')
                         ORDER BY g.GrowerNumber, r.ReceiptDate, r.ReceiptNumber";
 
                     var parameters = new { BatchId = batchId };
@@ -1251,6 +1253,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         INNER JOIN Receipts r ON rpa.ReceiptId = r.ReceiptId
                         LEFT JOIN Products p ON r.ProductId = p.ProductId
                         WHERE rpa.PaymentBatchId = @BatchId
+                          AND (rpa.Status IS NULL OR rpa.Status != 'Voided')
                         GROUP BY ISNULL(p.ProductName, 'Unknown Product')
                         ORDER BY Amount DESC";
 
