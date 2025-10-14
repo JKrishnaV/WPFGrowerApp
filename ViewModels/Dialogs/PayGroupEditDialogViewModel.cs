@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Windows.Input;
 using WPFGrowerApp.Commands;
 using WPFGrowerApp.DataAccess.Models;
+using WPFGrowerApp.Services;
 using MaterialDesignThemes.Wpf; // Add this for DialogHost
 
 namespace WPFGrowerApp.ViewModels.Dialogs
@@ -37,7 +38,7 @@ namespace WPFGrowerApp.ViewModels.Dialogs
         public ICommand SaveCommand { get; }
         public ICommand CancelCommand { get; }
 
-        public PayGroupEditDialogViewModel(PayGroup payGroup = null)
+        public PayGroupEditDialogViewModel(PayGroup payGroup = null, bool isReadOnly = false, IDialogService dialogService = null)
         {
             if (payGroup == null)
             {
@@ -69,8 +70,8 @@ namespace WPFGrowerApp.ViewModels.Dialogs
                     CreatedAt = payGroup.CreatedAt,
                     CreatedBy = payGroup.CreatedBy
                 };
-                IsEditMode = true;
-                Title = "Edit Payment Group";
+                IsEditMode = !isReadOnly;
+                Title = isReadOnly ? "View Payment Group" : "Edit Payment Group";
             }
 
             SaveCommand = new RelayCommand(Save, CanSave);
@@ -98,7 +99,7 @@ namespace WPFGrowerApp.ViewModels.Dialogs
         
         private bool IsValid()
         {
-             return !string.IsNullOrWhiteSpace(PayGroupData?.PayGroupId) &&
+             return !string.IsNullOrWhiteSpace(PayGroupData?.GroupCode) &&
                     !string.IsNullOrWhiteSpace(PayGroupData?.Description) &&
                     Error == null; // Check IDataErrorInfo
         }

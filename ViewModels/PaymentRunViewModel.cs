@@ -678,7 +678,7 @@ namespace WPFGrowerApp.ViewModels
             var selectedExcludeGrowerIds = SelectedGrowersCount == GrowerFilterItems.Count ? new List<int>() : 
                 GrowerFilterItems.Where(g => !g.IsSelected).Select(g => g.Item.GrowerId).ToList();
             var selectedExcludePayGroupIds = SelectedPayGroupsCount == PayGroupFilterItems.Count ? new List<string>() : 
-                PayGroupFilterItems.Where(pg => !pg.IsSelected).Select(pg => pg.Item.PayGroupId).ToList();
+                PayGroupFilterItems.Where(pg => !pg.IsSelected).Select(pg => pg.Item.GroupCode).ToList();
 
             // Log selected filters
             Report($"Filtering by Products: {(selectedProductIds.Any() ? string.Join(",", selectedProductIds) : "All")}");
@@ -813,7 +813,7 @@ namespace WPFGrowerApp.ViewModels
             var selectedExcludeGrowerIds = SelectedGrowersCount == GrowerFilterItems.Count ? new List<int>() : 
                 GrowerFilterItems.Where(g => !g.IsSelected).Select(g => g.Item.GrowerId).ToList();
             var selectedExcludePayGroupIds = SelectedPayGroupsCount == PayGroupFilterItems.Count ? new List<string>() : 
-                PayGroupFilterItems.Where(pg => !pg.IsSelected).Select(pg => pg.Item.PayGroupId).ToList();
+                PayGroupFilterItems.Where(pg => !pg.IsSelected).Select(pg => pg.Item.GroupCode).ToList();
 
             // Log selected filters
             Report($"Filtering by Products: {(selectedProductIds.Any() ? string.Join(",", selectedProductIds) : "All")}");
@@ -836,7 +836,7 @@ namespace WPFGrowerApp.ViewModels
                 ProductDescriptions = SelectedProducts.Select(p => $"{p.ProductId} - {p.Description}".TrimStart(' ', '-')).ToList(),
                 ProcessDescriptions = SelectedProcesses.Select(p => $"{p.ProcessId} - {p.Description}".TrimStart(' ', '-')).ToList(),
                 ExcludedGrowerDescriptions = SelectedExcludeGrowers.Select(g => $"{g.GrowerNumber} - {g.Name}".TrimStart(' ', '-')).ToList(),
-                ExcludedPayGroupDescriptions = SelectedExcludePayGroups.Select(pg => $"{pg.PayGroupId} - {pg.Description}".TrimStart(' ', '-')).ToList()
+                ExcludedPayGroupDescriptions = SelectedExcludePayGroups.Select(pg => $"{pg.GroupCode} - {pg.Description}".TrimStart(' ', '-')).ToList()
             };
 
 
@@ -940,7 +940,7 @@ namespace WPFGrowerApp.ViewModels
             var selectedExcludeGrowerIds = SelectedGrowersCount == GrowerFilterItems.Count ? new List<int>() : 
                 GrowerFilterItems.Where(g => !g.IsSelected).Select(g => g.Item.GrowerId).ToList();
             var selectedExcludePayGroupIds = SelectedPayGroupsCount == PayGroupFilterItems.Count ? new List<string>() : 
-                PayGroupFilterItems.Where(pg => !pg.IsSelected).Select(pg => pg.Item.PayGroupId).ToList();
+                PayGroupFilterItems.Where(pg => !pg.IsSelected).Select(pg => pg.Item.GroupCode).ToList();
 
             // Log selected filters
             Report($"Filtering by Products: {(selectedProductIds.Any() ? string.Join(",", selectedProductIds) : "All")}");
@@ -962,7 +962,7 @@ namespace WPFGrowerApp.ViewModels
                 ProductDescriptions = SelectedProducts.Select(p => $"{p.ProductId} - {p.Description}".TrimStart(' ', '-')).ToList(),
                 ProcessDescriptions = SelectedProcesses.Select(p => $"{p.ProcessId} - {p.Description}".TrimStart(' ', '-')).ToList(),
                 ExcludedGrowerDescriptions = SelectedExcludeGrowers.Select(g => $"{g.GrowerNumber} - {g.Name}".TrimStart(' ', '-')).ToList(),
-                ExcludedPayGroupDescriptions = SelectedExcludePayGroups.Select(pg => $"{pg.PayGroupId} - {pg.Description}".TrimStart(' ', '-')).ToList()
+                ExcludedPayGroupDescriptions = SelectedExcludePayGroups.Select(pg => $"{pg.GroupCode} - {pg.Description}".TrimStart(' ', '-')).ToList()
             };
 
             System.IO.Stream? reportStream = null;
@@ -1248,7 +1248,7 @@ namespace WPFGrowerApp.ViewModels
                     var selectedExcludeGrowerIds = SelectedGrowersCount == GrowerFilterItems.Count ? new List<int>() : 
                         GrowerFilterItems.Where(g => !g.IsSelected).Select(g => g.Item.GrowerId).ToList();
                     var selectedExcludePayGroupIds = SelectedPayGroupsCount == PayGroupFilterItems.Count ? new List<string>() : 
-                        PayGroupFilterItems.Where(pg => !pg.IsSelected).Select(pg => pg.Item.PayGroupId).ToList();
+                        PayGroupFilterItems.Where(pg => !pg.IsSelected).Select(pg => pg.Item.GroupCode).ToList();
 
                     var (success, errors, postedBatch) = await _paymentService.ProcessAdvancePaymentRunAsync(
                         AdvanceNumber,
@@ -1517,7 +1517,7 @@ namespace WPFGrowerApp.ViewModels
                 var selectedExcludeGrowerIds = SelectedGrowersCount == GrowerFilterItems.Count ? new List<int>() : 
                     GrowerFilterItems.Where(g => !g.IsSelected).Select(g => g.Item.GrowerId).ToList();
                 var selectedExcludePayGroupIds = SelectedPayGroupsCount == PayGroupFilterItems.Count ? new List<string>() : 
-                    PayGroupFilterItems.Where(pg => !pg.IsSelected).Select(pg => pg.Item.PayGroupId).ToList();
+                    PayGroupFilterItems.Where(pg => !pg.IsSelected).Select(pg => pg.Item.GroupCode).ToList();
                 var selectedProductIds = ProductFilterItems.Where(p => p.IsSelected).Select(p => p.Item.ProductId).ToList();
                 var selectedProcessIds = ProcessFilterItems.Where(p => p.IsSelected).Select(p => p.Item.ProcessId).ToList();
 
@@ -1624,7 +1624,7 @@ namespace WPFGrowerApp.ViewModels
                     SelectedProductIds = ProductFilterItems.Where(p => p.IsSelected).Select(p => p.Item.ProductId).ToList(),
                     SelectedProcessIds = ProcessFilterItems.Where(p => p.IsSelected).Select(p => p.Item.ProcessId).ToList(),
                     SelectedGrowerIds = GrowerFilterItems.Where(g => g.IsSelected).Select(g => g.Item.GrowerId).ToList(),
-                    SelectedPayGroupIds = PayGroupFilterItems.Where(pg => pg.IsSelected).Select(pg => pg.Item.PayGroupId).ToList()
+                    SelectedPayGroupIds = PayGroupFilterItems.Where(pg => pg.IsSelected).Select(pg => pg.Item.GroupCode).ToList()
                 };
 
                 // Add to collection
@@ -1790,7 +1790,7 @@ namespace WPFGrowerApp.ViewModels
             // Load pay groups
             foreach (var payGroupId in preset.SelectedPayGroupIds)
             {
-                var payGroup = _allPayGroups.FirstOrDefault(pg => pg.PayGroupId == payGroupId);
+                var payGroup = _allPayGroups.FirstOrDefault(pg => pg.GroupCode == payGroupId);
                 if (payGroup != null)
                     SelectedExcludePayGroups.Add(payGroup);
             }
@@ -2050,7 +2050,7 @@ namespace WPFGrowerApp.ViewModels
             PayGroupFilterItems.Clear();
             foreach (var payGroup in _allPayGroups)
             {
-                var displayText = $"{payGroup.PayGroupId} - {payGroup.Description}";
+                var displayText = $"{payGroup.GroupCode} - {payGroup.Description}";
                 PayGroupFilterItems.Add(new FilterItem<PayGroup>(payGroup, displayText, true)); // Always selected by default
             }
 

@@ -15,12 +15,12 @@ namespace WPFGrowerApp.DataAccess.Models
         /// <summary>
         /// Gets or sets the group code (e.g., "STD", "PREM", "NEW").
         /// </summary>
-        public string GroupCode { get; set; }
+        public string GroupCode { get; set; } = string.Empty;
 
         /// <summary>
         /// Gets or sets the group name.
         /// </summary>
-        public string GroupName { get; set; }
+        public string GroupName { get; set; } = string.Empty;
 
         /// <summary>
         /// Gets or sets the description of the payment group.
@@ -45,7 +45,7 @@ namespace WPFGrowerApp.DataAccess.Models
         /// <summary>
         /// Gets or sets who created the record.
         /// </summary>
-        public string CreatedBy { get; set; }
+        public string CreatedBy { get; set; } = string.Empty;
 
         /// <summary>
         /// Gets or sets when the record was last modified.
@@ -66,11 +66,5 @@ namespace WPFGrowerApp.DataAccess.Models
         /// Gets or sets who deleted the record.
         /// </summary>
         public string? DeletedBy { get; set; }
-
-        // Legacy property for backward compatibility with old code
-        // This maps to GroupCode in the UI
-        public string PayGroupId => GroupCode;
-        
-        // Legacy property for display - removed DefaultPayLevel as it doesn't exist in modern schema
     }
 }

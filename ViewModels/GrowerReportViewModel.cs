@@ -372,7 +372,7 @@ namespace WPFGrowerApp.ViewModels
                 if (SelectedPayGroups.Any())
                 {
                     // Get the PayGroupIds from the selected objects
-                    var selectedPayGroupIds = SelectedPayGroups.OfType<PayGroup>().Select(pg => pg.PayGroupId).ToList();
+                    var selectedPayGroupIds = SelectedPayGroups.OfType<PayGroup>().Select(pg => pg.GroupCode).ToList();
                     if (selectedPayGroupIds.Any())
                     {
                         // Filter growers whose PayGroup is in the selected list
@@ -558,7 +558,7 @@ namespace WPFGrowerApp.ViewModels
                 string lowerSearch = PayGroupSearchText.ToLower();
                 groupsToShow = groupsToShow.Where(pg =>
                     (pg.Description != null && pg.Description.ToLower().Contains(lowerSearch)) ||
-                    (pg.PayGroupId != null && pg.PayGroupId.ToLower().Contains(lowerSearch)));
+                    (pg.GroupCode != null && pg.GroupCode.ToLower().Contains(lowerSearch)));
             }
 
             foreach (var group in groupsToShow.OrderBy(pg => pg.Description))

@@ -22,19 +22,21 @@
         <StackPanel Grid.Row="1">
             <TextBox materialDesign:HintAssist.Hint="Group Code (e.g., STD, PREM)"
                      Text="{Binding PayGroupData.GroupCode, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True}"
-                     IsEnabled="{Binding IsEditMode, Converter={StaticResource InverseBooleanConverter}}"
+                     IsEnabled="{Binding IsEditMode}"
                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
                      Margin="0,8,0,8"
                      MaxLength="10"/> 
                      
             <TextBox materialDesign:HintAssist.Hint="Group Name"
                      Text="{Binding PayGroupData.GroupName, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True}"
+                     IsEnabled="{Binding IsEditMode}"
                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
                      Margin="0,8,0,8"
                      MaxLength="100"/>
 
             <TextBox materialDesign:HintAssist.Hint="Description (Optional)"
                      Text="{Binding PayGroupData.Description, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True}"
+                     IsEnabled="{Binding IsEditMode}"
                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
                      Margin="0,8,0,8"
                      MaxLength="500">
@@ -45,32 +47,32 @@
 
             <TextBox materialDesign:HintAssist.Hint="Default Price Level (1-3)"
                      Text="{Binding PayGroupData.DefaultPriceLevel, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, TargetNullValue=''}"
+                     IsEnabled="{Binding IsEditMode}"
                      Style="{StaticResource MaterialDesignOutlinedTextBox}"
                      Margin="0,8,0,8"
                      MaxLength="1"/>
 
+            <CheckBox Content="Active"
+                      IsChecked="{Binding PayGroupData.IsActive}"
+                      IsEnabled="{Binding IsEditMode}"
+                      Margin="0,8,0,8"
+                      Style="{StaticResource MaterialDesignCheckBox}"/>
+
         </StackPanel>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
-            <!-- Changed Style to MaterialDesignOutlinedButton -->
+            <!-- Show different buttons based on edit mode -->
             <Button Content="Cancel" IsCancel="True" Style="{StaticResource MaterialDesignOutlinedButton}" 
                     Command="{x:Static materialDesign:DialogHost.CloseDialogCommand}">
-                 <!-- Explicitly pass False for Cancel -->
                  <Button.CommandParameter>
                     <system:Boolean xmlns:system="clr-namespace:System;assembly=mscorlib">False</system:Boolean>
                 </Button.CommandParameter>
             </Button>
                     
-            <Button Content="Save" IsDefault="True" Style="{StaticResource MaterialDesignFlatButton}"
+            <Button Content="Save" IsDefault="True" Style="{StaticResource MaterialDesignRaisedButton}"
                     Command="{Binding SaveCommand}" 
-                    Margin="8,0,0,0">
-                 <!-- CommandParameter removed from attribute list -->
-                 <!-- Keep explicit CommandParameter for DialogHost closing if SaveCommand handles it -->
-                 <!-- If SaveCommand doesn't close dialog, this parameter might be used differently -->
-                 <!-- Let's assume SaveCommand will handle closing for now -->
-                 <!-- <Button.CommandParameter>
-                    <system:Boolean xmlns:system="clr-namespace:System;assembly=mscorlib">True</system:Boolean> 
-                </Button.CommandParameter> -->
+                    Margin="8,0,0,0"
+                    Visibility="{Binding IsEditMode, Converter={StaticResource BooleanToVisibilityConverter}}">
             </Button>
         </StackPanel>
     </Grid>
