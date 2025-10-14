@@ -1,325 +1,505 @@
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Input;
+using WPFGrowerApp.Commands;
+using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
-using WPFGrowerApp.DataAccess.Services;
-using WPFGrowerApp.Infrastructure;
-using WPFGrowerApp.Infrastructure.Logging;
 using WPFGrowerApp.Services;
+using Microsoft.Extensions.DependencyInjection;
+using MaterialDesignThemes.Wpf;
+using WPFGrowerApp.ViewModels.Dialogs;
+using WPFGrowerApp.Views.Dialogs;
 
 namespace WPFGrowerApp.ViewModels
 {
     /// <summary>
-    /// ViewModel for managing container types (Contain table).
+    /// ViewModel for managing container types (Containers table).
     /// Provides CRUD operations for container type definitions.
     /// </summary>
-    public partial class ContainerViewModel : ViewModelBase
+    public class ContainerViewModel : ViewModelBase
     {
-        private readonly ContainerTypeService _containerService;
+        private readonly IContainerTypeService _containerService;
         private readonly IDialogService _dialogService;
-
-        // Store all containers (unfiltered)
-        private ObservableCollection<ContainerType> _allContainers = new();
-
-        [ObservableProperty]
-        [NotifyPropertyChangedFor(nameof(ActiveContainerCount))]
-        [NotifyPropertyChangedFor(nameof(InactiveContainerCount))]
-        [NotifyPropertyChangedFor(nameof(TotalContainerCount))]
+        private readonly IHelpContentProvider _helpContentProvider;
+        private readonly IServiceProvider _serviceProvider;
+        
         private ObservableCollection<ContainerType> _containers = new();
-
-        [ObservableProperty]
-        [NotifyCanExecuteChangedFor(nameof(EditContainerCommand))]
-        [NotifyCanExecuteChangedFor(nameof(DeleteContainerCommand))]
-        [NotifyCanExecuteChangedFor(nameof(ToggleActiveCommand))]
+        private ObservableCollection<ContainerType> _filteredContainers = new();
         private ContainerType? _selectedContainer;
-
-        [ObservableProperty]
-        private bool _isLoading;
-
-        [ObservableProperty]
         private string _searchText = string.Empty;
+        private string _statusFilter = "All";
+        private string _statusMessage = "Ready";
+        private string _lastUpdated = string.Empty;
+        private bool _isLoading;
+        private bool _isDialogOpen;
 
-        /// <summary>
-        /// Filters the container list when search text changes.
-        /// </summary>
-        partial void OnSearchTextChanged(string value)
+        public ObservableCollection<ContainerType> Containers
         {
-            ApplyFilter();
+            get => _containers;
+            set => SetProperty(ref _containers, value);
         }
+
+        public ObservableCollection<ContainerType> FilteredContainers
+        {
+            get => _filteredContainers;
+            set => SetProperty(ref _filteredContainers, value);
+        }
+
+        public ContainerType? SelectedContainer
+        {
+            get => _selectedContainer;
+            set => SetProperty(ref _selectedContainer, value);
+        }
+
+        public string SearchText
+        {
+            get => _searchText;
+            set
+            {
+                if (SetProperty(ref _searchText, value))
+                {
+                    FilterContainers();
+                }
+            }
+        }
+
+        public string StatusFilter
+        {
+            get => _statusFilter;
+            set
+            {
+                if (SetProperty(ref _statusFilter, value))
+                {
+                    FilterContainers();
+                }
+            }
+        }
+
+        public bool IsLoading
+        {
+            get => _isLoading;
+            set => SetProperty(ref _isLoading, value);
+        }
+
+        public string StatusMessage
+        {
+            get => _statusMessage;
+            set => SetProperty(ref _statusMessage, value);
+        }
+
+        public string LastUpdated
+        {
+            get => _lastUpdated;
+            set => SetProperty(ref _lastUpdated, value);
+        }
+
+        // Commands
+        public ICommand AddContainerCommand { get; }
+        public ICommand EditContainerCommand { get; }
+        public ICommand ViewContainerCommand { get; }
+        public ICommand DeleteContainerCommand { get; }
+        public ICommand RefreshCommand { get; }
+        public ICommand SearchCommand { get; }
+        public ICommand ClearFiltersCommand { get; }
+        public ICommand NavigateToDashboardCommand { get; }
+        public ICommand NavigateToSettingsCommand { get; }
+        public ICommand ShowHelpCommand { get; }
 
         public ContainerViewModel(
-            ContainerTypeService containerService,
-            IDialogService dialogService)
+            IContainerTypeService containerService,
+            IDialogService dialogService,
+            IHelpContentProvider helpContentProvider,
+            IServiceProvider serviceProvider)
         {
-            Logger.Info("Initializing ContainerViewModel");
             _containerService = containerService ?? throw new ArgumentNullException(nameof(containerService));
             _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
+            _helpContentProvider = helpContentProvider ?? throw new ArgumentNullException(nameof(helpContentProvider));
+            _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 
-            Logger.Info("ContainerViewModel initialized successfully, loading containers...");
-            _ = LoadContainersAsync();
+            // Initialize commands
+            AddContainerCommand = new RelayCommand(async _ => await AddContainerAsync());
+            EditContainerCommand = new RelayCommand(async param => await EditContainerAsync(param as ContainerType), param => param != null);
+            ViewContainerCommand = new RelayCommand(async param => await ViewContainerAsync(param as ContainerType), param => param != null);
+            DeleteContainerCommand = new RelayCommand(async param => await DeleteContainerAsync(param as ContainerType), param => param != null);
+            RefreshCommand = new RelayCommand(async _ => await RefreshAsync());
+            SearchCommand = new RelayCommand(_ => FilterContainers());
+            ClearFiltersCommand = new RelayCommand(_ => ClearFilters());
+            NavigateToDashboardCommand = new RelayCommand(_ => NavigateToDashboard());
+            NavigateToSettingsCommand = new RelayCommand(_ => NavigateToSettings());
+            ShowHelpCommand = new RelayCommand(_ => ShowHelp());
+
+            // Load data
+            _ = InitializeAsync();
         }
 
-        /// <summary>
-        /// Gets the current user's username.
-        /// </summary>
-        private string CurrentUser => App.CurrentUser?.Username ?? "SYSTEM";
-
-        /// <summary>
-        /// Loads all container types from the database.
-        /// </summary>
-        [RelayCommand]
-        private async Task LoadContainersAsync()
+        public async Task InitializeAsync()
         {
             try
             {
-                Logger.Info("Loading container types from database...");
+                System.Diagnostics.Debug.WriteLine("ContainerViewModel: Starting initialization");
                 IsLoading = true;
-
-                var containers = await _containerService.GetAllAsync();
-                _allContainers = new ObservableCollection<ContainerType>(containers);
-                Logger.Info($"Successfully loaded {_allContainers.Count} container types");
-                
-                // Apply current filter
-                ApplyFilter();
+                StatusMessage = "Loading containers...";
+                await LoadContainersAsync();
+                System.Diagnostics.Debug.WriteLine($"ContainerViewModel: Loaded {Containers.Count} containers, {FilteredContainers.Count} filtered");
+                StatusMessage = "Ready";
+                LastUpdated = DateTime.Now.ToString("MMM dd, yyyy HH:mm:ss");
             }
             catch (Exception ex)
             {
-                Logger.Error("Failed to load container types", ex);
-                await _dialogService.ShowMessageBoxAsync(
-                    $"Failed to load container types:\n{ex.Message}",
-                    "Error");
+                System.Diagnostics.Debug.WriteLine($"Error initializing ContainerViewModel: {ex.Message}");
+                StatusMessage = "Error loading containers";
             }
             finally
             {
                 IsLoading = false;
+                System.Diagnostics.Debug.WriteLine("ContainerViewModel: Initialization completed");
             }
         }
 
-        /// <summary>
-        /// Applies the current search filter to the container list.
-        /// Searches across Container ID, Short Code, and Description.
-        /// </summary>
-        private void ApplyFilter()
+        private async Task LoadContainersAsync()
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(SearchText))
+                System.Diagnostics.Debug.WriteLine("ContainerViewModel: Starting to load containers from service");
+                var containers = await _containerService.GetAllAsync();
+                System.Diagnostics.Debug.WriteLine($"ContainerViewModel: Retrieved {containers.Count()} containers from service");
+                
+                Containers.Clear();
+                
+                foreach (var container in containers.OrderBy(c => c.DisplayOrder ?? 999).ThenBy(c => c.ContainerCode))
                 {
-                    // No filter - show all containers
-                    Containers = new ObservableCollection<ContainerType>(_allContainers);
+                    Containers.Add(container);
                 }
-                else
-                {
-                    // Filter containers by search text (case-insensitive)
-                    var searchLower = SearchText.ToLower();
-                    var filtered = _allContainers.Where(c =>
-                        c.ContainerId.ToString().Contains(searchLower) ||
-                        (c.ShortCode?.ToLower().Contains(searchLower) ?? false) ||
-                        (c.Description?.ToLower().Contains(searchLower) ?? false)
-                    ).ToList();
 
-                    Containers = new ObservableCollection<ContainerType>(filtered);
-                    Logger.Debug($"Filter applied: '{SearchText}' - {Containers.Count} of {_allContainers.Count} containers shown");
+                System.Diagnostics.Debug.WriteLine($"ContainerViewModel: Added {Containers.Count} containers to collection");
+
+                // Update filtered containers
+                FilterContainers();
+                System.Diagnostics.Debug.WriteLine($"ContainerViewModel: Filtered containers count: {FilteredContainers.Count}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading containers: {ex.Message}");
+                throw;
+            }
+        }
+
+        private async Task RefreshAsync()
+        {
+            await InitializeAsync();
+        }
+
+        private void FilterContainers()
+        {
+            var baseFilter = Containers.AsEnumerable();
+
+            // Apply status filter
+            switch (StatusFilter)
+            {
+                case "Active":
+                    baseFilter = baseFilter.Where(c => c.IsActive);
+                    break;
+                case "Inactive":
+                    baseFilter = baseFilter.Where(c => !c.IsActive);
+                    break;
+                case "All":
+                default:
+                    // No status filtering - show all records
+                    break;
+            }
+
+            // Apply search filter
+            if (!string.IsNullOrWhiteSpace(SearchText))
+            {
+                var searchLower = SearchText.ToLower();
+                baseFilter = baseFilter.Where(c =>
+                    (c.ContainerName?.ToLower().Contains(searchLower) ?? false) ||
+                    (c.ContainerCode?.ToLower().Contains(searchLower) ?? false) ||
+                    (c.ContainerId.ToString().Contains(searchLower)) ||
+                    (c.Value?.ToString().Contains(searchLower) ?? false) ||
+                    (c.TareWeight?.ToString().Contains(searchLower) ?? false)
+                );
+            }
+
+            FilteredContainers = new ObservableCollection<ContainerType>(baseFilter);
+            StatusMessage = $"Showing {FilteredContainers.Count} of {Containers.Count} containers";
+        }
+
+        private void ClearFilters()
+        {
+            SearchText = string.Empty;
+            StatusFilter = "All";
+            StatusMessage = "Ready";
+        }
+
+        private async Task AddContainerAsync()
+        {
+            if (_isDialogOpen) return; // Prevent multiple dialogs
+
+            try
+            {
+                _isDialogOpen = true;
+                var newContainer = new ContainerType
+                {
+                    ContainerId = 0,
+                    ContainerCode = string.Empty,
+                    ContainerName = string.Empty,
+                    TareWeight = 0,
+                    Value = 0,
+                    IsActive = true,
+                    DisplayOrder = null,
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = App.CurrentUser?.Username ?? "SYSTEM"
+                };
+
+                var dialogViewModel = new ContainerEditDialogViewModel(newContainer, false, _dialogService);
+                var result = await DialogHost.Show(new ContainerEditDialogView { DataContext = dialogViewModel }, "RootDialogHost");
+
+                if (result is bool boolResult && boolResult && dialogViewModel.ContainerData != null)
+                {
+                    IsLoading = true;
+                    StatusMessage = "Adding container...";
+                    
+                    try
+                    {
+                        bool success = await _containerService.CreateAsync(dialogViewModel.ContainerData, App.CurrentUser?.Username ?? "SYSTEM");
+                        
+                        if (success)
+                        {
+                            await _dialogService.ShowMessageBoxAsync("Container added successfully.", "Success");
+                            await LoadContainersAsync();
+                        }
+                        else
+                        {
+                            await _dialogService.ShowMessageBoxAsync("Failed to add the container.", "Error");
+                            StatusMessage = "Failed to add container";
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error adding container: {ex.Message}");
+                        await _dialogService.ShowMessageBoxAsync($"Error adding container: {ex.Message}", "Error");
+                        StatusMessage = "Error adding container";
+                    }
+                    finally
+                    {
+                        IsLoading = false;
+                    }
                 }
             }
             catch (Exception ex)
             {
-                Logger.Error("Error applying container filter", ex);
-                // On error, show all containers
-                Containers = new ObservableCollection<ContainerType>(_allContainers);
+                System.Diagnostics.Debug.WriteLine($"Error adding container: {ex.Message}");
+                await _dialogService.ShowMessageBoxAsync("Error", $"Failed to add container: {ex.Message}");
+                StatusMessage = "Error adding container";
+            }
+            finally
+            {
+                _isDialogOpen = false;
             }
         }
 
-        /// <summary>
-        /// Opens the Add Container dialog.
-        /// </summary>
-        [RelayCommand]
-        private void AddContainer()
+        private async Task ViewContainerAsync(ContainerType? container)
         {
-            var newContainer = new ContainerType
-            {
-                InUse = true // Default to active
-            };
-
-            var viewModel = new ContainerEntryViewModel(
-                _containerService,
-                _dialogService,
-                CurrentUser,
-                newContainer,
-                isEditMode: false);
-
-            var window = new Views.ContainerEntryWindow
-            {
-                DataContext = viewModel,
-                Owner = System.Windows.Application.Current.MainWindow
-            };
-
-            if (window.ShowDialog() == true)
-            {
-                _ = LoadContainersAsync();
-            }
-        }
-
-        /// <summary>
-        /// Opens the Edit Container dialog for the selected container.
-        /// </summary>
-        [RelayCommand(CanExecute = nameof(CanEditContainer))]
-        private void EditContainer()
-        {
-            if (SelectedContainer == null) return;
-
-            var viewModel = new ContainerEntryViewModel(
-                _containerService,
-                _dialogService,
-                CurrentUser,
-                SelectedContainer,
-                isEditMode: true);
-
-            var window = new Views.ContainerEntryWindow
-            {
-                DataContext = viewModel,
-                Owner = System.Windows.Application.Current.MainWindow
-            };
-
-            if (window.ShowDialog() == true)
-            {
-                _ = LoadContainersAsync();
-            }
-        }
-
-        private bool CanEditContainer() => SelectedContainer != null;
-
-        /// <summary>
-        /// Deletes the selected container type.
-        /// </summary>
-        [RelayCommand(CanExecute = nameof(CanDeleteContainer))]
-        private async Task DeleteContainer()
-        {
-            if (SelectedContainer == null) return;
+            if (container == null) return;
+            if (_isDialogOpen) return; // Prevent multiple dialogs
 
             try
             {
-                // Check if container is in use
-                var canDelete = await _containerService.CanDeleteAsync(SelectedContainer.ContainerId);
+                _isDialogOpen = true;
+                var dialogViewModel = new ContainerEditDialogViewModel(container, true, _dialogService);
+                await DialogHost.Show(new ContainerEditDialogView { DataContext = dialogViewModel }, "RootDialogHost");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error viewing container: {ex.Message}");
+                await _dialogService.ShowMessageBoxAsync("Error", $"Failed to view container: {ex.Message}");
+                StatusMessage = "Error viewing container";
+            }
+            finally
+            {
+                _isDialogOpen = false;
+            }
+        }
+
+        private async Task EditContainerAsync(ContainerType? container)
+        {
+            if (container == null) return;
+            if (_isDialogOpen) return; // Prevent multiple dialogs
+
+            try
+            {
+                _isDialogOpen = true;
+                var dialogViewModel = new ContainerEditDialogViewModel(container, false, _dialogService);
+                var result = await DialogHost.Show(new ContainerEditDialogView { DataContext = dialogViewModel }, "RootDialogHost");
+
+                if (result is bool boolResult && boolResult && dialogViewModel.ContainerData != null)
+                {
+                    IsLoading = true;
+                    StatusMessage = "Updating container...";
+                    
+                    try
+                    {
+                        bool success = await _containerService.UpdateAsync(dialogViewModel.ContainerData, App.CurrentUser?.Username ?? "SYSTEM");
+                        
+                        if (success)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"EditContainerAsync: Successfully updated container {dialogViewModel.ContainerData.ContainerId}");
+                            await _dialogService.ShowMessageBoxAsync("Container updated successfully.", "Success");
+                            await LoadContainersAsync();
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine($"EditContainerAsync: Failed to update container {dialogViewModel.ContainerData.ContainerId}");
+                            await _dialogService.ShowMessageBoxAsync("Failed to update the container.", "Error");
+                            StatusMessage = "Failed to update container";
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error updating container {dialogViewModel.ContainerData.ContainerId}: {ex.Message}");
+                        await _dialogService.ShowMessageBoxAsync($"Error updating container: {ex.Message}", "Error");
+                        StatusMessage = "Error updating container";
+                    }
+                    finally
+                    {
+                        IsLoading = false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error editing container: {ex.Message}");
+                await _dialogService.ShowMessageBoxAsync("Error", $"Failed to edit container: {ex.Message}");
+                StatusMessage = "Error editing container";
+            }
+            finally
+            {
+                _isDialogOpen = false;
+            }
+        }
+
+        private async Task DeleteContainerAsync(ContainerType container)
+        {
+            if (container == null) return;
+
+            try
+            {
+                // Check if container can be deleted
+                var canDelete = await _containerService.CanDeleteAsync(container.ContainerId);
                 if (!canDelete)
                 {
-                    var usageCount = await _containerService.GetUsageCountAsync(SelectedContainer.ContainerId);
+                    var usageCount = await _containerService.GetUsageCountAsync(container.ContainerId);
                     await _dialogService.ShowMessageBoxAsync(
-                        $"Cannot delete container type '{SelectedContainer.Description}' because it is used in {usageCount} receipt(s).\n\n" +
-                        "You can mark it as 'Inactive' instead by toggling the Active status.",
+                        $"Cannot delete container '{container.ContainerName}' because it is used in {usageCount} receipt(s).\n\n" +
+                        "You can mark it as 'Inactive' instead by editing the container.",
                         "Container In Use");
                     return;
                 }
 
-                // Confirm deletion
-                var confirmed = await _dialogService.ShowConfirmationDialogAsync(
-                    $"Are you sure you want to delete container type:\n\n" +
-                    $"[{SelectedContainer.ContainerId}] {SelectedContainer.ShortCode} - {SelectedContainer.Description}?\n\n" +
-                    "This action cannot be undone.",
+                var confirm = await _dialogService.ShowConfirmationDialogAsync(
+                    $"Are you sure you want to delete container '{container.ContainerName}' ({container.ContainerCode})?", 
                     "Confirm Delete");
+                
+                if (confirm != true) return;
 
-                if (!confirmed) return;
-
-                // Delete the container
-                var success = await _containerService.DeleteAsync(SelectedContainer.ContainerId, CurrentUser);
-
-                if (success)
+                IsLoading = true;
+                StatusMessage = "Deleting container...";
+                
+                try
                 {
-                    await _dialogService.ShowMessageBoxAsync(
-                        "Container type deleted successfully!",
-                        "Success");
+                    bool success = await _containerService.DeleteAsync(container.ContainerId, App.CurrentUser?.Username ?? "SYSTEM");
 
-                    await LoadContainersAsync();
+                    if (success)
+                    {
+                        await _dialogService.ShowMessageBoxAsync("Container deleted successfully.", "Success");
+                        await LoadContainersAsync();
+                    }
+                    else
+                    {
+                        await _dialogService.ShowMessageBoxAsync("Failed to delete the container.", "Error");
+                        StatusMessage = "Failed to delete container";
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    await _dialogService.ShowMessageBoxAsync(
-                        "Failed to delete container type. Please try again.",
-                        "Error");
+                    System.Diagnostics.Debug.WriteLine($"Error deleting container: {ex.Message}");
+                    await _dialogService.ShowMessageBoxAsync($"Error deleting container: {ex.Message}", "Error");
+                    StatusMessage = "Error deleting container";
+                }
+                finally
+                {
+                    IsLoading = false;
                 }
             }
             catch (Exception ex)
             {
-                await _dialogService.ShowMessageBoxAsync(
-                    $"Error deleting container type:\n{ex.Message}",
-                    "Error");
+                System.Diagnostics.Debug.WriteLine($"Error deleting container: {ex.Message}");
+                await _dialogService.ShowMessageBoxAsync($"Error deleting container: {ex.Message}", "Error");
+                StatusMessage = "Error deleting container";
             }
         }
 
-        private bool CanDeleteContainer() => SelectedContainer != null;
-
-        /// <summary>
-        /// Toggles the Active/Inactive status of the selected container.
-        /// </summary>
-        [RelayCommand(CanExecute = nameof(CanToggleActive))]
-        private async Task ToggleActive()
+        private void NavigateToDashboard()
         {
-            if (SelectedContainer == null) return;
-
             try
             {
-                var newStatus = !SelectedContainer.InUse;
-                var statusText = newStatus ? "Active" : "Inactive";
-
-                var confirmed = await _dialogService.ShowConfirmationDialogAsync(
-                    $"Mark container type '{SelectedContainer.Description}' as {statusText}?",
-                    "Confirm Status Change");
-
-                if (!confirmed) return;
-
-                SelectedContainer.InUse = newStatus;
-                var success = await _containerService.UpdateAsync(SelectedContainer, CurrentUser);
-
-                if (success)
+                var mainWindow = Application.Current.MainWindow as MainWindow;
+                if (mainWindow != null)
                 {
-                    await _dialogService.ShowMessageBoxAsync(
-                        $"Container type marked as {statusText}.",
-                        "Success");
-
-                    await LoadContainersAsync();
-                }
-                else
-                {
-                    await _dialogService.ShowMessageBoxAsync(
-                        "Failed to update container status.",
-                        "Error");
+                    // Navigate to dashboard - implementation depends on MainWindow structure
+                    System.Diagnostics.Debug.WriteLine("Navigate to Dashboard requested");
                 }
             }
             catch (Exception ex)
             {
-                await _dialogService.ShowMessageBoxAsync(
-                    $"Error updating container status:\n{ex.Message}",
-                    "Error");
+                System.Diagnostics.Debug.WriteLine($"Error navigating to dashboard: {ex.Message}");
+                StatusMessage = "Error navigating to dashboard";
             }
         }
 
-        private bool CanToggleActive() => SelectedContainer != null;
-
-        /// <summary>
-        /// Refreshes the container list.
-        /// </summary>
-        [RelayCommand]
-        private async Task Refresh()
+        private void NavigateToSettings()
         {
-            await LoadContainersAsync();
+            try
+            {
+                var mainWindow = Application.Current.MainWindow as MainWindow;
+                if (mainWindow != null)
+                {
+                    // Navigate to settings - implementation depends on MainWindow structure
+                    System.Diagnostics.Debug.WriteLine("Navigate to Settings requested");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error navigating to settings: {ex.Message}");
+                StatusMessage = "Error navigating to settings";
+            }
         }
 
-        /// <summary>
-        /// Gets the count of active containers.
-        /// </summary>
-        public int ActiveContainerCount => Containers?.Count(c => c.InUse) ?? 0;
-
-        /// <summary>
-        /// Gets the count of inactive containers.
-        /// </summary>
-        public int InactiveContainerCount => Containers?.Count(c => !c.InUse) ?? 0;
-
-        /// <summary>
-        /// Gets the total container count.
-        /// </summary>
-        public int TotalContainerCount => Containers?.Count ?? 0;
+        private async void ShowHelp()
+        {
+            try
+            {
+                await _dialogService.ShowMessageBoxAsync(
+                    "Container Types Help\n\n" +
+                    "• Use the search box to find containers by name, code, ID, value, or tare weight\n" +
+                    "• Use the status filter to show All, Active, or Inactive containers\n" +
+                    "• Click 'Add New' to create a new container type\n" +
+                    "• Double-click a row to edit the container\n" +
+                    "• Right-click for additional options like delete\n" +
+                    "• Use F5 to refresh the data\n" +
+                    "• Use F1 to show this help\n\n" +
+                    "Container Types are used to track physical containers (flats, lugs, pallets) that growers use to ship berries.", 
+                    "Container Types Help");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error showing help: {ex.Message}");
+                StatusMessage = "Error showing help";
+            }
+        }
     }
 }

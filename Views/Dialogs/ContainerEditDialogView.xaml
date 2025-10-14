@@ -1,14 +1,14 @@
-<UserControl x:Class="WPFGrowerApp.Views.DepotEditDialogView"
+<UserControl x:Class="WPFGrowerApp.Views.Dialogs.ContainerEditDialogView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:local="clr-namespace:WPFGrowerApp.Views"
-             xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels.Dialogs"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels.Dialogs"
              xmlns:converters="clr-namespace:WPFGrowerApp.Converters"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
              mc:Ignorable="d"
-             d:DataContext="{d:DesignInstance Type=vm:DepotEditDialogViewModel, IsDesignTimeCreatable=False}"
+             d:DataContext="{d:DesignInstance Type=vm:ContainerEditDialogViewModel, IsDesignTimeCreatable=False}"
              d:DesignHeight="500" d:DesignWidth="600">
     
     <UserControl.Resources>
@@ -22,25 +22,24 @@
         <Grid Margin="20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Title -->
-                <RowDefinition Height="Auto"/> <!-- Depot Info Section -->
-                <RowDefinition Height="Auto"/> <!-- Address Section -->
-                <RowDefinition Height="Auto"/> <!-- Contact Section -->
+                <RowDefinition Height="Auto"/> <!-- Container Info Section -->
+                <RowDefinition Height="Auto"/> <!-- Weight and Value Section -->
                 <RowDefinition Height="Auto"/> <!-- Additional Info Section -->
                 <RowDefinition Height="Auto"/> <!-- Action Buttons -->
             </Grid.RowDefinitions>
 
             <!-- Dialog Title -->
             <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
-                <materialDesign:PackIcon Kind="Warehouse" 
+                <materialDesign:PackIcon Kind="Package" 
                                        Width="32" Height="32" 
                                        VerticalAlignment="Center" 
                                        Margin="0,0,10,0"/>
-                <TextBlock Text="{Binding Title}" 
+                <TextBlock Text="{Binding WindowTitle}" 
                            Style="{StaticResource MaterialDesignHeadline5TextBlock}"
                            VerticalAlignment="Center"/>
             </StackPanel>
 
-            <!-- Depot Info Section -->
+            <!-- Container Info Section -->
             <Border Grid.Row="1" 
                     Margin="0,0,0,15" 
                     Padding="15"
@@ -54,29 +53,30 @@
                         <ColumnDefinition Width="2*"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Depot Code -->
+                    <!-- Container Code -->
                     <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                        <TextBlock Text="Depot Code" FontWeight="Bold" Margin="0,0,0,5"/>
-                        <TextBox Text="{Binding DepotCode, UpdateSourceTrigger=PropertyChanged}"
+                        <TextBlock Text="Container Code" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding ContainerData.ContainerCode, UpdateSourceTrigger=PropertyChanged}"
                                  IsReadOnly="{Binding IsReadOnly}"
                                  MaxLength="10"
+                                 CharacterCasing="Upper"
                                  materialDesign:HintAssist.Hint="10 chars max"
                                  Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
                     </StackPanel>
 
-                    <!-- Depot Name -->
+                    <!-- Container Name -->
                     <StackPanel Grid.Column="1">
-                        <TextBlock Text="Depot Name" FontWeight="Bold" Margin="0,0,0,5"/>
-                        <TextBox Text="{Binding DepotName, UpdateSourceTrigger=PropertyChanged}"
+                        <TextBlock Text="Container Name" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding ContainerData.ContainerName, UpdateSourceTrigger=PropertyChanged}"
                                  IsReadOnly="{Binding IsReadOnly}"
                                  MaxLength="100"
-                                 materialDesign:HintAssist.Hint="Depot description"
+                                 materialDesign:HintAssist.Hint="Container description"
                                  Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
                     </StackPanel>
                 </Grid>
             </Border>
 
-            <!-- Address Section -->
+            <!-- Weight and Value Section -->
             <Border Grid.Row="2" 
                     Margin="0,0,0,15" 
                     Padding="15"
@@ -85,82 +85,33 @@
                     BorderThickness="1"
                     CornerRadius="4">
                 <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
 
-                    <!-- Address -->
-                    <StackPanel Grid.Row="0" Margin="0,0,0,10">
-                        <TextBlock Text="Address" FontWeight="Bold" Margin="0,0,0,5"/>
-                        <TextBox Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}"
+                    <!-- Tare Weight -->
+                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                        <TextBlock Text="Tare Weight (lbs)" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding ContainerData.TareWeight, UpdateSourceTrigger=PropertyChanged}"
                                  IsReadOnly="{Binding IsReadOnly}"
-                                 MaxLength="200"
-                                 materialDesign:HintAssist.Hint="Street address"
+                                 materialDesign:HintAssist.Hint="Weight in pounds"
                                  Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
                     </StackPanel>
 
-                    <!-- City -->
-                    <StackPanel Grid.Row="1" Margin="0,0,0,10">
-                        <TextBlock Text="City" FontWeight="Bold" Margin="0,0,0,5"/>
-                        <TextBox Text="{Binding City, UpdateSourceTrigger=PropertyChanged}"
+                    <!-- Container Value -->
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="Container Value ($)" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding ContainerData.Value, UpdateSourceTrigger=PropertyChanged, StringFormat=F2}"
                                  IsReadOnly="{Binding IsReadOnly}"
-                                 MaxLength="50"
-                                 materialDesign:HintAssist.Hint="City name"
+                                 materialDesign:HintAssist.Hint="Value in dollars"
                                  Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
                     </StackPanel>
-
-                    <!-- Province and Postal Code -->
-                    <Grid Grid.Row="2">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <!-- Province -->
-                        <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                            <TextBlock Text="Province" FontWeight="Bold" Margin="0,0,0,5"/>
-                            <TextBox Text="{Binding Province, UpdateSourceTrigger=PropertyChanged}"
-                                     IsReadOnly="{Binding IsReadOnly}"
-                                     MaxLength="2"
-                                     materialDesign:HintAssist.Hint="2 chars max"
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
-                        </StackPanel>
-
-                        <!-- Postal Code -->
-                        <StackPanel Grid.Column="1">
-                            <TextBlock Text="Postal Code" FontWeight="Bold" Margin="0,0,0,5"/>
-                            <TextBox Text="{Binding PostalCode, UpdateSourceTrigger=PropertyChanged}"
-                                     IsReadOnly="{Binding IsReadOnly}"
-                                     MaxLength="10"
-                                     materialDesign:HintAssist.Hint="Postal code"
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
-                        </StackPanel>
-                    </Grid>
                 </Grid>
             </Border>
 
-            <!-- Contact Section -->
-            <Border Grid.Row="3" 
-                    Margin="0,0,0,15" 
-                    Padding="15"
-                    Background="#F5F5F5"
-                    BorderBrush="#E0E0E0"
-                    BorderThickness="1"
-                    CornerRadius="4">
-                <StackPanel>
-                    <TextBlock Text="Phone Number" FontWeight="Bold" Margin="0,0,0,5"/>
-                    <TextBox Text="{Binding PhoneNumber, UpdateSourceTrigger=PropertyChanged}"
-                             IsReadOnly="{Binding IsReadOnly}"
-                             MaxLength="20"
-                             materialDesign:HintAssist.Hint="Contact phone number"
-                             Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
-                </StackPanel>
-            </Border>
-
             <!-- Additional Info Section -->
-            <Border Grid.Row="4" 
+            <Border Grid.Row="3" 
                     Margin="0,0,0,15" 
                     Padding="15"
                     Background="#F5F5F5"
@@ -176,7 +127,7 @@
                     <!-- Display Order -->
                     <StackPanel Grid.Column="0" Margin="0,0,10,0">
                         <TextBlock Text="Display Order" FontWeight="Bold" Margin="0,0,0,5"/>
-                        <TextBox Text="{Binding DisplayOrder, UpdateSourceTrigger=PropertyChanged}"
+                        <TextBox Text="{Binding ContainerData.DisplayOrder, UpdateSourceTrigger=PropertyChanged}"
                                  IsReadOnly="{Binding IsReadOnly}"
                                  materialDesign:HintAssist.Hint="Sort order"
                                  Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
@@ -185,8 +136,8 @@
                     <!-- Active Status -->
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <CheckBox Content="Active" 
-                                  IsChecked="{Binding IsActive}"
-                                  IsEnabled="{Binding IsEditMode}"
+                                  IsChecked="{Binding ContainerData.IsActive}"
+                                  IsEnabled="{Binding IsReadOnly, Converter={StaticResource InverseBooleanConverter}}"
                                   FontWeight="SemiBold"
                                   Margin="0"/>
                     </StackPanel>
@@ -194,7 +145,7 @@
             </Border>
 
             <!-- Action Buttons -->
-            <StackPanel Grid.Row="5" 
+            <StackPanel Grid.Row="4" 
                        Orientation="Horizontal" 
                        HorizontalAlignment="Right" 
                        Margin="0,15,0,0">

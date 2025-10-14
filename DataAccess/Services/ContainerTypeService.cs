@@ -5,14 +5,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using WPFGrowerApp.DataAccess.Models;
+using WPFGrowerApp.DataAccess.Interfaces;
 
 namespace WPFGrowerApp.DataAccess.Services
 {
     /// <summary>
-    /// Service for managing container type data (Contain table).
+    /// Service for managing container type data (Containers table).
     /// Handles CRUD operations for container definitions.
     /// </summary>
-    public class ContainerTypeService : BaseDatabaseService
+    public class ContainerTypeService : BaseDatabaseService, IContainerTypeService
     {
 
         /// <summary>

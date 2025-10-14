@@ -74,11 +74,11 @@ namespace WPFGrowerApp.ViewModels
             if (containerToEdit != null)
             {
                 ContainerId = containerToEdit.ContainerId;
-                Description = containerToEdit.Description;
-                ShortCode = containerToEdit.ShortCode;
+                Description = containerToEdit.ContainerName;
+                ShortCode = containerToEdit.ContainerCode;
                 TareWeight = containerToEdit.TareWeight;
                 Value = containerToEdit.Value;
-                InUse = containerToEdit.InUse;
+                InUse = containerToEdit.IsActive;
                 _originalContainerId = containerToEdit.ContainerId;
             }
             else
@@ -117,11 +117,11 @@ namespace WPFGrowerApp.ViewModels
                 var containerType = new ContainerType
                 {
                     ContainerId = ContainerId,
-                    Description = Description.Trim(),
-                    ShortCode = ShortCode.Trim().ToUpper(),
+                    ContainerName = Description.Trim(),
+                    ContainerCode = ShortCode.Trim().ToUpper(),
                     TareWeight = TareWeight,
                     Value = Value,
-                    InUse = InUse
+                    IsActive = InUse
                 };
 
                 bool success;

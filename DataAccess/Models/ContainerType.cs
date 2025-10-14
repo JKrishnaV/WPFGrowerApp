@@ -89,41 +89,25 @@ namespace WPFGrowerApp.DataAccess.Models
         [MaxLength(50)]
         public string? DeletedBy { get; set; }
 
-        // Legacy properties for backward compatibility with old code
-        [NotMapped]
-        public string Description
-        {
-            get => ContainerName;
-            set => ContainerName = value;
-        }
-
-        [NotMapped]
-        public string ShortCode
-        {
-            get => ContainerCode;
-            set => ContainerCode = value;
-        }
-
-        [NotMapped]
-        public bool InUse
-        {
-            get => IsActive;
-            set => IsActive = value;
-        }
-
         // Navigation properties for calculated values
 
         /// <summary>
         /// Returns true if this container type is actively being used.
         /// </summary>
         [NotMapped]
-        public string InUseStatus => IsActive ? "Active" : "Inactive";
+        public string StatusText => IsActive ? "Active" : "Inactive";
 
         /// <summary>
         /// Formatted value with currency symbol.
         /// </summary>
         [NotMapped]
         public string FormattedValue => Value?.ToString("C2") ?? "$0.00";
+
+        /// <summary>
+        /// Formatted tare weight with units.
+        /// </summary>
+        [NotMapped]
+        public string FormattedTareWeight => TareWeight?.ToString("F2") + " lbs" ?? "N/A";
 
         /// <summary>
         /// Returns a display string for this container type.
