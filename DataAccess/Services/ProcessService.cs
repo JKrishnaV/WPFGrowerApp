@@ -210,7 +210,7 @@ namespace WPFGrowerApp.DataAccess.Services
                             GradeName3 = @GradeName3,
                             ModifiedAt = @ModifiedAt,
                             ModifiedBy = @ModifiedBy
-                        WHERE ProcessId = @ProcessId AND IsActive = 1";
+                        WHERE ProcessId = @ProcessId";
 
                     var parameters = new
                     {
@@ -230,6 +230,16 @@ namespace WPFGrowerApp.DataAccess.Services
                     };
 
                     int affectedRows = await connection.ExecuteAsync(sql, parameters);
+                    
+                    if (affectedRows == 0)
+                    {
+                        Logger.Warn($"UpdateProcessAsync: No rows were affected when updating ProcessId {process.ProcessId}. Process may not exist or may have been deleted.");
+                    }
+                    else
+                    {
+                        Logger.Info($"UpdateProcessAsync: Successfully updated ProcessId {process.ProcessId}. Rows affected: {affectedRows}");
+                    }
+                    
                     return affectedRows > 0;
                 }
             }

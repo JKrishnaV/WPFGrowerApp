@@ -341,11 +341,13 @@ namespace WPFGrowerApp.ViewModels
                         
                         if (success)
                         {
+                            Logger.Info($"EditProcessAsync: Successfully updated process type {dialogViewModel.ProcessData.ProcessId}");
                             await _dialogService.ShowMessageBoxAsync("Process type updated successfully.", "Success");
                             await LoadProcessesAsync();
                         }
                         else
                         {
+                            Logger.Error($"EditProcessAsync: Failed to update process type {dialogViewModel.ProcessData.ProcessId}. UpdateProcessAsync returned false - no rows were affected by the update operation.");
                             await _dialogService.ShowMessageBoxAsync("Failed to update the process type.", "Error");
                             StatusMessage = "Failed to update process type";
                         }
