@@ -100,7 +100,7 @@ namespace WPFGrowerApp.ViewModels
 
         // --- Navigation Helper ---
         // Changed to async Task
-        private async Task NavigateToAsync<TViewModel>(string viewName, object? parameter = null) where TViewModel : ViewModelBase 
+        public async Task NavigateToAsync<TViewModel>(string viewName, object? parameter = null) where TViewModel : ViewModelBase 
         {
             if (!CanNavigate(parameter)) return;
 

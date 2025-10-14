@@ -28,11 +28,11 @@ namespace WPFGrowerApp.DataAccess.Services
                             ProductId,
                             ProductCode,
                             ProductName as Description,
-                            '' as ShortDescription,
-                            0 as Deduct,
-                            NULL as Category,
+                            ISNULL(ShortDescription, '') as ShortDescription,
+                            ISNULL(MarketingDeduction, 0) as Deduct,
+                            ReportCategory as Category,
                             ChargeGST as ChargeGst,
-                            '' as Variety
+                            ISNULL(VarietyCode, '') as Variety
                         FROM Products
                         WHERE IsActive = 1
                         ORDER BY ProductName"; 
@@ -58,11 +58,11 @@ namespace WPFGrowerApp.DataAccess.Services
                             ProductId,
                             ProductCode,
                             ProductName as Description,
-                            '' as ShortDescription,
-                            0 as Deduct,
-                            NULL as Category,
+                            ISNULL(ShortDescription, '') as ShortDescription,
+                            ISNULL(MarketingDeduction, 0) as Deduct,
+                            ReportCategory as Category,
                             ChargeGST as ChargeGst,
-                            '' as Variety
+                            ISNULL(VarietyCode, '') as Variety
                         FROM Products
                         WHERE ProductId = @ProductId AND IsActive = 1";
                     return await connection.QueryFirstOrDefaultAsync<Product>(sql, new { ProductId = productId });
@@ -87,11 +87,11 @@ namespace WPFGrowerApp.DataAccess.Services
                             ProductId,
                             ProductCode,
                             ProductName as Description,
-                            '' as ShortDescription,
-                            0 as Deduct,
-                            NULL as Category,
+                            ISNULL(ShortDescription, '') as ShortDescription,
+                            ISNULL(MarketingDeduction, 0) as Deduct,
+                            ReportCategory as Category,
                             ChargeGST as ChargeGst,
-                            '' as Variety
+                            ISNULL(VarietyCode, '') as Variety
                         FROM Products
                         WHERE ProductCode = @ProductCode AND IsActive = 1";
                     return await connection.QueryFirstOrDefaultAsync<Product>(sql, new { ProductCode = productCode });

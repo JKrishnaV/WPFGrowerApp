@@ -60,6 +60,7 @@ namespace WPFGrowerApp.ViewModels
             RefreshCommand = new RelayCommand(RefreshExecute);
             ClearSearchCommand = new RelayCommand(ClearSearchExecute);
             NavigateToDashboardCommand = new RelayCommand(NavigateToDashboardExecute);
+            NavigateToSettingsCommand = new RelayCommand(NavigateToSettingsExecute);
             ShowHelpCommand = new RelayCommand(ShowHelpExecute);
 
             // Initialize collections
@@ -247,6 +248,7 @@ namespace WPFGrowerApp.ViewModels
     public ICommand RefreshCommand { get; }
     public ICommand ClearSearchCommand { get; }
     public ICommand NavigateToDashboardCommand { get; }
+    public ICommand NavigateToSettingsCommand { get; }
     public ICommand ShowHelpCommand { get; }
 
         private async Task LoadUsersAsync()
@@ -597,6 +599,38 @@ namespace WPFGrowerApp.ViewModels
             catch (Exception ex)
             {
                 Logger.Error("Error navigating to dashboard", ex);
+                StatusMessage = "Navigation failed";
+            }
+        }
+
+        private async void NavigateToSettingsExecute(object parameter)
+        {
+            try
+            {
+                StatusMessage = "Navigation to settings...";
+                
+                // Get the MainViewModel from the MainWindow
+                if (Application.Current?.MainWindow?.DataContext is MainViewModel mainViewModel)
+                {
+                    // Execute the settings navigation command
+                    if (mainViewModel.NavigateToSettingsCommand?.CanExecute(null) == true)
+                    {
+                        mainViewModel.NavigateToSettingsCommand.Execute(null);
+                        StatusMessage = "Navigated to Settings";
+                    }
+                    else
+                    {
+                        StatusMessage = "Unable to navigate to Settings";
+                    }
+                }
+                else
+                {
+                    StatusMessage = "Navigation service not available";
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error navigating to settings", ex);
                 StatusMessage = "Navigation failed";
             }
         }

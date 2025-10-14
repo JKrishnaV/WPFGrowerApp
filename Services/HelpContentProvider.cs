@@ -160,6 +160,88 @@ Esc - Close dialogs and popups"
                 quickTips: "• Use the navigation menu to access different modules\n• The dashboard updates automatically with real-time data",
                 keyboardShortcuts: "F1 - Show Help"
             );
+
+            // Price Management Help
+            _helpContents["PriceManagement"] = new HelpContent(
+                title: "Price Management Help",
+                content: @"The Price Management screen allows you to create, view, edit, and manage pricing structures for products and processes.
+
+**Key Features:**
+
+• **View All Prices**: See a complete list of all price records with product, process, effective dates, and Level 1 Grade 1 prices displayed.
+
+• **Search & Filter**: 
+  - Search by product or process name
+  - Filter by specific product
+  - Filter by specific process
+  - Filter by lock status (All/Unlocked Only/Any Locked)
+
+• **Add New Prices**: Create new price records with all 36 price points across 3 levels, 3 grades, and 4 payment types (Advance 1, 2, 3, and Final).
+
+• **Edit Prices**: Modify existing unlocked price records. Locked prices cannot be edited as they have been used in payments.
+
+• **View Prices**: View price details in read-only mode without making changes.
+
+• **Delete Prices**: Remove unlocked price records from the system.
+
+**Pricing Structure:**
+
+The system uses a comprehensive pricing matrix:
+
+• **3 Price Levels**: Level 1 (standard), Level 2, Level 3
+• **3 Grades**: Grade 1 (premium), Grade 2 (standard), Grade 3 (lower quality)
+• **4 Payment Types**: 
+  - Advance 1: First advance payment
+  - Advance 2: Second advance payment
+  - Advance 3: Third advance payment
+  - Final: Final payment
+
+**Price Validation Rules:**
+
+• **Non-Negative**: All prices must be zero or positive
+• **Progressive Advances**: 
+  - Advance 2 must be ≥ Advance 1
+  - Advance 3 must be ≥ Advance 2
+• **Final Price Rule**: Final payment must be ≥ highest advance (max of A1, A2, A3)
+
+**Lock Status:**
+
+Price records are locked when they have been used in payments:
+• 🔒 Red Lock: Advance 1 used
+• 🔒 Orange Lock: Advance 2 used
+• 🔒 Yellow Lock: Advance 3 used
+• 🔓 Green Lock Check: Final payment used
+
+Locked prices appear with a light orange background and cannot be edited or deleted.
+
+**Time Premium:**
+
+Optional time-based premium for early deliveries:
+• Enable/disable time premium checkbox
+• Set cutoff time (e.g., 10:10 AM)
+• Specify Canadian premium amount
+• Growers delivering before the cutoff receive the premium",
+
+                quickTips: @"• Double-click any price row to view price details
+• Use product and process filters to narrow down the list quickly
+• Lock status filter helps find editable vs. locked prices
+• Red borders on price fields indicate validation errors
+• All prices are in Canadian dollars
+• Most growers use Price Level 1
+• Set prices to 0 for payment types not used
+• Time premium is optional and applies to early morning deliveries
+• Price validation happens in real-time as you type
+• The warning banner appears if you try to cancel with unsaved changes
+• Statistics show total and locked price counts
+• Clear Filters button resets all filters at once",
+
+                keyboardShortcuts: @"F1 - Show this help
+F5 - Refresh price list
+Enter - Execute search (when in search box)
+Tab - Navigate between price entry fields
+Esc - Close dialogs
+Ctrl+Tab - Switch between price level tabs (Level 1/2/3)"
+            );
         }
 
         /// <summary>

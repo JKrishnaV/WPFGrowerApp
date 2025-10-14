@@ -1,0 +1,173 @@
+<UserControl x:Class="WPFGrowerApp.Views.ProductEditDialogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:converters="clr-namespace:WPFGrowerApp.Converters"
+             xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels.Dialogs"
+             mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance Type=vm:ProductEditDialogViewModel, IsDesignTimeCreatable=False}"
+             d:DesignHeight="500" d:DesignWidth="600">
+    
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+    </UserControl.Resources>
+
+    <materialDesign:Card materialDesign:ElevationAssist.Elevation="Dp8"
+                         UniformCornerRadius="8"
+                         Margin="20">
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Title -->
+                <RowDefinition Height="Auto"/> <!-- Product Info Section -->
+                <RowDefinition Height="Auto"/> <!-- Categories Section -->
+                <RowDefinition Height="Auto"/> <!-- Additional Info Section -->
+                <RowDefinition Height="Auto"/> <!-- Action Buttons -->
+            </Grid.RowDefinitions>
+
+            <!-- Dialog Title -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
+                <materialDesign:PackIcon Kind="Package" 
+                                       Width="32" Height="32" 
+                                       VerticalAlignment="Center" 
+                                       Margin="0,0,10,0"/>
+                <TextBlock Text="{Binding Title}" 
+                           Style="{StaticResource MaterialDesignHeadline5TextBlock}"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Product Info Section -->
+            <Border Grid.Row="1" 
+                    Margin="0,0,0,15" 
+                    Padding="15"
+                    Background="#F5F5F5"
+                    BorderBrush="#E0E0E0"
+                    BorderThickness="1"
+                    CornerRadius="4">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="2*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Product Code -->
+                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,0">
+                        <TextBlock Text="Product Code" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding ProductCode, UpdateSourceTrigger=PropertyChanged}"
+                                 IsEnabled="{Binding IsReadOnly, Converter={StaticResource InverseBooleanConverter}}"
+                                 MaxLength="2"
+                                 materialDesign:HintAssist.Hint="2 chars max"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                    </StackPanel>
+
+                    <!-- Description -->
+                    <StackPanel Grid.Row="0" Grid.Column="1">
+                        <TextBlock Text="Description" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"
+                                 IsReadOnly="{Binding IsReadOnly}"
+                                 materialDesign:HintAssist.Hint="Product description"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                    </StackPanel>
+
+                    <!-- Short Description -->
+                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,10,10,0">
+                        <TextBlock Text="Short Description" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding ShortDescription, UpdateSourceTrigger=PropertyChanged}"
+                                 IsReadOnly="{Binding IsReadOnly}"
+                                 MaxLength="4"
+                                 materialDesign:HintAssist.Hint="4 chars max"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                    </StackPanel>
+
+                    <!-- Variety -->
+                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,10,0,0">
+                        <TextBlock Text="Variety" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding Variety, UpdateSourceTrigger=PropertyChanged}"
+                                 IsReadOnly="{Binding IsReadOnly}"
+                                 MaxLength="8"
+                                 materialDesign:HintAssist.Hint="8 chars max"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Categories and Deduct Section -->
+            <Border Grid.Row="2" 
+                    Margin="0,0,0,15" 
+                    Padding="15"
+                    Background="#F5F5F5"
+                    BorderBrush="#E0E0E0"
+                    BorderThickness="1"
+                    CornerRadius="4">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Category -->
+                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                        <TextBlock Text="Category" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding Category, UpdateSourceTrigger=PropertyChanged}"
+                                 IsReadOnly="{Binding IsReadOnly}"
+                                 materialDesign:HintAssist.Hint="Category number"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                    </StackPanel>
+
+                    <!-- Deduct -->
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="Deduct Amount" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding Deduct, StringFormat=F6, UpdateSourceTrigger=PropertyChanged}"
+                                 IsReadOnly="{Binding IsReadOnly}"
+                                 materialDesign:HintAssist.Hint="Deduct (e.g., 0.050000)"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Additional Info Section -->
+            <Border Grid.Row="3" 
+                    Margin="0,0,0,15" 
+                    Padding="15"
+                    Background="#F5F5F5"
+                    BorderBrush="#E0E0E0"
+                    BorderThickness="1"
+                    CornerRadius="4">
+                <CheckBox Content="Charge GST" 
+                          IsChecked="{Binding ChargeGst}"
+                          IsEnabled="{Binding IsReadOnly, Converter={StaticResource InverseBooleanConverter}}"
+                          FontWeight="SemiBold"
+                          Margin="0"/>
+            </Border>
+
+            <!-- Action Buttons -->
+            <StackPanel Grid.Row="4" 
+                       Orientation="Horizontal" 
+                       HorizontalAlignment="Right" 
+                       Margin="0,15,0,0">
+                <Button Content="Save" 
+                        Command="{Binding SaveCommand}"
+                        Visibility="{Binding IsReadOnly, Converter={StaticResource InverseBooleanConverter}}"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Background="#3F51B5"
+                        BorderBrush="#3F51B5"
+                        Foreground="White"
+                        Width="100"
+                        Margin="0,0,10,0"/>
+                <Button Content="Cancel" 
+                        Command="{Binding CancelCommand}"
+                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        BorderBrush="#757575"
+                        Foreground="#757575"
+                        Width="100"/>
+            </StackPanel>
+        </Grid>
+    </materialDesign:Card>
+</UserControl>
+

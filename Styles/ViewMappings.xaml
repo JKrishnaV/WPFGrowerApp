@@ -47,7 +47,7 @@
     </DataTemplate>
 
     <!-- Product Management Mapping -->
-    <DataTemplate DataType="{x:Type vm:ProductViewModel}">
+    <DataTemplate DataType="{x:Type viewmodels:ProductViewModel}">
         <views:ProductView />
     </DataTemplate>
 

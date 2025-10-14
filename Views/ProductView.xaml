@@ -5,139 +5,326 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:WPFGrowerApp.Views"
              xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels"
-             xmlns:models="clr-namespace:WPFGrowerApp.DataAccess.Models"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:converters="clr-namespace:WPFGrowerApp.Converters"
              mc:Ignorable="d" 
              d:DataContext="{d:DesignInstance Type=vm:ProductViewModel, IsDesignTimeCreatable=False}"
-             d:DesignHeight="600" d:DesignWidth="700"
-             Background="{DynamicResource MaterialDesignPaper}">
+             d:DesignHeight="600" d:DesignWidth="1000"
+             Background="{DynamicResource MaterialDesignPaper}"
+             Focusable="True"
+             x:Name="productView">
+    
+    <UserControl.InputBindings>
+        <KeyBinding Key="F1" Command="{Binding ShowHelpCommand}"/>
+        <KeyBinding Key="F5" Command="{Binding RefreshCommand}"/>
+    </UserControl.InputBindings>
 
     <UserControl.Resources>
         <ResourceDictionary>
-            <Style x:Key="ScaledMaterialDesignFloatingHintTextBox" TargetType="TextBox" BasedOn="{StaticResource MaterialDesignFloatingHintTextBox}">
-                <Setter Property="FontSize" Value="{DynamicResource ScaledFontSizeNormal}"/>
-            </Style>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Styles/StandardizedViewTemplate.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            
+            <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+            <converters:BoolToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+            <converters:NotNullConverter x:Key="NotNullConverter"/>
         </ResourceDictionary>
     </UserControl.Resources>
+
     <Grid Margin="10">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/> <!-- Title -->
-            <RowDefinition Height="*"/>    <!-- DataGrid -->
-            <RowDefinition Height="Auto"/> <!-- Edit Form -->
-            <RowDefinition Height="Auto"/> <!-- Buttons -->
+            <RowDefinition Height="Auto"/> <!-- Row 0: Breadcrumb -->
+            <RowDefinition Height="Auto"/> <!-- Row 1: Title -->
+            <RowDefinition Height="Auto"/> <!-- Row 2: Search/Filter Bar -->
+            <RowDefinition Height="Auto"/> <!-- Row 3: Statistics -->
+            <RowDefinition Height="*"/>    <!-- Row 4: Main Content (DataGrid) -->
+            <RowDefinition Height="Auto"/> <!-- Row 5: Status Bar -->
         </Grid.RowDefinitions>
 
-        <!-- Title -->
-        <TextBlock Grid.Row="0" Text="Manage Products" Style="{StaticResource MaterialDesignHeadline5TextBlock}" Margin="0,0,0,15"/>
+        <!-- Breadcrumb Navigation -->
+        <materialDesign:ColorZone Grid.Row="0" Style="{StaticResource BreadcrumbNavigationStyle}">
+            <StackPanel Orientation="Horizontal">
+                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                        Command="{Binding NavigateToDashboardCommand}"
+                        Padding="5,0">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Home" Width="16" Height="16" 
+                                               VerticalAlignment="Center" Margin="0,0,5,0"/>
+                        <TextBlock Text="Dashboard" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+                <materialDesign:PackIcon Kind="ChevronRight" Width="16" Height="16" 
+                                        VerticalAlignment="Center" Margin="5,0"/>
+                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                        Command="{Binding NavigateToSettingsCommand}"
+                        Padding="5,0">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Cog" Width="16" Height="16" 
+                                               VerticalAlignment="Center" Margin="0,0,5,0"/>
+                        <TextBlock Text="Settings" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+                <materialDesign:PackIcon Kind="ChevronRight" Width="16" Height="16" 
+                                        VerticalAlignment="Center" Margin="5,0"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <materialDesign:PackIcon Kind="Package" Width="16" Height="16" 
+                                           VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBlock Text="Product Management" FontSize="12" FontWeight="SemiBold"/>
+                </StackPanel>
+            </StackPanel>
+        </materialDesign:ColorZone>
+
+        <!-- View Title -->
+        <TextBlock Grid.Row="1" 
+                   Text="Product Management" 
+                   Style="{StaticResource StandardizedViewTitleStyle}"/>
+
+        <!-- Search/Filter Bar -->
+        <materialDesign:Card Grid.Row="2" Style="{StaticResource FiltersActionsPanelStyle}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>        <!-- Search -->
+                    <ColumnDefinition Width="Auto"/>     <!-- Search Button -->
+                    <ColumnDefinition Width="Auto"/>     <!-- Clear Button -->
+                    <ColumnDefinition Width="Auto"/>     <!-- Add New -->
+                    <ColumnDefinition Width="Auto"/>     <!-- Refresh -->
+                    <ColumnDefinition Width="Auto"/>     <!-- Help -->
+                </Grid.ColumnDefinitions>
+
+                <!-- Search TextBox -->
+                <TextBox Grid.Column="0"
+                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                         materialDesign:HintAssist.Hint="Search products by description, code, or variety..."
+                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                         VerticalAlignment="Center"
+                         Margin="0,0,10,0">
+                    <TextBox.InputBindings>
+                        <KeyBinding Key="Enter" Command="{Binding SearchCommand}"/>
+                    </TextBox.InputBindings>
+                </TextBox>
+
+                <!-- Search Button -->
+                <Button Grid.Column="1"
+                        Command="{Binding SearchCommand}"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Width="100"
+                        Margin="0,0,10,0">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Magnify" Width="16" Height="16" Margin="0,0,5,0"/>
+                        <TextBlock Text="Search"/>
+                    </StackPanel>
+                </Button>
+
+                <!-- Clear Button -->
+                <Button Grid.Column="2"
+                        Command="{Binding ClearFiltersCommand}"
+                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        Width="90"
+                        Margin="0,0,10,0">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Close" Width="16" Height="16" Margin="0,0,5,0"/>
+                        <TextBlock Text="Clear"/>
+                    </StackPanel>
+                </Button>
+
+                <!-- Add New Button -->
+                <Button Grid.Column="3"
+                        Command="{Binding AddProductCommand}"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Width="120"
+                        Margin="0,0,10,0">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Plus" Width="16" Height="16" Margin="0,0,5,0"/>
+                        <TextBlock Text="Add New"/>
+                    </StackPanel>
+                </Button>
+
+                <!-- Refresh Button -->
+                <Button Grid.Column="4"
+                        Command="{Binding RefreshCommand}"
+                        Style="{StaticResource MaterialDesignIconButton}"
+                        ToolTip="Refresh (F5)"
+                        Width="40"
+                        Margin="0,0,5,0">
+                    <materialDesign:PackIcon Kind="Refresh" Width="20" Height="20"/>
+                </Button>
+
+                <!-- Help Button -->
+                <Button Grid.Column="5"
+                        Command="{Binding ShowHelpCommand}"
+                        Style="{StaticResource MaterialDesignIconButton}"
+                        ToolTip="Show help (F1)"
+                        Width="40">
+                    <materialDesign:PackIcon Kind="HelpCircle" 
+                                           Width="20" Height="20"
+                                           Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                </Button>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Statistics Card -->
+        <materialDesign:Card Grid.Row="3" Margin="0,0,0,10" 
+                             Background="{DynamicResource PrimaryHueLightBrush}">
+            <Grid Margin="15">
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="Package" 
+                                           Width="20" Height="20" 
+                                           VerticalAlignment="Center" 
+                                           Margin="0,0,8,0"
+                                           Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"/>
+                    <TextBlock Text="{Binding FilteredProducts.Count, StringFormat='{}{0} Products'}" 
+                              FontWeight="SemiBold"
+                              VerticalAlignment="Center"
+                              Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"/>
+                </StackPanel>
+            </Grid>
+        </materialDesign:Card>
 
         <!-- Product List -->
-        <DataGrid Grid.Row="1" 
-                  ItemsSource="{Binding Products}" 
-                  SelectedItem="{Binding SelectedProduct, Mode=TwoWay}"
-                  AutoGenerateColumns="False" 
-                  IsReadOnly="True" 
-                  CanUserAddRows="False"
-                  SelectionMode="Single"
-                  materialDesign:DataGridAssist.CellPadding="13 8 8 8"
-                  materialDesign:DataGridAssist.ColumnHeaderPadding="8"
-                  Margin="0,0,0,10"
-                  MaxHeight="350"> <!-- Added MaxHeight -->
+        <materialDesign:Card Grid.Row="4" Style="{StaticResource MainContentAreaStyle}">            
+            <Grid>
+                <!-- Loading Indicator -->
+                <StackPanel HorizontalAlignment="Center" 
+                           VerticalAlignment="Center"
+                           Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <materialDesign:PackIcon Kind="Loading" 
+                                            Width="40" 
+                                            Height="40" 
+                                            Margin="0,0,0,10"
+                                            Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                    <TextBlock Text="Loading products..." 
+                              HorizontalAlignment="Center"
+                              Style="{StaticResource MaterialDesignBody2TextBlock}"/>
+                </StackPanel>
+                
+            <!-- Data Grid -->
+            <DataGrid x:Name="ProductsDataGrid"
+                    ItemsSource="{Binding FilteredProducts}" 
+                      SelectedItem="{Binding SelectedProduct, Mode=TwoWay}"
+                    AutoGenerateColumns="False" 
+                    IsReadOnly="True" 
+                    CanUserAddRows="False"
+                    CanUserSortColumns="True"
+                    SelectionMode="Single"
+                    MinHeight="200"
+                    materialDesign:DataGridAssist.CellPadding="13 8 8 8"
+                    materialDesign:DataGridAssist.ColumnHeaderPadding="13 10 8 10"
+                    MouseDoubleClick="ProductsDataGrid_MouseDoubleClick">
+                
             <DataGrid.Columns>
-                <!-- Moved Description column up -->
-                <DataGridTextColumn Header="ID" Binding="{Binding ProductId}" Width="Auto"/>
-                <DataGridTextColumn Header="Description" Binding="{Binding Description}"/> <!-- Removed Width attribute -->
-                <DataGridTextColumn Header="Short Desc" Binding="{Binding ShortDescription}" Width="Auto"/>
-                <DataGridTextColumn Header="Deduct" Binding="{Binding Deduct, StringFormat=N6}" Width="Auto"/>
-                <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="Auto"/>
-                <DataGridCheckBoxColumn Header="Charge GST" Binding="{Binding ChargeGst}" Width="Auto"/>
-                <DataGridTextColumn Header="Variety" Binding="{Binding Variety}" Width="Auto"/>
+                <!-- Product Code Column -->
+                <DataGridTextColumn Header="Code" 
+                                    Binding="{Binding ProductCode}" 
+                                    Width="80">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter Property="FontSize" Value="14"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <!-- Description Column -->
+                <DataGridTextColumn Header="Description" 
+                                    Binding="{Binding Description}" 
+                                    Width="100"/>
+
+                <!-- Short Description Column -->
+                <DataGridTextColumn Header="Short Desc" 
+                                    Binding="{Binding ShortDescription, TargetNullValue='', FallbackValue=''}" 
+                                    Width="100"/>
+
+                <!-- Category Column -->
+                <DataGridTextColumn Header="Category" 
+                                    Binding="{Binding Category, TargetNullValue='', FallbackValue=''}" 
+                                    Width="90"/>
+
+                <!-- Variety Column -->
+                <DataGridTextColumn Header="Variety" 
+                                    Binding="{Binding Variety, TargetNullValue='', FallbackValue=''}" 
+                                    Width="100"/>
+
+                <!-- Charge GST Column -->
+                <DataGridCheckBoxColumn Header="Charge GST" 
+                                        Binding="{Binding ChargeGst}" 
+                                        Width="100"/>
+
+                <!-- Actions Column -->
+                <DataGridTemplateColumn Header="Actions" Width="120">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Margin="5" HorizontalAlignment="Left">
+                                <Button Style="{StaticResource MaterialDesignIconButton}"
+                                        Width="30" Height="30"
+                                        ToolTip="View Product"
+                                        Click="ViewProduct_Click"
+                                        Tag="{Binding}">
+                                    <materialDesign:PackIcon Kind="Eye" Width="16" Height="16"/>
+                                </Button>
+                                <Button Style="{StaticResource MaterialDesignIconButton}"
+                                        Width="30" Height="30"
+                                        ToolTip="Edit Product"
+                                        Click="EditProduct_Click"
+                                        Tag="{Binding}">
+                                    <materialDesign:PackIcon Kind="Pencil" Width="16" Height="16"/>
+                                </Button>
+                                <Button Style="{StaticResource MaterialDesignIconButton}"
+                                        Width="30" Height="30"
+                                        ToolTip="Delete Product"
+                                        Click="DeleteProduct_Click"
+                                        Tag="{Binding}"
+                                        Foreground="IndianRed">
+                                    <materialDesign:PackIcon Kind="Delete" Width="16" Height="16"/>
+                                </Button>
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
+            </Grid>
+        </materialDesign:Card>
 
-        <!-- Edit/Add Form -->
-        <materialDesign:Card Grid.Row="2" Margin="0,10,0,10" Padding="15"
-                             Visibility="{Binding SelectedProduct, Converter={StaticResource NotNullConverter}}"> 
-             <!-- Removed IsEnabled binding from Grid - fields are editable whenever the card is visible -->
-             <Grid> 
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
+        <!-- Status Bar -->
+        <materialDesign:ColorZone Grid.Row="5" Style="{StaticResource StatusFooterBarStyle}">
+            <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-
-                <TextBox Grid.Row="0" Grid.Column="1" Margin="5"
-                         materialDesign:HintAssist.Hint="Product ID (Max 2 Chars)"
-                         Text="{Binding SelectedProduct.ProductId, UpdateSourceTrigger=PropertyChanged}" 
-                         MaxLength="2"
-                         Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"/>
-
-                <TextBox Grid.Row="0" Grid.Column="3" Margin="5"
-                         materialDesign:HintAssist.Hint="Description"
-                         Text="{Binding SelectedProduct.Description, UpdateSourceTrigger=PropertyChanged}"
-                         Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"/>
                 
-                <TextBox Grid.Row="1" Grid.Column="1" Margin="5"
-                         materialDesign:HintAssist.Hint="Short Description (Max 4 Chars)"
-                         Text="{Binding SelectedProduct.ShortDescription, UpdateSourceTrigger=PropertyChanged}" 
-                         MaxLength="4"
-                         Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"/>
-
-                <TextBox Grid.Row="1" Grid.Column="3" Margin="5"
-                         materialDesign:HintAssist.Hint="Deduct (e.g., 0.000000)"
-                         Text="{Binding SelectedProduct.Deduct, StringFormat=N6, UpdateSourceTrigger=PropertyChanged}"
-                         Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"/>
-                         <!-- Add input validation for decimal if needed -->
-
-                <TextBox Grid.Row="2" Grid.Column="1" Margin="5"
-                         materialDesign:HintAssist.Hint="Category (Number)"
-                         Text="{Binding SelectedProduct.Category, UpdateSourceTrigger=PropertyChanged}"
-                         Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"/>
-                         <!-- Add input validation for integer if needed -->
-
-                <TextBox Grid.Row="2" Grid.Column="3" Margin="5"
-                         materialDesign:HintAssist.Hint="Variety (Max 8 Chars)"
-                         Text="{Binding SelectedProduct.Variety, UpdateSourceTrigger=PropertyChanged}" 
-                         MaxLength="8"
-                         Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"/>
-
-                <CheckBox Grid.Row="3" Grid.Column="1" Margin="5,15,5,5"
-                          Content="Charge GST"
-                          IsChecked="{Binding SelectedProduct.ChargeGst}"/>
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock Text="Status: " FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding StatusMessage}"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <TextBlock Text="Showing: " FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding FilteredProducts.Count}"/>
+                    <TextBlock Text=" / " Margin="5,0"/>
+                    <TextBlock Text="{Binding Products.Count}"/>
+                    <TextBlock Text=" | " Margin="5,0"/>
+                    <TextBlock Text="Last Updated: " FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding LastUpdated}"/>
+                </StackPanel>
             </Grid>
-        </materialDesign:Card>
+        </materialDesign:ColorZone>
 
-        <!-- Action Buttons -->
-        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-             <!-- New button enabled only when NO product is selected (i.e., IsEditing is false) -->
-            <Button Content="New" Command="{Binding NewCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Margin="5"
-                    IsEnabled="{Binding IsEditing, Converter={StaticResource InverseBooleanConverter}}"/> 
-            <!-- Save, Delete, Cancel enabled only when a product IS selected -->
-            <Button Content="Save" Command="{Binding SaveCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Margin="5" 
-                    IsEnabled="{Binding SelectedProduct, Converter={StaticResource NotNullConverter}}" 
-                    Background="{DynamicResource PrimaryHueMidBrush}" Foreground="{DynamicResource PrimaryHueMidForegroundBrush}"/> 
-            <Button Content="Delete" Command="{Binding DeleteCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Background="IndianRed" Foreground="White" Margin="5" 
-                    IsEnabled="{Binding SelectedProduct, Converter={StaticResource NotNullConverter}}"/> 
-            <Button Content="Cancel" Command="{Binding CancelCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Margin="5" 
-                    IsEnabled="{Binding SelectedProduct, Converter={StaticResource NotNullConverter}}"/>
-        </StackPanel>
-        
         <!-- Loading Indicator -->
-        <materialDesign:Card Grid.Row="1" Grid.RowSpan="3" 
-                             VerticalAlignment="Center" HorizontalAlignment="Center" 
-                             Padding="20" Background="{DynamicResource MaterialDesignCardBackground}"
-                             Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+        <materialDesign:Card Grid.Row="0" 
+                            Grid.RowSpan="6"
+                            Style="{StaticResource LoadingIndicatorStyle}"
+                            Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
             <StackPanel Orientation="Horizontal">
-                <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}" Value="0" IsIndeterminate="True" />
-                <TextBlock Text="Loading..." VerticalAlignment="Center" Margin="10,0,0,0"/>
+                <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}"
+                            Value="0"
+                            IsIndeterminate="True"/>
+                <TextBlock Text="Loading products..."
+                          VerticalAlignment="Center"
+                          Margin="10,0,0,0"/>
             </StackPanel>
         </materialDesign:Card>
-
     </Grid>
 </UserControl>

@@ -29,6 +29,7 @@
     <!-- Main Content Area Style -->
     <Style x:Key="MainContentAreaStyle" TargetType="materialDesign:Card">
         <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp2"/>
+        <Setter Property="Padding" Value="0"/>
     </Style>
 
     <!-- Status/Footer Bar Style -->
