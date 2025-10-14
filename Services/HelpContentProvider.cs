@@ -242,6 +242,135 @@ Tab - Navigate between price entry fields
 Esc - Close dialogs
 Ctrl+Tab - Switch between price level tabs (Level 1/2/3)"
             );
+
+            // Process Types Management Help
+            _helpContents["ProcessView"] = new HelpContent(
+                title: "Process Types Management Help",
+                content: @"The Process Types Management screen allows you to create, view, edit, and manage process types used throughout the system.
+
+**Key Features:**
+
+• **View All Process Types**: See a complete list of all process types with their ID, description, code, default grade, and process class.
+
+• **Search & Filter**: 
+  - Search by description, code, ID, or process class
+  - Real-time filtering as you type
+  - Clear filters to reset search
+
+• **Add New Process Types**: Create new process types with unique identifiers and descriptions.
+
+• **Edit Process Types**: Modify existing process type information including description, code, default grade, and process class.
+
+• **View Process Types**: View process type details in read-only mode without making changes.
+
+• **Delete Process Types**: Remove process types from the system (use with caution).
+
+**Process Type Fields:**
+
+• **Process ID**: Unique numeric identifier for the process type
+• **Process Code**: Short code (up to 8 characters) for the process
+• **Description**: Full description of the process type (up to 19 characters)
+• **Default Grade**: Default grade assigned (1-3, where 1 is highest quality)
+• **Process Class**: Classification number (1-4) used for reporting and categorization
+
+**Process Classifications:**
+
+Process classes are used for reporting and categorization:
+• **Class 1**: Primary processing operations
+• **Class 2**: Secondary processing operations  
+• **Class 3**: Quality control processes
+• **Class 4**: Administrative processes
+
+**Grade System:**
+
+The default grade system works as follows:
+• **Grade 1**: Premium quality (highest value)
+• **Grade 2**: Standard quality (normal value)
+• **Grade 3**: Lower quality (reduced value)
+
+**Validation Rules:**
+
+• **Process ID**: Must be a positive integer
+• **Process Code**: Required, maximum 8 characters
+• **Description**: Required, maximum 19 characters
+• **Default Grade**: Must be between 1 and 3
+• **Process Class**: Must be between 1 and 4
+
+**Best Practices:**
+
+• Use descriptive process codes that are easy to remember
+• Keep descriptions concise but clear
+• Assign appropriate default grades based on typical quality
+• Use process classes consistently for reporting purposes
+• Avoid deleting process types that are already in use",
+
+                quickTips: @"• Double-click any process type row to view details
+• Use the search box to quickly find specific process types
+• Process types are used throughout the system for pricing and reporting
+• Be careful when deleting process types as they may be referenced elsewhere
+• The statistics card shows the total number of process types
+• All fields have validation to ensure data integrity
+• Use the refresh button to reload data from the database
+• Process types are sorted alphabetically by description by default",
+
+                keyboardShortcuts: @"F1 - Show this help
+F5 - Refresh process types list
+Enter - Execute search (when in search box)
+Tab - Navigate between fields and controls
+Esc - Close dialogs
+Double-click - View process type details
+Ctrl+N - Add new process type (when not in dialog)"
+            );
+
+            // Depot Management Help
+            _helpContents["DepotView"] = new HelpContent(
+                title: "Depot Management Help",
+                content: @"The Depot Management screen allows you to create, view, edit, and manage depots used throughout the system.
+
+**Key Features:**
+
+• **View All Depots**: See a complete list of all depots with their ID, name, and code.
+
+• **Search & Filter**: 
+  - Search by depot name, code, or ID
+  - Real-time filtering as you type
+  - Clear filters to reset search
+
+• **Add New Depots**: Create new depots with unique identifiers and names.
+
+• **Edit Depots**: Modify existing depot information including name and code.
+
+• **View Depots**: View depot details in read-only mode without making changes.
+
+• **Delete Depots**: Remove depots from the system (use with caution).
+
+**Depot Fields:**
+
+• **Depot ID**: Unique numeric identifier for the depot
+• **Depot Name**: Descriptive name for the depot (max 12 characters)
+• **Depot Code**: Short code for the depot (max 8 characters)
+
+**Validation Rules:**
+
+• **Depot ID**: Must be a positive integer
+• **Depot Name**: Required, maximum 12 characters
+• **Depot Code**: Required, maximum 8 characters
+
+**Best Practices:**
+
+• Use descriptive depot names that clearly identify the location
+• Keep depot codes short and memorable
+• Avoid deleting depots that are already in use
+• Use consistent naming conventions across all depots",
+
+                quickTips: @"• Double-click any depot row to view details
+• Use the search box to quickly find specific depots
+• Depots are used throughout the system for location tracking
+• Keep depot names concise but descriptive
+• Use consistent naming conventions for better organization",
+
+                keyboardShortcuts: "F1 - Show Help\nF5 - Refresh Data\nEsc - Close Dialog"
+            );
         }
 
         /// <summary>

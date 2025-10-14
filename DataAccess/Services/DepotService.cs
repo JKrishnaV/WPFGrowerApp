@@ -27,11 +27,33 @@ namespace WPFGrowerApp.DataAccess.Services
                     var sql = @"
                         SELECT
                             DepotId,
-                            DepotName
+                            DepotCode,
+                            DepotName,
+                            Address,
+                            City,
+                            Province,
+                            PostalCode,
+                            PhoneNumber,
+                            IsActive,
+                            DisplayOrder,
+                            CreatedAt,
+                            CreatedBy,
+                            ModifiedAt,
+                            ModifiedBy,
+                            DeletedAt,
+                            DeletedBy
                         FROM Depots
-                        WHERE IsActive = 1
+                        WHERE DeletedAt IS NULL
                         ORDER BY DepotName";
-                    return await connection.QueryAsync<Depot>(sql); // Return IEnumerable
+                    var depots = await connection.QueryAsync<Depot>(sql);
+                    
+                    Logger.Info($"Found {depots.Count()} depots from Depots table");
+                    foreach (var depot in depots)
+                    {
+                        Logger.Info($"Depot: ID={depot.DepotId}, Name={depot.DepotName}, Code={depot.DepotCode}");
+                    }
+                    
+                    return depots;
                 }
             }
             catch (Exception ex)
@@ -52,9 +74,22 @@ namespace WPFGrowerApp.DataAccess.Services
                         SELECT 
                             DepotId,
                             DepotCode,
-                            DepotName
+                            DepotName,
+                            Address,
+                            City,
+                            Province,
+                            PostalCode,
+                            PhoneNumber,
+                            IsActive,
+                            DisplayOrder,
+                            CreatedAt,
+                            CreatedBy,
+                            ModifiedAt,
+                            ModifiedBy,
+                            DeletedAt,
+                            DeletedBy
                         FROM Depots 
-                        WHERE DepotId = @DepotId AND IsActive = 1";
+                        WHERE DepotId = @DepotId";
                     return await connection.QueryFirstOrDefaultAsync<Depot>(sql, new { DepotId = depotId });
                 }
             }
@@ -76,9 +111,22 @@ namespace WPFGrowerApp.DataAccess.Services
                         SELECT 
                             DepotId,
                             DepotCode,
-                            DepotName
+                            DepotName,
+                            Address,
+                            City,
+                            Province,
+                            PostalCode,
+                            PhoneNumber,
+                            IsActive,
+                            DisplayOrder,
+                            CreatedAt,
+                            CreatedBy,
+                            ModifiedAt,
+                            ModifiedBy,
+                            DeletedAt,
+                            DeletedBy
                         FROM Depots 
-                        WHERE DepotCode = @DepotCode AND IsActive = 1";
+                        WHERE DepotCode = @DepotCode";
                     return await connection.QueryFirstOrDefaultAsync<Depot>(sql, new { DepotCode = depotCode });
                 }
             }
@@ -100,15 +148,30 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = @"
                         INSERT INTO Depots (
-                            DepotCode, DepotName, IsActive, DisplayOrder,
-                            CreatedAt, CreatedBy
+                            DepotCode, DepotName, Address, City, Province, PostalCode, PhoneNumber,
+                            IsActive, DisplayOrder, CreatedAt, CreatedBy
                         ) VALUES (
-                            @DepotCode, @DepotName, 1, 0,
-                            GETDATE(), @OperatorInitials
+                            @DepotCode, @DepotName, @Address, @City, @Province, @PostalCode, @PhoneNumber,
+                            @IsActive, @DisplayOrder, @CreatedAt, @CreatedBy
                         );
                         SELECT CAST(SCOPE_IDENTITY() as int);";
 
-                    var newId = await connection.ExecuteScalarAsync<int>(sql, new { depot.DepotCode, depot.DepotName, OperatorInitials = GetCurrentUserInitials() });
+                    var parameters = new
+                    {
+                        depot.DepotCode,
+                        depot.DepotName,
+                        depot.Address,
+                        depot.City,
+                        depot.Province,
+                        depot.PostalCode,
+                        depot.PhoneNumber,
+                        depot.IsActive,
+                        depot.DisplayOrder,
+                        CreatedAt = DateTime.Now,
+                        CreatedBy = GetCurrentUserInitials()
+                    };
+
+                    var newId = await connection.ExecuteScalarAsync<int>(sql, parameters);
                     depot.DepotId = newId;
                     return newId > 0;
                 }
@@ -131,12 +194,45 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = @"
                         UPDATE Depots SET
+                            DepotCode = @DepotCode,
                             DepotName = @DepotName,
-                            ModifiedAt = GETDATE(),
-                            ModifiedBy = @OperatorInitials
-                        WHERE DepotId = @DepotId AND IsActive = 1"; 
+                            Address = @Address,
+                            City = @City,
+                            Province = @Province,
+                            PostalCode = @PostalCode,
+                            PhoneNumber = @PhoneNumber,
+                            IsActive = @IsActive,
+                            DisplayOrder = @DisplayOrder,
+                            ModifiedAt = @ModifiedAt,
+                            ModifiedBy = @ModifiedBy
+                        WHERE DepotId = @DepotId";
 
-                    int affectedRows = await connection.ExecuteAsync(sql, new { depot.DepotName, depot.DepotId, OperatorInitials = GetCurrentUserInitials() });
+                    var parameters = new
+                    {
+                        depot.DepotId,
+                        depot.DepotCode,
+                        depot.DepotName,
+                        depot.Address,
+                        depot.City,
+                        depot.Province,
+                        depot.PostalCode,
+                        depot.PhoneNumber,
+                        depot.IsActive,
+                        depot.DisplayOrder,
+                        ModifiedAt = DateTime.Now,
+                        ModifiedBy = GetCurrentUserInitials()
+                    };
+
+                    int affectedRows = await connection.ExecuteAsync(sql, parameters);
+                    
+                    if (affectedRows == 0)
+                    {
+                        Logger.Warn($"UpdateDepotAsync: No rows were affected when updating DepotId {depot.DepotId}. Depot may not exist or may have been deleted.");
+                    }
+                    else
+                    {
+                        Logger.Info($"UpdateDepotAsync: Successfully updated DepotId {depot.DepotId}. Rows affected: {affectedRows}");
+                    }
                     return affectedRows > 0;
                 }
             }

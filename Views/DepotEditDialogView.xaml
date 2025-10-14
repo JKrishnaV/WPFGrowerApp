@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl x:Class="WPFGrowerApp.Views.DepotEditDialogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:WPFGrowerApp.Views"
+             xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels.Dialogs"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance Type=vm:DepotEditDialogViewModel, IsDesignTimeCreatable=False}"
+             d:DesignHeight="600" d:DesignWidth="700"
+             Background="{DynamicResource MaterialDesignPaper}">
+
+    <materialDesign:Card Margin="16" Padding="24">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Title -->
+                <RowDefinition Height="Auto"/> <!-- Form Fields -->
+                <RowDefinition Height="Auto"/> <!-- Buttons -->
+            </Grid.RowDefinitions>
+
+            <!-- Title -->
+            <TextBlock Grid.Row="0" 
+                       Text="{Binding Title}" 
+                       Style="{StaticResource MaterialDesignHeadline4TextBlock}"
+                       Margin="0,0,0,24"
+                       HorizontalAlignment="Center"/>
+
+            <!-- Form Fields -->
+            <ScrollViewer Grid.Row="1" MaxHeight="400" VerticalScrollBarVisibility="Auto">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Depot Code -->
+                    <TextBox Grid.Row="0"
+                             materialDesign:HintAssist.Hint="Depot Code (Max 10 Chars)"
+                             Text="{Binding DepotCode, UpdateSourceTrigger=PropertyChanged}"
+                             MaxLength="10"
+                             IsReadOnly="{Binding IsReadOnly}"
+                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                             Margin="0,0,0,16"/>
+
+                    <!-- Depot Name -->
+                    <TextBox Grid.Row="1"
+                             materialDesign:HintAssist.Hint="Depot Name (Max 100 Chars)"
+                             Text="{Binding DepotName, UpdateSourceTrigger=PropertyChanged}"
+                             MaxLength="100"
+                             IsReadOnly="{Binding IsReadOnly}"
+                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                             Margin="0,0,0,16"/>
+
+                    <!-- Address -->
+                    <TextBox Grid.Row="2"
+                             materialDesign:HintAssist.Hint="Address (Max 200 Chars)"
+                             Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}"
+                             MaxLength="200"
+                             IsReadOnly="{Binding IsReadOnly}"
+                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                             Margin="0,0,0,16"/>
+
+                    <!-- City -->
+                    <TextBox Grid.Row="3"
+                             materialDesign:HintAssist.Hint="City (Max 50 Chars)"
+                             Text="{Binding City, UpdateSourceTrigger=PropertyChanged}"
+                             MaxLength="50"
+                             IsReadOnly="{Binding IsReadOnly}"
+                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                             Margin="0,0,0,16"/>
+
+                    <!-- Province and Postal Code -->
+                    <Grid Grid.Row="4" Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Province -->
+                        <TextBox Grid.Column="0"
+                                 materialDesign:HintAssist.Hint="Province (Max 2 Chars)"
+                                 Text="{Binding Province, UpdateSourceTrigger=PropertyChanged}"
+                                 MaxLength="2"
+                                 IsReadOnly="{Binding IsReadOnly}"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                 Margin="0,0,8,0"/>
+
+                        <!-- Postal Code -->
+                        <TextBox Grid.Column="1"
+                                 materialDesign:HintAssist.Hint="Postal Code (Max 10 Chars)"
+                                 Text="{Binding PostalCode, UpdateSourceTrigger=PropertyChanged}"
+                                 MaxLength="10"
+                                 IsReadOnly="{Binding IsReadOnly}"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                 Margin="8,0,0,0"/>
+                    </Grid>
+
+                    <!-- Phone Number -->
+                    <TextBox Grid.Row="5"
+                             materialDesign:HintAssist.Hint="Phone Number (Max 20 Chars)"
+                             Text="{Binding PhoneNumber, UpdateSourceTrigger=PropertyChanged}"
+                             MaxLength="20"
+                             IsReadOnly="{Binding IsReadOnly}"
+                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                             Margin="0,0,0,16"/>
+
+                    <!-- Additional Fields Section -->
+                    <Border Grid.Row="6" 
+                            BorderBrush="{DynamicResource MaterialDesignDivider}"
+                            BorderThickness="0,1,0,0" 
+                            Margin="0,16,0,16" 
+                            Padding="0,16,0,0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Display Order -->
+                            <TextBox Grid.Row="0"
+                                     materialDesign:HintAssist.Hint="Display Order"
+                                     Text="{Binding DisplayOrder, UpdateSourceTrigger=PropertyChanged}"
+                                     IsReadOnly="{Binding IsReadOnly}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     Margin="0,0,0,16"/>
+
+                            <!-- Is Active -->
+                            <CheckBox Grid.Row="1"
+                                      Content="Active"
+                                      IsChecked="{Binding IsActive}"
+                                      IsEnabled="{Binding IsEditMode}"
+                                      Margin="0,0,0,16"/>
+
+                            <!-- Status Display (for view mode) -->
+                            <TextBlock Grid.Row="2"
+                                       Text="{Binding StatusText}"
+                                       Style="{StaticResource MaterialDesignBody1TextBlock}"
+                                       Foreground="{Binding IsActive, Converter={StaticResource ActiveStatusBrushConverter}}"
+                                       FontWeight="Bold"
+                                       Margin="0,0,0,16"
+                                       Visibility="{Binding IsReadOnly, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </ScrollViewer>
+
+            <!-- Action Buttons -->
+            <StackPanel Grid.Row="2" 
+                        Orientation="Horizontal" 
+                        HorizontalAlignment="Right" 
+                        Margin="0,24,0,0">
+                <Button Content="Save" 
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Background="{DynamicResource PrimaryHueMidBrush}"
+                        Foreground="{DynamicResource PrimaryHueMidForegroundBrush}"
+                        Command="{Binding SaveCommand}"
+                        Visibility="{Binding IsReadOnly, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+                        Margin="0,0,8,0"/>
+                <Button Content="Cancel" 
+                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        Command="{Binding CancelCommand}"/>
+            </StackPanel>
+        </Grid>
+    </materialDesign:Card>
+</UserControl>

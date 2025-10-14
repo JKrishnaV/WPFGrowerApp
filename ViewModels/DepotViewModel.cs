@@ -6,7 +6,11 @@ using System.Windows.Input;
 using WPFGrowerApp.Commands;
 using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
-using WPFGrowerApp.Services; // For IDialogService
+using WPFGrowerApp.Services;
+using WPFGrowerApp.Infrastructure.Logging;
+using Microsoft.Extensions.DependencyInjection;
+using MaterialDesignThemes.Wpf;
+using WPFGrowerApp.Views;
 
 namespace WPFGrowerApp.ViewModels
 {
@@ -14,10 +18,17 @@ namespace WPFGrowerApp.ViewModels
     {
         private readonly IDepotService _depotService;
         private readonly IDialogService _dialogService;
+        private readonly IHelpContentProvider _helpContentProvider;
+        private readonly IServiceProvider _serviceProvider;
+        
         private ObservableCollection<Depot> _depots;
+        private ObservableCollection<Depot> _filteredDepots;
         private Depot _selectedDepot;
-        private bool _isEditing;
+        private string _searchText = string.Empty;
+        private string _statusMessage = "Ready";
+        private string _lastUpdated = string.Empty;
         private bool _isLoading;
+        private bool _isDialogOpen;
 
         public ObservableCollection<Depot> Depots
         {
@@ -25,31 +36,26 @@ namespace WPFGrowerApp.ViewModels
             set => SetProperty(ref _depots, value);
         }
 
+        public ObservableCollection<Depot> FilteredDepots
+        {
+            get => _filteredDepots;
+            set => SetProperty(ref _filteredDepots, value);
+        }
+
         public Depot SelectedDepot
         {
             get => _selectedDepot;
-            set
-            {
-                bool depotSelected = value != null;
-                if (SetProperty(ref _selectedDepot, value))
-                {
-                    IsEditing = depotSelected; // Set IsEditing based on selection
-                }
-            }
+            set => SetProperty(ref _selectedDepot, value);
         }
 
-        public bool IsEditing
+        public string SearchText
         {
-            get => _isEditing;
-            private set // Controlled internally
+            get => _searchText;
+            set
             {
-                if (SetProperty(ref _isEditing, value))
+                if (SetProperty(ref _searchText, value))
                 {
-                    // Raise CanExecuteChanged for relevant commands
-                    ((RelayCommand)SaveCommand).RaiseCanExecuteChanged();
-                    ((RelayCommand)CancelCommand).RaiseCanExecuteChanged();
-                    ((RelayCommand)DeleteCommand).RaiseCanExecuteChanged();
-                    ((RelayCommand)NewCommand).RaiseCanExecuteChanged();
+                    FilterDepots();
                 }
             }
         }
@@ -60,42 +66,85 @@ namespace WPFGrowerApp.ViewModels
             set => SetProperty(ref _isLoading, value);
         }
 
-        public ICommand LoadDepotsCommand { get; }
-        public ICommand NewCommand { get; }
-        public ICommand SaveCommand { get; }
-        public ICommand DeleteCommand { get; }
-        public ICommand CancelCommand { get; }
+        public string StatusMessage
+        {
+            get => _statusMessage;
+            set => SetProperty(ref _statusMessage, value);
+        }
 
-        public DepotViewModel(IDepotService depotService, IDialogService dialogService)
+        public string LastUpdated
+        {
+            get => _lastUpdated;
+            set => SetProperty(ref _lastUpdated, value);
+        }
+
+        // Commands
+        public ICommand AddDepotCommand { get; }
+        public ICommand EditDepotCommand { get; }
+        public ICommand ViewDepotCommand { get; }
+        public ICommand DeleteDepotCommand { get; }
+        public ICommand RefreshCommand { get; }
+        public ICommand SearchCommand { get; }
+        public ICommand ClearFiltersCommand { get; }
+        public ICommand NavigateToDashboardCommand { get; }
+        public ICommand NavigateToSettingsCommand { get; }
+        public ICommand ShowHelpCommand { get; }
+
+        public DepotViewModel(
+            IDepotService depotService, 
+            IDialogService dialogService,
+            IHelpContentProvider helpContentProvider,
+            IServiceProvider serviceProvider)
         {
             _depotService = depotService ?? throw new ArgumentNullException(nameof(depotService));
             _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
+            _helpContentProvider = helpContentProvider ?? throw new ArgumentNullException(nameof(helpContentProvider));
+            _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 
             Depots = new ObservableCollection<Depot>();
+            FilteredDepots = new ObservableCollection<Depot>();
 
-            LoadDepotsCommand = new RelayCommand(async (param) => await LoadDepotsAsync(param), (param) => true);
-            NewCommand = new RelayCommand(AddNewDepot, CanAddNew);
-            SaveCommand = new RelayCommand(async (param) => await SaveDepotAsync(param), CanSaveCancelDelete);
-            DeleteCommand = new RelayCommand(async (param) => await DeleteDepotAsync(param), CanSaveCancelDelete);
-            CancelCommand = new RelayCommand(CancelEdit, CanSaveCancelDelete);
+            // Initialize commands
+            AddDepotCommand = new RelayCommand(async (param) => await AddDepotAsync());
+            EditDepotCommand = new RelayCommand(async (param) => await EditDepotAsync(param as Depot));
+            ViewDepotCommand = new RelayCommand(async (param) => await ViewDepotAsync(param as Depot));
+            DeleteDepotCommand = new RelayCommand(async (param) => await DeleteDepotAsync(param as Depot));
+            RefreshCommand = new RelayCommand(async (param) => await RefreshAsync());
+            SearchCommand = new RelayCommand((param) => FilterDepots());
+            ClearFiltersCommand = new RelayCommand((param) => ClearFilters());
+            NavigateToDashboardCommand = new RelayCommand(NavigateToDashboardExecute);
+            NavigateToSettingsCommand = new RelayCommand(NavigateToSettingsExecute);
+            ShowHelpCommand = new RelayCommand((param) => ShowHelpExecute());
 
-            // Load depots on initialization
-            _ = LoadDepotsAsync(null);
+            // Initialize data
+            _ = InitializeAsync();
         }
 
-        private async Task LoadDepotsAsync(object parameter)
+        private async Task InitializeAsync()
+        {
+            await LoadDepotsAsync();
+        }
+
+        private async Task LoadDepotsAsync()
         {
             IsLoading = true;
+            StatusMessage = "Loading depots...";
+            
             try
             {
                 var depots = await _depotService.GetAllDepotsAsync();
-                Depots = new ObservableCollection<Depot>(depots.OrderBy(d => d.DepotId)); // Order by ID
-                SelectedDepot = null; // Clear selection after loading
+                Depots = new ObservableCollection<Depot>(depots.OrderBy(d => d.DepotName));
+                FilterDepots();
+                LastUpdated = DateTime.Now.ToString("MMM dd, yyyy HH:mm");
+                StatusMessage = "Ready";
+                
+                Logger.Info($"Loaded {Depots.Count} depots");
             }
             catch (Exception ex)
             {
-                Infrastructure.Logging.Logger.Error("Error loading depots.", ex);
-                await _dialogService?.ShowMessageBoxAsync($"Error loading depots: {ex.Message}", "Error"); // Use async
+                Logger.Error("Error loading depots.", ex);
+                await _dialogService.ShowMessageBoxAsync($"Error loading depots: {ex.Message}", "Error");
+                StatusMessage = "Error loading depots";
             }
             finally
             {
@@ -103,180 +152,190 @@ namespace WPFGrowerApp.ViewModels
             }
         }
 
-        private void AddNewDepot(object parameter)
+        private async Task RefreshAsync()
         {
-            SelectedDepot = new Depot(); // Create a new, empty depot object
+            await InitializeAsync();
         }
 
-        // CanExecute for New button
-        private bool CanAddNew(object parameter)
+        private void FilterDepots()
         {
-            return SelectedDepot == null;
+            var baseFilter = Depots.AsEnumerable();
+
+            // Apply search filter
+            if (!string.IsNullOrWhiteSpace(SearchText))
+            {
+                var searchLower = SearchText.ToLower();
+                baseFilter = baseFilter.Where(d =>
+                    (d.DepotName?.ToLower().Contains(searchLower) ?? false) ||
+                    (d.DepotCode?.ToLower().Contains(searchLower) ?? false) ||
+                    (d.City?.ToLower().Contains(searchLower) ?? false) ||
+                    (d.Province?.ToLower().Contains(searchLower) ?? false) ||
+                    (d.PhoneNumber?.ToLower().Contains(searchLower) ?? false) ||
+                    (d.DepotId.ToString().Contains(searchLower))
+                );
+            }
+
+            FilteredDepots = new ObservableCollection<Depot>(baseFilter);
         }
 
-        // Combined CanExecute for Save, Cancel, Delete
-        private bool CanSaveCancelDelete(object parameter)
+        private void ClearFilters()
         {
-            return SelectedDepot != null;
+            SearchText = string.Empty;
+            StatusMessage = "Ready";
         }
 
-        private async Task SaveDepotAsync(object parameter)
+        private async Task AddDepotAsync()
         {
-            if (SelectedDepot == null) return;
+            if (_isDialogOpen) return;
 
-          // Basic Validation
-          if (SelectedDepot.DepotId <= 0)
-          {
-              await _dialogService?.ShowMessageBoxAsync("Depot ID must be a positive integer.", "Validation Error"); // Use async
-              return;
-          }
-          if (string.IsNullOrWhiteSpace(SelectedDepot.DepotCode) || SelectedDepot.DepotCode.Length > 8)
-          {
-              await _dialogService?.ShowMessageBoxAsync("Depot Code cannot be empty and must be 8 characters or less.", "Validation Error"); // Use async
-              return;
-          }
-          if (string.IsNullOrWhiteSpace(SelectedDepot.DepotName) || SelectedDepot.DepotName.Length > 12)
-          {
-              await _dialogService?.ShowMessageBoxAsync("Depot Name cannot be empty and must be 12 characters or less.", "Validation Error"); // Use async
-              return;
-          }
-
-            // --- Start Validation ---
-            Depot existingDepotById = null; // Declare variable outside the try block
             try
             {
-                existingDepotById = await _depotService.GetDepotByIdAsync(SelectedDepot.DepotId); // Assign value inside
-                var allDepots = (await _depotService.GetAllDepotsAsync()).ToList(); // Materialize for multiple checks
+                _isDialogOpen = true;
+                var newDepot = new Depot();
+                var dialogViewModel = new Dialogs.DepotEditDialogViewModel(newDepot, false, _dialogService);
+                var result = await DialogHost.Show(new DepotEditDialogView { DataContext = dialogViewModel }, "RootDialogHost");
 
-                // Check if adding a new depot
-                if (existingDepotById == null)
+                if (result is bool boolResult && boolResult && dialogViewModel.DepotData != null)
                 {
-                    // Check if ID already exists (should be caught by GetDepotByIdAsync, but double-check)
-                    // This check is technically redundant if GetDepotByIdAsync works correctly, but safe to keep.
-                    if (allDepots.Any(d => d.DepotId == SelectedDepot.DepotId))
+                    IsLoading = true;
+                    StatusMessage = "Adding depot...";
+                    
+                    try
                     {
-                        await _dialogService?.ShowMessageBoxAsync($"Depot ID '{SelectedDepot.DepotId}' already exists.", "Validation Error"); // Use async
-                        return;
+                        bool success = await _depotService.AddDepotAsync(dialogViewModel.DepotData);
+                        
+                        if (success)
+                        {
+                            Logger.Info($"AddDepotAsync: Successfully added depot {dialogViewModel.DepotData.DepotId}");
+                            await _dialogService.ShowMessageBoxAsync("Depot added successfully.", "Success");
+                            await LoadDepotsAsync();
+                        }
+                        else
+                        {
+                            Logger.Error($"AddDepotAsync: Failed to add depot {dialogViewModel.DepotData.DepotId}. AddDepotAsync returned false - no rows were affected by the add operation.");
+                            await _dialogService.ShowMessageBoxAsync("Failed to add the depot.", "Error");
+                            StatusMessage = "Failed to add depot";
+                        }
                     }
-                    // Check if Name already exists
-                    if (allDepots.Any(d => d.DepotName.Equals(SelectedDepot.DepotName, StringComparison.OrdinalIgnoreCase)))
+                    catch (Exception ex)
                     {
-                        await _dialogService?.ShowMessageBoxAsync($"Depot Name '{SelectedDepot.DepotName}' already exists.", "Validation Error"); // Use async
-                        return;
+                        Logger.Error($"Error adding depot {dialogViewModel.DepotData.DepotId}.", ex);
+                        await _dialogService.ShowMessageBoxAsync($"Error adding depot: {ex.Message}", "Error");
+                        StatusMessage = "Error adding depot";
+                    }
+                    finally
+                    {
+                        IsLoading = false;
                     }
                 }
-                else // Check if updating an existing depot
-                {
-                    // Check if Name already exists for a *different* depot
-                    if (allDepots.Any(d => d.DepotId != SelectedDepot.DepotId &&
-                                           d.DepotName.Equals(SelectedDepot.DepotName, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        await _dialogService?.ShowMessageBoxAsync($"Depot Name '{SelectedDepot.DepotName}' is already used by another depot.", "Validation Error"); // Use async
-                        return;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                 Infrastructure.Logging.Logger.Error($"Error during validation check for depot {SelectedDepot.DepotId}.", ex);
-                await _dialogService?.ShowMessageBoxAsync($"An error occurred during validation: {ex.Message}", "Error"); // Use async
-                return; // Stop if validation check fails
             }
             finally
             {
-                 // No IsLoading changes here, validation should be quick
+                _isDialogOpen = false;
             }
-            // --- End Validation ---
+        }
 
+        private async Task ViewDepotAsync(Depot? depot)
+        {
+            if (depot == null) return;
+            if (_isDialogOpen) return;
 
-            IsLoading = true;
-            bool success = false;
             try
             {
-                // Determine if it's an Add or Update (using the existingDepotById variable declared above)
+                _isDialogOpen = true;
+                var dialogViewModel = new Dialogs.DepotEditDialogViewModel(depot, true, _dialogService);
+                await DialogHost.Show(new DepotEditDialogView { DataContext = dialogViewModel }, "RootDialogHost");
+            }
+            finally
+            {
+                _isDialogOpen = false;
+            }
+        }
 
-                if (existingDepotById == null)
+        private async Task EditDepotAsync(Depot? depot)
+        {
+            if (depot == null) return;
+            if (_isDialogOpen) return;
+
+            try
+            {
+                _isDialogOpen = true;
+                var dialogViewModel = new Dialogs.DepotEditDialogViewModel(depot, false, _dialogService);
+                var result = await DialogHost.Show(new DepotEditDialogView { DataContext = dialogViewModel }, "RootDialogHost");
+
+                if (result is bool boolResult && boolResult && dialogViewModel.DepotData != null)
                 {
-                    // Add new depot
-                    success = await _depotService.AddDepotAsync(SelectedDepot);
-                    if(success) await _dialogService?.ShowMessageBoxAsync("Depot added successfully.", "Success"); // Use async
+                    IsLoading = true;
+                    StatusMessage = "Updating depot...";
+                    
+                    try
+                    {
+                        bool success = await _depotService.UpdateDepotAsync(dialogViewModel.DepotData);
+                        
+                        if (success)
+                        {
+                            Logger.Info($"EditDepotAsync: Successfully updated depot {dialogViewModel.DepotData.DepotId}");
+                            await _dialogService.ShowMessageBoxAsync("Depot updated successfully.", "Success");
+                            await LoadDepotsAsync();
+                        }
+                        else
+                        {
+                            Logger.Error($"EditDepotAsync: Failed to update depot {dialogViewModel.DepotData.DepotId}. UpdateDepotAsync returned false - no rows were affected by the update operation.");
+                            await _dialogService.ShowMessageBoxAsync("Failed to update the depot.", "Error");
+                            StatusMessage = "Failed to update depot";
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error($"Error updating depot {dialogViewModel.DepotData.DepotId}.", ex);
+                        await _dialogService.ShowMessageBoxAsync($"Error updating depot: {ex.Message}", "Error");
+                        StatusMessage = "Error updating depot";
+                    }
+                    finally
+                    {
+                        IsLoading = false;
+                    }
                 }
-                else
-                {
-                    // Update existing depot
-                    success = await _depotService.UpdateDepotAsync(SelectedDepot);
-                     if(success) await _dialogService?.ShowMessageBoxAsync("Depot updated successfully.", "Success"); // Use async
-                }
+            }
+            finally
+            {
+                _isDialogOpen = false;
+            }
+        }
+
+        private async Task DeleteDepotAsync(Depot? depot)
+        {
+            if (depot == null) return;
+
+            var confirm = await _dialogService.ShowConfirmationDialogAsync(
+                $"Are you sure you want to delete depot '{depot.DepotName}' ({depot.DepotId})?", 
+                "Confirm Delete");
+            
+            if (confirm != true) return;
+
+            IsLoading = true;
+            StatusMessage = "Deleting depot...";
+            
+            try
+            {
+                bool success = await _depotService.DeleteDepotAsync(depot.DepotId, App.CurrentUser?.Username ?? "SYSTEM");
 
                 if (success)
                 {
-                    await LoadDepotsAsync(null); // Reload the list
+                    await _dialogService.ShowMessageBoxAsync("Depot deleted successfully.", "Success");
+                    await LoadDepotsAsync();
                 }
                 else
                 {
-                     await _dialogService?.ShowMessageBoxAsync("Failed to save the depot.", "Error"); // Use async
+                    await _dialogService.ShowMessageBoxAsync("Failed to delete the depot.", "Error");
+                    StatusMessage = "Failed to delete depot";
                 }
             }
             catch (Exception ex)
             {
-                Infrastructure.Logging.Logger.Error($"Error saving depot {SelectedDepot.DepotId}.", ex);
-                await _dialogService?.ShowMessageBoxAsync($"Error saving depot: {ex.Message}", "Error"); // Use async
-            }
-             finally
-            {
-                IsLoading = false;
-            }
-        }
-
-        private async Task DeleteDepotAsync(object parameter)
-        {
-             // Infrastructure.Logging.Logger.Info($"DeleteDepotAsync called for DepotId: {SelectedDepot?.DepotId ?? "null"}"); // Removed log
-             if (!CanSaveCancelDelete(parameter)) return;
-
-            bool confirm = false; // Default to false
-            try
-            {
-                 // Infrastructure.Logging.Logger.Info($"Showing confirmation dialog for DepotId: {SelectedDepot.DepotId}"); // Removed log
-                 if (_dialogService != null) // Check if service is not null before calling
-                 {
-                    confirm = await _dialogService.ShowConfirmationDialogAsync($"Are you sure you want to delete depot '{SelectedDepot.DepotName}' ({SelectedDepot.DepotId})?", "Confirm Delete");
-                 }
-                 // 'confirm' remains false if _dialogService was null
-                 // Infrastructure.Logging.Logger.Info($"Confirmation dialog returned: {confirm}"); // Removed log
-            }
-            catch (Exception dialogEx)
-            {
-                 Infrastructure.Logging.Logger.Error($"Error showing confirmation dialog: {dialogEx.Message}", dialogEx);
-                 await _dialogService?.ShowMessageBoxAsync($"An error occurred showing the confirmation dialog: {dialogEx.Message}", "Dialog Error");
-                 return; // Stop if dialog fails
-            }
-
-            if (!confirm)
-            {
-                 // Infrastructure.Logging.Logger.Info("Deletion cancelled by user."); // Removed log
-                 return; // Stop if user didn't confirm
-            }
-
-            IsLoading = true;
-            try
-            {
-                // Infrastructure.Logging.Logger.Info($"Calling _depotService.DeleteDepotAsync for DepotId: {SelectedDepot.DepotId}"); // Removed log
-                bool success = await _depotService.DeleteDepotAsync(SelectedDepot.DepotId, App.CurrentUser?.Username ?? "SYSTEM");
-
-                if (success)
-                {
-                    await _dialogService?.ShowMessageBoxAsync("Depot deleted successfully.", "Success"); // Use async
-                    await LoadDepotsAsync(null); // Reload list
-                }
-                else
-                {
-                    await _dialogService?.ShowMessageBoxAsync("Failed to delete the depot.", "Error"); // Use async
-                }
-            }
-            catch (Exception ex)
-            {
-                Infrastructure.Logging.Logger.Error($"Error deleting depot {SelectedDepot.DepotId}.", ex);
-                await _dialogService?.ShowMessageBoxAsync($"Error deleting depot: {ex.Message}", "Error"); // Use async
+                Logger.Error($"Error deleting depot {depot.DepotId}.", ex);
+                await _dialogService.ShowMessageBoxAsync($"Error deleting depot: {ex.Message}", "Error");
+                StatusMessage = "Error deleting depot";
             }
             finally
             {
@@ -284,11 +343,70 @@ namespace WPFGrowerApp.ViewModels
             }
         }
 
-        private void CancelEdit(object parameter)
+        private async void NavigateToDashboardExecute(object? parameter)
         {
-            if (!CanSaveCancelDelete(parameter)) return;
+            try
+            {
+                Logger.Info("NavigateToDashboardExecute called - navigating to Dashboard");
+                
+                // Get the MainViewModel instance that's bound to the UI
+                var mainWindow = System.Windows.Application.Current.MainWindow;
+                if (mainWindow?.DataContext is MainViewModel mainViewModel)
+                {
+                    Logger.Info($"MainViewModel instance: {mainViewModel.GetHashCode()}");
+                    
+                    // Navigate to Dashboard using the MainViewModel's navigation system
+                    await mainViewModel.NavigateToAsync<DashboardViewModel>("Dashboard");
+                    
+                    Logger.Info($"NavigateToDashboardExecute completed successfully. CurrentViewModel: {mainViewModel.CurrentViewModel?.GetType().Name}");
+                }
+                else
+                {
+                    Logger.Error("Could not access MainViewModel from MainWindow DataContext");
+                    await _dialogService.ShowMessageBoxAsync("Navigation error: Could not access main application.", "Navigation Error");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error navigating to Dashboard", ex);
+                await _dialogService.ShowMessageBoxAsync($"Error navigating to Dashboard: {ex.Message}", "Navigation Error");
+            }
+        }
 
-            SelectedDepot = null;
+        private async void NavigateToSettingsExecute(object? parameter)
+        {
+            try
+            {
+                Logger.Info("NavigateToSettingsExecute called - navigating to Settings");
+                
+                // Get the MainViewModel instance that's bound to the UI
+                var mainWindow = System.Windows.Application.Current.MainWindow;
+                if (mainWindow?.DataContext is MainViewModel mainViewModel)
+                {
+                    Logger.Info($"MainViewModel instance: {mainViewModel.GetHashCode()}");
+                    
+                    // Navigate to Settings using the MainViewModel's navigation system
+                    await mainViewModel.NavigateToAsync<SettingsHostViewModel>("Settings");
+                    
+                    Logger.Info($"NavigateToSettingsExecute completed successfully. CurrentViewModel: {mainViewModel.CurrentViewModel?.GetType().Name}");
+                }
+                else
+                {
+                    Logger.Error("Could not access MainViewModel from MainWindow DataContext");
+                    await _dialogService.ShowMessageBoxAsync("Navigation error: Could not access main application.", "Navigation Error");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error navigating to Settings", ex);
+                await _dialogService.ShowMessageBoxAsync($"Error navigating to Settings: {ex.Message}", "Navigation Error");
+            }
+        }
+
+        private void ShowHelpExecute()
+        {
+            var helpContent = _helpContentProvider.GetHelpContent("DepotView");
+            _dialogService.ShowMessageBoxAsync(helpContent.Content, helpContent.Title);
         }
     }
 }
