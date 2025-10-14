@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl x:Class="WPFGrowerApp.Views.ProcessEditDialogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:converters="clr-namespace:WPFGrowerApp.Converters"
+             xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels.Dialogs"
+             mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance Type=vm:ProcessEditDialogViewModel, IsDesignTimeCreatable=False}"
+             d:DesignHeight="500" d:DesignWidth="600">
+    
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+    </UserControl.Resources>
+
+    <materialDesign:Card materialDesign:ElevationAssist.Elevation="Dp8"
+                         UniformCornerRadius="8"
+                         Margin="20">
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
+                <materialDesign:PackIcon Kind="Cog" 
+                                       Width="32" Height="32" 
+                                       VerticalAlignment="Center" 
+                                       Margin="0,0,10,0"/>
+                <TextBlock Text="{Binding Title}" 
+                           Style="{StaticResource MaterialDesignHeadline5TextBlock}"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <Border Grid.Row="1" 
+                    Margin="0,0,0,15" 
+                    Padding="15"
+                    Background="#F5F5F5"
+                    BorderBrush="#E0E0E0"
+                    BorderThickness="1"
+                    CornerRadius="4">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="2*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,0">
+                        <TextBlock Text="Process ID" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding ProcessId, UpdateSourceTrigger=PropertyChanged}"
+                                 IsEnabled="{Binding IsReadOnly, Converter={StaticResource InverseBooleanConverter}}"
+                                 materialDesign:HintAssist.Hint="Numeric ID"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="0" Grid.Column="1">
+                        <TextBlock Text="Process Code" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding ProcessCode, UpdateSourceTrigger=PropertyChanged}"
+                                 IsReadOnly="{Binding IsReadOnly}"
+                                 MaxLength="10"
+                                 materialDesign:HintAssist.Hint="10 chars max"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,10,0,0">
+                        <TextBlock Text="Process Name" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding ProcessName, UpdateSourceTrigger=PropertyChanged}"
+                                 IsReadOnly="{Binding IsReadOnly}"
+                                 MaxLength="100"
+                                 materialDesign:HintAssist.Hint="Process name (100 chars max)"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,10,0,0">
+                        <TextBlock Text="Description" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"
+                                 IsReadOnly="{Binding IsReadOnly}"
+                                 MaxLength="500"
+                                 materialDesign:HintAssist.Hint="Optional description (500 chars max)"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border Grid.Row="2" 
+                    Margin="0,0,0,15" 
+                    Padding="15"
+                    Background="#F5F5F5"
+                    BorderBrush="#E0E0E0"
+                    BorderThickness="1"
+                    CornerRadius="4">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                        <TextBlock Text="Default Grade" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding DefaultGrade, UpdateSourceTrigger=PropertyChanged}"
+                                 IsReadOnly="{Binding IsReadOnly}"
+                                 materialDesign:HintAssist.Hint="1-3"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="Process Class" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding ProcessClass, UpdateSourceTrigger=PropertyChanged}"
+                                 IsReadOnly="{Binding IsReadOnly}"
+                                 materialDesign:HintAssist.Hint="1-4"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Additional Fields Section -->
+            <Border Grid.Row="3" 
+                    Margin="0,0,0,15" 
+                    Padding="15"
+                    Background="#F5F5F5"
+                    BorderBrush="#E0E0E0"
+                    BorderThickness="1"
+                    CornerRadius="4">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,0">
+                        <TextBlock Text="Display Order" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding DisplayOrder, UpdateSourceTrigger=PropertyChanged}"
+                                 IsReadOnly="{Binding IsReadOnly}"
+                                 materialDesign:HintAssist.Hint="Optional order"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,10,0">
+                        <TextBlock Text="Is Active" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <CheckBox IsChecked="{Binding IsActive}"
+                                  IsEnabled="{Binding IsReadOnly, Converter={StaticResource InverseBooleanConverter}}"
+                                  Content="Active"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="0" Grid.Column="2">
+                        <TextBlock Text="Grade Names" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBlock Text="Configure grade names below" FontSize="12" Foreground="Gray"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,10,10,0">
+                        <TextBlock Text="Grade Name 1" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding GradeName1, UpdateSourceTrigger=PropertyChanged}"
+                                 IsReadOnly="{Binding IsReadOnly}"
+                                 MaxLength="20"
+                                 materialDesign:HintAssist.Hint="Grade 1 name"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,10,10,0">
+                        <TextBlock Text="Grade Name 2" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding GradeName2, UpdateSourceTrigger=PropertyChanged}"
+                                 IsReadOnly="{Binding IsReadOnly}"
+                                 MaxLength="20"
+                                 materialDesign:HintAssist.Hint="Grade 2 name"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,10,0,0">
+                        <TextBlock Text="Grade Name 3" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding GradeName3, UpdateSourceTrigger=PropertyChanged}"
+                                 IsReadOnly="{Binding IsReadOnly}"
+                                 MaxLength="20"
+                                 materialDesign:HintAssist.Hint="Grade 3 name"
+                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <StackPanel Grid.Row="4" 
+                       Orientation="Horizontal" 
+                       HorizontalAlignment="Right" 
+                       Margin="0,15,0,0">
+                <Button Content="Save" 
+                        Command="{Binding SaveCommand}"
+                        Visibility="{Binding IsReadOnly, Converter={StaticResource InverseBooleanConverter}}"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Background="#3F51B5"
+                        BorderBrush="#3F51B5"
+                        Foreground="White"
+                        Width="100"
+                        Margin="0,0,10,0"/>
+                <Button Content="Cancel" 
+                        Command="{Binding CancelCommand}"
+                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        BorderBrush="#757575"
+                        Foreground="#757575"
+                        Width="100"/>
+            </StackPanel>
+        </Grid>
+    </materialDesign:Card>
+</UserControl>

@@ -7,114 +7,365 @@
              xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels"
              xmlns:models="clr-namespace:WPFGrowerApp.DataAccess.Models"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:converters="clr-namespace:WPFGrowerApp.Converters"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
              mc:Ignorable="d" 
              d:DataContext="{d:DesignInstance Type=vm:ProcessViewModel, IsDesignTimeCreatable=False}"
-             d:DesignHeight="600" d:DesignWidth="700"
-             Background="{DynamicResource MaterialDesignPaper}">
+             d:DesignHeight="600" d:DesignWidth="1000"
+             Background="{DynamicResource MaterialDesignPaper}"
+             Focusable="True"
+             x:Name="processView">
+    
+    <UserControl.InputBindings>
+        <KeyBinding Key="F1" Command="{Binding ShowHelpCommand}"/>
+        <KeyBinding Key="F5" Command="{Binding RefreshCommand}"/>
+    </UserControl.InputBindings>
 
     <UserControl.Resources>
         <ResourceDictionary>
-            <Style x:Key="ScaledMaterialDesignFloatingHintTextBox" TargetType="TextBox" BasedOn="{StaticResource MaterialDesignFloatingHintTextBox}">
-                <Setter Property="FontSize" Value="{DynamicResource ScaledFontSizeNormal}"/>
-            </Style>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Styles/StandardizedViewTemplate.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            
+            <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+            <converters:BoolToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+            <converters:NotNullConverter x:Key="NotNullConverter"/>
+            <converters:ActiveStatusConverter x:Key="ActiveStatusConverter"/>
+            <converters:ActiveStatusBrushConverter x:Key="ActiveStatusBrushConverter"/>
         </ResourceDictionary>
     </UserControl.Resources>
+
     <Grid Margin="10">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/> <!-- Title -->
-            <RowDefinition Height="*"/>    <!-- DataGrid -->
-            <RowDefinition Height="Auto"/> <!-- Edit Form -->
-            <RowDefinition Height="Auto"/> <!-- Buttons -->
+            <RowDefinition Height="Auto"/> <!-- Row 0: Breadcrumb -->
+            <RowDefinition Height="Auto"/> <!-- Row 1: Title -->
+            <RowDefinition Height="Auto"/> <!-- Row 2: Search/Filter Bar -->
+            <RowDefinition Height="Auto"/> <!-- Row 3: Statistics -->
+            <RowDefinition Height="*"/>    <!-- Row 4: Main Content (DataGrid) -->
+            <RowDefinition Height="Auto"/> <!-- Row 5: Status Bar -->
         </Grid.RowDefinitions>
 
-        <!-- Title -->
-        <TextBlock Grid.Row="0" Text="Manage Process Types" Style="{StaticResource MaterialDesignHeadline5TextBlock}" Margin="0,0,0,15"/>
+        <!-- Breadcrumb Navigation -->
+        <materialDesign:ColorZone Grid.Row="0" Style="{StaticResource BreadcrumbNavigationStyle}">
+            <StackPanel Orientation="Horizontal">
+                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                        Command="{Binding NavigateToDashboardCommand}"
+                        Padding="5,0">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Home" Width="16" Height="16" 
+                                               VerticalAlignment="Center" Margin="0,0,5,0"/>
+                        <TextBlock Text="Dashboard" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+                <materialDesign:PackIcon Kind="ChevronRight" Width="16" Height="16" 
+                                        VerticalAlignment="Center" Margin="5,0"/>
+                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                        Command="{Binding NavigateToSettingsCommand}"
+                        Padding="5,0">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Cog" Width="16" Height="16" 
+                                               VerticalAlignment="Center" Margin="0,0,5,0"/>
+                        <TextBlock Text="Settings" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+                <materialDesign:PackIcon Kind="ChevronRight" Width="16" Height="16" 
+                                        VerticalAlignment="Center" Margin="5,0"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <materialDesign:PackIcon Kind="Cog" Width="16" Height="16" 
+                                           VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBlock Text="Process Types Management" FontSize="12" FontWeight="SemiBold"/>
+                </StackPanel>
+            </StackPanel>
+        </materialDesign:ColorZone>
+
+        <!-- View Title -->
+        <TextBlock Grid.Row="1" 
+                   Text="Process Types Management" 
+                   Style="{StaticResource StandardizedViewTitleStyle}"/>
+
+        <!-- Search/Filter Bar -->
+        <materialDesign:Card Grid.Row="2" Style="{StaticResource FiltersActionsPanelStyle}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>        <!-- Search -->
+                    <ColumnDefinition Width="Auto"/>     <!-- Search Button -->
+                    <ColumnDefinition Width="Auto"/>     <!-- Clear Button -->
+                    <ColumnDefinition Width="Auto"/>     <!-- Add New -->
+                    <ColumnDefinition Width="Auto"/>     <!-- Refresh -->
+                    <ColumnDefinition Width="Auto"/>     <!-- Help -->
+                </Grid.ColumnDefinitions>
+
+                <!-- Search TextBox -->
+                <TextBox Grid.Column="0"
+                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                         materialDesign:HintAssist.Hint="Search process types by name, code, ID, or class..."
+                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                         VerticalAlignment="Center"
+                         Margin="0,0,10,0">
+                    <TextBox.InputBindings>
+                        <KeyBinding Key="Enter" Command="{Binding SearchCommand}"/>
+                    </TextBox.InputBindings>
+                </TextBox>
+
+                <!-- Search Button -->
+                <Button Grid.Column="1"
+                        Command="{Binding SearchCommand}"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Width="100"
+                        Margin="0,0,10,0">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Magnify" Width="16" Height="16" Margin="0,0,5,0"/>
+                        <TextBlock Text="Search"/>
+                    </StackPanel>
+                </Button>
+
+                <!-- Clear Button -->
+                <Button Grid.Column="2"
+                        Command="{Binding ClearFiltersCommand}"
+                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        Width="90"
+                        Margin="0,0,10,0">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Close" Width="16" Height="16" Margin="0,0,5,0"/>
+                        <TextBlock Text="Clear"/>
+                    </StackPanel>
+                </Button>
+
+                <!-- Status Filter Dropdown -->
+                <ComboBox Grid.Column="3"
+                          SelectedItem="{Binding StatusFilter}"
+                          VerticalAlignment="Center"
+                          Width="120"
+                          Margin="0,0,10,0"
+                          Style="{StaticResource MaterialDesignOutlinedComboBox}">
+                    <sys:String>All</sys:String>
+                    <sys:String>Active</sys:String>
+                    <sys:String>Inactive</sys:String>
+                </ComboBox>
+
+                <!-- Add New Button -->
+                <Button Grid.Column="4"
+                        Command="{Binding AddProcessCommand}"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Width="120"
+                        Margin="0,0,10,0">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Plus" Width="16" Height="16" Margin="0,0,5,0"/>
+                        <TextBlock Text="Add New"/>
+                    </StackPanel>
+                </Button>
+
+                <!-- Refresh Button -->
+                <Button Grid.Column="5"
+                        Command="{Binding RefreshCommand}"
+                        Style="{StaticResource MaterialDesignIconButton}"
+                        ToolTip="Refresh (F5)"
+                        Width="40"
+                        Margin="0,0,5,0">
+                    <materialDesign:PackIcon Kind="Refresh" Width="20" Height="20"/>
+                </Button>
+
+                <!-- Help Button -->
+                <Button Grid.Column="6"
+                        Command="{Binding ShowHelpCommand}"
+                        Style="{StaticResource MaterialDesignIconButton}"
+                        ToolTip="Show help (F1)"
+                        Width="40">
+                    <materialDesign:PackIcon Kind="HelpCircle" 
+                                           Width="20" Height="20"
+                                           Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                </Button>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Statistics Card -->
+        <materialDesign:Card Grid.Row="3" Margin="0,0,0,10" 
+                             Background="{DynamicResource PrimaryHueLightBrush}">
+            <Grid Margin="15">
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="Cog" 
+                                           Width="20" Height="20" 
+                                           VerticalAlignment="Center" 
+                                           Margin="0,0,8,0"
+                                           Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"/>
+                    <TextBlock Text="{Binding FilteredProcesses.Count, StringFormat='{}{0} Process Types'}" 
+                              FontWeight="SemiBold"
+                              VerticalAlignment="Center"
+                              Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"/>
+                </StackPanel>
+            </Grid>
+        </materialDesign:Card>
 
         <!-- Process List -->
-        <DataGrid Grid.Row="1" 
-                  ItemsSource="{Binding Processes}" 
+        <materialDesign:Card Grid.Row="4" Style="{StaticResource MainContentAreaStyle}">            
+            <Grid>
+                <!-- Loading Indicator -->
+                <StackPanel HorizontalAlignment="Center" 
+                           VerticalAlignment="Center"
+                           Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <materialDesign:PackIcon Kind="Loading" 
+                                            Width="40" 
+                                            Height="40" 
+                                            Margin="0,0,0,10"
+                                            Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                    <TextBlock Text="Loading process types..." 
+                              HorizontalAlignment="Center"
+                              Style="{StaticResource MaterialDesignBody2TextBlock}"/>
+                </StackPanel>
+                
+            <!-- Data Grid -->
+            <DataGrid x:Name="ProcessesDataGrid"
+                    ItemsSource="{Binding FilteredProcesses}" 
                   SelectedItem="{Binding SelectedProcess, Mode=TwoWay}"
                   AutoGenerateColumns="False" 
                   IsReadOnly="True" 
                   CanUserAddRows="False"
+                    CanUserSortColumns="True"
                   SelectionMode="Single"
+                    MinHeight="200"
                   materialDesign:DataGridAssist.CellPadding="13 8 8 8"
-                  materialDesign:DataGridAssist.ColumnHeaderPadding="8"
-                  Margin="0,0,0,10"
-                  MaxHeight="350"> 
+                    materialDesign:DataGridAssist.ColumnHeaderPadding="13 10 8 10"
+                    MouseDoubleClick="ProcessesDataGrid_MouseDoubleClick">
+                
             <DataGrid.Columns>
-                <DataGridTextColumn Header="ID" Binding="{Binding ProcessId}" Width="Auto"/>
-                <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="Auto"/>
-                <DataGridTextColumn Header="Def Grade" Binding="{Binding DefGrade}" Width="Auto"/>
-                <DataGridTextColumn Header="Proc Class" Binding="{Binding ProcClass}" Width="Auto"/>
-                <!-- Add column for ProcClass Description if needed later -->
+                <!-- Process ID Column -->
+                <DataGridTextColumn Header="ID" 
+                                    Binding="{Binding ProcessId, TargetNullValue='', FallbackValue=''}" 
+                                    Width="60">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter Property="FontSize" Value="14"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <!-- Process Name Column -->
+                <DataGridTextColumn Header="Process Name" 
+                                    Binding="{Binding ProcessName, TargetNullValue='', FallbackValue=''}" 
+                                    Width="200"/>
+
+                <!-- Description Column -->
+                <DataGridTextColumn Header="Description" 
+                                    Binding="{Binding Description, TargetNullValue='', FallbackValue=''}" 
+                                    Width="200"/>
+
+                <!-- Process Code Column -->
+                <DataGridTextColumn Header="Code" 
+                                    Binding="{Binding ProcessCode, TargetNullValue='', FallbackValue=''}" 
+                                    Width="100"/>
+
+                <!-- Default Grade Column -->
+                <DataGridTextColumn Header="Default Grade" 
+                                    Binding="{Binding DefaultGrade, TargetNullValue='', FallbackValue=''}" 
+                                    Width="120"/>
+
+                <!-- Process Class Column -->
+                <DataGridTextColumn Header="Process Class" 
+                                    Binding="{Binding ProcessClass, TargetNullValue='', FallbackValue=''}" 
+                                    Width="120"/>
+
+                <!-- Status Column -->
+                <DataGridTemplateColumn Header="Status" Width="100" SortMemberPath="IsActive">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Border Background="{Binding IsActive, Converter={StaticResource ActiveStatusBrushConverter}}"
+                                  CornerRadius="10"
+                                  Padding="8,1"
+                                  HorizontalAlignment="Left"
+                                  VerticalAlignment="Center">
+                                <TextBlock Text="{Binding IsActive, Converter={StaticResource ActiveStatusConverter}}"
+                                         Foreground="White"
+                                         FontWeight="SemiBold"
+                                         FontSize="11"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center"/>
+                            </Border>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <!-- Grade Names Column -->
+                <DataGridTextColumn Header="Grade Names" 
+                                    Binding="{Binding GradeNames, TargetNullValue='', FallbackValue=''}" 
+                                    Width="200"/>
+
+                <!-- Actions Column -->
+                <DataGridTemplateColumn Header="Actions" Width="120">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Margin="5" HorizontalAlignment="Left">
+                                <Button Style="{StaticResource MaterialDesignIconButton}"
+                                        Width="30" Height="30"
+                                        ToolTip="View Process Type"
+                                        Click="ViewProcess_Click"
+                                        Tag="{Binding}">
+                                    <materialDesign:PackIcon Kind="Eye" Width="16" Height="16"/>
+                                </Button>
+                                <Button Style="{StaticResource MaterialDesignIconButton}"
+                                        Width="30" Height="30"
+                                        ToolTip="Edit Process Type"
+                                        Click="EditProcess_Click"
+                                        Tag="{Binding}">
+                                    <materialDesign:PackIcon Kind="Pencil" Width="16" Height="16"/>
+                                </Button>
+                                <Button Style="{StaticResource MaterialDesignIconButton}"
+                                        Width="30" Height="30"
+                                        ToolTip="Delete Process Type"
+                                        Click="DeleteProcess_Click"
+                                        Tag="{Binding}"
+                                        Foreground="IndianRed">
+                                    <materialDesign:PackIcon Kind="Delete" Width="16" Height="16"/>
+                                </Button>
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
+            </Grid>
+        </materialDesign:Card>
 
-        <!-- Edit/Add Form -->
-        <materialDesign:Card Grid.Row="2" Margin="0,10,0,10" Padding="15"
-                             Visibility="{Binding SelectedProcess, Converter={StaticResource NotNullConverter}}"> 
+        <!-- Status Bar -->
+        <materialDesign:ColorZone Grid.Row="5" Style="{StaticResource StatusFooterBarStyle}">
              <Grid> 
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <TextBox Grid.Row="0" Grid.Column="1" Margin="5"
-                         materialDesign:HintAssist.Hint="Process ID (Max 2 Chars)"
-                         Text="{Binding SelectedProcess.ProcessId, UpdateSourceTrigger=PropertyChanged}" 
-                         MaxLength="2"
-                         Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"/>
-
-                <TextBox Grid.Row="0" Grid.Column="3" Margin="5"
-                         materialDesign:HintAssist.Hint="Description (Max 19 Chars)"
-                         Text="{Binding SelectedProcess.Description, UpdateSourceTrigger=PropertyChanged}"
-                         MaxLength="19"
-                         Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"/>
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock Text="Status: " FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding StatusMessage}"/>
+                </StackPanel>
                 
-                <TextBox Grid.Row="1" Grid.Column="1" Margin="5"
-                         materialDesign:HintAssist.Hint="Default Grade (Number 1-3)"
-                         Text="{Binding SelectedProcess.DefaultGrade, UpdateSourceTrigger=PropertyChanged}" 
-                         Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"/>
-                         <!-- Add validation for 1-3 range if needed -->
-
-                <TextBox Grid.Row="1" Grid.Column="3" Margin="5"
-                         materialDesign:HintAssist.Hint="Process Class (Number 1-4)"
-                         Text="{Binding SelectedProcess.ProcessClass, UpdateSourceTrigger=PropertyChanged}"
-                         Style="{StaticResource ScaledMaterialDesignFloatingHintTextBox}"/>
-                         <!-- Add validation for 1-4 range if needed -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <TextBlock Text="Showing: " FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding FilteredProcesses.Count}"/>
+                    <TextBlock Text=" / " Margin="5,0"/>
+                    <TextBlock Text="{Binding Processes.Count}"/>
+                    <TextBlock Text=" | " Margin="5,0"/>
+                    <TextBlock Text="Last Updated: " FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding LastUpdated}"/>
+                </StackPanel>
             </Grid>
-        </materialDesign:Card>
-
-        <!-- Action Buttons -->
-        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-            <Button Content="New" Command="{Binding NewCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Margin="5"
-                    IsEnabled="{Binding IsEditing, Converter={StaticResource InverseBooleanConverter}}"/> 
-            <Button Content="Save" Command="{Binding SaveCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Margin="5" 
-                    IsEnabled="{Binding SelectedProcess, Converter={StaticResource NotNullConverter}}" 
-                    Background="{DynamicResource PrimaryHueMidBrush}" Foreground="{DynamicResource PrimaryHueMidForegroundBrush}"/> 
-            <Button Content="Delete" Command="{Binding DeleteCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Background="IndianRed" Foreground="White" Margin="5" 
-                    IsEnabled="{Binding SelectedProcess, Converter={StaticResource NotNullConverter}}"/> 
-            <Button Content="Cancel" Command="{Binding CancelCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" Margin="5" 
-                    IsEnabled="{Binding SelectedProcess, Converter={StaticResource NotNullConverter}}"/>
-        </StackPanel>
+        </materialDesign:ColorZone>
         
         <!-- Loading Indicator -->
-        <materialDesign:Card Grid.Row="1" Grid.RowSpan="3" 
-                             VerticalAlignment="Center" HorizontalAlignment="Center" 
-                             Padding="20" Background="{DynamicResource MaterialDesignCardBackground}"
+        <materialDesign:Card Grid.Row="0" 
+                            Grid.RowSpan="6"
+                            Style="{StaticResource LoadingIndicatorStyle}"
                              Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
             <StackPanel Orientation="Horizontal">
-                <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}" Value="0" IsIndeterminate="True" />
-                <TextBlock Text="Loading..." VerticalAlignment="Center" Margin="10,0,0,0"/>
+                <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}"
+                            Value="0"
+                            IsIndeterminate="True"/>
+                <TextBlock Text="Loading process types..."
+                          VerticalAlignment="Center"
+                          Margin="10,0,0,0"/>
             </StackPanel>
         </materialDesign:Card>
-
     </Grid>
 </UserControl>
