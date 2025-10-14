@@ -212,16 +212,22 @@
 
         <!-- Price List -->
         <materialDesign:Card Grid.Row="4" Style="{StaticResource MainContentAreaStyle}">
-            <DataGrid x:Name="PricesDataGrid"
-                      ItemsSource="{Binding FilteredPrices}" 
-                      SelectedItem="{Binding SelectedPrice, Mode=TwoWay}"
-                      AutoGenerateColumns="False" 
-                      IsReadOnly="True" 
-                      CanUserAddRows="False"
-                      SelectionMode="Single"
-                      materialDesign:DataGridAssist.CellPadding="13 8 8 8"
-                      materialDesign:DataGridAssist.ColumnHeaderPadding="13 10 8 10"
-                      MouseDoubleClick="PricesDataGrid_MouseDoubleClick">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                <DataGrid x:Name="PricesDataGrid"
+                          ItemsSource="{Binding FilteredPrices}" 
+                          SelectedItem="{Binding SelectedPrice, Mode=TwoWay}"
+                          AutoGenerateColumns="False" 
+                          IsReadOnly="True" 
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          CanUserReorderColumns="True"
+                          CanUserResizeColumns="True"
+                          CanUserSortColumns="True"
+                          SelectionMode="Single"
+                          MaxHeight="600"
+                          materialDesign:DataGridAssist.CellPadding="13 8 8 8"
+                          materialDesign:DataGridAssist.ColumnHeaderPadding="13 10 8 10"
+                          MouseDoubleClick="PricesDataGrid_MouseDoubleClick">
                 
                 <!-- Row styling for locked records -->
                 <DataGrid.RowStyle>
@@ -325,7 +331,8 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
                 </DataGrid.Columns>
-            </DataGrid>
+                </DataGrid>
+            </ScrollViewer>
         </materialDesign:Card>
 
         <!-- Status Bar -->
