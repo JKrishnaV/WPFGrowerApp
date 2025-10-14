@@ -30,7 +30,7 @@
             <RowDefinition Height="Auto"/> <!-- Breadcrumb -->
             <RowDefinition Height="Auto"/> <!-- Title -->
             <RowDefinition Height="Auto"/> <!-- Filters/Actions Panel -->
-            <RowDefinition Height="*"/>    <!-- Main Content Area -->
+            <RowDefinition Height="Auto"/> <!-- Main Content Area -->
             <RowDefinition Height="Auto"/> <!-- Status/Footer Bar -->
         </Grid.RowDefinitions>
 
@@ -183,10 +183,10 @@
         </materialDesign:Card>
 
         <!-- Main Content Area -->
-        <materialDesign:Card Grid.Row="3" Style="{StaticResource MainContentAreaStyle}">
+        <materialDesign:Card Grid.Row="3" Style="{StaticResource MainContentAreaStyle}" Margin="0,5,0,0">
             <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <!-- Growers DataGrid -->
@@ -195,6 +195,8 @@
                           ItemsSource="{Binding FilteredGrowers}"
                           SelectedItem="{Binding SelectedGrower, Mode=TwoWay}"
                           Style="{StaticResource StandardizedDataGridStyle}"
+                          MaxHeight="400"
+                          VerticalScrollBarVisibility="Auto"
                           MouseDoubleClick="GrowersDataGrid_MouseDoubleClick">
                     
                     <DataGrid.Columns>

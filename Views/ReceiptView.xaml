@@ -12,7 +12,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
@@ -228,7 +228,7 @@
         </StackPanel>
 
         <!-- Data Grid -->
-        <materialDesign:Card Grid.Row="3">
+        <materialDesign:Card Grid.Row="3" Margin="0,5,0,0">
             <Grid>
                 <DataGrid ItemsSource="{Binding Receipts}"
                          SelectedItem="{Binding SelectedReceipt}"
@@ -237,6 +237,8 @@
                          CanUserDeleteRows="False"
                          IsReadOnly="True"
                          SelectionMode="Single"
+                         MaxHeight="400"
+                         VerticalScrollBarVisibility="Auto"
                          Style="{StaticResource MaterialDesignDataGrid}">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Receipt #" 

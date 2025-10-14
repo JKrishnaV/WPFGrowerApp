@@ -43,7 +43,7 @@
             <RowDefinition Height="Auto"/> <!-- Row 1: Title -->
             <RowDefinition Height="Auto"/> <!-- Row 2: Search/Filter Bar -->
             <RowDefinition Height="Auto"/> <!-- Row 3: Statistics -->
-            <RowDefinition Height="*"/>    <!-- Row 4: Main Content (DataGrid) -->
+            <RowDefinition Height="Auto"/> <!-- Row 4: Main Content (DataGrid) -->
             <RowDefinition Height="Auto"/> <!-- Row 5: Status Bar -->
         </Grid.RowDefinitions>
 
@@ -169,9 +169,9 @@
         </materialDesign:Card>
 
         <!-- Statistics Card -->
-        <materialDesign:Card Grid.Row="3" Margin="0,0,0,10" 
+        <materialDesign:Card Grid.Row="3" Margin="0,0,0,5" 
                              Background="{DynamicResource PrimaryHueLightBrush}">
-            <Grid Margin="15">
+            <Grid Margin="15,10">
                 <StackPanel Orientation="Horizontal">
                     <materialDesign:PackIcon Kind="Warehouse" 
                                            Width="20" Height="20" 
@@ -187,7 +187,7 @@
         </materialDesign:Card>
 
         <!-- Depot List -->
-        <materialDesign:Card Grid.Row="4" Style="{StaticResource MainContentAreaStyle}">            
+        <materialDesign:Card Grid.Row="4" Style="{StaticResource MainContentAreaStyle}" Margin="0,5,0,0">            
             <Grid>
                 <!-- Loading Indicator -->
                 <StackPanel HorizontalAlignment="Center" 
@@ -213,6 +213,8 @@
                     CanUserSortColumns="True"
                     SelectionMode="Single"
                     MinHeight="200"
+                    MaxHeight="400"
+                    VerticalScrollBarVisibility="Auto"
                     materialDesign:DataGridAssist.CellPadding="13 8 8 8"
                     materialDesign:DataGridAssist.ColumnHeaderPadding="13 10 8 10"
                     MouseDoubleClick="DepotsDataGrid_MouseDoubleClick">
