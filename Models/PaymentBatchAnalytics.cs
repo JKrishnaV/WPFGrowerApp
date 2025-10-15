@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using WPFGrowerApp.DataAccess.Models;
 
 namespace WPFGrowerApp.Models
 {
@@ -17,7 +18,7 @@ namespace WPFGrowerApp.Models
         private int _anomalyCount;
         private string _comparisonNote = string.Empty;
         private List<PaymentDistributionBucket> _paymentDistribution = new();
-        private List<ProductBreakdown> _productBreakdown = new();
+        private List<WPFGrowerApp.DataAccess.Models.ProductBreakdown> _productBreakdown = new();
         private List<PaymentRangeBucket> _paymentRangeBuckets = new();
 
         // Computed properties for empty state logic
@@ -67,7 +68,7 @@ namespace WPFGrowerApp.Models
             set => SetProperty(ref _paymentDistribution, value);
         }
 
-        public List<ProductBreakdown> ProductBreakdown
+        public List<WPFGrowerApp.DataAccess.Models.ProductBreakdown> ProductBreakdown
         {
             get => _productBreakdown;
             set => SetProperty(ref _productBreakdown, value);

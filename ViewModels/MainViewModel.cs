@@ -21,6 +21,9 @@ namespace WPFGrowerApp.ViewModels
         
         // Store current PaymentBatchViewModel instance to preserve state during navigation
         private PaymentBatchViewModel _paymentBatchViewModel;
+        
+        // Store current ReceiptListViewModel instance to preserve state during navigation
+        private ReceiptListViewModel _receiptListViewModel;
 
         // Inject IServiceProvider, IDialogService, and IThemeService
         public MainViewModel(IServiceProvider serviceProvider, IDialogService dialogService, IThemeService themeService) 
@@ -122,6 +125,20 @@ namespace WPFGrowerApp.ViewModels
                         CurrentViewModel = paymentBatchVm;
                     }
                 }
+                // Store ReceiptListViewModel instance for state preservation
+                else if (viewModel is ReceiptListViewModel receiptListVm)
+                {
+                    // Reuse existing instance if available, otherwise use the new one
+                    if (_receiptListViewModel != null)
+                    {
+                        CurrentViewModel = _receiptListViewModel;
+                    }
+                    else
+                    {
+                        _receiptListViewModel = receiptListVm;
+                        CurrentViewModel = receiptListVm;
+                    }
+                }
                 else
                 {
                     CurrentViewModel = viewModel;
@@ -159,7 +176,7 @@ namespace WPFGrowerApp.ViewModels
         // Removed NavigateToDashboardExecute - Handled by NavigateTo<TViewModel>
 
 
-        private async Task NavigateToReceiptsExecuteAsync(object? parameter) // Added Receipts navigation
+        private async Task NavigateToReceiptsExecuteAsync(object? parameter) // Updated to use new ReceiptListViewModel
         {
             Infrastructure.Logging.Logger.Info("NavigateToReceiptsExecuteAsync - Starting receipt navigation");
             
@@ -174,16 +191,12 @@ namespace WPFGrowerApp.ViewModels
 
             try
             {
-                Infrastructure.Logging.Logger.Info("NavigateToReceiptsExecuteAsync - Resolving ReceiptViewModel from DI container");
-                // Resolve ViewModel from DI container
-                var receiptViewModel = _serviceProvider.GetRequiredService<ReceiptViewModel>();
+                Infrastructure.Logging.Logger.Info("NavigateToReceiptsExecuteAsync - Resolving ReceiptListViewModel from DI container");
+                // Resolve new ReceiptListViewModel from DI container
+                var receiptListViewModel = _serviceProvider.GetRequiredService<ReceiptListViewModel>();
 
-                Infrastructure.Logging.Logger.Info("NavigateToReceiptsExecuteAsync - Calling ReceiptViewModel.InitializeAsync");
-                // Call InitializeAsync to load receipts
-                await receiptViewModel.InitializeAsync();
-
-                Infrastructure.Logging.Logger.Info("NavigateToReceiptsExecuteAsync - Setting CurrentViewModel to ReceiptViewModel");
-                CurrentViewModel = receiptViewModel;
+                Infrastructure.Logging.Logger.Info("NavigateToReceiptsExecuteAsync - Setting CurrentViewModel to ReceiptListViewModel");
+                CurrentViewModel = receiptListViewModel;
                 IsMenuOpen = false; // Close menu after navigation
                 
                 Infrastructure.Logging.Logger.Info("NavigateToReceiptsExecuteAsync - Receipt navigation completed successfully");
@@ -255,6 +268,13 @@ namespace WPFGrowerApp.ViewModels
         {
             get => _paymentBatchViewModel;
             set => SetProperty(ref _paymentBatchViewModel, value);
+        }
+        
+        // Public property to access/store ReceiptListViewModel for state preservation
+        public ReceiptListViewModel ReceiptListViewModel
+        {
+            get => _receiptListViewModel;
+            set => SetProperty(ref _receiptListViewModel, value);
         }
         
         // Alias property for compatibility with detail view navigation

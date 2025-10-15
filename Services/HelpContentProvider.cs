@@ -153,6 +153,87 @@ Enter - Execute search (when in search boxes)
 Esc - Close dialogs and popups"
             );
 
+            // Receipt Detail View Help
+            _helpContents["ReceiptDetailView"] = new HelpContent(
+                title: "Receipt Detail Help",
+                content: @"The Receipt Detail screen provides comprehensive information about a specific receipt, including all related data and management capabilities.
+
+**Key Features:**
+
+• **Receipt Details Tab**: View and edit basic receipt information including receipt number, date, time, and audit information.
+
+• **Grower & Product Tab**: Manage grower selection, depot assignment, and product information including process, variety, and price class.
+
+• **Weights & Measurements Tab**: Enter and calculate weight measurements including gross weight, tare weight, net weight, dock percentage, and final weight.
+
+• **Quality Control Tab**: Manage quality information including grade assignment, quality checking, and void information if applicable.
+
+• **Payment Allocations Tab**: View all payment allocations associated with this receipt, including batch numbers, payment types, and amounts.
+
+• **Audit History Tab**: Review complete audit trail of all changes made to this receipt, including who made changes and when.
+
+**Receipt Management:**
+
+• **View Mode**: Read-only access to receipt information with ability to export and print
+• **Edit Mode**: Full editing capabilities for all receipt fields
+• **New Receipt**: Create new receipts with default values and validation
+
+**Weight Calculations:**
+
+The system automatically calculates:
+• **Net Weight** = Gross Weight - Tare Weight
+• **Dock Weight** = Net Weight × (Dock Percentage ÷ 100)
+• **Final Weight** = Net Weight - Dock Weight
+
+**Quality Control:**
+
+• **Grade Assignment**: Assign quality grades (1-3) to receipts
+• **Quality Checking**: Mark receipts as quality checked with timestamp and user
+• **Void Management**: Void receipts with reason and audit trail
+
+**Payment Integration:**
+
+• View all payment allocations for this receipt
+• See payment batch information and amounts
+• Track payment status and allocation details
+
+**Export & Print Features:**
+
+• **Export to Excel**: Generate detailed Excel report with all receipt information
+• **Export to PDF**: Create professional PDF receipt document
+• **Print**: Send receipt directly to printer with formatted layout
+
+**Validation & Error Handling:**
+
+• Real-time validation of all input fields
+• Comprehensive error messages with field highlighting
+• Unsaved changes tracking with confirmation dialogs
+• Audit trail for all modifications",
+
+                quickTips: @"• Use the summary cards to quickly see key receipt metrics
+• Switch between View and Edit modes using the toggle button
+• Weight calculations update automatically as you enter values
+• Use the 'Recalculate Weights' button to refresh calculations
+• Quality check receipts to mark them as verified
+• Export to Excel for detailed analysis and reporting
+• All changes are tracked in the audit history
+• Use the search in Payment Allocations to find specific payments
+• Filter audit history by change type for focused review
+• Void receipts only when absolutely necessary as this action is permanent",
+
+                keyboardShortcuts: @"F1 - Show this help
+F5 - Refresh receipt data
+Tab - Navigate between fields and tabs
+Shift+Tab - Navigate backwards
+Enter - Save changes (when in edit mode)
+Esc - Cancel changes (when in edit mode)
+Ctrl+S - Save receipt (when in edit mode)
+Ctrl+E - Toggle edit mode
+Ctrl+P - Print receipt
+Ctrl+Shift+E - Export to Excel
+Ctrl+Shift+P - Export to PDF"
+            );
+
             // Add more help contents for other views here as they are created
             _helpContents["Dashboard"] = new HelpContent(
                 title: "Dashboard Help",

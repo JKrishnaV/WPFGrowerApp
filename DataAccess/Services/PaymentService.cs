@@ -1235,7 +1235,7 @@ namespace WPFGrowerApp.DataAccess.Services
         /// <summary>
         /// Calculate product breakdown for the batch
         /// </summary>
-        private async Task<List<ProductBreakdown>> CalculateProductBreakdownAsync(int batchId)
+        private async Task<List<WPFGrowerApp.DataAccess.Models.ProductBreakdown>> CalculateProductBreakdownAsync(int batchId)
         {
             try
             {
@@ -1258,7 +1258,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         ORDER BY Amount DESC";
 
                     var parameters = new { BatchId = batchId };
-                    var result = (await connection.QueryAsync<ProductBreakdown>(sql, parameters)).ToList();
+                    var result = (await connection.QueryAsync<WPFGrowerApp.DataAccess.Models.ProductBreakdown>(sql, parameters)).ToList();
 
                     // Calculate percentages
                     var totalAmount = result.Sum(r => r.Amount);
@@ -1273,7 +1273,7 @@ namespace WPFGrowerApp.DataAccess.Services
             catch (Exception ex)
             {
                 Logger.Error($"Error calculating product breakdown for batch {batchId}: {ex.Message}", ex);
-                return new List<ProductBreakdown>();
+                return new List<WPFGrowerApp.DataAccess.Models.ProductBreakdown>();
             }
         }
 

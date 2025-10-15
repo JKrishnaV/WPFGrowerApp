@@ -9,6 +9,7 @@ using WPFGrowerApp.DataAccess.Models;
 using System.Linq;
 using WPFGrowerApp.Infrastructure.Logging; // Added for Logger
 using WPFGrowerApp.DataAccess.Exceptions; // Added for MissingReferenceDataException
+using WPFGrowerApp.Models; // Added for ValidationResult
 
 namespace WPFGrowerApp.DataAccess.Services
 {
@@ -528,57 +529,6 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        public async Task<bool> ValidateReceiptAsync(Receipt receipt)
-        {
-            try
-            {
-                using (var connection = new SqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
-
-                    // Check if receipt number exists
-                    var existingReceipt = await GetReceiptByNumberAsync(decimal.TryParse(receipt.ReceiptNumber, out var num) ? num : 0);
-                    if (existingReceipt != null)
-                    {
-                        return false;
-                    }
-
-                    // Validate grower exists
-                    var growerCount = await connection.ExecuteScalarAsync<int>(
-                        "SELECT COUNT(*) FROM Growers WHERE NUMBER = @GrowerNumber",
-                        new { receipt.GrowerNumber });
-                    if (growerCount == 0)
-                    {
-                        return false;
-                    }
-
-                    // Validate product exists
-                    var productCount = await connection.ExecuteScalarAsync<int>(
-                        "SELECT COUNT(*) FROM Products WHERE ProductCode = @Product",
-                        new { receipt.Product });
-                    if (productCount == 0)
-                    {
-                        return false;
-                    }
-
-                    // Validate process exists
-                    var processCount = await connection.ExecuteScalarAsync<int>(
-                        "SELECT COUNT(*) FROM Processes WHERE ProcessCode = @Process",
-                        new { receipt.Process });
-                    if (processCount == 0)
-                    {
-                        return false;
-                    }
-
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error in ValidateReceiptAsync: {ex.Message}");
-                throw;
-            }
-        }
 
         public async Task<decimal> CalculateNetWeightAsync(Receipt receipt)
         {
@@ -901,19 +851,22 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = @"
                         SELECT 
-                            AllocationId,
-                            ReceiptId,
-                            PaymentBatchId,
-                            PaymentTypeId,
-                            PriceScheduleId,
-                            PricePerPound,
-                            QuantityPaid,
-                            AmountPaid,
-                            AllocatedAt
-                        FROM ReceiptPaymentAllocations
-                        WHERE ReceiptId = @ReceiptId
-                          AND (Status IS NULL OR Status != 'Voided')
-                        ORDER BY PaymentTypeId;";
+                            rpa.AllocationId,
+                            rpa.ReceiptId,
+                            rpa.PaymentBatchId,
+                            rpa.PaymentTypeId,
+                            rpa.PriceScheduleId,
+                            rpa.PricePerPound,
+                            rpa.QuantityPaid as AllocatedWeight,
+                            rpa.AmountPaid,
+                            rpa.AllocatedAt,
+                            rpa.Status,
+                            pb.BatchNumber
+                        FROM ReceiptPaymentAllocations rpa
+                        LEFT JOIN PaymentBatches pb ON rpa.PaymentBatchId = pb.PaymentBatchId
+                        WHERE rpa.ReceiptId = @ReceiptId
+                          AND (rpa.Status IS NULL OR rpa.Status != 'Voided')
+                        ORDER BY rpa.PaymentTypeId;";
                     
                     var result = await connection.QueryAsync<ReceiptPaymentAllocation>(sql, new { ReceiptId = receiptId });
                     return result.ToList();
@@ -1145,6 +1098,668 @@ namespace WPFGrowerApp.DataAccess.Services
             catch (Exception ex)
             {
                 Logger.Error($"Error in GetPendingReceiptsCountAsync: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        #endregion
+
+        #region New Enhanced Methods
+
+        /// <summary>
+        /// Get detailed receipt information with joined data
+        /// </summary>
+        public async Task<ReceiptDetailDto?> GetReceiptDetailAsync(int receiptId)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    
+                    var sql = @"
+                        SELECT 
+                            r.ReceiptId, r.ReceiptNumber, r.ReceiptDate, r.ReceiptTime,
+                            r.GrowerId, r.ProductId, r.ProcessId, r.ProcessTypeId, r.VarietyId, r.DepotId,
+                            r.GrossWeight, r.TareWeight, r.NetWeight, r.DockPercentage, r.DockWeight, r.FinalWeight,
+                            r.Grade, r.PriceClassId, r.IsVoided, r.VoidedReason, r.VoidedAt, r.VoidedBy,
+                            r.ImportBatchId, r.CreatedAt, r.CreatedBy, r.ModifiedAt, r.ModifiedBy,
+                            r.QualityCheckedAt, r.QualityCheckedBy, r.DeletedAt, r.DeletedBy,
+                            g.FullName as GrowerName, g.GrowerNumber, g.Address as GrowerAddress, 
+                            g.PhoneNumber as GrowerPhone, g.Email as GrowerEmail,
+                            p.Description as ProductName, p.Description as ProductDescription,
+                            pr.ProcessName, pr.Description as ProcessDescription,
+                            v.VarietyName,
+                            d.DepotName, d.Address as DepotAddress
+                        FROM Receipts r
+                        LEFT JOIN Growers g ON r.GrowerId = g.GrowerId
+                        LEFT JOIN Products p ON r.ProductId = p.ProductId
+                        LEFT JOIN Processes pr ON r.ProcessId = pr.ProcessId
+                        LEFT JOIN Varieties v ON r.VarietyId = v.VarietyId
+                        LEFT JOIN Depots d ON r.DepotId = d.DepotId
+                        WHERE r.ReceiptId = @ReceiptId";
+                    
+                    var result = await connection.QueryFirstOrDefaultAsync<ReceiptDetailDto>(sql, new { ReceiptId = receiptId });
+                    
+                    if (result != null)
+                    {
+                        // Get payment allocation summary
+                        var paymentSummary = await GetReceiptPaymentSummaryAsync(receiptId);
+                        if (paymentSummary != null)
+                        {
+                            result.IsPaid = paymentSummary.TotalAmountPaid > 0;
+                            result.TotalAmountPaid = paymentSummary.TotalAmountPaid;
+                            result.LastPaymentDate = paymentSummary.LastPaymentDate;
+                        }
+                        
+                        // Get audit trail summary (simplified - no audit table exists)
+                        var auditCount = 0;
+                        result.ChangeCount = auditCount;
+                        
+                        if (result.ModifiedAt.HasValue)
+                        {
+                            result.LastModifiedDate = result.ModifiedAt;
+                            result.LastModifiedBy = result.ModifiedBy;
+                        }
+                    }
+                    
+                    return result;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting receipt detail for ReceiptId {receiptId}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get audit history for a receipt
+        /// </summary>
+        public Task<List<ReceiptAuditEntry>> GetReceiptAuditHistoryAsync(int receiptId)
+        {
+            try
+            {
+                // Audit table doesn't exist, return empty list
+                Logger.Info($"Audit history requested for ReceiptId {receiptId}, but ReceiptAuditTrail table doesn't exist");
+                return Task.FromResult(new List<ReceiptAuditEntry>());
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting audit history for ReceiptId {receiptId}: {ex.Message}", ex);
+                return Task.FromResult(new List<ReceiptAuditEntry>());
+            }
+        }
+
+        /// <summary>
+        /// Get related receipts (same grower, same date, or duplicates)
+        /// </summary>
+        public async Task<List<Receipt>> GetRelatedReceiptsAsync(int receiptId)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    
+                    // First get the source receipt
+                    var sourceReceipt = await connection.QueryFirstOrDefaultAsync<Receipt>(
+                        "SELECT * FROM Receipts WHERE ReceiptId = @ReceiptId", 
+                        new { ReceiptId = receiptId });
+                    
+                    if (sourceReceipt == null) return new List<Receipt>();
+                    
+                    var sql = @"
+                        SELECT 
+                            r.ReceiptId, r.ReceiptNumber, r.ReceiptDate, r.ReceiptTime,
+                            r.GrowerId, r.ProductId, r.ProcessId, r.ProcessTypeId, r.VarietyId, r.DepotId,
+                            r.GrossWeight, r.TareWeight, r.NetWeight, r.DockPercentage, r.DockWeight, r.FinalWeight,
+                            r.Grade, r.PriceClassId, r.IsVoided, r.VoidedReason, r.VoidedAt, r.VoidedBy,
+                            r.ImportBatchId, r.CreatedAt, r.CreatedBy, r.ModifiedAt, r.ModifiedBy,
+                            r.QualityCheckedAt, r.QualityCheckedBy, r.DeletedAt, r.DeletedBy,
+                            g.FullName as GrowerName
+                        FROM Receipts r
+                        LEFT JOIN Growers g ON r.GrowerId = g.GrowerId
+                        WHERE r.DeletedAt IS NULL
+                          AND r.ReceiptId != @ReceiptId
+                          AND (
+                              (r.GrowerId = @GrowerId AND r.ReceiptDate = @ReceiptDate) OR
+                              (r.ReceiptNumber = @ReceiptNumber AND r.ReceiptId != @ReceiptId)
+                          )
+                        ORDER BY r.ReceiptDate DESC, r.ReceiptNumber DESC";
+                    
+                    var result = await connection.QueryAsync<Receipt>(sql, new { 
+                        ReceiptId = receiptId,
+                        GrowerId = sourceReceipt.GrowerId,
+                        ReceiptDate = sourceReceipt.ReceiptDate,
+                        ReceiptNumber = sourceReceipt.ReceiptNumber
+                    });
+                    
+                    return result.ToList();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting related receipts for ReceiptId {receiptId}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Duplicate a receipt with new receipt number and date
+        /// </summary>
+        public async Task<Receipt> DuplicateReceiptAsync(int receiptId, string createdBy)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    
+                    // Get the source receipt
+                    var sourceReceipt = await connection.QueryFirstOrDefaultAsync<Receipt>(
+                        "SELECT * FROM Receipts WHERE ReceiptId = @ReceiptId", 
+                        new { ReceiptId = receiptId });
+                    
+                    if (sourceReceipt == null)
+                        throw new ArgumentException($"Receipt with ID {receiptId} not found");
+                    
+                    // Generate new receipt number
+                    var nextNumber = await GetNextReceiptNumberAsync();
+                    
+                    // Create duplicate with new receipt number and current date/time
+                    var duplicateReceipt = new Receipt
+                    {
+                        ReceiptNumber = nextNumber.ToString(),
+                        ReceiptDate = DateTime.Today,
+                        ReceiptTime = DateTime.Now.TimeOfDay,
+                        GrowerId = sourceReceipt.GrowerId,
+                        ProductId = sourceReceipt.ProductId,
+                        ProcessId = sourceReceipt.ProcessId,
+                        ProcessTypeId = sourceReceipt.ProcessTypeId,
+                        VarietyId = sourceReceipt.VarietyId,
+                        DepotId = sourceReceipt.DepotId,
+                        GrossWeight = sourceReceipt.GrossWeight,
+                        TareWeight = sourceReceipt.TareWeight,
+                        NetWeight = sourceReceipt.NetWeight,
+                        DockPercentage = sourceReceipt.DockPercentage,
+                        DockWeight = sourceReceipt.DockWeight,
+                        FinalWeight = sourceReceipt.FinalWeight,
+                        Grade = sourceReceipt.Grade,
+                        PriceClassId = sourceReceipt.PriceClassId,
+                        IsVoided = false,
+                        VoidedReason = null,
+                        VoidedAt = null,
+                        VoidedBy = null,
+                        ImportBatchId = null,
+                        CreatedAt = DateTime.Now,
+                        CreatedBy = createdBy,
+                        ModifiedAt = null,
+                        ModifiedBy = null,
+                        QualityCheckedAt = null,
+                        QualityCheckedBy = null,
+                        DeletedAt = null,
+                        DeletedBy = null
+                    };
+                    
+                    // Save the duplicate
+                    var savedReceipt = await SaveReceiptAsync(duplicateReceipt);
+                    
+                    Logger.Info($"Duplicated receipt {sourceReceipt.ReceiptNumber} as {savedReceipt.ReceiptNumber} by {createdBy}");
+                    return savedReceipt;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error duplicating receipt {receiptId}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Mark a receipt as quality checked
+        /// </summary>
+        public async Task<bool> MarkQualityCheckedAsync(int receiptId, string checkedBy)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    
+                    var sql = @"
+                        UPDATE Receipts
+                        SET QualityCheckedAt = GETDATE(),
+                            QualityCheckedBy = @CheckedBy,
+                            ModifiedAt = GETDATE(),
+                            ModifiedBy = @ModifiedBy
+                        WHERE ReceiptId = @ReceiptId
+                          AND DeletedAt IS NULL
+                          AND IsVoided = 0";
+                    
+                    var parameters = new { 
+                        ReceiptId = receiptId, 
+                        CheckedBy = checkedBy,
+                        ModifiedBy = checkedBy
+                    };
+                    
+                    var result = await connection.ExecuteAsync(sql, parameters);
+                    
+                    if (result > 0)
+                    {
+                        Logger.Info($"Receipt {receiptId} marked as quality checked by {checkedBy}");
+                    }
+                    
+                    return result > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error marking receipt {receiptId} as quality checked: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Validate receipt data comprehensively
+        /// </summary>
+        public async Task<WPFGrowerApp.Models.ValidationResult> ValidateReceiptAsync(Receipt receipt)
+        {
+            try
+            {
+                var validationService = new ReceiptValidationService(
+                    null, null, null, null, this); // TODO: Inject proper dependencies
+                
+                return await validationService.ValidateReceiptDataAsync(receipt);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error validating receipt: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get receipt analytics for a date range
+        /// </summary>
+        public async Task<ReceiptAnalytics> GetReceiptAnalyticsAsync(DateTime? startDate, DateTime? endDate)
+        {
+            try
+            {
+                var analyticsService = new ReceiptAnalyticsService(this);
+                return await analyticsService.GetReceiptAnalyticsAsync(startDate, endDate);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting receipt analytics: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Generate receipt PDF
+        /// </summary>
+        public async Task<byte[]> GenerateReceiptPdfAsync(int receiptId)
+        {
+            try
+            {
+                var exportService = new ReceiptExportService(this, null); // TODO: Inject proper dependencies
+                return await exportService.GenerateReceiptPrintPreviewAsync(receiptId);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error generating PDF for receipt {receiptId}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Bulk void multiple receipts
+        /// </summary>
+        public async Task<bool> BulkVoidReceiptsAsync(List<int> receiptIds, string reason, string voidedBy)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    using (var transaction = connection.BeginTransaction())
+                    {
+                        try
+                        {
+                            var sql = @"
+                                UPDATE Receipts
+                                SET IsVoided = 1,
+                                    VoidedReason = @VoidedReason,
+                                    VoidedAt = GETDATE(),
+                                    VoidedBy = @VoidedBy,
+                                    ModifiedAt = GETDATE(),
+                                    ModifiedBy = @ModifiedBy
+                                WHERE ReceiptId IN @ReceiptIds
+                                  AND DeletedAt IS NULL
+                                  AND IsVoided = 0";
+                            
+                            var parameters = new { 
+                                ReceiptIds = receiptIds,
+                                VoidedReason = reason,
+                                VoidedBy = voidedBy,
+                                ModifiedBy = voidedBy
+                            };
+                            
+                            var result = await connection.ExecuteAsync(sql, parameters, transaction);
+                            
+                            transaction.Commit();
+                            
+                            if (result > 0)
+                            {
+                                Logger.Info($"Bulk voided {result} receipts by {voidedBy}. Reason: {reason}");
+                            }
+                            
+                            return result > 0;
+                        }
+                        catch
+                        {
+                            transaction.Rollback();
+                            throw;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error bulk voiding receipts: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get receipts with advanced filtering and total count
+        /// </summary>
+        public async Task<(List<Receipt> Receipts, int TotalCount)> GetReceiptsWithFiltersAndCountAsync(ReceiptFilters filters)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    
+                    // First, get the total count
+                    var countBuilder = new SqlBuilder();
+                    var countSelector = countBuilder.AddTemplate(@"
+                        SELECT COUNT(*)
+                        FROM Receipts r
+                        LEFT JOIN Growers g ON r.GrowerId = g.GrowerId
+                        /**where**/"
+                    );
+                    
+                    // Add mandatory conditions for count
+                    countBuilder.Where("r.DeletedAt IS NULL");
+                    
+                    // Add filters for count
+                    if (filters.StartDate.HasValue)
+                        countBuilder.Where("r.ReceiptDate >= @StartDate", new { filters.StartDate });
+                    
+                    if (filters.EndDate.HasValue)
+                        countBuilder.Where("r.ReceiptDate <= @EndDate", new { filters.EndDate });
+                    
+                    if (!string.IsNullOrEmpty(filters.SearchText))
+                        countBuilder.Where("(r.ReceiptNumber LIKE @SearchText OR g.FullName LIKE @SearchText)", 
+                            new { SearchText = $"%{filters.SearchText}%" });
+                    
+                    if (filters.ShowVoided.HasValue)
+                        countBuilder.Where("r.IsVoided = @ShowVoided", new { filters.ShowVoided });
+                    
+                    if (filters.ProductId.HasValue)
+                        countBuilder.Where("r.ProductId = @ProductId", new { filters.ProductId });
+                    
+                    if (filters.DepotId.HasValue)
+                        countBuilder.Where("r.DepotId = @DepotId", new { filters.DepotId });
+                    
+                    if (filters.GrowerId.HasValue)
+                        countBuilder.Where("r.GrowerId = @GrowerId", new { filters.GrowerId });
+                    
+                    if (!string.IsNullOrEmpty(filters.CreatedBy))
+                        countBuilder.Where("r.CreatedBy = @CreatedBy", new { filters.CreatedBy });
+                    
+                    if (filters.Grade.HasValue)
+                        countBuilder.Where("r.Grade = @Grade", new { filters.Grade });
+                    
+                    if (filters.IsQualityChecked.HasValue)
+                    {
+                        if (filters.IsQualityChecked.Value)
+                            countBuilder.Where("r.QualityCheckedAt IS NOT NULL");
+                        else
+                            countBuilder.Where("r.QualityCheckedAt IS NULL");
+                    }
+                    
+                    // Get total count
+                    var totalCount = await connection.QuerySingleAsync<int>(countSelector.RawSql, countSelector.Parameters);
+                    
+                    // Now get the paginated results
+                    var sqlBuilder = new SqlBuilder();
+                    var selector = sqlBuilder.AddTemplate(@"
+                        SELECT 
+                            r.ReceiptId, r.ReceiptNumber, r.ReceiptDate, r.ReceiptTime,
+                            r.GrowerId, r.ProductId, r.ProcessId, r.ProcessTypeId, r.VarietyId, r.DepotId,
+                            r.GrossWeight, r.TareWeight, r.NetWeight, r.DockPercentage, r.DockWeight, r.FinalWeight,
+                            r.Grade, r.PriceClassId, r.IsVoided, r.VoidedReason, r.VoidedAt, r.VoidedBy,
+                            r.ImportBatchId, r.CreatedAt, r.CreatedBy, r.ModifiedAt, r.ModifiedBy,
+                            r.QualityCheckedAt, r.QualityCheckedBy, r.DeletedAt, r.DeletedBy,
+                            g.FullName as GrowerName,
+                            p.ProductName,
+                            d.DepotName
+                        FROM Receipts r
+                        LEFT JOIN Growers g ON r.GrowerId = g.GrowerId
+                        LEFT JOIN Products p ON r.ProductId = p.ProductId
+                        LEFT JOIN Depots d ON r.DepotId = d.DepotId
+                        /**where**/
+                        ORDER BY 
+                            CASE WHEN @SortBy = 'ReceiptDate' AND @SortDescending = 1 THEN r.ReceiptDate END DESC,
+                            CASE WHEN @SortBy = 'ReceiptDate' AND @SortDescending = 0 THEN r.ReceiptDate END ASC,
+                            CASE WHEN @SortBy = 'ReceiptNumber' AND @SortDescending = 1 THEN r.ReceiptNumber END DESC,
+                            CASE WHEN @SortBy = 'ReceiptNumber' AND @SortDescending = 0 THEN r.ReceiptNumber END ASC,
+                            r.ReceiptDate DESC, r.ReceiptNumber DESC
+                        OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY"
+                    );
+                    
+                    // Add the same conditions for the main query
+                    sqlBuilder.Where("r.DeletedAt IS NULL");
+                    
+                    if (filters.StartDate.HasValue)
+                        sqlBuilder.Where("r.ReceiptDate >= @StartDate", new { filters.StartDate });
+                    
+                    if (filters.EndDate.HasValue)
+                        sqlBuilder.Where("r.ReceiptDate <= @EndDate", new { filters.EndDate });
+                    
+                    if (!string.IsNullOrEmpty(filters.SearchText))
+                        sqlBuilder.Where("(r.ReceiptNumber LIKE @SearchText OR g.FullName LIKE @SearchText)", 
+                            new { SearchText = $"%{filters.SearchText}%" });
+                    
+                    if (filters.ShowVoided.HasValue)
+                        sqlBuilder.Where("r.IsVoided = @ShowVoided", new { filters.ShowVoided });
+                    
+                    if (filters.ProductId.HasValue)
+                        sqlBuilder.Where("r.ProductId = @ProductId", new { filters.ProductId });
+                    
+                    if (filters.DepotId.HasValue)
+                        sqlBuilder.Where("r.DepotId = @DepotId", new { filters.DepotId });
+                    
+                    if (filters.GrowerId.HasValue)
+                        sqlBuilder.Where("r.GrowerId = @GrowerId", new { filters.GrowerId });
+                    
+                    if (!string.IsNullOrEmpty(filters.CreatedBy))
+                        sqlBuilder.Where("r.CreatedBy = @CreatedBy", new { filters.CreatedBy });
+                    
+                    if (filters.Grade.HasValue)
+                        sqlBuilder.Where("r.Grade = @Grade", new { filters.Grade });
+                    
+                    if (filters.IsQualityChecked.HasValue)
+                    {
+                        if (filters.IsQualityChecked.Value)
+                            sqlBuilder.Where("r.QualityCheckedAt IS NOT NULL");
+                        else
+                            sqlBuilder.Where("r.QualityCheckedAt IS NULL");
+                    }
+                    
+                    // Add parameters
+                    sqlBuilder.AddParameters(new {
+                        filters.SortBy,
+                        filters.SortDescending,
+                        Offset = (filters.PageNumber - 1) * filters.PageSize,
+                        filters.PageSize
+                    });
+                    
+                    var result = await connection.QueryAsync<Receipt>(selector.RawSql, selector.Parameters);
+                    return (result.ToList(), totalCount);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting receipts with filters and count: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get receipts with advanced filtering (legacy method for backward compatibility)
+        /// </summary>
+        public async Task<List<Receipt>> GetReceiptsWithFiltersAsync(ReceiptFilters filters)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    
+                    var sqlBuilder = new SqlBuilder();
+                    var selector = sqlBuilder.AddTemplate(@"
+                        SELECT 
+                            r.ReceiptId, r.ReceiptNumber, r.ReceiptDate, r.ReceiptTime,
+                            r.GrowerId, r.ProductId, r.ProcessId, r.ProcessTypeId, r.VarietyId, r.DepotId,
+                            r.GrossWeight, r.TareWeight, r.NetWeight, r.DockPercentage, r.DockWeight, r.FinalWeight,
+                            r.Grade, r.PriceClassId, r.IsVoided, r.VoidedReason, r.VoidedAt, r.VoidedBy,
+                            r.ImportBatchId, r.CreatedAt, r.CreatedBy, r.ModifiedAt, r.ModifiedBy,
+                            r.QualityCheckedAt, r.QualityCheckedBy, r.DeletedAt, r.DeletedBy,
+                            g.FullName as GrowerName
+                        FROM Receipts r
+                        LEFT JOIN Growers g ON r.GrowerId = g.GrowerId
+                        /**where**/
+                        ORDER BY 
+                            CASE WHEN @SortBy = 'ReceiptDate' AND @SortDescending = 1 THEN r.ReceiptDate END DESC,
+                            CASE WHEN @SortBy = 'ReceiptDate' AND @SortDescending = 0 THEN r.ReceiptDate END ASC,
+                            CASE WHEN @SortBy = 'ReceiptNumber' AND @SortDescending = 1 THEN r.ReceiptNumber END DESC,
+                            CASE WHEN @SortBy = 'ReceiptNumber' AND @SortDescending = 0 THEN r.ReceiptNumber END ASC,
+                            r.ReceiptDate DESC, r.ReceiptNumber DESC
+                        OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY"
+                    );
+                    
+                    // Add mandatory conditions
+                    sqlBuilder.Where("r.DeletedAt IS NULL");
+                    
+                    // Add filters
+                    if (filters.StartDate.HasValue)
+                        sqlBuilder.Where("r.ReceiptDate >= @StartDate", new { filters.StartDate });
+                    
+                    if (filters.EndDate.HasValue)
+                        sqlBuilder.Where("r.ReceiptDate <= @EndDate", new { filters.EndDate });
+                    
+                    if (!string.IsNullOrEmpty(filters.SearchText))
+                        sqlBuilder.Where("(r.ReceiptNumber LIKE @SearchText OR g.FullName LIKE @SearchText)", 
+                            new { SearchText = $"%{filters.SearchText}%" });
+                    
+                    if (filters.ShowVoided.HasValue)
+                        sqlBuilder.Where("r.IsVoided = @ShowVoided", new { filters.ShowVoided });
+                    
+                    if (filters.ProductId.HasValue)
+                        sqlBuilder.Where("r.ProductId = @ProductId", new { filters.ProductId });
+                    
+                    if (filters.DepotId.HasValue)
+                        sqlBuilder.Where("r.DepotId = @DepotId", new { filters.DepotId });
+                    
+                    if (filters.GrowerId.HasValue)
+                        sqlBuilder.Where("r.GrowerId = @GrowerId", new { filters.GrowerId });
+                    
+                    if (!string.IsNullOrEmpty(filters.CreatedBy))
+                        sqlBuilder.Where("r.CreatedBy = @CreatedBy", new { filters.CreatedBy });
+                    
+                    if (filters.Grade.HasValue)
+                        sqlBuilder.Where("r.Grade = @Grade", new { filters.Grade });
+                    
+                    if (filters.IsQualityChecked.HasValue)
+                    {
+                        if (filters.IsQualityChecked.Value)
+                            sqlBuilder.Where("r.QualityCheckedAt IS NOT NULL");
+                        else
+                            sqlBuilder.Where("r.QualityCheckedAt IS NULL");
+                    }
+                    
+                    // Add parameters
+                    sqlBuilder.AddParameters(new {
+                        filters.SortBy,
+                        filters.SortDescending,
+                        Offset = (filters.PageNumber - 1) * filters.PageSize,
+                        filters.PageSize
+                    });
+                    
+                    var result = await connection.QueryAsync<Receipt>(selector.RawSql, selector.Parameters);
+                    return result.ToList();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting receipts with filters: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get receipt statistics for dashboard
+        /// </summary>
+        public async Task<ReceiptStatistics> GetReceiptStatisticsAsync(DateTime? startDate, DateTime? endDate)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    
+                    var sql = @"
+                        SELECT 
+                            COUNT(*) as TotalReceipts,
+                            SUM(CASE WHEN IsVoided = 0 THEN 1 ELSE 0 END) as ActiveReceipts,
+                            SUM(CASE WHEN IsVoided = 1 THEN 1 ELSE 0 END) as VoidedReceipts,
+                            SUM(CASE WHEN QualityCheckedAt IS NOT NULL THEN 1 ELSE 0 END) as QualityCheckedReceipts,
+                            SUM(GrossWeight) as TotalGrossWeight,
+                            SUM(NetWeight) as TotalNetWeight,
+                            SUM(FinalWeight) as TotalFinalWeight,
+                            AVG(DockPercentage) as AverageDockPercentage,
+                            COUNT(DISTINCT GrowerId) as UniqueGrowers,
+                            COUNT(DISTINCT ProductId) as UniqueProducts,
+                            COUNT(DISTINCT DepotId) as UniqueDepots
+                        FROM Receipts
+                        WHERE DeletedAt IS NULL";
+                    
+                    var parameters = new DynamicParameters();
+                    
+                    if (startDate.HasValue)
+                    {
+                        sql += " AND ReceiptDate >= @StartDate";
+                        parameters.Add("@StartDate", startDate.Value);
+                    }
+                    
+                    if (endDate.HasValue)
+                    {
+                        sql += " AND ReceiptDate <= @EndDate";
+                        parameters.Add("@EndDate", endDate.Value);
+                    }
+                    
+                    var result = await connection.QueryFirstOrDefaultAsync<ReceiptStatistics>(sql, parameters);
+                    return result ?? new ReceiptStatistics();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting receipt statistics: {ex.Message}", ex);
                 throw;
             }
         }

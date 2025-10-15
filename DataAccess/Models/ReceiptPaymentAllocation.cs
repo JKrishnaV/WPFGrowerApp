@@ -1,172 +1,67 @@
 using System;
 using System.ComponentModel;
-using System.Runtime.CompilerServices;
 
 namespace WPFGrowerApp.DataAccess.Models
 {
     /// <summary>
-    /// Represents a payment allocation to a receipt.
-    /// Links receipts to payment batches and tracks what was paid.
-    /// Matches the ReceiptPaymentAllocations table in the modern database.
+    /// Represents a payment allocation for a receipt
     /// </summary>
     public class ReceiptPaymentAllocation : INotifyPropertyChanged
     {
-        // ======================================================================
-        // PRIMARY IDENTIFICATION
-        // ======================================================================
+        public int AllocationId { get; set; }
+        public int ReceiptId { get; set; }
+        public int PaymentBatchId { get; set; }
+        public string BatchNumber { get; set; } = string.Empty;
+        public DateTime BatchDate { get; set; }
+        public string PaymentTypeName { get; set; } = string.Empty;
+        public decimal AmountPaid { get; set; }
+        public decimal AllocatedWeight { get; set; }
+        public decimal PricePerPound { get; set; }
+        public DateTime AllocatedAt { get; set; }
+        public string AllocatedBy { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty; // Active, Voided, etc.
+        public string? Notes { get; set; }
         
-        private int _allocationId;
-        private int _receiptId;
-        private int _paymentBatchId;
-        private int _paymentTypeId;
+        // Additional properties for compatibility
+        public int PaymentTypeId { get; set; }
+        public int PriceScheduleId { get; set; }
+        public decimal QuantityPaid { get; set; }
+        public int GrowerId { get; set; }
+        public string GrowerName { get; set; } = string.Empty;
+        public string ReceiptNumber { get; set; } = string.Empty;
 
-        public int AllocationId
+        // Display Properties
+        public string AmountPaidDisplay => $"{AmountPaid:C2}";
+        public string AllocatedWeightDisplay => $"{AllocatedWeight:N2} lbs";
+        public string PricePerPoundDisplay => $"{PricePerPound:C4}/lb";
+        public string AllocatedAtDisplay => $"{AllocatedAt:yyyy-MM-dd HH:mm}";
+        public string BatchInfoDisplay => $"{BatchNumber} ({PaymentTypeDisplay})";
+        public string StatusDisplay => Status;
+        public string PaymentTypeDisplay => GetPaymentTypeDisplay();
+
+        // Helper Properties
+        public bool IsActive => Status == "Active";
+        public bool IsVoided => Status == "Voided";
+        public bool IsRecent => (DateTime.Now - AllocatedAt).TotalDays <= 30;
+
+        private string GetPaymentTypeDisplay()
         {
-            get => _allocationId;
-            set => SetProperty(ref _allocationId, value);
+            // Map PaymentTypeId to display names
+            return PaymentTypeId switch
+            {
+                1 => "Advance 1",
+                2 => "Advance 2", 
+                3 => "Advance 3",
+                4 => "Final Payment",
+                _ => $"Payment Type {PaymentTypeId}"
+            };
         }
 
-        public int ReceiptId
-        {
-            get => _receiptId;
-            set => SetProperty(ref _receiptId, value);
-        }
+        public event PropertyChangedEventHandler PropertyChanged;
 
-        public int PaymentBatchId
-        {
-            get => _paymentBatchId;
-            set => SetProperty(ref _paymentBatchId, value);
-        }
-
-        public int PaymentTypeId
-        {
-            get => _paymentTypeId;
-            set => SetProperty(ref _paymentTypeId, value);
-        }
-
-        // ======================================================================
-        // PRICING & PAYMENT DETAILS
-        // ======================================================================
-        
-        private int _priceScheduleId;
-        private decimal _pricePerPound;
-        private decimal _quantityPaid;
-        private decimal _amountPaid;
-
-        public int PriceScheduleId
-        {
-            get => _priceScheduleId;
-            set => SetProperty(ref _priceScheduleId, value);
-        }
-
-        public decimal PricePerPound
-        {
-            get => _pricePerPound;
-            set => SetProperty(ref _pricePerPound, value);
-        }
-
-        public decimal QuantityPaid
-        {
-            get => _quantityPaid;
-            set => SetProperty(ref _quantityPaid, value);
-        }
-
-        public decimal AmountPaid
-        {
-            get => _amountPaid;
-            set => SetProperty(ref _amountPaid, value);
-        }
-
-        // ======================================================================
-        // AUDIT TRAIL
-        // ======================================================================
-        
-        private DateTime _allocatedAt;
-        private string _status = "Pending";
-        private DateTime? _modifiedAt;
-        private string? _modifiedBy;
-
-        public DateTime AllocatedAt
-        {
-            get => _allocatedAt;
-            set => SetProperty(ref _allocatedAt, value);
-        }
-
-        public string Status
-        {
-            get => _status;
-            set => SetProperty(ref _status, value);
-        }
-
-        public DateTime? ModifiedAt
-        {
-            get => _modifiedAt;
-            set => SetProperty(ref _modifiedAt, value);
-        }
-
-        public string? ModifiedBy
-        {
-            get => _modifiedBy;
-            set => SetProperty(ref _modifiedBy, value);
-        }
-
-        // ======================================================================
-        // NAVIGATION PROPERTIES (Not mapped to database)
-        // ======================================================================
-        
-        private int? _growerId;
-        private string? _receiptNumber;
-        private string? _growerName;
-        private string? _paymentTypeName;
-        private string? _batchNumber;
-
-        public int? GrowerId
-        {
-            get => _growerId;
-            set => SetProperty(ref _growerId, value);
-        }
-
-        public string? ReceiptNumber
-        {
-            get => _receiptNumber;
-            set => SetProperty(ref _receiptNumber, value);
-        }
-
-        public string? GrowerName
-        {
-            get => _growerName;
-            set => SetProperty(ref _growerName, value);
-        }
-
-        public string? PaymentTypeName
-        {
-            get => _paymentTypeName;
-            set => SetProperty(ref _paymentTypeName, value);
-        }
-
-        public string? BatchNumber
-        {
-            get => _batchNumber;
-            set => SetProperty(ref _batchNumber, value);
-        }
-
-        // ======================================================================
-        // INOTIFYPROPERTYCHANGED IMPLEMENTATION
-        // ======================================================================
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-
-        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        protected virtual void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-
-        protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
-        {
-            if (Equals(field, value)) return false;
-            field = value;
-            OnPropertyChanged(propertyName);
-            return true;
         }
     }
 }

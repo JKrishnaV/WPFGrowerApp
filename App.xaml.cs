@@ -61,6 +61,11 @@ namespace WPFGrowerApp
             services.AddTransient<IContainerTypeService, ContainerTypeService>(); // Added Container Type Service
             services.AddTransient<ValidationService>();
             services.AddTransient<IUserService, UserService>();
+            
+            // New Receipt Management Services
+            services.AddTransient<IReceiptExportService, ReceiptExportService>();
+            services.AddTransient<IReceiptValidationService, ReceiptValidationService>();
+            services.AddTransient<IReceiptAnalyticsService, ReceiptAnalyticsService>();
 
             // Register Other Services
             services.AddTransient<ReportExportService>();
@@ -78,6 +83,9 @@ namespace WPFGrowerApp
             services.AddTransient<GrowerDetailViewModel>();
             services.AddTransient<ReceiptViewModel>(); // Added Receipt VM
             services.AddTransient<ReceiptEntryViewModel>(); // Added Receipt Entry VM
+            // New Receipt Management ViewModels
+            services.AddTransient<ReceiptListViewModel>();
+            services.AddTransient<ReceiptDetailViewModel>();
             services.AddTransient<ImportViewModel>();
             services.AddTransient<ReportsViewModel>();
             services.AddTransient<InventoryViewModel>();

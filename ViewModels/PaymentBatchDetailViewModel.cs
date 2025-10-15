@@ -334,8 +334,8 @@ namespace WPFGrowerApp.ViewModels
                 GrowerFilterOptions.Add(new GrowerFilterOption { GrowerId = null, DisplayText = "All Growers" });
                 
                 var uniqueGrowers = allocations
-                    .Where(a => a.GrowerId.HasValue)
-                    .Select(a => new { GrowerId = a.GrowerId!.Value, GrowerName = a.GrowerName ?? "" })
+                    .Where(a => a.GrowerId > 0)
+                    .Select(a => new { GrowerId = a.GrowerId, GrowerName = a.GrowerName ?? "" })
                     .Distinct()
                     .OrderBy(g => g.GrowerName);
 

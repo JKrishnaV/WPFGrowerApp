@@ -1,0 +1,962 @@
+<!-- BACKUP OF ORIGINAL RECEIPT DETAIL VIEW - COMMENTED OUT FOR REDESIGN -->
+<!--
+<UserControl x:Class="WPFGrowerApp.Views.ReceiptDetailView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels"
+             mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance Type={x:Type vm:ReceiptDetailViewModel}}"
+             d:DesignHeight="800" d:DesignWidth="1200"
+             Background="{DynamicResource MaterialDesignPaper}"
+             Focusable="True">
+-->
+
+<!-- NEW REDESIGNED RECEIPT DETAIL VIEW -->
+<UserControl x:Class="WPFGrowerApp.Views.ReceiptDetailView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels"
+             xmlns:converters="clr-namespace:WPFGrowerApp.Converters"
+             mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance Type={x:Type vm:ReceiptDetailViewModel}}"
+             d:DesignHeight="800" d:DesignWidth="1200"
+             Background="{DynamicResource MaterialDesignPaper}"
+             Focusable="True">
+
+    <!-- Keyboard Shortcuts -->
+    <UserControl.InputBindings>
+        <KeyBinding Key="F1" Command="{Binding ShowHelpCommand}"/>
+        <KeyBinding Key="F5" Command="{Binding RefreshCommand}"/>
+    </UserControl.InputBindings>
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Styles/StandardizedViewTemplate.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid Margin="10">
+                <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>  <!-- Breadcrumb -->
+            <RowDefinition Height="Auto"/>  <!-- Header -->
+            <RowDefinition Height="Auto"/>  <!-- Summary Cards -->
+            <RowDefinition Height="*"/>     <!-- TabControl -->
+            <RowDefinition Height="Auto"/>  <!-- Status Bar -->
+                </Grid.RowDefinitions>
+
+            <!-- Breadcrumb Navigation -->
+            <materialDesign:ColorZone Grid.Row="0" Style="{StaticResource BreadcrumbNavigationStyle}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <!-- Breadcrumb Path -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <Button Style="{StaticResource MaterialDesignFlatButton}"
+                            Command="{Binding NavigateToDashboardCommand}"
+                            Padding="5,0">
+                <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Home" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBlock Text="Dashboard" FontSize="12"/>
+                        </StackPanel>
+                    </Button>
+                    <materialDesign:PackIcon Kind="ChevronRight" Width="16" Height="16" VerticalAlignment="Center" Margin="5,0"/>
+                    <Button Style="{StaticResource MaterialDesignFlatButton}"
+                            Command="{Binding NavigateBackCommand}"
+                            Padding="5,0">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Receipt" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBlock Text="Receipt Management" FontSize="12"/>
+                        </StackPanel>
+                    </Button>
+                    <materialDesign:PackIcon Kind="ChevronRight" Width="16" Height="16" VerticalAlignment="Center" Margin="5,0"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <materialDesign:PackIcon Kind="FileDocument" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                        <TextBlock Text="{Binding ReceiptNumber}" FontSize="12" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </StackPanel>
+                
+                <!-- Help Button (Right Side) -->
+                <Button Grid.Column="1"
+                        Command="{Binding ShowHelpCommand}"
+                        Style="{StaticResource MaterialDesignIconButton}"
+                        ToolTip="Show help (F1)"
+                        Width="32"
+                        Height="32"
+                        Margin="0,0,8,0"
+                        VerticalAlignment="Center">
+                    <materialDesign:PackIcon Kind="HelpCircleOutline" 
+                                           Width="20" Height="20"
+                                           Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                </Button>
+            </Grid>
+            </materialDesign:ColorZone>
+
+        <!-- Header with Receipt Info -->
+        <materialDesign:Card Grid.Row="1" Margin="0,10,0,10" materialDesign:ElevationAssist.Elevation="Dp2">
+            <Grid Margin="15">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="Receipt" Width="32" Height="32" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{Binding ReceiptNumber, StringFormat='Receipt #{0}'}" FontSize="20" FontWeight="Bold"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                            <TextBlock Text="{Binding SelectedGrower.GrowerName}" FontSize="12" Margin="0,0,10,0"/>
+                            <TextBlock Text="•" FontSize="12" Margin="0,0,10,0"/>
+                            <TextBlock Text="{Binding ReceiptDate, StringFormat='{}{0:MMM dd, yyyy}'}" FontSize="12" Margin="0,0,10,0"/>
+                            <TextBlock Text="•" FontSize="12" Margin="0,0,10,0"/>
+                            <TextBlock Text="{Binding ReceiptTime, StringFormat='{}{0:HH:mm}'}" FontSize="12"/>
+                        </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+
+                <Border Grid.Column="1" CornerRadius="12" Padding="12,4" VerticalAlignment="Center" Margin="0,0,15,0">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="#4CAF50"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding StatusDisplay}" Value="Voided">
+                                    <Setter Property="Background" Value="#F44336"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding QualityStatusDisplay}" Value="Pending">
+                                    <Setter Property="Background" Value="#FFC107"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock Text="{Binding StatusDisplay}" Foreground="White" FontWeight="SemiBold" FontSize="14"/>
+                </Border>
+
+                    <!-- Action Buttons -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Export to Excel Button -->
+                    <Button Command="{Binding ExportToExcelCommand}"
+                            Style="{StaticResource MaterialDesignIconButton}"
+                            ToolTip="Export to Excel"
+                            Width="36"
+                            Height="36"
+                            Margin="0,0,8,0"
+                            IsEnabled="{Binding IsExporting, Converter={StaticResource InverseBooleanConverter}}">
+                        <materialDesign:PackIcon Kind="FileExcel" 
+                                               Width="20" Height="20"
+                                               Foreground="#107C41"/>
+                    </Button>
+
+                    <!-- Export to PDF Button -->
+                    <Button Command="{Binding ExportToPdfCommand}"
+                            Style="{StaticResource MaterialDesignIconButton}"
+                            ToolTip="Export to PDF"
+                            Width="36"
+                            Height="36"
+                            Margin="0,0,8,0"
+                            IsEnabled="{Binding IsExporting, Converter={StaticResource InverseBooleanConverter}}">
+                        <materialDesign:PackIcon Kind="FilePdfBox"  
+                                               Width="20" Height="20"
+                                               Foreground="#D32F2F"/>
+                    </Button>
+
+                    <!-- Print Button -->
+                    <Button Command="{Binding PrintReceiptCommand}"
+                            Style="{StaticResource MaterialDesignIconButton}"
+                            ToolTip="Print Report"
+                            Width="36"
+                            Height="36"
+                            Margin="0,0,15,0"
+                            IsEnabled="{Binding IsExporting, Converter={StaticResource InverseBooleanConverter}}">
+                        <materialDesign:PackIcon Kind="Printer" 
+                                               Width="20" Height="20"
+                                               Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                    </Button>
+                </StackPanel>
+
+                <!-- Edit/Save/Cancel Buttons -->
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Edit Button (View Mode) -->
+                        <Button Command="{Binding ToggleEditModeCommand}" 
+                            Style="{StaticResource MaterialDesignIconButton}"
+                            ToolTip="Edit Receipt"
+                            Width="36"
+                            Height="36"
+                            Margin="0,0,8,0"
+                            Visibility="{Binding IsEditMode, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                        <materialDesign:PackIcon Kind="Pencil" 
+                                               Width="20" Height="20"
+                                               Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                    </Button>
+
+                    <!-- Save Button (Edit Mode) -->
+                        <Button Command="{Binding SaveCommand}" 
+                            Style="{StaticResource MaterialDesignIconButton}"
+                            ToolTip="Save Changes"
+                            Width="36"
+                            Height="36"
+                            Margin="0,0,8,0"
+                            IsEnabled="{Binding CanSave}"
+                            Visibility="{Binding IsEditMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <materialDesign:PackIcon Kind="Check" 
+                                               Width="20" Height="20"
+                                               Foreground="#4CAF50"/>
+                    </Button>
+
+                    <!-- Cancel Button (Edit Mode) -->
+                        <Button Command="{Binding CancelCommand}" 
+                            Style="{StaticResource MaterialDesignIconButton}"
+                            ToolTip="Cancel Changes"
+                            Width="36"
+                            Height="36"
+                            Margin="0,0,15,0"
+                            Visibility="{Binding IsEditMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <materialDesign:PackIcon Kind="Close" 
+                                               Width="20" Height="20"
+                                               Foreground="#F44336"/>
+                    </Button>
+                </StackPanel>
+
+                <!-- Delete Button -->
+                <Button Grid.Column="4" 
+                        Command="{Binding DeleteReceiptCommand}"
+                        Style="{StaticResource MaterialDesignIconButton}"
+                        ToolTip="Delete Receipt"
+                        Width="36"
+                        Height="36"
+                        Margin="0,0,15,0"
+                        IsEnabled="{Binding CanDelete}">
+                    <materialDesign:PackIcon Kind="Delete" 
+                                           Width="20" Height="20"
+                                           Foreground="#F44336"/>
+                </Button>
+
+                <StackPanel Grid.Column="5" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Command="{Binding RefreshCommand}"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Width="100"
+                            Margin="0,0,8,0"
+                            ToolTip="Refresh (F5)">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Refresh" Width="16" Height="16" Margin="0,0,5,0"/>
+                            <TextBlock Text="Refresh"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Command="{Binding NavigateBackCommand}"
+                            Style="{StaticResource MaterialDesignRaisedButton}"
+                            Width="100">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="ArrowLeft" Width="16" Height="16" Margin="0,0,5,0"/>
+                            <TextBlock Text="Back"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Summary Cards -->
+        <Grid Grid.Row="2" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Net Weight Card -->
+            <materialDesign:Card Grid.Column="0" Margin="0,0,5,0" materialDesign:ElevationAssist.Elevation="Dp4">
+                <Grid Margin="15">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="Net Weight" FontSize="12" Opacity="0.7"/>
+                    <TextBlock Grid.Row="1" Text="{Binding NetWeight, StringFormat='{}{0:N2} lbs'}" 
+                               FontSize="24" FontWeight="Bold" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                </Grid>
+            </materialDesign:Card>
+
+            <!-- Final Weight Card -->
+            <materialDesign:Card Grid.Column="1" Margin="5,0,5,0" materialDesign:ElevationAssist.Elevation="Dp4">
+                <Grid Margin="15">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="Final Weight" FontSize="12" Opacity="0.7"/>
+                    <TextBlock Grid.Row="1" Text="{Binding FinalWeight, StringFormat='{}{0:N2} lbs'}" 
+                               FontSize="24" FontWeight="Bold" Foreground="{DynamicResource SecondaryHueMidBrush}"/>
+                </Grid>
+            </materialDesign:Card>
+
+            <!-- Grade Card -->
+            <materialDesign:Card Grid.Column="2" Margin="5,0,5,0" materialDesign:ElevationAssist.Elevation="Dp4">
+                <Grid Margin="15">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="Grade" FontSize="12" Opacity="0.7"/>
+                    <TextBlock Grid.Row="1" Text="{Binding Grade}" 
+                               FontSize="24" FontWeight="Bold"/>
+                </Grid>
+            </materialDesign:Card>
+
+            <!-- Payment Status Card -->
+            <materialDesign:Card Grid.Column="3" Margin="5,0,0,0" materialDesign:ElevationAssist.Elevation="Dp4">
+                <Grid Margin="15">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="Payment Status" FontSize="12" Opacity="0.7"/>
+                    <TextBlock Grid.Row="1" Text="{Binding PaymentStatusDisplay}" 
+                               FontSize="20" FontWeight="Bold" Foreground="{DynamicResource MaterialDesignBody}"/>
+                </Grid>
+            </materialDesign:Card>
+        </Grid>
+
+        <!-- TabControl with organized tabs -->
+        <materialDesign:Card Grid.Row="3" Style="{StaticResource MainContentAreaStyle}">
+            <TabControl SelectedIndex="{Binding SelectedTabIndex}"
+                        materialDesign:ColorZoneAssist.Mode="PrimaryMid">
+                <!-- Tab 1: Receipt Details -->
+                <TabItem>
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="FileDocument" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBlock Text="Receipt Details" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <Grid Margin="10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Receipt Information -->
+                        <materialDesign:Card Grid.Row="0" Margin="0,0,0,10" materialDesign:ElevationAssist.Elevation="Dp1">
+                            <StackPanel Margin="15">
+                                <TextBlock Text="Receipt Information" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Receipt Number -->
+                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,16,16">
+                                        <TextBlock Text="Receipt Number *" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding ReceiptNumber, UpdateSourceTrigger=PropertyChanged}"
+                                        IsReadOnly="{Binding IsReceiptNumberReadOnly}"/>
+                            </StackPanel>
+
+                            <!-- Receipt Date -->
+                            <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,16,16">
+                                        <TextBlock Text="Receipt Date *" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <DatePicker SelectedDate="{Binding ReceiptDate, UpdateSourceTrigger=PropertyChanged}"
+                                           IsEnabled="{Binding IsEditMode}"/>
+                            </StackPanel>
+
+                            <!-- Receipt Time -->
+                            <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,16">
+                                        <TextBlock Text="Receipt Time *" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding ReceiptTime, UpdateSourceTrigger=PropertyChanged}"
+                                        IsEnabled="{Binding IsEditMode}"/>
+                            </StackPanel>
+
+                                    <!-- Import Batch -->
+                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,16,0">
+                                        <TextBlock Text="Import Batch" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                        <TextBox Text="{Binding ImportBatchDisplay, Mode=OneWay}" IsReadOnly="True" 
+                                                Background="{DynamicResource MaterialDesignDivider}"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </materialDesign:Card>
+                        <!-- Audit Information -->
+                        <materialDesign:Card Grid.Row="1" Margin="0,0,0,10" materialDesign:ElevationAssist.Elevation="Dp1">
+                            <StackPanel Margin="15">
+                                <TextBlock Text="Audit Information" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Created -->
+                                    <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                                        <TextBlock Text="Created" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                        <TextBox Text="{Binding CreatedDisplay, Mode=OneWay}" IsReadOnly="True" 
+                                                Background="{DynamicResource MaterialDesignDivider}"/>
+                                    </StackPanel>
+
+                                    <!-- Modified -->
+                                    <StackPanel Grid.Column="1" Margin="0,0,16,0">
+                                        <TextBlock Text="Modified" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                        <TextBox Text="{Binding ModifiedDisplay, Mode=OneWay}" IsReadOnly="True" 
+                                                Background="{DynamicResource MaterialDesignDivider}"/>
+                                    </StackPanel>
+
+                                    <!-- Last Saved -->
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Last Saved" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                        <TextBox Text="{Binding LastSavedDisplay, Mode=OneWay}" IsReadOnly="True" 
+                                                Background="{DynamicResource MaterialDesignDivider}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </materialDesign:Card>
+                    </Grid>
+                </TabItem>
+
+                <!-- Tab 2: Grower & Product -->
+                <TabItem>
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="AccountGroup" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBlock Text="Grower &amp; Product" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <Grid Margin="10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Grower & Location -->
+                        <materialDesign:Card Grid.Row="0" Margin="0,0,0,10" materialDesign:ElevationAssist.Elevation="Dp1">
+                            <StackPanel Margin="15">
+                                <TextBlock Text="Grower &amp; Location" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Grower Selection -->
+                            <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                                        <TextBlock Text="Grower *" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <ComboBox ItemsSource="{Binding Growers}"
+                                         SelectedItem="{Binding SelectedGrower, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding IsEditMode}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding GrowerNumber}" FontWeight="Bold" Margin="0,0,10,0"/>
+                                                <TextBlock Text="-" Margin="0,0,10,0"/>
+                                                <TextBlock Text="{Binding GrowerName}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+
+                                        <!-- Grower Details -->
+                                        <StackPanel Margin="0,8,0,0" Visibility="{Binding HasSelectedGrower, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <TextBlock Text="{Binding SelectedGrower.Address}" FontSize="12" 
+                                              Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                                            <TextBlock Text="{Binding SelectedGrower.PhoneNumber}" FontSize="12" 
+                                              Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                                            <TextBlock Text="{Binding SelectedGrower.Email}" FontSize="12" 
+                                              Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- Depot Selection -->
+                            <StackPanel Grid.Column="1">
+                                        <TextBlock Text="Depot *" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <ComboBox ItemsSource="{Binding Depots}"
+                                         SelectedItem="{Binding SelectedDepot, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding IsEditMode}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding DepotName}" FontWeight="Bold" Margin="0,0,10,0"/>
+                                                <TextBlock Text="-" Margin="0,0,10,0"/>
+                                                <TextBlock Text="{Binding DepotAddress}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <!-- Product Information -->
+                        <materialDesign:Card Grid.Row="1" materialDesign:ElevationAssist.Elevation="Dp1">
+                            <StackPanel Margin="15">
+                                <TextBlock Text="Product Information" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Product -->
+                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,16,16">
+                                        <TextBlock Text="Product *" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <ComboBox ItemsSource="{Binding Products}"
+                                         SelectedItem="{Binding SelectedProduct, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding IsEditMode}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding ProductCode}" FontWeight="Bold" Margin="0,0,10,0"/>
+                                                <TextBlock Text="-" Margin="0,0,10,0"/>
+                                                <TextBlock Text="{Binding Description}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+
+                            <!-- Process -->
+                            <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,16,16">
+                                        <TextBlock Text="Process *" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <ComboBox ItemsSource="{Binding Processes}"
+                                         SelectedItem="{Binding SelectedProcess, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding IsEditMode}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding ProcessCode}" FontWeight="Bold" Margin="0,0,10,0"/>
+                                                <TextBlock Text="-" Margin="0,0,10,0"/>
+                                                <TextBlock Text="{Binding ProcessName}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+
+                            <!-- Process Type -->
+                            <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,16">
+                                        <TextBlock Text="Process Type" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <ComboBox ItemsSource="{Binding ProcessTypes}"
+                                         SelectedItem="{Binding SelectedProcessType, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding IsEditMode}"/>
+                            </StackPanel>
+
+                            <!-- Variety -->
+                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,16,0">
+                                        <TextBlock Text="Variety" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <ComboBox ItemsSource="{Binding Varieties}"
+                                         SelectedItem="{Binding SelectedVariety, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding IsEditMode}"/>
+                            </StackPanel>
+
+                            <!-- Price Class -->
+                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,16,0">
+                                        <TextBlock Text="Price Class *" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <ComboBox ItemsSource="{Binding PriceClasses}"
+                                         SelectedItem="{Binding SelectedPriceClass, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding IsEditMode}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding ClassCode}" FontWeight="Bold" Margin="0,0,10,0"/>
+                                                <TextBlock Text="-" Margin="0,0,10,0"/>
+                                                <TextBlock Text="{Binding ClassName}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </materialDesign:Card>
+                    </Grid>
+                </TabItem>
+
+                <!-- Tab 3: Weights & Measurements -->
+                <TabItem>
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Scale" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBlock Text="Weights &amp; Measurements" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <Grid Margin="10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Weight Inputs -->
+                        <materialDesign:Card Grid.Row="0" Margin="0,0,0,10" materialDesign:ElevationAssist.Elevation="Dp1">
+                            <StackPanel Margin="15">
+                                <TextBlock Text="Weight Measurements" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Gross Weight -->
+                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,16,16">
+                                        <TextBlock Text="Gross Weight (lbs) *" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding GrossWeight, UpdateSourceTrigger=PropertyChanged}"
+                                        IsEnabled="{Binding IsEditMode}"/>
+                            </StackPanel>
+
+                            <!-- Tare Weight -->
+                            <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,16,16">
+                                        <TextBlock Text="Tare Weight (lbs) *" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding TareWeight, UpdateSourceTrigger=PropertyChanged}"
+                                        IsEnabled="{Binding IsEditMode}"/>
+                            </StackPanel>
+
+                            <!-- Net Weight (Calculated) -->
+                            <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,16">
+                                        <TextBlock Text="Net Weight (lbs)" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                        <TextBox Text="{Binding NetWeight, Mode=OneWay, StringFormat='{}{0:N2}'}" 
+                                                IsReadOnly="True" FontWeight="Bold"
+                                                Background="{DynamicResource MaterialDesignDivider}"/>
+                            </StackPanel>
+
+                            <!-- Dock Percentage -->
+                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,16,0">
+                                        <TextBlock Text="Dock Percentage (%) *" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding DockPercentage, UpdateSourceTrigger=PropertyChanged}"
+                                        IsEnabled="{Binding IsEditMode}"/>
+                            </StackPanel>
+
+                            <!-- Dock Weight (Calculated) -->
+                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,16,0">
+                                        <TextBlock Text="Dock Weight (lbs)" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                        <TextBox Text="{Binding DockWeight, Mode=OneWay, StringFormat='{}{0:N2}'}" 
+                                                IsReadOnly="True"
+                                                Background="{DynamicResource MaterialDesignDivider}"/>
+                            </StackPanel>
+
+                            <!-- Final Weight (Calculated) -->
+                                    <StackPanel Grid.Row="1" Grid.Column="2">
+                                        <TextBlock Text="Final Weight (lbs)" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                        <TextBox Text="{Binding FinalWeight, Mode=OneWay, StringFormat='{}{0:N2}'}" 
+                                                IsReadOnly="True" FontWeight="Bold"
+                                                Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                                Background="{DynamicResource MaterialDesignDivider}"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Calculate Button -->
+                        <Button Command="{Binding CalculateWeightsCommand}" 
+                               Style="{StaticResource MaterialDesignRaisedButton}"
+                               Content="Recalculate Weights"
+                               HorizontalAlignment="Left"
+                               Margin="0,16,0,0"
+                               IsEnabled="{Binding IsEditMode}"/>
+                    </StackPanel>
+                </materialDesign:Card>
+                    </Grid>
+                </TabItem>
+
+                <!-- Tab 4: Quality Control -->
+                <TabItem>
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="CheckCircle" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBlock Text="Quality Control" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <Grid Margin="10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Quality Information -->
+                        <materialDesign:Card Grid.Row="0" Margin="0,0,0,10" materialDesign:ElevationAssist.Elevation="Dp1">
+                            <StackPanel Margin="15">
+                                <TextBlock Text="Quality Information" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Grade -->
+                            <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                                        <TextBlock Text="Grade *" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <ComboBox ItemsSource="{Binding Grades}"
+                                         SelectedItem="{Binding Grade, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding IsEditMode}"/>
+                            </StackPanel>
+
+                            <!-- Quality Checked At -->
+                            <StackPanel Grid.Column="1" Margin="0,0,16,0">
+                                        <TextBlock Text="Quality Checked At" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                        <TextBox Text="{Binding QualityCheckedDisplay, Mode=OneWay}" 
+                                                IsReadOnly="True"
+                                                Background="{DynamicResource MaterialDesignDivider}"/>
+                            </StackPanel>
+
+                            <!-- Quality Checked By -->
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Quality Checked By" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                        <TextBox Text="{Binding QualityCheckedBy, Mode=OneWay}" 
+                                                IsReadOnly="True"
+                                                Background="{DynamicResource MaterialDesignDivider}"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Quality Check Button -->
+                        <Button Command="{Binding QualityCheckCommand}" 
+                               Style="{StaticResource MaterialDesignRaisedButton}"
+                               Content="Mark as Quality Checked"
+                               HorizontalAlignment="Left"
+                               Margin="0,16,0,0"
+                               IsEnabled="{Binding CanQualityCheck}"/>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <!-- Void Information (if voided) -->
+                        <materialDesign:Card Grid.Row="1" 
+                                           materialDesign:ElevationAssist.Elevation="Dp1"
+                                   Visibility="{Binding IsVoided, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <StackPanel Margin="15">
+                                <TextBlock Text="Void Information" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Void Reason -->
+                            <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                                        <TextBlock Text="Void Reason" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                        <TextBox Text="{Binding VoidedReason, Mode=OneWay}" 
+                                                IsReadOnly="True"
+                                                Background="{DynamicResource MaterialDesignDivider}"/>
+                            </StackPanel>
+
+                            <!-- Voided At -->
+                            <StackPanel Grid.Column="1" Margin="0,0,16,0">
+                                        <TextBlock Text="Voided At" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                        <TextBox Text="{Binding VoidedDisplay, Mode=OneWay}" 
+                                                IsReadOnly="True"
+                                                Background="{DynamicResource MaterialDesignDivider}"/>
+                            </StackPanel>
+
+                            <!-- Voided By -->
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Voided By" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                        <TextBox Text="{Binding VoidedBy, Mode=OneWay}" 
+                                                IsReadOnly="True"
+                                                Background="{DynamicResource MaterialDesignDivider}"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </materialDesign:Card>
+                    </Grid>
+                </TabItem>
+
+                <!-- Tab 5: Payment Allocations -->
+                <TabItem>
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="CashMultiple" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBlock Text="Payment Allocations" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <Grid Margin="10">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                        <!-- Filter Controls -->
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+                            <TextBox Text="{Binding PaymentSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     materialDesign:HintAssist.Hint="Search payment allocations..."
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     Width="300" Margin="0,0,10,0"/>
+                            
+                            <Button Command="{Binding RefreshPaymentAllocationsCommand}"
+                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                    Content="Refresh"/>
+                            </StackPanel>
+
+                        <!-- Payment Allocations DataGrid -->
+                        <DataGrid Grid.Row="1"
+                                  ItemsSource="{Binding PaymentAllocations}"
+                                     AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                     CanUserAddRows="False"
+                                  SelectionMode="Single"
+                                  VirtualizingPanel.IsVirtualizing="True"
+                                  VirtualizingPanel.VirtualizationMode="Recycling"
+                                  EnableRowVirtualization="True"
+                                  materialDesign:DataGridAssist.CellPadding="13 8 8 8"
+                                  materialDesign:DataGridAssist.ColumnHeaderPadding="13 10 8 10">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Batch Number" Binding="{Binding BatchNumber}" Width="120"/>
+                                    <DataGridTextColumn Header="Payment Type" Binding="{Binding PaymentTypeName}" Width="150"/>
+                                <DataGridTextColumn Header="Amount Paid" Binding="{Binding AmountPaidDisplay}" Width="120">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                    <DataGridTextColumn Header="Allocated Weight" Binding="{Binding AllocatedWeightDisplay}" Width="120"/>
+                                    <DataGridTextColumn Header="Price/Lb" Binding="{Binding PricePerPoundDisplay}" Width="100"/>
+                                    <DataGridTextColumn Header="Allocated At" Binding="{Binding AllocatedAtDisplay}" Width="150"/>
+                                    <DataGridTextColumn Header="Status" Binding="{Binding StatusDisplay}" Width="100"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+
+                        <!-- Empty State -->
+                        <TextBlock Grid.Row="1" 
+                                   Text="No payment allocations found for this receipt." 
+                                      Visibility="{Binding HasPaymentAllocations, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+                                      FontStyle="Italic" 
+                                      Foreground="{DynamicResource MaterialDesignBodyLight}"
+                                      HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                      Margin="0,50,0,0"/>
+                    </Grid>
+                </TabItem>
+
+                <!-- Tab 6: Audit History -->
+                <TabItem>
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="History" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <TextBlock Text="Audit History" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <Grid Margin="10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Filter Controls -->
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+                            <ComboBox ItemsSource="{Binding AuditFilterOptions}"
+                                     SelectedItem="{Binding SelectedAuditFilter}"
+                                     materialDesign:HintAssist.Hint="Filter by change type"
+                                     Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                     Width="200" Margin="0,0,10,0"/>
+                            
+                            <Button Command="{Binding RefreshAuditHistoryCommand}"
+                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                    Content="Refresh"/>
+                        </StackPanel>
+
+                        <!-- Audit History DataGrid -->
+                        <DataGrid Grid.Row="1"
+                                  ItemsSource="{Binding AuditHistory}"
+                                     AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                     CanUserAddRows="False"
+                                  SelectionMode="Single"
+                                  VirtualizingPanel.IsVirtualizing="True"
+                                  VirtualizingPanel.VirtualizationMode="Recycling"
+                                  EnableRowVirtualization="True"
+                                  materialDesign:DataGridAssist.CellPadding="13 8 8 8"
+                                  materialDesign:DataGridAssist.ColumnHeaderPadding="13 10 8 10">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Change Type" Binding="{Binding ChangeTypeDisplay}" Width="120"/>
+                                    <DataGridTextColumn Header="Field" Binding="{Binding FieldDisplayName}" Width="150"/>
+                                    <DataGridTextColumn Header="Old Value" Binding="{Binding OldValue}" Width="150"/>
+                                    <DataGridTextColumn Header="New Value" Binding="{Binding NewValue}" Width="150"/>
+                                    <DataGridTextColumn Header="Changed By" Binding="{Binding ChangedByDisplay}" Width="150"/>
+                                    <DataGridTextColumn Header="Changed At" Binding="{Binding ChangedAtDisplay}" Width="150"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+
+                        <!-- Empty State -->
+                        <TextBlock Grid.Row="1" 
+                                   Text="No audit history found for this receipt." 
+                                      Visibility="{Binding HasAuditHistory, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+                                      FontStyle="Italic" 
+                                      Foreground="{DynamicResource MaterialDesignBodyLight}"
+                                      HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                      Margin="0,50,0,0"/>
+                    </Grid>
+                </TabItem>
+
+            </TabControl>
+        </materialDesign:Card>
+
+        <!-- Status Bar -->
+        <StatusBar Grid.Row="4">
+            <StatusBarItem>
+                <TextBlock Text="{Binding StatusMessage}"/>
+            </StatusBarItem>
+            <StatusBarItem HorizontalAlignment="Right">
+                <TextBlock Text="{Binding LastSavedDisplay, Mode=OneWay, StringFormat='Last updated: {0}'}"/>
+            </StatusBarItem>
+        </StatusBar>
+
+        <!-- Loading Overlay -->
+        <Grid Grid.Row="0" Grid.RowSpan="5" 
+              Background="#80000000" 
+              Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ProgressBar IsIndeterminate="True" 
+                           Width="200" 
+                           Height="4" 
+                           Margin="0,0,0,16"/>
+                <TextBlock Text="Loading receipt details..." 
+                          Foreground="White" 
+                          HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Exporting Overlay -->
+        <Grid Grid.Row="0" Grid.RowSpan="5" 
+              Background="#80000000" 
+              Visibility="{Binding IsExporting, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ProgressBar IsIndeterminate="True" 
+                           Width="200" 
+                           Height="4" 
+                           Margin="0,0,0,16"/>
+                <TextBlock Text="Exporting data..." 
+                          Foreground="White" 
+                          HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 using System.Collections.Generic;
 using Microsoft.Data.SqlClient;
 using System.Threading.Tasks;
@@ -16,7 +16,6 @@ namespace WPFGrowerApp.DataAccess.Interfaces
     Task<List<Receipt>> GetReceiptsByGrowerAsync(string growerNumber, DateTime? startDate = null, DateTime? endDate = null);
         Task<List<Receipt>> GetReceiptsByImportBatchAsync(decimal impBatch);
         Task<decimal> GetNextReceiptNumberAsync();
-        Task<bool> ValidateReceiptAsync(Receipt receipt);
         Task<decimal> CalculateNetWeightAsync(Receipt receipt);
         Task<decimal> GetPriceForReceiptAsync(Receipt receipt);
 
@@ -88,14 +87,144 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// </summary>
         Task CreateReceiptPaymentAllocationAsync(ReceiptPaymentAllocation allocation, SqlConnection connection, SqlTransaction transaction);
 
-        /// <summary>
-        /// Gets all payment allocations for a specific receipt.
-        /// </summary>
-        Task<List<ReceiptPaymentAllocation>> GetReceiptPaymentAllocationsAsync(int receiptId);
 
         /// <summary>
         /// Gets a payment summary for a receipt showing total paid and breakdown by advance.
         /// </summary>
         Task<ReceiptPaymentSummary?> GetReceiptPaymentSummaryAsync(int receiptId);
+
+        // ======================================================================
+        // NEW METHODS FOR ENHANCED RECEIPT MANAGEMENT
+        // ======================================================================
+
+        /// <summary>
+        /// Get detailed receipt information with joined data
+        /// </summary>
+        /// <param name="receiptId">The receipt ID</param>
+        /// <returns>Receipt detail DTO</returns>
+        Task<ReceiptDetailDto?> GetReceiptDetailAsync(int receiptId);
+
+        /// <summary>
+        /// Get audit history for a receipt
+        /// </summary>
+        /// <param name="receiptId">The receipt ID</param>
+        /// <returns>List of audit entries</returns>
+        Task<List<ReceiptAuditEntry>> GetReceiptAuditHistoryAsync(int receiptId);
+
+        /// <summary>
+        /// Get payment allocations for a receipt
+        /// </summary>
+        /// <param name="receiptId">The receipt ID</param>
+        /// <returns>List of payment allocations</returns>
+        Task<List<ReceiptPaymentAllocation>> GetReceiptPaymentAllocationsAsync(int receiptId);
+
+        /// <summary>
+        /// Get related receipts (same grower, same date, or duplicates)
+        /// </summary>
+        /// <param name="receiptId">The receipt ID</param>
+        /// <returns>List of related receipts</returns>
+        Task<List<Receipt>> GetRelatedReceiptsAsync(int receiptId);
+
+        /// <summary>
+        /// Duplicate a receipt with new receipt number and date
+        /// </summary>
+        /// <param name="receiptId">The receipt ID to duplicate</param>
+        /// <param name="createdBy">User creating the duplicate</param>
+        /// <returns>New receipt</returns>
+        Task<Receipt> DuplicateReceiptAsync(int receiptId, string createdBy);
+
+        /// <summary>
+        /// Mark a receipt as quality checked
+        /// </summary>
+        /// <param name="receiptId">The receipt ID</param>
+        /// <param name="checkedBy">User performing quality check</param>
+        /// <returns>True if successful</returns>
+        Task<bool> MarkQualityCheckedAsync(int receiptId, string checkedBy);
+
+        /// <summary>
+        /// Validate receipt data comprehensively
+        /// </summary>
+        /// <param name="receipt">The receipt to validate</param>
+        /// <returns>Validation result</returns>
+        Task<WPFGrowerApp.Models.ValidationResult> ValidateReceiptAsync(Receipt receipt);
+
+        /// <summary>
+        /// Get receipt analytics for a date range
+        /// </summary>
+        /// <param name="startDate">Start date</param>
+        /// <param name="endDate">End date</param>
+        /// <returns>Receipt analytics</returns>
+        Task<ReceiptAnalytics> GetReceiptAnalyticsAsync(DateTime? startDate, DateTime? endDate);
+
+        /// <summary>
+        /// Generate receipt PDF
+        /// </summary>
+        /// <param name="receiptId">The receipt ID</param>
+        /// <returns>PDF byte array</returns>
+        Task<byte[]> GenerateReceiptPdfAsync(int receiptId);
+
+        /// <summary>
+        /// Bulk void multiple receipts
+        /// </summary>
+        /// <param name="receiptIds">List of receipt IDs to void</param>
+        /// <param name="reason">Void reason</param>
+        /// <param name="voidedBy">User voiding receipts</param>
+        /// <returns>True if successful</returns>
+        Task<bool> BulkVoidReceiptsAsync(List<int> receiptIds, string reason, string voidedBy);
+
+        /// <summary>
+        /// Get receipts with advanced filtering
+        /// </summary>
+        /// <param name="filters">Filter criteria</param>
+        /// <returns>Filtered receipts</returns>
+        Task<List<Receipt>> GetReceiptsWithFiltersAsync(ReceiptFilters filters);
+        Task<(List<Receipt> Receipts, int TotalCount)> GetReceiptsWithFiltersAndCountAsync(ReceiptFilters filters);
+
+        /// <summary>
+        /// Get receipt statistics for dashboard
+        /// </summary>
+        /// <param name="startDate">Start date</param>
+        /// <param name="endDate">End date</param>
+        /// <returns>Receipt statistics</returns>
+        Task<ReceiptStatistics> GetReceiptStatisticsAsync(DateTime? startDate, DateTime? endDate);
+    }
+
+    /// <summary>
+    /// Receipt filter criteria
+    /// </summary>
+    public class ReceiptFilters
+    {
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+        public string? SearchText { get; set; }
+        public bool? ShowVoided { get; set; }
+        public int? ProductId { get; set; }
+        public int? DepotId { get; set; }
+        public int? GrowerId { get; set; }
+        public string? CreatedBy { get; set; }
+        public int? Grade { get; set; }
+        public bool? IsQualityChecked { get; set; }
+        public int PageNumber { get; set; } = 1;
+        public int PageSize { get; set; } = 100;
+        public string? SortBy { get; set; }
+        public bool SortDescending { get; set; } = true;
+    }
+
+    /// <summary>
+    /// Receipt statistics for dashboard
+    /// </summary>
+    public class ReceiptStatistics
+    {
+        public int TotalReceipts { get; set; }
+        public int ActiveReceipts { get; set; }
+        public int VoidedReceipts { get; set; }
+        public int QualityCheckedReceipts { get; set; }
+        public decimal TotalGrossWeight { get; set; }
+        public decimal TotalNetWeight { get; set; }
+        public decimal TotalFinalWeight { get; set; }
+        public decimal AverageDockPercentage { get; set; }
+        public int UniqueGrowers { get; set; }
+        public int UniqueProducts { get; set; }
+        public int UniqueDepots { get; set; }
     }
 }

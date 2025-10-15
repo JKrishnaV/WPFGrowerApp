@@ -105,8 +105,74 @@ namespace WPFGrowerApp.DataAccess.Models
 
         // Navigation property for display purposes
     private string? _growerName;
+    private string? _productName;
+    private string? _depotName;
         [NotMapped]
     public string? GrowerName { get => _growerName; set => SetProperty(ref _growerName, value); }
+    public string? ProductName { get => _productName; set => SetProperty(ref _productName, value); }
+    public string? DepotName { get => _depotName; set => SetProperty(ref _depotName, value); }
+
+        // ======================================================================
+        // HELPER PROPERTIES - Business logic and display helpers
+        // ======================================================================
+
+        [NotMapped]
+        public bool IsEditable => !IsVoided && DeletedAt == null;
+
+        [NotMapped]
+        public bool CanVoid => !IsVoided && DeletedAt == null;
+
+        [NotMapped]
+        public bool CanDelete => !IsVoided && DeletedAt == null;
+
+        [NotMapped]
+        public bool CanQualityCheck => !IsVoided && QualityCheckedAt == null;
+
+        [NotMapped]
+        public bool IsRecentlyCreated => (DateTime.Now - CreatedAt).TotalDays <= 7;
+
+        [NotMapped]
+        public bool IsRecentlyModified => ModifiedAt.HasValue && (DateTime.Now - ModifiedAt.Value).TotalDays <= 7;
+
+        [NotMapped]
+        public string StatusDisplay => IsVoided ? "Voided" : "Active";
+
+        [NotMapped]
+        public string QualityStatusDisplay => QualityCheckedAt.HasValue ? "Quality Checked" : "Pending";
+
+        [NotMapped]
+        public string ReceiptDateTimeDisplay => $"{ReceiptDate:yyyy-MM-dd} {ReceiptTime:HH:mm}";
+
+        [NotMapped]
+        public string CreatedDisplay => $"{CreatedAt:yyyy-MM-dd HH:mm} by {CreatedBy}";
+
+        [NotMapped]
+        public string ModifiedDisplay => ModifiedAt.HasValue ? $"{ModifiedAt:yyyy-MM-dd HH:mm} by {ModifiedBy}" : "Never";
+
+        [NotMapped]
+        public string QualityCheckedDisplay => QualityCheckedAt.HasValue ? $"{QualityCheckedAt:yyyy-MM-dd HH:mm} by {QualityCheckedBy}" : "Not checked";
+
+        [NotMapped]
+        public string VoidedDisplay => IsVoided ? $"{VoidedAt:yyyy-MM-dd HH:mm} by {VoidedBy}" : "Not voided";
+
+        [NotMapped]
+        public string GradeDisplay => $"Grade {Grade}";
+
+        [NotMapped]
+        public string WeightSummary => $"Gross: {GrossWeight:N2} | Net: {NetWeight:N2} | Final: {FinalWeight:N2}";
+
+        [NotMapped]
+        public string DockSummary => $"Dock: {DockPercentage:N2}% ({DockWeight:N2} lbs)";
+
+        // Legacy compatibility properties
+        [NotMapped]
+        public string ReceiptNumberModern => ReceiptNumber ?? string.Empty;
+
+        [NotMapped]
+        public string GradeModern => Grade.ToString();
+
+        [NotMapped]
+        public bool IsVoidedModern => IsVoided;
 
         // ======================================================================
         // LEGACY PROPERTIES - For backward compatibility with Daily table

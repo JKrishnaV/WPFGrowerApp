@@ -961,7 +961,7 @@ namespace WPFGrowerApp.DataAccess.Services
                 foreach (var product in analytics.ProductBreakdown)
                 {
                     sheet.Range[$"A{row}"].Text = product.ProductName;
-                    sheet.Range[$"B{row}"].Number = (double)product.Weight;
+                    sheet.Range[$"B{row}"].Number = (double)product.TotalWeight;
                     sheet.Range[$"B{row}"].NumberFormat = "#,##0.00";
                     sheet.Range[$"C{row}"].Number = (double)product.Amount;
                     sheet.Range[$"C{row}"].NumberFormat = "$#,##0.00";
