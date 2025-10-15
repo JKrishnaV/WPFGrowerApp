@@ -4,32 +4,33 @@ using System.Runtime.CompilerServices;
 
 namespace WPFGrowerApp.DataAccess.Models
 {
+    /// <summary>
+    /// Represents a grower in the modern database schema.
+    /// Maps directly to the Growers table with all fields from the latest schema.
+    /// </summary>
     public class Grower : INotifyPropertyChanged
     {
-    private string _growerNumber;
-        private string _chequeName;
-        private string _growerName;
-        private string _address;
-        private string _city;
-        private string _prov;
-        private string _postal;
-        private string _phone;
-        private decimal _acres;
-        private string _notes = string.Empty;
-        private string _contract;
-        private char _currency = 'C';
-        private int _contractLimit;
-        private string _payGroup = "1";
-        private bool _onHold;
-        private string _phone2;
-        private string _phoneAdditional1;
-        private string _otherNames;
-        private string _phoneAdditional2;
-        private int _lyFresh;
-        private int _lyOther;
-        private string _certified;
-        private bool _chargeGST;
-        private int _defaultPriceClassId = 1;
+        // ======================================================================
+        // PRIMARY IDENTIFICATION
+        // ======================================================================
+        
+        private int _growerId;
+        private string _growerNumber = string.Empty;
+        private string _fullName = string.Empty;
+        private string _checkPayeeName = string.Empty;
+
+        public int GrowerId
+        {
+            get => _growerId;
+            set
+            {
+                if (_growerId != value)
+                {
+                    _growerId = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
 
         public string GrowerNumber
         {
@@ -44,31 +45,43 @@ namespace WPFGrowerApp.DataAccess.Models
             }
         }
 
-        public string ChequeName
+        public string FullName
         {
-            get => _chequeName;
+            get => _fullName;
             set
             {
-                if (_chequeName != value)
+                if (_fullName != value)
                 {
-                    _chequeName = value;
+                    _fullName = value;
                     OnPropertyChanged();
                 }
             }
         }
 
-        public string GrowerName
+        public string CheckPayeeName
         {
-            get => _growerName;
+            get => _checkPayeeName;
             set
             {
-                if (_growerName != value)
+                if (_checkPayeeName != value)
                 {
-                    _growerName = value;
+                    _checkPayeeName = value;
                     OnPropertyChanged();
                 }
             }
         }
+
+        // ======================================================================
+        // CONTACT INFORMATION
+        // ======================================================================
+        
+        private string _address = string.Empty;
+        private string _city = string.Empty;
+        private string _province = string.Empty;
+        private string _postalCode = string.Empty;
+        private string _phoneNumber = string.Empty;
+        private string _mobileNumber = string.Empty;
+        private string _email = string.Empty;
 
         public string Address
         {
@@ -96,221 +109,208 @@ namespace WPFGrowerApp.DataAccess.Models
             }
         }
 
-        public string Prov
+        public string Province
         {
-            get => _prov;
+            get => _province;
             set
             {
-                if (_prov != value)
+                if (_province != value)
                 {
-                    _prov = value;
+                    _province = value;
                     OnPropertyChanged();
                 }
             }
         }
 
-        public string Postal
+        public string PostalCode
         {
-            get => _postal;
+            get => _postalCode;
             set
             {
-                if (_postal != value)
+                if (_postalCode != value)
                 {
-                    _postal = value;
+                    _postalCode = value;
                     OnPropertyChanged();
                 }
             }
         }
 
-        public string Phone
+        public string PhoneNumber
         {
-            get => _phone;
+            get => _phoneNumber;
             set
             {
-                if (_phone != value)
+                if (_phoneNumber != value)
                 {
-                    _phone = value;
+                    _phoneNumber = value;
                     OnPropertyChanged();
                 }
             }
         }
 
-        public decimal Acres
+        public string MobileNumber
         {
-            get => _acres;
+            get => _mobileNumber;
             set
             {
-                if (_acres != value)
+                if (_mobileNumber != value)
                 {
-                    _acres = value;
+                    _mobileNumber = value;
                     OnPropertyChanged();
                 }
             }
         }
 
-        public string Notes
+        public string Email
         {
-            get => _notes ?? string.Empty;
+            get => _email;
             set
             {
-                if (_notes != value)
+                if (_email != value)
                 {
-                    _notes = value;
+                    _email = value;
                     OnPropertyChanged();
                 }
             }
         }
 
-        public string Contract
+        // ======================================================================
+        // BUSINESS INFORMATION
+        // ======================================================================
+        
+        private string _gstNumber = string.Empty;
+        private string _businessNumber = string.Empty;
+        private string _currencyCode = "CAD";
+
+        public string GSTNumber
         {
-            get => _contract;
+            get => _gstNumber;
             set
             {
-                if (_contract != value)
+                if (_gstNumber != value)
                 {
-                    _contract = value;
+                    _gstNumber = value;
                     OnPropertyChanged();
                 }
             }
         }
 
-        public char Currency
+        public string BusinessNumber
         {
-            get => _currency;
+            get => _businessNumber;
             set
             {
-                if (_currency != value)
+                if (_businessNumber != value)
                 {
-                    _currency = value;
+                    _businessNumber = value;
                     OnPropertyChanged();
                 }
             }
         }
 
-        public int ContractLimit
+        public string CurrencyCode
         {
-            get => _contractLimit;
+            get => _currencyCode;
             set
             {
-                if (_contractLimit != value)
+                if (_currencyCode != value)
                 {
-                    _contractLimit = value;
+                    _currencyCode = value;
                     OnPropertyChanged();
                 }
             }
         }
 
-        public string PayGroup
+        // ======================================================================
+        // PAYMENT & PRICING CONFIGURATION
+        // ======================================================================
+        
+        private int _paymentGroupId;
+        private int _defaultDepotId;
+        private int _defaultPriceClassId;
+        private int? _paymentMethodId;
+
+        public int PaymentGroupId
         {
-            get => _payGroup;
+            get => _paymentGroupId;
             set
             {
-                if (_payGroup != value)
+                if (_paymentGroupId != value)
                 {
-                    _payGroup = value;
+                    _paymentGroupId = value;
                     OnPropertyChanged();
                 }
             }
         }
 
-        public bool OnHold
+        public int DefaultDepotId
         {
-            get => _onHold;
+            get => _defaultDepotId;
             set
             {
-                if (_onHold != value)
+                if (_defaultDepotId != value)
                 {
-                    _onHold = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-        public string Phone2
-        {
-            get => _phone2;
-            set
-            {
-                if (_phone2 != value)
-                {
-                    _phone2 = value;
+                    _defaultDepotId = value;
                     OnPropertyChanged();
                 }
             }
         }
 
-        public string PhoneAdditional1
+        public int DefaultPriceClassId
         {
-            get => _phoneAdditional1;
+            get => _defaultPriceClassId;
             set
             {
-                if (_phoneAdditional1 != value)
+                if (_defaultPriceClassId != value)
                 {
-                    _phoneAdditional1 = value;
+                    _defaultPriceClassId = value;
                     OnPropertyChanged();
                 }
             }
         }
 
-        public string OtherNames
+        public int? PaymentMethodId
         {
-            get => _otherNames;
+            get => _paymentMethodId;
             set
             {
-                if (_otherNames != value)
+                if (_paymentMethodId != value)
                 {
-                    _otherNames = value;
+                    _paymentMethodId = value;
                     OnPropertyChanged();
                 }
             }
         }
 
-        public string PhoneAdditional2
+        // ======================================================================
+        // STATUS & FLAGS
+        // ======================================================================
+        
+        private bool _isActive = true;
+        private bool _isOnHold;
+        private bool _chargeGST = true;
+
+        public bool IsActive
         {
-            get => _phoneAdditional2;
+            get => _isActive;
             set
             {
-                if (_phoneAdditional2 != value)
+                if (_isActive != value)
                 {
-                    _phoneAdditional2 = value;
+                    _isActive = value;
                     OnPropertyChanged();
                 }
             }
         }
 
-        public int LYFresh
+        public bool IsOnHold
         {
-            get => _lyFresh;
+            get => _isOnHold;
             set
             {
-                if (_lyFresh != value)
+                if (_isOnHold != value)
                 {
-                    _lyFresh = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-
-        public int LYOther
-        {
-            get => _lyOther;
-            set
-            {
-                if (_lyOther != value)
-                {
-                    _lyOther = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-
-        public string Certified
-        {
-            get => _certified;
-            set
-            {
-                if (_certified != value)
-                {
-                    _certified = value;
+                    _isOnHold = value;
                     OnPropertyChanged();
                 }
             }
@@ -329,22 +329,174 @@ namespace WPFGrowerApp.DataAccess.Models
             }
         }
 
-        /// <summary>
-        /// Default Price Class for this grower (formerly STATUS field, Price Level 1-4).
-        /// Links to PriceClasses.PriceClassId. Can be overridden on individual receipts.
-        /// Required field - all growers must have a valid price class.
-        /// </summary>
-        public int DefaultPriceClassId
+        // ======================================================================
+        // ADMINISTRATIVE
+        // ======================================================================
+        
+        private string _notes = string.Empty;
+        private DateTime _createdAt = DateTime.Now;
+        private string _createdBy = string.Empty;
+        private DateTime? _modifiedAt;
+        private string _modifiedBy = string.Empty;
+        private DateTime? _deletedAt;
+        private string _deletedBy = string.Empty;
+
+        public string Notes
         {
-            get => _defaultPriceClassId;
+            get => _notes;
             set
             {
-                if (_defaultPriceClassId != value)
+                if (_notes != value)
                 {
-                    _defaultPriceClassId = value;
+                    _notes = value;
                     OnPropertyChanged();
                 }
             }
+        }
+
+        public DateTime CreatedAt
+        {
+            get => _createdAt;
+            set
+            {
+                if (_createdAt != value)
+                {
+                    _createdAt = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string CreatedBy
+        {
+            get => _createdBy;
+            set
+            {
+                if (_createdBy != value)
+                {
+                    _createdBy = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public DateTime? ModifiedAt
+        {
+            get => _modifiedAt;
+            set
+            {
+                if (_modifiedAt != value)
+                {
+                    _modifiedAt = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string ModifiedBy
+        {
+            get => _modifiedBy;
+            set
+            {
+                if (_modifiedBy != value)
+                {
+                    _modifiedBy = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public DateTime? DeletedAt
+        {
+            get => _deletedAt;
+            set
+            {
+                if (_deletedAt != value)
+                {
+                    _deletedAt = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public string DeletedBy
+        {
+            get => _deletedBy;
+            set
+            {
+                if (_deletedBy != value)
+                {
+                    _deletedBy = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        // ======================================================================
+        // NAVIGATION PROPERTIES (for FK lookups)
+        // ======================================================================
+        
+        public PaymentGroup? PaymentGroup { get; set; }
+        public Depot? DefaultDepot { get; set; }
+        public PriceClass? DefaultPriceClass { get; set; }
+        public PaymentMethod? PaymentMethod { get; set; }
+
+        // ======================================================================
+        // LEGACY COMPATIBILITY (for existing code that might reference these)
+        // ======================================================================
+        
+        /// <summary>
+        /// Legacy property for backward compatibility. Maps to FullName.
+        /// </summary>
+        public string GrowerName
+        {
+            get => FullName;
+            set => FullName = value;
+        }
+
+        /// <summary>
+        /// Legacy property for backward compatibility. Maps to CheckPayeeName.
+        /// </summary>
+        public string ChequeName
+        {
+            get => CheckPayeeName;
+            set => CheckPayeeName = value;
+        }
+
+        /// <summary>
+        /// Legacy property for backward compatibility. Maps to Province.
+        /// </summary>
+        public string Prov
+        {
+            get => Province;
+            set => Province = value;
+        }
+
+        /// <summary>
+        /// Legacy property for backward compatibility. Maps to PostalCode.
+        /// </summary>
+        public string Postal
+        {
+            get => PostalCode;
+            set => PostalCode = value;
+        }
+
+        /// <summary>
+        /// Legacy property for backward compatibility. Maps to PhoneNumber.
+        /// </summary>
+        public string Phone
+        {
+            get => PhoneNumber;
+            set => PhoneNumber = value;
+        }
+
+        /// <summary>
+        /// Legacy property for backward compatibility. Maps to MobileNumber.
+        /// </summary>
+        public string PhoneAdditional1
+        {
+            get => MobileNumber;
+            set => MobileNumber = value;
         }
 
         /// <summary>
@@ -352,18 +504,91 @@ namespace WPFGrowerApp.DataAccess.Models
         /// </summary>
         public int PriceLevel
         {
-            get => _defaultPriceClassId;
-            set
-            {
-                DefaultPriceClassId = value > 0 ? value : 1;
-            }
+            get => DefaultPriceClassId;
+            set => DefaultPriceClassId = value;
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        // ======================================================================
+        // INOTIFYPROPERTYCHANGED IMPLEMENTATION
+        // ======================================================================
+        
+        public event PropertyChangedEventHandler? PropertyChanged;
 
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        // ======================================================================
+        // UTILITY METHODS
+        // ======================================================================
+        
+        /// <summary>
+        /// Creates a deep copy of the grower for editing.
+        /// </summary>
+        public Grower Clone()
+        {
+            return new Grower
+            {
+                GrowerId = GrowerId,
+                GrowerNumber = GrowerNumber,
+                FullName = FullName,
+                CheckPayeeName = CheckPayeeName,
+                Address = Address,
+                City = City,
+                Province = Province,
+                PostalCode = PostalCode,
+                PhoneNumber = PhoneNumber,
+                MobileNumber = MobileNumber,
+                Email = Email,
+                GSTNumber = GSTNumber,
+                BusinessNumber = BusinessNumber,
+                CurrencyCode = CurrencyCode,
+                PaymentGroupId = PaymentGroupId,
+                DefaultDepotId = DefaultDepotId,
+                DefaultPriceClassId = DefaultPriceClassId,
+                PaymentMethodId = PaymentMethodId,
+                IsActive = IsActive,
+                IsOnHold = IsOnHold,
+                ChargeGST = ChargeGST,
+                Notes = Notes,
+                CreatedAt = CreatedAt,
+                CreatedBy = CreatedBy,
+                ModifiedAt = ModifiedAt,
+                ModifiedBy = ModifiedBy,
+                DeletedAt = DeletedAt,
+                DeletedBy = DeletedBy
+            };
+        }
+
+        /// <summary>
+        /// Determines if the grower has any changes compared to another grower.
+        /// </summary>
+        public bool HasChanges(Grower other)
+        {
+            if (other == null) return true;
+
+            return GrowerNumber != other.GrowerNumber ||
+                   FullName != other.FullName ||
+                   CheckPayeeName != other.CheckPayeeName ||
+                   Address != other.Address ||
+                   City != other.City ||
+                   Province != other.Province ||
+                   PostalCode != other.PostalCode ||
+                   PhoneNumber != other.PhoneNumber ||
+                   MobileNumber != other.MobileNumber ||
+                   Email != other.Email ||
+                   GSTNumber != other.GSTNumber ||
+                   BusinessNumber != other.BusinessNumber ||
+                   CurrencyCode != other.CurrencyCode ||
+                   PaymentGroupId != other.PaymentGroupId ||
+                   DefaultDepotId != other.DefaultDepotId ||
+                   DefaultPriceClassId != other.DefaultPriceClassId ||
+                   PaymentMethodId != other.PaymentMethodId ||
+                   IsActive != other.IsActive ||
+                   IsOnHold != other.IsOnHold ||
+                   ChargeGST != other.ChargeGST ||
+                   Notes != other.Notes;
         }
     }
 }

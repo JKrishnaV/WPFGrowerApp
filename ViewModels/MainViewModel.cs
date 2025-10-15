@@ -31,7 +31,7 @@ namespace WPFGrowerApp.ViewModels
 
             // Initialize commands using the NavigateToAsync helper
             NavigateToDashboardCommand = new RelayCommand(async p => await NavigateToAsync<DashboardViewModel>("Dashboard", p), CanNavigate); // Use async lambda
-            NavigateToGrowersCommand = new RelayCommand(NavigateToGrowersExecuteAsync, CanNavigate); // Keep separate async logic
+            NavigateToGrowersCommand = new RelayCommand(async p => await NavigateToAsync<GrowerManagementHostViewModel>("Growers", p), CanNavigate);
             NavigateToReceiptsCommand = new RelayCommand(NavigateToReceiptsExecuteAsync, CanNavigate); // Added Receipts navigation
             NavigateToImportCommand = new RelayCommand(async p => await NavigateToAsync<ImportViewModel>("Import", p), CanNavigate); // Use async lambda
             // Update Reports command to navigate to the new ReportsHostViewModel
@@ -158,44 +158,6 @@ namespace WPFGrowerApp.ViewModels
 
         // Removed NavigateToDashboardExecute - Handled by NavigateTo<TViewModel>
 
-        private async Task NavigateToGrowersExecuteAsync(object? parameter) // Changed parameter to object?
-        {
-            if (!CanNavigate(parameter)) return; // Prevent re-entry
-
-            _isNavigating = true;
-            ((RelayCommand)NavigateToGrowersCommand).RaiseCanExecuteChanged(); 
-
-            try
-            {
-                // Use Dialog Service
-                var result = _dialogService.ShowGrowerSearchDialog();
-
-                if (result.DialogResult == true && !string.IsNullOrEmpty(result.SelectedGrowerNumber))
-                {
-                    // Resolve ViewModel from DI container
-                    var growerViewModel = _serviceProvider.GetRequiredService<GrowerViewModel>();
-
-                    // Call InitializeAsync after getting the instance
-                    await growerViewModel.InitializeAsync();
-
-                    if (result.SelectedGrowerNumber != "0") // Load only if not creating new
-                        await growerViewModel.LoadGrowerAsync(result.SelectedGrowerNumber);
-                    CurrentViewModel = growerViewModel;
-                    IsMenuOpen = false; // Close menu after navigation
-                }
-                // If dialog is cancelled or no grower selected, leave menu state as is
-            }
-            catch (System.Exception ex)
-            {
-                 Infrastructure.Logging.Logger.Error("Error during grower navigation", ex);
-                 await _dialogService.ShowMessageBoxAsync($"Error navigating to grower: {ex.Message}", "Navigation Error"); // Use async
-            }
-            finally
-            {
-                _isNavigating = false;
-                 ((RelayCommand)NavigateToGrowersCommand).RaiseCanExecuteChanged();
-            }
-        }
 
         private async Task NavigateToReceiptsExecuteAsync(object? parameter) // Added Receipts navigation
         {

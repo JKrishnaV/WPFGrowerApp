@@ -1,0 +1,79 @@
+<UserControl x:Class="WPFGrowerApp.Views.GrowerManagementHostView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:WPFGrowerApp.Views"
+             xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance Type=vm:GrowerManagementHostViewModel, IsDesignTimeCreatable=False}"
+             d:DesignHeight="600" d:DesignWidth="1000"
+             Background="{DynamicResource MaterialDesignPaper}"
+             Focusable="True"
+             x:Name="growerManagementHostView">
+    
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Styles/StandardizedViewTemplate.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Row 0: Breadcrumb -->
+            <RowDefinition Height="*"/>    <!-- Row 1: Content -->
+        </Grid.RowDefinitions>
+
+        <!-- Breadcrumb Navigation -->
+        <materialDesign:ColorZone Grid.Row="0" Style="{StaticResource BreadcrumbNavigationStyle}">
+            <StackPanel Orientation="Horizontal">
+                <!-- Dashboard -->
+                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                        Command="{Binding NavigateToDashboardCommand}"
+                        Padding="5,0">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Home" Width="16" Height="16" 
+                                               VerticalAlignment="Center" Margin="0,0,5,0"/>
+                        <TextBlock Text="Dashboard" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+                <materialDesign:PackIcon Kind="ChevronRight" Width="16" Height="16" 
+                                       VerticalAlignment="Center" Margin="5,0"/>
+                
+                <!-- Growers -->
+                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                        Command="{Binding NavigateToListCommand}"
+                        Padding="5,0">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="AccountGroup" Width="16" Height="16" 
+                                               VerticalAlignment="Center" Margin="0,0,5,0"/>
+                        <TextBlock Text="Growers" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+                
+                <!-- Third segment - only visible when in detail view -->
+                <StackPanel Orientation="Horizontal" 
+                           Visibility="{Binding IsShowingDetail, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <materialDesign:PackIcon Kind="ChevronRight" Width="16" Height="16" 
+                                           VerticalAlignment="Center" Margin="5,0"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <materialDesign:PackIcon Kind="Account" Width="16" Height="16" 
+                                               VerticalAlignment="Center" Margin="0,0,5,0"/>
+                        <TextBlock Text="{Binding CurrentGrowerDisplayText}" 
+                                  FontSize="12" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </materialDesign:ColorZone>
+
+        <!-- Child View Content -->
+        <ContentPresenter Grid.Row="1" 
+                          Content="{Binding CurrentChildView}"
+                          Margin="0,10,0,0"/>
+    </Grid>
+</UserControl>

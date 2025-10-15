@@ -56,6 +56,35 @@ namespace WPFGrowerApp.DataAccess.Services
         }
 
         /// <summary>
+        /// Retrieves all PaymentGroup records asynchronously (alias for GetAllPayGroupsAsync).
+        /// </summary>
+        public async Task<IEnumerable<PaymentGroup>> GetAllPaymentGroupsAsync()
+        {
+            const string sql = @"
+                SELECT 
+                    PaymentGroupId,
+                    GroupCode,
+                    GroupName,
+                    Description,
+                    DefaultPriceLevel,
+                    IsActive,
+                    CreatedAt,
+                    CreatedBy,
+                    ModifiedAt,
+                    ModifiedBy,
+                    DeletedAt,
+                    DeletedBy
+                FROM PaymentGroups 
+                WHERE DeletedAt IS NULL 
+                ORDER BY GroupCode";
+                
+            using (var connection = CreateConnection())
+            {
+                return await connection.QueryAsync<PaymentGroup>(sql);
+            }
+        }
+
+        /// <summary>
         /// Retrieves a specific PayGroup record by its code asynchronously.
         /// </summary>
         public async Task<PayGroup> GetPayGroupByIdAsync(string payGroupId)

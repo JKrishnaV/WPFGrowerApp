@@ -217,7 +217,7 @@ namespace WPFGrowerApp.ViewModels
             }
 
             var payGroupGroups = Growers
-                .GroupBy(g => g.PayGroup ?? "Unknown")
+                .GroupBy(g => g.PaymentGroupId.ToString())
                 .Select(g => new PieChartData
                 {
                     Category = $"Group {g.Key}",

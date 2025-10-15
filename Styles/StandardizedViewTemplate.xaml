@@ -56,33 +56,8 @@
         <Setter Property="Margin" Value="0,0,0,10"/>
     </Style>
 
-    <!-- Loading Indicator Style -->
-    <Style x:Key="LoadingIndicatorStyle" TargetType="materialDesign:Card">
-        <Setter Property="VerticalAlignment" Value="Center"/>
-        <Setter Property="HorizontalAlignment" Value="Center"/>
-        <Setter Property="Padding" Value="20"/>
-        <Setter Property="Background" Value="{DynamicResource MaterialDesignCardBackground}"/>
-    </Style>
 
-    <!-- DataGrid Standard Style -->
-    <Style x:Key="StandardizedDataGridStyle" TargetType="DataGrid" BasedOn="{StaticResource MaterialDesignDataGrid}">
-        <Setter Property="AutoGenerateColumns" Value="False"/>
-        <Setter Property="IsReadOnly" Value="True"/>
-        <Setter Property="CanUserAddRows" Value="False"/>
-        <Setter Property="CanUserSortColumns" Value="True"/>
-        <Setter Property="SelectionMode" Value="Single"/>
-        <Setter Property="materialDesign:DataGridAssist.CellPadding" Value="13 8 8 8"/>
-        <Setter Property="materialDesign:DataGridAssist.ColumnHeaderPadding" Value="8"/>
-        <Setter Property="GridLinesVisibility" Value="None"/>
-        <Setter Property="AlternatingRowBackground" Value="{DynamicResource MaterialDesignDivider}"/>
-    </Style>
 
-    <!-- Status Badge Style -->
-    <Style x:Key="StatusBadgeStyle" TargetType="Border">
-        <Setter Property="CornerRadius" Value="10"/>
-        <Setter Property="Padding" Value="8,4"/>
-        <Setter Property="HorizontalAlignment" Value="Center"/>
-    </Style>
 
     <!-- Primary Action Button Style -->
     <Style x:Key="PrimaryActionButtonStyle" TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
@@ -99,6 +74,123 @@
         <Setter Property="Background" Value="IndianRed"/>
         <Setter Property="Foreground" Value="White"/>
         <Setter Property="Margin" Value="0,0,5,0"/>
+    </Style>
+
+    <!-- Statistics Row Style -->
+    <Style x:Key="StatisticsRowStyle" TargetType="Grid">
+        <Setter Property="Margin" Value="0,0,0,15"/>
+    </Style>
+
+    <!-- Statistics Card Style -->
+    <Style x:Key="StatisticsCardStyle" TargetType="materialDesign:Card">
+        <Setter Property="Margin" Value="0,0,10,0"/>
+        <Setter Property="Padding" Value="15"/>
+        <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp2"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+    </Style>
+
+    <!-- Statistics Number Style -->
+    <Style x:Key="StatisticsNumberStyle" TargetType="TextBlock" BasedOn="{StaticResource MaterialDesignHeadline3TextBlock}">
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="0,5,0,0"/>
+        <Setter Property="Foreground" Value="{DynamicResource PrimaryHueMidBrush}"/>
+    </Style>
+
+    <!-- Statistics Label Style -->
+    <Style x:Key="StatisticsLabelStyle" TargetType="TextBlock" BasedOn="{StaticResource MaterialDesignBody2TextBlock}">
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="0,5,0,0"/>
+        <Setter Property="Foreground" Value="{DynamicResource MaterialDesignBodyLight}"/>
+    </Style>
+
+    <!-- Statistics Sub Label Style -->
+    <Style x:Key="StatisticsSubLabelStyle" TargetType="TextBlock" BasedOn="{StaticResource MaterialDesignCaptionTextBlock}">
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="0,2,0,0"/>
+        <Setter Property="Foreground" Value="{DynamicResource MaterialDesignBodyLight}"/>
+    </Style>
+
+    <!-- DataGrid Card Style -->
+    <Style x:Key="DataGridCardStyle" TargetType="materialDesign:Card">
+        <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp2"/>
+        <Setter Property="Padding" Value="0"/>
+    </Style>
+
+    <!-- Standardized DataGrid Style -->
+    <Style x:Key="StandardizedDataGridStyle" TargetType="DataGrid" BasedOn="{StaticResource MaterialDesignDataGrid}">
+        <Setter Property="AutoGenerateColumns" Value="False"/>
+        <Setter Property="CanUserAddRows" Value="False"/>
+        <Setter Property="CanUserDeleteRows" Value="False"/>
+        <Setter Property="CanUserReorderColumns" Value="True"/>
+        <Setter Property="CanUserResizeColumns" Value="True"/>
+        <Setter Property="CanUserSortColumns" Value="True"/>
+        <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+        <Setter Property="HeadersVisibility" Value="Column"/>
+        <Setter Property="SelectionMode" Value="Single"/>
+        <Setter Property="SelectionUnit" Value="FullRow"/>
+        <Setter Property="AlternatingRowBackground" Value="{DynamicResource MaterialDesignDataGridAlternatingRowBackground}"/>
+    </Style>
+
+    <!-- Status Bar Color Zone Style -->
+    <Style x:Key="StatusBarColorZoneStyle" TargetType="materialDesign:ColorZone">
+        <Setter Property="Mode" Value="PrimaryLight"/>
+        <Setter Property="Padding" Value="10,8"/>
+        <Setter Property="Margin" Value="0,10,0,0"/>
+        <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+
+    <!-- Status Bar Label Style -->
+    <Style x:Key="StatusBarLabelStyle" TargetType="TextBlock" BasedOn="{StaticResource MaterialDesignCaptionTextBlock}">
+        <Setter Property="Foreground" Value="{DynamicResource MaterialDesignBodyLight}"/>
+        <Setter Property="Margin" Value="0,0,5,0"/>
+    </Style>
+
+    <!-- Status Bar Message Style -->
+    <Style x:Key="StatusBarMessageStyle" TargetType="TextBlock" BasedOn="{StaticResource MaterialDesignCaptionTextBlock}">
+        <Setter Property="Foreground" Value="{DynamicResource MaterialDesignBody}"/>
+        <Setter Property="Margin" Value="0,0,10,0"/>
+    </Style>
+
+    <!-- Title Bar Card Style -->
+    <Style x:Key="TitleBarCardStyle" TargetType="materialDesign:Card">
+        <Setter Property="Margin" Value="0,0,0,15"/>
+        <Setter Property="Padding" Value="15"/>
+        <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp2"/>
+    </Style>
+
+    <!-- Field Label Style -->
+    <Style x:Key="FieldLabelStyle" TargetType="TextBlock" BasedOn="{StaticResource MaterialDesignBody2TextBlock}">
+        <Setter Property="Margin" Value="0,0,0,5"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <!-- Section Header Style -->
+    <Style x:Key="SectionHeaderStyle" TargetType="TextBlock" BasedOn="{StaticResource MaterialDesignHeadline6TextBlock}">
+        <Setter Property="Margin" Value="0,0,0,10"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <!-- Body Text Style -->
+    <Style x:Key="BodyTextStyle" TargetType="TextBlock" BasedOn="{StaticResource MaterialDesignBody2TextBlock}">
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <!-- Status Badge Style -->
+    <Style x:Key="StatusBadgeStyle" TargetType="Border">
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <!-- Loading Indicator Style -->
+    <Style x:Key="LoadingIndicatorStyle" TargetType="materialDesign:Card">
+        <Setter Property="Background" Value="{DynamicResource MaterialDesignPaper}"/>
+        <Setter Property="Opacity" Value="0.9"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+        <Setter Property="Padding" Value="20"/>
     </Style>
 
 </ResourceDictionary>

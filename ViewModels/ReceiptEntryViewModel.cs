@@ -112,7 +112,7 @@ namespace WPFGrowerApp.ViewModels
             {
                 // Load all lookup data
                 Infrastructure.Logging.Logger.Info("ReceiptEntryViewModel.InitializeAsync - Loading lookup data (Growers, Products, Processes, Depots)");
-                var growersTask = _growerService.GetAllGrowersAsync();
+                var growersTask = _growerService.GetAllGrowersForListAsync();
                 var productsTask = _productService.GetAllProductsAsync();
                 var processesTask = _processService.GetAllProcessesAsync();
                 var depotsTask = _depotService.GetAllDepotsAsync();

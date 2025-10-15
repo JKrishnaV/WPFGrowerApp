@@ -167,13 +167,13 @@ namespace WPFGrowerApp.ViewModels
             get
             {
                 if (CurrentGrower == null) return "CAD";
-                return CurrentGrower.Currency == 'U' ? "USD" : "CAD";
+                return CurrentGrower.CurrencyCode ?? "CAD";
             }
             set
             {
                 if (CurrentGrower != null)
                 {
-                    CurrentGrower.Currency = value == "USD" ? 'U' : 'C';
+                    CurrentGrower.CurrencyCode = value;
                     OnPropertyChanged();
                 }
             }
@@ -376,11 +376,10 @@ namespace WPFGrowerApp.ViewModels
             CurrentGrower = new Grower
             {
                 GrowerNumber = string.Empty, // This will be set by the database
-                Currency = 'C', // Default to CAD
-                PayGroup = "1", // Default pay group
-                PriceLevel = 1, // Default price level
-                ContractLimit = 0, // Default contract limit
-                OnHold = false,
+                CurrencyCode = "CAD", // Default to CAD
+                PaymentGroupId = 1, // Default payment group
+                DefaultPriceClassId = 1, // Default price class
+                IsOnHold = false,
                 ChargeGST = false
             };
             StatusMessage = "Created new grower.";
@@ -476,11 +475,7 @@ namespace WPFGrowerApp.ViewModels
                  AddError(nameof(CurrentGrower.Postal), "Invalid Postal Code format.");
             }
             
-            // Example: Validate Acres (must be non-negative)
-            if (CurrentGrower.Acres < 0)
-            {
-                 AddError(nameof(CurrentGrower.Acres), "Acres cannot be negative.");
-            }
+            // Acres validation removed - field not available in new Grower model
 
             // Add other validation rules for properties like City, Prov, Phone, etc.
         }

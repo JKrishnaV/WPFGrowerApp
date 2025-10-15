@@ -6,18 +6,19 @@ namespace WPFGrowerApp.Models
     public class GrowerSearchResult
     {
         public int GrowerId { get; set; }  // Primary key from database
-        public decimal GrowerNumber { get; set; }  // Legacy grower number
-        public string GrowerName { get; set; }
-        public string ChequeName { get; set; }
-        public string City { get; set; }
-        public string Phone { get; set; }
-        public string Province { get; set; }
-        public decimal Acres { get; set; }
-        public string Notes { get; set; }
-        public string PayGroup { get; set; }
-        public string Phone2 { get; set; }
+        public string GrowerNumber { get; set; } = string.Empty;  // Updated to string
+        public string GrowerName { get; set; } = string.Empty;
+        public string ChequeName { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string Province { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;  // Added missing Email property
+        public string Notes { get; set; } = string.Empty;
+        public string PayGroup { get; set; } = string.Empty;
+        public string PaymentGroupCode { get; set; } = string.Empty;  // Added missing PaymentGroupCode property
+        public string Phone2 { get; set; } = string.Empty;
         public bool IsOnHold { get; set; }
         public bool IsActive { get; set; }
-        public string Status { get; set; }
+        public string Status { get; set; } = string.Empty;
     }
 }

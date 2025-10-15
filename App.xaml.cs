@@ -46,6 +46,8 @@ namespace WPFGrowerApp
             services.AddTransient<IPostBatchService, PostBatchService>(); // Added
             services.AddTransient<IPaymentBatchService, PaymentBatchService>(); // Added for modern payment processing
             services.AddTransient<IPaymentTypeService, PaymentTypeService>(); // Added for payment types
+            services.AddTransient<IPaymentMethodService, PaymentMethodService>(); // Added for payment methods
+            services.AddTransient<IPriceClassService, PriceClassService>(); // Added for price classes
             services.AddTransient<IPaymentBatchManagementService, PaymentBatchManagementService>(); // Added for payment batch management
             services.AddTransient<IChequeGenerationService, ChequeGenerationService>(); // Added for cheque generation
             services.AddTransient<IChequePrintingService, ChequePrintingService>(); // Added for cheque printing
@@ -70,8 +72,10 @@ namespace WPFGrowerApp
             // Register ViewModels
             services.AddTransient<MainViewModel>();
             services.AddTransient<DashboardViewModel>();
-            services.AddTransient<GrowerViewModel>();
-            services.AddTransient<GrowerSearchViewModel>();
+            // New Grower Management ViewModels
+            services.AddTransient<GrowerManagementHostViewModel>();
+            services.AddTransient<GrowerListViewModel>();
+            services.AddTransient<GrowerDetailViewModel>();
             services.AddTransient<ReceiptViewModel>(); // Added Receipt VM
             services.AddTransient<ReceiptEntryViewModel>(); // Added Receipt Entry VM
             services.AddTransient<ImportViewModel>();
@@ -95,10 +99,8 @@ namespace WPFGrowerApp
             services.AddTransient<AppearanceSettingsViewModel>(); // Register Appearance Settings VM
             services.AddTransient<PriceViewModel>();
             services.AddTransient<ContainerViewModel>(); // Added Container VM
-            services.AddTransient<GrowersManagementViewModel>(); // Added Growers Management VM
 
             // Register Views (Views are typically not registered unless needed for DI resolution like DialogService)
-            services.AddTransient<GrowerSearchView>(); // Needed by DialogService
             services.AddTransient<LoginView>();
             services.AddTransient<ReceiptEntryView>(); // Added Receipt Entry View for dialogs
             // SettingsHostView and ProductView don't need registration if only resolved via DataTemplates

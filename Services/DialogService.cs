@@ -45,19 +45,12 @@ namespace WPFGrowerApp.Services
             return result is string stringResult && stringResult.Equals("True", StringComparison.OrdinalIgnoreCase);
         }
 
-        // ShowGrowerSearchDialog remains synchronous for now, using standard Window.ShowDialog()
+        // ShowGrowerSearchDialog - DEPRECATED: Use new grower management system instead
         GrowerSearchDialogResult IDialogService.ShowGrowerSearchDialog()
         {
-            var searchView = _serviceProvider.GetRequiredService<GrowerSearchView>();
-            bool? dialogResult = searchView.ShowDialog();
-            if (dialogResult == true)
-            {
-                return new GrowerSearchDialogResult(true, searchView.SelectedGrowerNumber);
-            }
-            else
-            {
-                return new GrowerSearchDialogResult(dialogResult, null);
-            }
+            // This method is deprecated. The new grower management system should be used instead.
+            // Return a cancelled result to maintain compatibility with existing code.
+            return new GrowerSearchDialogResult(false, null);
         }
 
         // Implementation for showing custom ViewModels as dialogs

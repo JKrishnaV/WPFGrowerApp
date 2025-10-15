@@ -81,7 +81,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         PaymentBatchId = paymentBatchId,
                         ChequeDate = chequeDate,
                         ChequeAmount = amount,
-                        CurrencyCode = grower.Currency != '\0' ? grower.Currency.ToString() : "C",
+                        CurrencyCode = !string.IsNullOrWhiteSpace(grower.CurrencyCode) ? grower.CurrencyCode : "CAD",
                         PayeeName = !string.IsNullOrWhiteSpace(grower.ChequeName) ? grower.ChequeName : grower.GrowerName,
                         Memo = memo,
                         Status = "Issued",

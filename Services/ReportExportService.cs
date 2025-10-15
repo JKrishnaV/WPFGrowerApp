@@ -76,8 +76,8 @@ namespace WPFGrowerApp.Services
                             row.Cells[2].Value = grower.City ?? string.Empty;
                             row.Cells[3].Value = grower.Prov ?? string.Empty;
                             row.Cells[4].Value = grower.Phone ?? string.Empty;
-                            row.Cells[5].Value = grower.Acres.ToString();
-                            row.Cells[6].Value = grower.PayGroup ?? string.Empty;
+                            row.Cells[5].Value = "0"; // Acres field not available in new model
+                            row.Cells[6].Value = grower.PaymentGroupId.ToString();
                         }
                         
                         // Draw the grid
@@ -167,8 +167,8 @@ namespace WPFGrowerApp.Services
                         sheet.Range[$"F{row}"].Text = grower.Prov ?? string.Empty;
                         sheet.Range[$"G{row}"].Text = grower.Postal ?? string.Empty;
                         sheet.Range[$"H{row}"].Text = grower.Phone ?? string.Empty;
-                        sheet.Range[$"I{row}"].Number = (double)grower.Acres;
-                        sheet.Range[$"J{row}"].Text = grower.PayGroup ?? string.Empty;
+                        sheet.Range[$"I{row}"].Number = 0; // Acres field not available in new model
+                        sheet.Range[$"J{row}"].Text = grower.PaymentGroupId.ToString();
                         sheet.Range[$"K{row}"].Number = grower.PriceLevel;
                         row++;
                     }
@@ -262,8 +262,8 @@ namespace WPFGrowerApp.Services
                         table[i + 1, 2].AddParagraph().AppendText(grower.City ?? string.Empty);
                         table[i + 1, 3].AddParagraph().AppendText(grower.Prov ?? string.Empty);
                         table[i + 1, 4].AddParagraph().AppendText(grower.Phone ?? string.Empty);
-                        table[i + 1, 5].AddParagraph().AppendText(grower.Acres.ToString());
-                        table[i + 1, 6].AddParagraph().AppendText(grower.PayGroup ?? string.Empty);
+                        table[i + 1, 5].AddParagraph().AppendText("0"); // Acres field not available in new model
+                        table[i + 1, 6].AddParagraph().AppendText(grower.PaymentGroupId.ToString());
                     }
 
                     // Apply table formatting

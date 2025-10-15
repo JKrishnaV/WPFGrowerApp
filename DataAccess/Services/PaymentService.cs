@@ -485,7 +485,7 @@ namespace WPFGrowerApp.DataAccess.Services
                                     receipt, // Use the full receipt object
                                     GetAdvanceAccountType(advanceNumber),
                                     receiptDetail.CalculatedAdvancePrice, // Use calculated price
-                                    grower.Currency.ToString(),
+                                    grower.CurrencyCode ?? "CAD",
                                     cropYear,
                                     createdBatch.PaymentBatchId,
                                     paymentDate));
@@ -500,7 +500,7 @@ namespace WPFGrowerApp.DataAccess.Services
                                         receipt,
                                         AccTypePremium,
                                         receiptDetail.CalculatedPremiumPrice, // Use calculated price
-                                        grower.Currency.ToString(),
+                                        grower.CurrencyCode ?? "CAD",
                                         cropYear,
                                         createdBatch.PaymentBatchId,
                                         paymentDate));
@@ -511,7 +511,7 @@ namespace WPFGrowerApp.DataAccess.Services
                                         receipt,
                                         AccTypeDeduction,
                                         receiptDetail.CalculatedMarketingDeduction, // Use calculated rate
-                                        grower.Currency.ToString(),
+                                        grower.CurrencyCode ?? "CAD",
                                         cropYear,
                                         createdBatch.PaymentBatchId,
                                         paymentDate));
@@ -688,11 +688,11 @@ namespace WPFGrowerApp.DataAccess.Services
                     // Populate from Grower object
                     currentGrowerPayment.GrowerNumber = grower.GrowerNumber ?? string.Empty;
                     currentGrowerPayment.GrowerName = grower.GrowerName ?? string.Empty;
-                    currentGrowerPayment.Currency = grower.Currency.ToString();
-                    currentGrowerPayment.IsOnHold = grower.OnHold;
+                    currentGrowerPayment.Currency = grower.CurrencyCode ?? "CAD";
+                    currentGrowerPayment.IsOnHold = grower.IsOnHold;
 
                     // SIMPLIFIED: Skip processing entirely if grower is on hold
-                    if (grower.OnHold)
+                    if (grower.IsOnHold)
                     {
                         progress?.Report($"GrowerID {growerId} ({grower.GrowerName}) is ON HOLD - skipping all receipts.");
                         continue; // Skip to next grower - don't add to results at all
@@ -740,7 +740,7 @@ namespace WPFGrowerApp.DataAccess.Services
                                 receipt.Process ?? string.Empty,
                                 receipt.ReceiptDate,
                                 parameters.AdvanceNumber,
-                                grower.Currency,
+                                (grower.CurrencyCode ?? "CAD")[0],
                                 grower.PriceLevel,
                                 receipt.Grade);
 
@@ -764,7 +764,7 @@ namespace WPFGrowerApp.DataAccess.Services
                                     receipt.Process ?? string.Empty,
                                     receipt.ReceiptDate,
                                     receipt.ReceiptDate.TimeOfDay,
-                                    grower.Currency);
+                                    (grower.CurrencyCode ?? "CAD")[0]);
                                     
                                 marketingDeduction = await _priceService.GetMarketingDeductionAsync(receipt.Product ?? string.Empty);
                             }

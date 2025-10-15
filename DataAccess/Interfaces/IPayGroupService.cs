@@ -16,6 +16,12 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         Task<IEnumerable<PayGroup>> GetAllPayGroupsAsync();
 
         /// <summary>
+        /// Retrieves all PaymentGroup records asynchronously (alias for GetAllPayGroupsAsync).
+        /// </summary>
+        /// <returns>A collection of PaymentGroup objects.</returns>
+        Task<IEnumerable<PaymentGroup>> GetAllPaymentGroupsAsync();
+
+        /// <summary>
         /// Retrieves a specific PayGroup record by its ID asynchronously.
         /// </summary>
         /// <param name="payGroupId">The ID of the PayGroup to retrieve.</param>

@@ -341,7 +341,7 @@ namespace WPFGrowerApp.ViewModels
                 }
 
                 // Fetch ALL data first
-                var growerSearchResults = await _growerService.GetAllGrowersAsync();
+                var growerSearchResults = await _growerService.GetAllGrowersForListAsync();
 
                 // Apply filtering BEFORE mapping and pagination
                 IEnumerable<GrowerSearchResult> filteredResults = growerSearchResults;
@@ -384,19 +384,20 @@ namespace WPFGrowerApp.ViewModels
                 // Map the FINAL filtered results to Grower model and store for pagination
                 _allGrowers = filteredResults.Select(gsr => new Grower
                 {
-                    GrowerNumber = gsr.GrowerNumber.ToString(),
-                    GrowerName = gsr.GrowerName,
-                    ChequeName = gsr.ChequeName,
+                    GrowerId = gsr.GrowerId,
+                    GrowerNumber = gsr.GrowerNumber,
+                    FullName = gsr.GrowerName,
+                    CheckPayeeName = gsr.ChequeName,
                     City = gsr.City,
-                    Phone = gsr.Phone,
-                    Prov = gsr.Province,
-                    Acres = gsr.Acres,
-                    Notes = gsr.Notes?.Trim(), // Handle potential null Notes
-                    PayGroup = gsr.PayGroup, // Ensure PayGroup is mapped
-                    Phone2 = gsr.Phone2,
-                    OnHold = gsr.IsOnHold // Ensure OnHold is mapped
-                    // Removed Address and PostalCode mapping assumptions
-                    // Map other properties if needed
+                    Province = gsr.Province,
+                    PhoneNumber = gsr.Phone,
+                    MobileNumber = gsr.Phone2,
+                    Email = gsr.Email,
+                    Notes = gsr.Notes?.Trim(),
+                    IsActive = gsr.IsActive,
+                    IsOnHold = gsr.IsOnHold,
+                    PaymentGroupId = 1 // Default value, would need to be resolved from PayGroup string
+                    // Note: Acres, PayGroup, Phone2, OnHold properties don't exist in new Grower model
                 }).ToList(); // Store the filtered results
 
                 //if _allGrowers has no data, add a empty record
@@ -406,17 +407,16 @@ namespace WPFGrowerApp.ViewModels
                     {
                         new Grower
                         {
+                            GrowerId = 0,
                             GrowerNumber = string.Empty,
-                            GrowerName = "No growers found with current filters",
-                            ChequeName = string.Empty,
+                            FullName = "No growers found with current filters",
+                            CheckPayeeName = string.Empty,
                             City = string.Empty,
-                            Phone = string.Empty,
-                            Prov = string.Empty,
-                            Acres = 0,
+                            Province = string.Empty,
+                            PhoneNumber = string.Empty,
+                            MobileNumber = string.Empty,
                             Notes = string.Empty,
-                            PayGroup = string.Empty,
-                            Phone2 = string.Empty,
-                            OnHold = false
+                            IsOnHold = false
                         }
                     };
                     Infrastructure.Logging.Logger.Info("No growers found with current filters - adding empty placeholder record");

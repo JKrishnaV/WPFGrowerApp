@@ -1,0 +1,514 @@
+<UserControl x:Class="WPFGrowerApp.Views.GrowerDetailView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:WPFGrowerApp.Views"
+             xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:converters="clr-namespace:WPFGrowerApp.Converters"
+             mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance Type=vm:GrowerDetailViewModel, IsDesignTimeCreatable=False}"
+             d:DesignHeight="600" d:DesignWidth="1000"
+             Background="{DynamicResource MaterialDesignPaper}"
+             Focusable="True"
+             x:Name="growerDetailView">
+    
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Styles/StandardizedViewTemplate.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            
+            <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+            <converters:BoolToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+            <converters:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter"/>
+            <converters:NotNullConverter x:Key="NotNullConverter"/>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Row 0: Title Bar -->
+            <RowDefinition Height="*"/>    <!-- Row 1: Tab Content -->
+        </Grid.RowDefinitions>
+
+        <!-- Title Bar with Actions -->
+        <materialDesign:Card Grid.Row="0" Style="{StaticResource TitleBarCardStyle}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Title -->
+                <TextBlock Grid.Column="0" 
+                           Text="{Binding WindowTitle}" 
+                           Style="{StaticResource StandardizedViewTitleStyle}"
+                           VerticalAlignment="Center"/>
+
+                <!-- Action Buttons -->
+                <StackPanel Grid.Column="1" 
+                            Orientation="Horizontal" 
+                            VerticalAlignment="Center">
+                    
+                    <Button Command="{Binding SaveCommand}"
+                            Style="{StaticResource MaterialDesignRaisedButton}"
+                            IsEnabled="{Binding IsEditable}"
+                            Visibility="{Binding IsEditMode, Converter={StaticResource InverseBooleanConverter}}"
+                            Margin="0,0,10,0">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="ContentSave" Width="16" Height="16" Margin="0,0,5,0"/>
+                            <TextBlock Text="Save"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Command="{Binding CancelCommand}"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Margin="0,0,10,0">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Close" Width="16" Height="16" Margin="0,0,5,0"/>
+                            <TextBlock Text="Cancel"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Command="{Binding DeleteCommand}"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Visibility="{Binding IsNewGrower, Converter={StaticResource InverseBooleanConverter}}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Delete" Width="16" Height="16" Margin="0,0,5,0"/>
+                            <TextBlock Text="Delete"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Tab Content -->
+        <TabControl Grid.Row="1" 
+                    SelectedIndex="{Binding SelectedTabIndex}"
+                    Style="{StaticResource MaterialDesignTabControl}">
+            
+            <!-- Tab 1: Basic Information -->
+            <TabItem Header="Basic Information">
+                <materialDesign:Card Margin="10">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="500">
+                        <Grid Margin="20">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Grower Number -->
+                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,20">
+                                <TextBlock Text="Grower Number *" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding CurrentGrower.GrowerNumber, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding IsEditable}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Enter grower number"/>
+                            </StackPanel>
+
+                            <!-- Full Name -->
+                            <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,0,0,20">
+                                <TextBlock Text="Full Name *" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding CurrentGrower.FullName, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding IsEditable}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Enter full name"/>
+                            </StackPanel>
+
+                            <!-- Check Payee Name -->
+                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,20">
+                                <TextBlock Text="Check Payee Name" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding CurrentGrower.CheckPayeeName, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding IsEditable}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Enter check payee name"/>
+                            </StackPanel>
+
+                            <!-- Currency -->
+                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="10,0,0,20">
+                                <TextBlock Text="Currency" Style="{StaticResource FieldLabelStyle}"/>
+                                <ComboBox ItemsSource="{Binding CurrencyCodes}"
+                                          SelectedItem="{Binding CurrentGrower.CurrencyCode}"
+                                          IsEnabled="{Binding IsEditable}"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
+                            </StackPanel>
+
+                            <!-- Status Checkboxes -->
+                            <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,20">
+                                <TextBlock Text="Status" Style="{StaticResource FieldLabelStyle}"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                    <CheckBox Content="Is Active" 
+                                              IsChecked="{Binding CurrentGrower.IsActive}"
+                                              IsEnabled="{Binding IsEditable}"
+                                              Margin="0,0,30,0"/>
+                                    <CheckBox Content="On Hold" 
+                                              IsChecked="{Binding CurrentGrower.IsOnHold}"
+                                              IsEnabled="{Binding IsEditable}"
+                                              Margin="0,0,30,0"/>
+                                    <CheckBox Content="Charge GST" 
+                                              IsChecked="{Binding CurrentGrower.ChargeGST}"
+                                              IsEnabled="{Binding IsEditable}"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- Notes -->
+                            <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2">
+                                <TextBlock Text="Notes" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding CurrentGrower.Notes, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding IsEditable}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Enter notes"
+                                         AcceptsReturn="True"
+                                         TextWrapping="Wrap"
+                                         Height="100"
+                                         VerticalScrollBarVisibility="Auto"/>
+                            </StackPanel>
+                        </Grid>
+                    </ScrollViewer>
+                </materialDesign:Card>
+            </TabItem>
+
+            <!-- Tab 2: Contact Information -->
+            <TabItem Header="Contact Information">
+                <materialDesign:Card Margin="10">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="500">
+                        <Grid Margin="20">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Address -->
+                            <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,20">
+                                <TextBlock Text="Address" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding CurrentGrower.Address, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding IsEditable}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Enter address"
+                                         AcceptsReturn="True"
+                                         TextWrapping="Wrap"
+                                         Height="60"
+                                         VerticalScrollBarVisibility="Auto"/>
+                            </StackPanel>
+
+                            <!-- City -->
+                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,20">
+                                <TextBlock Text="City" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding CurrentGrower.City, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding IsEditable}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Enter city"/>
+                            </StackPanel>
+
+                            <!-- Province -->
+                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="10,0,0,20">
+                                <TextBlock Text="Province" Style="{StaticResource FieldLabelStyle}"/>
+                                <ComboBox ItemsSource="{Binding Provinces}"
+                                          SelectedItem="{Binding CurrentGrower.Province}"
+                                          IsEnabled="{Binding IsEditable}"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
+                            </StackPanel>
+
+                            <!-- Postal Code -->
+                            <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,20">
+                                <TextBlock Text="Postal Code" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding CurrentGrower.PostalCode, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding IsEditable}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Enter postal code"/>
+                            </StackPanel>
+
+                            <!-- Phone Number -->
+                            <StackPanel Grid.Row="2" Grid.Column="1" Margin="10,0,0,20">
+                                <TextBlock Text="Phone Number" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding CurrentGrower.PhoneNumber, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding IsEditable}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Enter phone number"/>
+                            </StackPanel>
+
+                            <!-- Mobile Number -->
+                            <StackPanel Grid.Row="3" Grid.Column="0" Margin="0,0,10,20">
+                                <TextBlock Text="Mobile Number" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding CurrentGrower.MobileNumber, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding IsEditable}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Enter mobile number"/>
+                            </StackPanel>
+
+                            <!-- Email -->
+                            <StackPanel Grid.Row="3" Grid.Column="1" Margin="10,0,0,20">
+                                <TextBlock Text="Email" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding CurrentGrower.Email, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding IsEditable}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Enter email address"/>
+                            </StackPanel>
+                        </Grid>
+                    </ScrollViewer>
+                </materialDesign:Card>
+            </TabItem>
+
+            <!-- Tab 3: Business & Payment -->
+            <TabItem Header="Business &amp; Payment">
+                <materialDesign:Card Margin="10">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="500">
+                        <Grid Margin="20">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- GST Number -->
+                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,20">
+                                <TextBlock Text="GST Number" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding CurrentGrower.GSTNumber, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding IsEditable}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Enter GST number"/>
+                            </StackPanel>
+
+                            <!-- Business Number -->
+                            <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,0,0,20">
+                                <TextBlock Text="Business Number" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding CurrentGrower.BusinessNumber, UpdateSourceTrigger=PropertyChanged}"
+                                         IsEnabled="{Binding IsEditable}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         materialDesign:HintAssist.Hint="Enter business number"/>
+                            </StackPanel>
+
+                            <!-- Payment Group -->
+                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,20">
+                                <TextBlock Text="Payment Group *" Style="{StaticResource FieldLabelStyle}"/>
+                                <ComboBox ItemsSource="{Binding PaymentGroups}"
+                                          SelectedValue="{Binding CurrentGrower.PaymentGroupId}"
+                                          SelectedValuePath="PaymentGroupId"
+                                          DisplayMemberPath="GroupName"
+                                          IsEnabled="{Binding IsEditable}"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
+                            </StackPanel>
+
+                            <!-- Payment Method -->
+                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="10,0,0,20">
+                                <TextBlock Text="Payment Method" Style="{StaticResource FieldLabelStyle}"/>
+                                <ComboBox ItemsSource="{Binding PaymentMethods}"
+                                          SelectedValue="{Binding CurrentGrower.PaymentMethodId}"
+                                          SelectedValuePath="PaymentMethodId"
+                                          DisplayMemberPath="PaymentMethodName"
+                                          IsEnabled="{Binding IsEditable}"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
+                            </StackPanel>
+
+                            <!-- Default Depot -->
+                            <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,20">
+                                <TextBlock Text="Default Depot *" Style="{StaticResource FieldLabelStyle}"/>
+                                <ComboBox ItemsSource="{Binding Depots}"
+                                          SelectedValue="{Binding CurrentGrower.DefaultDepotId}"
+                                          SelectedValuePath="DepotId"
+                                          DisplayMemberPath="DepotName"
+                                          IsEnabled="{Binding IsEditable}"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
+                            </StackPanel>
+
+                            <!-- Default Price Class -->
+                            <StackPanel Grid.Row="2" Grid.Column="1" Margin="10,0,0,20">
+                                <TextBlock Text="Default Price Class *" Style="{StaticResource FieldLabelStyle}"/>
+                                <ComboBox ItemsSource="{Binding PriceClasses}"
+                                          SelectedValue="{Binding CurrentGrower.DefaultPriceClassId}"
+                                          SelectedValuePath="PriceClassId"
+                                          DisplayMemberPath="PriceClassName"
+                                          IsEnabled="{Binding IsEditable}"
+                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
+                            </StackPanel>
+                        </Grid>
+                    </ScrollViewer>
+                </materialDesign:Card>
+            </TabItem>
+
+            <!-- Tab 4: History & Statistics -->
+            <TabItem Header="History &amp; Statistics">
+                <materialDesign:Card Margin="10">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="500">
+                        <StackPanel Margin="20">
+                            
+                            <!-- Statistics Summary -->
+                            <TextBlock Text="Statistics Summary" 
+                                       Style="{StaticResource SectionHeaderStyle}" 
+                                       Margin="0,0,0,20"/>
+                            
+                            <Grid Margin="0,0,0,30">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Total Receipts -->
+                                <materialDesign:Card Grid.Column="0" Style="{StaticResource StatisticsCardStyle}" Margin="0,0,10,0">
+                                    <StackPanel>
+                                        <materialDesign:PackIcon Kind="Receipt" Width="24" Height="24" 
+                                                               Foreground="{DynamicResource PrimaryHueMidBrush}" 
+                                                               HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding GrowerStatistics.TotalReceipts, StringFormat='{}{0:N0}'}" 
+                                                   Style="{StaticResource StatisticsNumberStyle}"/>
+                                        <TextBlock Text="Total Receipts" Style="{StaticResource StatisticsLabelStyle}"/>
+                                        <TextBlock Text="{Binding GrowerStatistics.TotalReceiptsValue, StringFormat='{}{0:C}'}" 
+                                                   Style="{StaticResource StatisticsSubLabelStyle}"/>
+                                    </StackPanel>
+                                </materialDesign:Card>
+
+                                <!-- Total Payments -->
+                                <materialDesign:Card Grid.Column="1" Style="{StaticResource StatisticsCardStyle}" Margin="5,0">
+                                    <StackPanel>
+                                        <materialDesign:PackIcon Kind="Cash" Width="24" Height="24" 
+                                                               Foreground="{DynamicResource PrimaryHueMidBrush}" 
+                                                               HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding GrowerStatistics.TotalPayments, StringFormat='{}{0:N0}'}" 
+                                                   Style="{StaticResource StatisticsNumberStyle}"/>
+                                        <TextBlock Text="Total Payments" Style="{StaticResource StatisticsLabelStyle}"/>
+                                        <TextBlock Text="{Binding GrowerStatistics.TotalPaymentsValue, StringFormat='{}{0:C}'}" 
+                                                   Style="{StaticResource StatisticsSubLabelStyle}"/>
+                                    </StackPanel>
+                                </materialDesign:Card>
+
+                                <!-- Last Receipt -->
+                                <materialDesign:Card Grid.Column="2" Style="{StaticResource StatisticsCardStyle}" Margin="5,0">
+                                    <StackPanel>
+                                        <materialDesign:PackIcon Kind="Calendar" Width="24" Height="24" 
+                                                               Foreground="{DynamicResource PrimaryHueMidBrush}" 
+                                                               HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding GrowerStatistics.LastReceiptDate, StringFormat='{}{0:MMM dd}'}" 
+                                                   Style="{StaticResource StatisticsNumberStyle}"/>
+                                        <TextBlock Text="Last Receipt" Style="{StaticResource StatisticsLabelStyle}"/>
+                                    </StackPanel>
+                                </materialDesign:Card>
+
+                                <!-- Last Payment -->
+                                <materialDesign:Card Grid.Column="3" Style="{StaticResource StatisticsCardStyle}" Margin="10,0,0,0">
+                                    <StackPanel>
+                                        <materialDesign:PackIcon Kind="Calendar" Width="24" Height="24" 
+                                                               Foreground="{DynamicResource PrimaryHueMidBrush}" 
+                                                               HorizontalAlignment="Center"/>
+                                        <TextBlock Text="{Binding GrowerStatistics.LastPaymentDate, StringFormat='{}{0:MMM dd}'}" 
+                                                   Style="{StaticResource StatisticsNumberStyle}"/>
+                                        <TextBlock Text="Last Payment" Style="{StaticResource StatisticsLabelStyle}"/>
+                                    </StackPanel>
+                                </materialDesign:Card>
+                            </Grid>
+
+                            <!-- Recent Receipts -->
+                            <TextBlock Text="Recent Receipts" 
+                                       Style="{StaticResource SectionHeaderStyle}" 
+                                       Margin="0,0,0,10"/>
+                            
+                            <DataGrid ItemsSource="{Binding RecentReceipts}"
+                                      Style="{StaticResource StandardizedDataGridStyle}"
+                                      MaxHeight="200"
+                                      Margin="0,0,0,20"
+                                      IsReadOnly="True">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Date" 
+                                                      Binding="{Binding ReceiptDate, StringFormat='{}{0:MMM dd, yyyy}'}" 
+                                                      Width="100"/>
+                                    <DataGridTextColumn Header="Receipt #" 
+                                                      Binding="{Binding ReceiptNumber}" 
+                                                      Width="100"/>
+                                    <DataGridTextColumn Header="Amount" 
+                                                      Binding="{Binding TotalAmount, StringFormat='{}{0:C}'}" 
+                                                      Width="100"/>
+                                    <DataGridTextColumn Header="Status" 
+                                                      Binding="{Binding Status}" 
+                                                      Width="80"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+
+                            <!-- Recent Payments -->
+                            <TextBlock Text="Recent Payments" 
+                                       Style="{StaticResource SectionHeaderStyle}" 
+                                       Margin="0,0,0,10"/>
+                            
+                            <DataGrid ItemsSource="{Binding RecentPayments}"
+                                      Style="{StaticResource StandardizedDataGridStyle}"
+                                      MaxHeight="200"
+                                      IsReadOnly="True">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Date" 
+                                                      Binding="{Binding PaymentDate, StringFormat='{}{0:MMM dd, yyyy}'}" 
+                                                      Width="100"/>
+                                    <DataGridTextColumn Header="Batch" 
+                                                      Binding="{Binding PaymentBatchId}" 
+                                                      Width="80"/>
+                                    <DataGridTextColumn Header="Amount" 
+                                                      Binding="{Binding Amount, StringFormat='{}{0:C}'}" 
+                                                      Width="100"/>
+                                    <DataGridTextColumn Header="Status" 
+                                                      Binding="{Binding Status}" 
+                                                      Width="80"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+                    </ScrollViewer>
+                </materialDesign:Card>
+            </TabItem>
+
+            <!-- Tab 5: Documents (Placeholder) -->
+            <TabItem Header="Documents">
+                <materialDesign:Card Margin="10">
+                    <StackPanel Margin="20" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <materialDesign:PackIcon Kind="FileDocument" Width="64" Height="64" 
+                                               Foreground="{DynamicResource MaterialDesignBodyLight}"
+                                               HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                        <TextBlock Text="Document Management" 
+                                   Style="{StaticResource SectionHeaderStyle}" 
+                                   HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                        <TextBlock Text="Document management feature coming soon" 
+                                   Style="{StaticResource BodyTextStyle}" 
+                                   HorizontalAlignment="Center" 
+                                   Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                    </StackPanel>
+                </materialDesign:Card>
+            </TabItem>
+        </TabControl>
+
+        <!-- Loading Indicator -->
+        <materialDesign:Card Grid.Row="0" 
+                            Grid.RowSpan="3"
+                            Style="{StaticResource LoadingIndicatorStyle}"
+                            Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel Orientation="Horizontal">
+                <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}"
+                            Value="0"
+                            IsIndeterminate="True"/>
+                <TextBlock Text="Loading grower data..."
+                          VerticalAlignment="Center"
+                          Margin="10,0,0,0"/>
+            </StackPanel>
+        </materialDesign:Card>
+    </Grid>
+</UserControl>

@@ -43,7 +43,6 @@ namespace WPFGrowerApp.Services
 
             // Register ViewModels
             services.AddTransient<GrowerViewModel>();
-            services.AddTransient<GrowerSearchViewModel>();
             services.AddTransient<ImportViewModel>();
             services.AddSingleton<MainViewModel>();
             

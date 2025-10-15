@@ -12,8 +12,15 @@
         <views:DashboardView />
     </DataTemplate>
     
-    <DataTemplate DataType="{x:Type viewmodels:GrowerViewModel}">
-        <views:GrowerView />
+    <!-- Grower Management Mappings -->
+    <DataTemplate DataType="{x:Type vm:GrowerManagementHostViewModel}">
+        <views:GrowerManagementHostView />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:GrowerListViewModel}">
+        <views:GrowerListView />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:GrowerDetailViewModel}">
+        <views:GrowerDetailView />
     </DataTemplate>
     
     <!-- Reports Mappings -->
