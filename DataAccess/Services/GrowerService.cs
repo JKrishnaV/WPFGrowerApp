@@ -75,7 +75,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     var parameters = new { GrowerId = growerId };
                     var result = await connection.QueryFirstOrDefaultAsync<dynamic>(sql, parameters);
 
-                    if (result == null) return null;
+                    if (result == null) return null!;
 
                     return MapDynamicToGrower(result);
                 }
@@ -130,7 +130,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     var parameters = new { GrowerNumber = growerNumber };
                     var result = await connection.QueryFirstOrDefaultAsync<dynamic>(sql, parameters);
 
-                    if (result == null) return null;
+                    if (result == null) return null!;
 
                     return MapDynamicToGrower(result);
                 }
@@ -650,56 +650,91 @@ namespace WPFGrowerApp.DataAccess.Services
                 errors["GrowerNumber"] = "Grower Number is required.";
             else if (grower.GrowerNumber.Length > 20)
                 errors["GrowerNumber"] = "Grower Number cannot exceed 20 characters.";
+            else if (grower.GrowerNumber.Length < 1)
+                errors["GrowerNumber"] = "Grower Number must be at least 1 character.";
 
             if (string.IsNullOrWhiteSpace(grower.FullName))
                 errors["FullName"] = "Full Name is required.";
             else if (grower.FullName.Length > 100)
                 errors["FullName"] = "Full Name cannot exceed 100 characters.";
+            else if (grower.FullName.Length < 2)
+                errors["FullName"] = "Full Name must be at least 2 characters.";
 
-            if (grower.CheckPayeeName?.Length > 100)
+            // Optional field length validations
+            if (!string.IsNullOrWhiteSpace(grower.CheckPayeeName) && grower.CheckPayeeName.Length > 100)
                 errors["CheckPayeeName"] = "Check Payee Name cannot exceed 100 characters.";
 
-            if (grower.Address?.Length > 200)
+            if (!string.IsNullOrWhiteSpace(grower.Address) && grower.Address.Length > 200)
                 errors["Address"] = "Address cannot exceed 200 characters.";
 
-            if (grower.City?.Length > 50)
+            if (!string.IsNullOrWhiteSpace(grower.City) && grower.City.Length > 50)
                 errors["City"] = "City cannot exceed 50 characters.";
 
-            if (grower.Province?.Length > 2)
+            if (!string.IsNullOrWhiteSpace(grower.Province) && grower.Province.Length > 2)
                 errors["Province"] = "Province cannot exceed 2 characters.";
 
-            if (grower.PostalCode?.Length > 10)
+            if (!string.IsNullOrWhiteSpace(grower.PostalCode) && grower.PostalCode.Length > 10)
                 errors["PostalCode"] = "Postal Code cannot exceed 10 characters.";
 
-            if (grower.PhoneNumber?.Length > 20)
+            if (!string.IsNullOrWhiteSpace(grower.PhoneNumber) && grower.PhoneNumber.Length > 20)
                 errors["PhoneNumber"] = "Phone Number cannot exceed 20 characters.";
 
-            if (grower.MobileNumber?.Length > 20)
+            if (!string.IsNullOrWhiteSpace(grower.MobileNumber) && grower.MobileNumber.Length > 20)
                 errors["MobileNumber"] = "Mobile Number cannot exceed 20 characters.";
 
-            if (grower.Email?.Length > 100)
+            if (!string.IsNullOrWhiteSpace(grower.Email) && grower.Email.Length > 100)
                 errors["Email"] = "Email cannot exceed 100 characters.";
 
-            if (grower.GSTNumber?.Length > 20)
+            if (!string.IsNullOrWhiteSpace(grower.GSTNumber) && grower.GSTNumber.Length > 20)
                 errors["GSTNumber"] = "GST Number cannot exceed 20 characters.";
 
-            if (grower.BusinessNumber?.Length > 20)
+            if (!string.IsNullOrWhiteSpace(grower.BusinessNumber) && grower.BusinessNumber.Length > 20)
                 errors["BusinessNumber"] = "Business Number cannot exceed 20 characters.";
 
-            if (grower.CurrencyCode?.Length > 3)
-                errors["CurrencyCode"] = "Currency Code cannot exceed 3 characters.";
-
-            if (grower.Notes?.Length > 2000)
+            if (!string.IsNullOrWhiteSpace(grower.Notes) && grower.Notes.Length > 2000)
                 errors["Notes"] = "Notes cannot exceed 2000 characters.";
 
             // Email format validation
             if (!string.IsNullOrWhiteSpace(grower.Email) && !IsValidEmail(grower.Email))
-                errors["Email"] = "Invalid email format.";
+                errors["Email"] = "Invalid email format. Please enter a valid email address.";
+
+            // Phone number format validation
+            if (!string.IsNullOrWhiteSpace(grower.PhoneNumber) && !IsValidPhoneNumber(grower.PhoneNumber))
+                errors["PhoneNumber"] = "Invalid phone number format. Use format: (123) 456-7890 or 123-456-7890";
+
+            if (!string.IsNullOrWhiteSpace(grower.MobileNumber) && !IsValidPhoneNumber(grower.MobileNumber))
+                errors["MobileNumber"] = "Invalid mobile number format. Use format: (123) 456-7890 or 123-456-7890";
+
+            // Postal code validation (Canadian format)
+            if (!string.IsNullOrWhiteSpace(grower.PostalCode) && !IsValidCanadianPostalCode(grower.PostalCode))
+                errors["PostalCode"] = "Invalid postal code format. Use format: A1A 1A1";
+
+            // Province validation (Canadian provinces)
+            if (!string.IsNullOrWhiteSpace(grower.Province) && !IsValidCanadianProvince(grower.Province))
+                errors["Province"] = "Invalid province code. Use valid Canadian province codes (AB, BC, MB, etc.)";
 
             // Currency validation
             if (!string.IsNullOrWhiteSpace(grower.CurrencyCode) && 
                 !new[] { "CAD", "USD" }.Contains(grower.CurrencyCode.ToUpper()))
                 errors["CurrencyCode"] = "Currency Code must be CAD or USD.";
+
+            // GST Number validation (Canadian format)
+            if (!string.IsNullOrWhiteSpace(grower.GSTNumber) && !IsValidGSTNumber(grower.GSTNumber))
+                errors["GSTNumber"] = "Invalid GST number format. Use format: 123456789RT0001";
+
+            // Business Number validation (Canadian format)
+            if (!string.IsNullOrWhiteSpace(grower.BusinessNumber) && !IsValidBusinessNumber(grower.BusinessNumber))
+                errors["BusinessNumber"] = "Invalid business number format. Use format: 123456789";
+
+            // Required foreign key validations
+            if (grower.PaymentGroupId <= 0)
+                errors["PaymentGroupId"] = "Payment Group is required.";
+
+            if (grower.DefaultDepotId <= 0)
+                errors["DefaultDepotId"] = "Default Depot is required.";
+
+            if (grower.DefaultPriceClassId <= 0)
+                errors["DefaultPriceClassId"] = "Default Price Class is required.";
 
             // Unique grower number validation
             if (!string.IsNullOrWhiteSpace(grower.GrowerNumber))
@@ -707,7 +742,11 @@ namespace WPFGrowerApp.DataAccess.Services
                 var excludeId = grower.GrowerId > 0 ? grower.GrowerId : (int?)null;
                 var isUnique = await IsGrowerNumberUniqueAsync(grower.GrowerNumber, excludeId);
                 if (!isUnique)
-                    errors["GrowerNumber"] = "Grower Number must be unique.";
+                    errors["GrowerNumber"] = "Grower Number must be unique. This number is already in use.";
+
+                // Check for invalid characters in grower number
+                if (grower.GrowerNumber.Any(c => !char.IsLetterOrDigit(c) && c != '-' && c != '_'))
+                    errors["GrowerNumber"] = "Grower Number can only contain letters, numbers, hyphens, and underscores.";
             }
 
             return errors;
@@ -1159,6 +1198,68 @@ namespace WPFGrowerApp.DataAccess.Services
             {
                 return false;
             }
+        }
+
+        private static bool IsValidPhoneNumber(string phoneNumber)
+        {
+            if (string.IsNullOrWhiteSpace(phoneNumber))
+                return true;
+
+            // Remove all non-digit characters
+            var digitsOnly = new string(phoneNumber.Where(char.IsDigit).ToArray());
+            
+            // Check if we have 10 digits (North American format)
+            if (digitsOnly.Length == 10)
+                return true;
+
+            // Check if we have 11 digits starting with 1 (North American format with country code)
+            if (digitsOnly.Length == 11 && digitsOnly.StartsWith("1"))
+                return true;
+
+            return false;
+        }
+
+        private static bool IsValidCanadianPostalCode(string postalCode)
+        {
+            if (string.IsNullOrWhiteSpace(postalCode))
+                return true;
+
+            // Canadian postal code pattern: A1A 1A1
+            var pattern = @"^[A-Za-z]\d[A-Za-z] \d[A-Za-z]\d$";
+            return System.Text.RegularExpressions.Regex.IsMatch(postalCode, pattern);
+        }
+
+        private static bool IsValidCanadianProvince(string province)
+        {
+            if (string.IsNullOrWhiteSpace(province))
+                return true;
+
+            var validProvinces = new[]
+            {
+                "AB", "BC", "MB", "NB", "NL", "NS", "NT", "NU", "ON", "PE", "QC", "SK", "YT"
+            };
+
+            return validProvinces.Contains(province.ToUpper());
+        }
+
+        private static bool IsValidGSTNumber(string gstNumber)
+        {
+            if (string.IsNullOrWhiteSpace(gstNumber))
+                return true;
+
+            // Canadian GST number pattern: 9 digits + RT + 4 digits
+            var pattern = @"^\d{9}RT\d{4}$";
+            return System.Text.RegularExpressions.Regex.IsMatch(gstNumber.ToUpper(), pattern);
+        }
+
+        private static bool IsValidBusinessNumber(string businessNumber)
+        {
+            if (string.IsNullOrWhiteSpace(businessNumber))
+                return true;
+
+            // Canadian business number: 9 digits
+            var pattern = @"^\d{9}$";
+            return System.Text.RegularExpressions.Regex.IsMatch(businessNumber, pattern);
         }
 
         #endregion

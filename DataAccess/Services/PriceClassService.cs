@@ -25,7 +25,7 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     var sql = @"
-                        SELECT PriceClassId, ClassName, Description, IsActive, CreatedAt, CreatedBy, ModifiedAt, ModifiedBy
+                        SELECT PriceClassId, ClassCode, ClassName, Description, IsActive, CreatedAt, CreatedBy, ModifiedAt, ModifiedBy
                         FROM PriceClasses
                         WHERE IsActive = 1
                         ORDER BY ClassName";
@@ -36,6 +36,54 @@ namespace WPFGrowerApp.DataAccess.Services
             catch (Exception ex)
             {
                 Logger.Error($"Error in GetAllPriceClassesAsync: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        public async Task<List<PriceClass>> GetPriceClassesByCurrencyAsync(string currencyCode)
+        {
+            try
+            {
+                // Validate currency code
+                if (string.IsNullOrEmpty(currencyCode))
+                {
+                    Logger.Warn("Currency code is null or empty, defaulting to CAD");
+                    currencyCode = "CAD";
+                }
+
+                var upperCurrencyCode = currencyCode.ToUpper();
+                if (upperCurrencyCode != "CAD" && upperCurrencyCode != "USD")
+                {
+                    Logger.Warn($"Unsupported currency code '{currencyCode}', defaulting to CAD");
+                    upperCurrencyCode = "CAD";
+                }
+
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    
+                    // Filter based on ClassCode pattern:
+                    // CAD: ClassCode starts with 'C' (CL1, CL2, CL3, etc.)
+                    // USD: ClassCode starts with 'U' (UL1, UL2, UL3, etc.)
+                    string classCodePattern = upperCurrencyCode == "CAD" ? "C%" : "U%";
+                    
+                    var sql = @"
+                        SELECT PriceClassId, ClassCode, ClassName, Description, IsActive, CreatedAt, CreatedBy, ModifiedAt, ModifiedBy
+                        FROM PriceClasses
+                        WHERE IsActive = 1 
+                        AND ClassCode LIKE @ClassCodePattern
+                        ORDER BY ClassName";
+
+                    var parameters = new { ClassCodePattern = classCodePattern };
+                    var priceClasses = (await connection.QueryAsync<PriceClass>(sql, parameters)).ToList();
+                    
+                    Logger.Info($"Loaded {priceClasses.Count} price classes for currency {upperCurrencyCode} (filtered by ClassCode pattern: {classCodePattern})");
+                    return priceClasses;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error in GetPriceClassesByCurrencyAsync for currency {currencyCode}: {ex.Message}", ex);
                 throw;
             }
         }

@@ -25,6 +25,8 @@
             <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
             <converters:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter"/>
             <converters:NotNullConverter x:Key="NotNullConverter"/>
+            <converters:ValidationErrorConverter x:Key="ValidationErrorConverter"/>
+            <converters:HasValidationErrorConverter x:Key="HasValidationErrorConverter"/>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -85,6 +87,32 @@
             </Grid>
         </materialDesign:Card>
 
+        <!-- Validation Summary -->
+        <materialDesign:Card Grid.Row="1" 
+                            Margin="10,0,10,10"
+                            Visibility="{Binding HasValidationErrors, Converter={StaticResource BooleanToVisibilityConverter}}"
+                            Background="#FFF3E0"
+                            BorderBrush="Orange"
+                            BorderThickness="1">
+            <StackPanel Margin="15">
+                <TextBlock Text="Please fix the following validation errors:" 
+                           FontWeight="Bold" 
+                           Foreground="Orange"
+                           Margin="0,0,0,10"/>
+                <ItemsControl ItemsSource="{Binding ValidationErrors}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Margin="0,2">
+                                <TextBlock Text="{Binding Key}" FontWeight="Bold" Margin="0,0,5,0"/>
+                                <TextBlock Text=":" Margin="0,0,5,0"/>
+                                <TextBlock Text="{Binding Value}" Foreground="Red"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </materialDesign:Card>
+
         <!-- Tab Content -->
         <TabControl Grid.Row="1" 
                     SelectedIndex="{Binding SelectedTabIndex}"
@@ -112,8 +140,25 @@
                                 <TextBlock Text="Grower Number *" Style="{StaticResource FieldLabelStyle}"/>
                                 <TextBox Text="{Binding CurrentGrower.GrowerNumber, UpdateSourceTrigger=PropertyChanged}"
                                          IsEnabled="{Binding IsEditable}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="Enter grower number"/>
+                                         materialDesign:HintAssist.Hint="Enter grower number">
+                                    <TextBox.Style>
+                                        <Style TargetType="TextBox" BasedOn="{StaticResource MaterialDesignOutlinedTextBox}">
+                                            <Setter Property="BorderBrush" Value="{DynamicResource MaterialDesignDivider}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ValidationErrors, Converter={StaticResource HasValidationErrorConverter}, ConverterParameter=GrowerNumber}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="Red"/>
+                                                    <Setter Property="BorderThickness" Value="2"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBox.Style>
+                                </TextBox>
+                                <TextBlock Text="{Binding ValidationErrors, Converter={StaticResource ValidationErrorConverter}, ConverterParameter=GrowerNumber}"
+                                           Foreground="Red"
+                                           FontSize="12"
+                                           Margin="0,5,0,0"
+                                           TextWrapping="Wrap"
+                                           Visibility="{Binding ValidationErrors, Converter={StaticResource HasValidationErrorConverter}, ConverterParameter=GrowerNumber}"/>
                             </StackPanel>
 
                             <!-- Full Name -->
@@ -121,8 +166,25 @@
                                 <TextBlock Text="Full Name *" Style="{StaticResource FieldLabelStyle}"/>
                                 <TextBox Text="{Binding CurrentGrower.FullName, UpdateSourceTrigger=PropertyChanged}"
                                          IsEnabled="{Binding IsEditable}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="Enter full name"/>
+                                         materialDesign:HintAssist.Hint="Enter full name">
+                                    <TextBox.Style>
+                                        <Style TargetType="TextBox" BasedOn="{StaticResource MaterialDesignOutlinedTextBox}">
+                                            <Setter Property="BorderBrush" Value="{DynamicResource MaterialDesignDivider}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ValidationErrors, Converter={StaticResource HasValidationErrorConverter}, ConverterParameter=FullName}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="Red"/>
+                                                    <Setter Property="BorderThickness" Value="2"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBox.Style>
+                                </TextBox>
+                                <TextBlock Text="{Binding ValidationErrors, Converter={StaticResource ValidationErrorConverter}, ConverterParameter=FullName}"
+                                           Foreground="Red"
+                                           FontSize="12"
+                                           Margin="0,5,0,0"
+                                           TextWrapping="Wrap"
+                                           Visibility="{Binding ValidationErrors, Converter={StaticResource HasValidationErrorConverter}, ConverterParameter=FullName}"/>
                             </StackPanel>
 
                             <!-- Check Payee Name -->
@@ -259,8 +321,25 @@
                                 <TextBlock Text="Email" Style="{StaticResource FieldLabelStyle}"/>
                                 <TextBox Text="{Binding CurrentGrower.Email, UpdateSourceTrigger=PropertyChanged}"
                                          IsEnabled="{Binding IsEditable}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         materialDesign:HintAssist.Hint="Enter email address"/>
+                                         materialDesign:HintAssist.Hint="Enter email address">
+                                    <TextBox.Style>
+                                        <Style TargetType="TextBox" BasedOn="{StaticResource MaterialDesignOutlinedTextBox}">
+                                            <Setter Property="BorderBrush" Value="{DynamicResource MaterialDesignDivider}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ValidationErrors, Converter={StaticResource HasValidationErrorConverter}, ConverterParameter=Email}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="Red"/>
+                                                    <Setter Property="BorderThickness" Value="2"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBox.Style>
+                                </TextBox>
+                                <TextBlock Text="{Binding ValidationErrors, Converter={StaticResource ValidationErrorConverter}, ConverterParameter=Email}"
+                                           Foreground="Red"
+                                           FontSize="12"
+                                           Margin="0,5,0,0"
+                                           TextWrapping="Wrap"
+                                           Visibility="{Binding ValidationErrors, Converter={StaticResource HasValidationErrorConverter}, ConverterParameter=Email}"/>
                             </StackPanel>
                         </Grid>
                     </ScrollViewer>
@@ -309,8 +388,25 @@
                                           SelectedValue="{Binding CurrentGrower.PaymentGroupId}"
                                           SelectedValuePath="PaymentGroupId"
                                           DisplayMemberPath="GroupName"
-                                          IsEnabled="{Binding IsEditable}"
-                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
+                                          IsEnabled="{Binding IsEditable}">
+                                    <ComboBox.Style>
+                                        <Style TargetType="ComboBox" BasedOn="{StaticResource MaterialDesignOutlinedComboBox}">
+                                            <Setter Property="BorderBrush" Value="{DynamicResource MaterialDesignDivider}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ValidationErrors, Converter={StaticResource HasValidationErrorConverter}, ConverterParameter=PaymentGroupId}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="Red"/>
+                                                    <Setter Property="BorderThickness" Value="2"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ComboBox.Style>
+                                </ComboBox>
+                                <TextBlock Text="{Binding ValidationErrors, Converter={StaticResource ValidationErrorConverter}, ConverterParameter=PaymentGroupId}"
+                                           Foreground="Red"
+                                           FontSize="12"
+                                           Margin="0,5,0,0"
+                                           TextWrapping="Wrap"
+                                           Visibility="{Binding ValidationErrors, Converter={StaticResource HasValidationErrorConverter}, ConverterParameter=PaymentGroupId}"/>
                             </StackPanel>
 
                             <!-- Payment Method -->
@@ -319,7 +415,7 @@
                                 <ComboBox ItemsSource="{Binding PaymentMethods}"
                                           SelectedValue="{Binding CurrentGrower.PaymentMethodId}"
                                           SelectedValuePath="PaymentMethodId"
-                                          DisplayMemberPath="PaymentMethodName"
+                                          DisplayMemberPath="MethodName"
                                           IsEnabled="{Binding IsEditable}"
                                           Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
                             </StackPanel>
@@ -331,8 +427,25 @@
                                           SelectedValue="{Binding CurrentGrower.DefaultDepotId}"
                                           SelectedValuePath="DepotId"
                                           DisplayMemberPath="DepotName"
-                                          IsEnabled="{Binding IsEditable}"
-                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
+                                          IsEnabled="{Binding IsEditable}">
+                                    <ComboBox.Style>
+                                        <Style TargetType="ComboBox" BasedOn="{StaticResource MaterialDesignOutlinedComboBox}">
+                                            <Setter Property="BorderBrush" Value="{DynamicResource MaterialDesignDivider}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ValidationErrors, Converter={StaticResource HasValidationErrorConverter}, ConverterParameter=DefaultDepotId}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="Red"/>
+                                                    <Setter Property="BorderThickness" Value="2"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ComboBox.Style>
+                                </ComboBox>
+                                <TextBlock Text="{Binding ValidationErrors, Converter={StaticResource ValidationErrorConverter}, ConverterParameter=DefaultDepotId}"
+                                           Foreground="Red"
+                                           FontSize="12"
+                                           Margin="0,5,0,0"
+                                           TextWrapping="Wrap"
+                                           Visibility="{Binding ValidationErrors, Converter={StaticResource HasValidationErrorConverter}, ConverterParameter=DefaultDepotId}"/>
                             </StackPanel>
 
                             <!-- Default Price Class -->
@@ -341,9 +454,26 @@
                                 <ComboBox ItemsSource="{Binding PriceClasses}"
                                           SelectedValue="{Binding CurrentGrower.DefaultPriceClassId}"
                                           SelectedValuePath="PriceClassId"
-                                          DisplayMemberPath="PriceClassName"
-                                          IsEnabled="{Binding IsEditable}"
-                                          Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
+                                          DisplayMemberPath="ClassName"
+                                          IsEnabled="{Binding IsEditable}">
+                                    <ComboBox.Style>
+                                        <Style TargetType="ComboBox" BasedOn="{StaticResource MaterialDesignOutlinedComboBox}">
+                                            <Setter Property="BorderBrush" Value="{DynamicResource MaterialDesignDivider}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ValidationErrors, Converter={StaticResource HasValidationErrorConverter}, ConverterParameter=DefaultPriceClassId}" Value="True">
+                                                    <Setter Property="BorderBrush" Value="Red"/>
+                                                    <Setter Property="BorderThickness" Value="2"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ComboBox.Style>
+                                </ComboBox>
+                                <TextBlock Text="{Binding ValidationErrors, Converter={StaticResource ValidationErrorConverter}, ConverterParameter=DefaultPriceClassId}"
+                                           Foreground="Red"
+                                           FontSize="12"
+                                           Margin="0,5,0,0"
+                                           TextWrapping="Wrap"
+                                           Visibility="{Binding ValidationErrors, Converter={StaticResource HasValidationErrorConverter}, ConverterParameter=DefaultPriceClassId}"/>
                             </StackPanel>
                         </Grid>
                     </ScrollViewer>

@@ -195,7 +195,7 @@ namespace WPFGrowerApp.ViewModels
                 else
                 {
                     // Create new grower
-                    detailViewModel.CreateNewGrower();
+                    await detailViewModel.CreateNewGrowerAsync();
                     CurrentGrowerDisplayText = "New Grower";
                 }
             }

@@ -16,6 +16,13 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         Task<List<PriceClass>> GetAllPriceClassesAsync();
 
         /// <summary>
+        /// Gets price classes filtered by currency.
+        /// </summary>
+        /// <param name="currencyCode">The currency code to filter by</param>
+        /// <returns>List of price classes for the specified currency</returns>
+        Task<List<PriceClass>> GetPriceClassesByCurrencyAsync(string currencyCode);
+
+        /// <summary>
         /// Gets a price class by ID.
         /// </summary>
         /// <param name="priceClassId">The price class ID</param>
