@@ -16,10 +16,17 @@ namespace WPFGrowerApp.DataAccess.Services
     public class PaymentBatchManagementService : BaseDatabaseService, IPaymentBatchManagementService
     {
         private readonly IPaymentTypeService _paymentTypeService;
+        private readonly IGrowerAccountService _growerAccountService;
+        private readonly IPriceScheduleLockService _priceScheduleLockService;
 
-        public PaymentBatchManagementService(IPaymentTypeService paymentTypeService)
+        public PaymentBatchManagementService(
+            IPaymentTypeService paymentTypeService,
+            IGrowerAccountService growerAccountService,
+            IPriceScheduleLockService priceScheduleLockService)
         {
             _paymentTypeService = paymentTypeService;
+            _growerAccountService = growerAccountService;
+            _priceScheduleLockService = priceScheduleLockService;
         }
 
         // ==============================================================
@@ -347,7 +354,7 @@ namespace WPFGrowerApp.DataAccess.Services
         }
 
         /// <summary>
-        /// Approve a payment batch (Draft → Posted)
+        /// Approve a payment batch (Draft → Approved)
         /// </summary>
         public async Task<bool> ApproveBatchAsync(int paymentBatchId, string approvedBy)
         {
@@ -360,7 +367,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     var sql = @"
                         UPDATE PaymentBatches
                         SET 
-                            Status = 'Posted',
+                            Status = 'Approved',
                             ProcessedAt = @ProcessedAt,
                             ProcessedBy = @ProcessedBy,
                             ModifiedAt = @ModifiedAt,
@@ -383,6 +390,148 @@ namespace WPFGrowerApp.DataAccess.Services
             catch (Exception ex)
             {
                 Logger.Error($"Error approving payment batch {paymentBatchId}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Post a payment batch (Approved → Posted)
+        /// Creates GrowerAccounts and PriceScheduleLocks records
+        /// </summary>
+        public async Task<bool> PostBatchAsync(int paymentBatchId, string postedBy)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    using (var transaction = connection.BeginTransaction())
+                    {
+                        try
+                        {
+                            // 1. Update PaymentBatches status
+                            var updateBatchSql = @"
+                                UPDATE PaymentBatches
+                                SET 
+                                    Status = 'Posted',
+                                    ProcessedAt = @ProcessedAt,
+                                    ProcessedBy = @ProcessedBy,
+                                    ModifiedAt = @ModifiedAt,
+                                    ModifiedBy = @ModifiedBy
+                                WHERE PaymentBatchId = @PaymentBatchId AND Status = 'Approved'";
+
+                            var batchRowsAffected = await connection.ExecuteAsync(updateBatchSql, new
+                            {
+                                PaymentBatchId = paymentBatchId,
+                                ProcessedAt = DateTime.Now,
+                                ProcessedBy = postedBy,
+                                ModifiedAt = DateTime.Now,
+                                ModifiedBy = postedBy
+                            }, transaction);
+
+                            if (batchRowsAffected == 0)
+                            {
+                                Logger.Warn($"Batch {paymentBatchId} is not in Approved status, cannot post");
+                                return false;
+                            }
+
+                            // 2. Get batch details and receipt allocations
+                            var batchSql = @"
+                                SELECT pb.*, pt.TypeName AS PaymentTypeName
+                                FROM PaymentBatches pb
+                                LEFT JOIN PaymentTypes pt ON pb.PaymentTypeId = pt.PaymentTypeId
+                                WHERE pb.PaymentBatchId = @PaymentBatchId";
+
+                            var batch = await connection.QueryFirstOrDefaultAsync(batchSql, new { PaymentBatchId = paymentBatchId }, transaction);
+
+                            if (batch == null)
+                            {
+                                Logger.Error($"Batch {paymentBatchId} not found");
+                                transaction.Rollback();
+                                return false;
+                            }
+
+                            // 3. Get receipt allocations for this batch
+                            // Note: We don't filter by status here because the trigger may have already updated
+                            // the allocation status to 'Posted' when we updated the batch status above
+                            var allocationsSql = @"
+                                SELECT 
+                                    rpa.*,
+                                    r.GrowerId,
+                                    r.ReceiptNumber,
+                                    ps.PriceScheduleId
+                                FROM ReceiptPaymentAllocations rpa
+                                INNER JOIN Receipts r ON rpa.ReceiptId = r.ReceiptId
+                                LEFT JOIN PriceSchedules ps ON rpa.PriceScheduleId = ps.PriceScheduleId
+                                WHERE rpa.PaymentBatchId = @PaymentBatchId
+                                  AND rpa.Status IN ('Approved', 'Posted')";
+
+                            var allocations = await connection.QueryAsync(allocationsSql, new { PaymentBatchId = paymentBatchId }, transaction);
+
+                            // 4. Create GrowerAccounts records
+                            var growerAccounts = new List<GrowerAccount>();
+                            var priceScheduleLocks = new List<PriceScheduleLock>();
+
+                            foreach (var allocation in allocations)
+                            {
+                                // Create GrowerAccount entry
+                                var growerAccount = new GrowerAccount
+                                {
+                                    GrowerId = allocation.GrowerId,
+                                    TransactionDate = DateTime.Now.Date,
+                                    TransactionType = "Payment",
+                                    Description = $"Payment - {batch.PaymentTypeName} - Receipt {allocation.ReceiptNumber}",
+                                    DebitAmount = 0,
+                                    CreditAmount = allocation.AmountPaid,
+                                    PaymentBatchId = paymentBatchId,
+                                    ReceiptId = allocation.ReceiptId,
+                                    CurrencyCode = "CAD",
+                                    ExchangeRate = 1.0m
+                                };
+                                growerAccounts.Add(growerAccount);
+
+                                // Create PriceScheduleLock if price schedule exists
+                                if (allocation.PriceScheduleId != null)
+                                {
+                                    var priceScheduleLock = new PriceScheduleLock
+                                    {
+                                        PriceScheduleId = allocation.PriceScheduleId,
+                                        PaymentTypeId = batch.PaymentTypeId,
+                                        PaymentBatchId = paymentBatchId
+                                    };
+                                    priceScheduleLocks.Add(priceScheduleLock);
+                                }
+                            }
+
+                            // 5. Create GrowerAccounts records in bulk
+                            if (growerAccounts.Any())
+                            {
+                                await _growerAccountService.CreatePaymentBatchAccountsAsync(growerAccounts, connection, transaction);
+                                Logger.Info($"Created {growerAccounts.Count} grower account entries for batch {paymentBatchId}");
+                            }
+
+                            // 6. Create PriceScheduleLocks records in bulk
+                            if (priceScheduleLocks.Any())
+                            {
+                                await _priceScheduleLockService.CreatePaymentBatchLocksAsync(priceScheduleLocks, connection, transaction);
+                                Logger.Info($"Created {priceScheduleLocks.Count} price schedule locks for batch {paymentBatchId}");
+                            }
+
+                            transaction.Commit();
+                            Logger.Info($"Posted payment batch {paymentBatchId} by {postedBy}");
+                            return true;
+                        }
+                        catch
+                        {
+                            transaction.Rollback();
+                            throw;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error posting payment batch {paymentBatchId}", ex);
                 throw;
             }
         }
@@ -596,8 +745,36 @@ namespace WPFGrowerApp.DataAccess.Services
                         var chequesVoided = await connection.ExecuteAsync(voidCheques,
                             new { PaymentBatchId = paymentBatchId, VoidedBy = voidedBy },
                             transaction: transaction);
+
+                        // 3. Void all GrowerAccounts for this batch
+                        var voidGrowerAccounts = @"
+                            UPDATE GrowerAccounts
+                            SET DeletedAt = GETDATE(),
+                                DeletedBy = @VoidedBy,
+                                ModifiedAt = GETDATE(),
+                                ModifiedBy = @VoidedBy
+                            WHERE PaymentBatchId = @PaymentBatchId
+                              AND DeletedAt IS NULL";
                         
-                        // 3. Void the batch with soft delete
+                        var growerAccountsVoided = await connection.ExecuteAsync(voidGrowerAccounts,
+                            new { PaymentBatchId = paymentBatchId, VoidedBy = voidedBy },
+                            transaction: transaction);
+
+                        // 4. Remove PriceScheduleLocks for this batch
+                        var removePriceScheduleLocks = @"
+                            UPDATE PriceScheduleLocks
+                            SET DeletedAt = GETDATE(),
+                                DeletedBy = @VoidedBy,
+                                ModifiedAt = GETDATE(),
+                                ModifiedBy = @VoidedBy
+                            WHERE PaymentBatchId = @PaymentBatchId
+                              AND DeletedAt IS NULL";
+                        
+                        var priceScheduleLocksRemoved = await connection.ExecuteAsync(removePriceScheduleLocks,
+                            new { PaymentBatchId = paymentBatchId, VoidedBy = voidedBy },
+                            transaction: transaction);
+                        
+                        // 5. Void the batch with soft delete
                         var voidBatch = @"
                             UPDATE PaymentBatches
                             SET Status = 'Voided',
@@ -615,7 +792,7 @@ namespace WPFGrowerApp.DataAccess.Services
                             transaction: transaction);
                         
                         transaction.Commit();
-                        Logger.Info($"Successfully voided batch {paymentBatchId} - voided {allocationsVoided} allocations and {chequesVoided} cheques");
+                        Logger.Info($"Successfully voided batch {paymentBatchId} - voided {allocationsVoided} allocations, {chequesVoided} cheques, {growerAccountsVoided} grower accounts, and removed {priceScheduleLocksRemoved} price schedule locks");
                         return true;
                     }
                     catch (Exception ex)

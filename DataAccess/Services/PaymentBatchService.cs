@@ -271,13 +271,14 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
+
         public async Task<bool> ApproveBatchAsync(int paymentBatchId, string approvedBy)
         {
             try
             {
                 string sql = @"
                     UPDATE PaymentBatches
-                    SET Status = 'Posted',
+                    SET Status = 'Approved',
                         ProcessedAt = GETDATE(),
                         ProcessedBy = @ApprovedBy
                     WHERE PaymentBatchId = @PaymentBatchId AND Status = 'Draft'";
@@ -302,6 +303,60 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
+        public async Task<bool> PostBatchAsync(int paymentBatchId, string postedBy)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    using (var transaction = connection.BeginTransaction())
+                    {
+                        try
+                        {
+                            // Update batch status to Posted
+                            string updateBatchSql = @"
+                                UPDATE PaymentBatches
+                                SET Status = 'Posted',
+                                    ProcessedAt = GETDATE(),
+                                    ProcessedBy = @PostedBy
+                                WHERE PaymentBatchId = @PaymentBatchId AND Status = 'Approved'";
+
+                            var batchRowsAffected = await connection.ExecuteAsync(updateBatchSql, new
+                            {
+                                PaymentBatchId = paymentBatchId,
+                                PostedBy = postedBy
+                            }, transaction);
+
+                            if (batchRowsAffected == 0)
+                            {
+                                Logger.Warn($"Batch {paymentBatchId} is not in Approved status, cannot post");
+                                return false;
+                            }
+
+                            // Create ReceiptPaymentAllocations records
+                            // Note: This would need to be implemented based on your specific business logic
+                            // For now, we'll just update the batch status
+                            
+                            transaction.Commit();
+                            Logger.Info($"Posted payment batch {paymentBatchId} by {postedBy}");
+                            return true;
+                        }
+                        catch
+                        {
+                            transaction.Rollback();
+                            throw;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error posting payment batch {paymentBatchId}", ex);
+                return false;
+            }
+        }
+
         public async Task<bool> ProcessPaymentsAsync(int paymentBatchId, string processedBy)
         {
             try
@@ -322,13 +377,13 @@ namespace WPFGrowerApp.DataAccess.Services
                         ProcessedBy = processedBy
                     });
 
-                    Logger.Info($"Processed payments for batch {paymentBatchId} by {processedBy}");
+                    Logger.Info($"Finalized payments for batch {paymentBatchId} by {processedBy}");
                     return rowsAffected > 0;
                 }
             }
             catch (Exception ex)
             {
-                Logger.Error($"Error processing payments for batch {paymentBatchId}", ex);
+                Logger.Error($"Error finalizing payments for batch {paymentBatchId}", ex);
                 return false;
             }
         }

@@ -77,12 +77,20 @@ namespace WPFGrowerApp.DataAccess.Interfaces
             string postedBy);
 
         /// <summary>
-        /// Approve a payment batch (Draft → Posted)
+        /// Approve a payment batch (Draft → Approved)
         /// </summary>
         /// <param name="paymentBatchId">Batch ID</param>
         /// <param name="approvedBy">User approving the batch</param>
         /// <returns>True if successful</returns>
         Task<bool> ApproveBatchAsync(int paymentBatchId, string approvedBy);
+
+        /// <summary>
+        /// Post a payment batch (Approved → Posted)
+        /// </summary>
+        /// <param name="paymentBatchId">Batch ID</param>
+        /// <param name="postedBy">User posting the batch</param>
+        /// <returns>True if successful</returns>
+        Task<bool> PostBatchAsync(int paymentBatchId, string postedBy);
 
         /// <summary>
         /// Process payments for a batch (Posted → Finalized)

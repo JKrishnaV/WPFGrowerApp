@@ -140,6 +140,7 @@ namespace WPFGrowerApp.ViewModels
         public ICommand ExportBatchCommand { get; }
         public ICommand ClearFiltersCommand { get; }
         public ICommand ApproveBatchCommand { get; }
+        public ICommand PostBatchCommand { get; }
         public ICommand ProcessPaymentsCommand { get; }
         public ICommand NavigateToDashboardCommand { get; }
 
@@ -171,6 +172,7 @@ namespace WPFGrowerApp.ViewModels
             ExportBatchCommand = new RelayCommand(async o => await ExportBatchAsync(), o => SelectedBatch != null);
             ClearFiltersCommand = new RelayCommand(o => ClearFilters());
             ApproveBatchCommand = new RelayCommand(async o => await ApproveBatchAsync(), o => CanApproveBatch());
+            PostBatchCommand = new RelayCommand(async o => await PostBatchAsync(), o => CanPostBatch());
             ProcessPaymentsCommand = new RelayCommand(async o => await ProcessPaymentsAsync(), o => CanProcessPayments());
             NavigateToDashboardCommand = new RelayCommand(NavigateToDashboardExecute);
 
@@ -499,10 +501,11 @@ namespace WPFGrowerApp.ViewModels
             {
                 // Confirm approval
                 var confirm = await _dialogService.ShowConfirmationAsync(
-                    $"This will approve and post the batch for payment processing.\n\n" +
+                    $"This will approve the batch for posting.\n\n" +
                     $"Batch: {SelectedBatch.BatchNumber}\n" +
                     $"Amount: ${SelectedBatch.TotalAmount:N2}\n" +
                     $"Growers: {SelectedBatch.TotalGrowers}\n\n" +
+                    $"After approval, you can post the batch to create payment records.\n" +
                     $"Continue with approval?",
                     $"Approve Batch {SelectedBatch.BatchNumber}?");
 
@@ -511,7 +514,7 @@ namespace WPFGrowerApp.ViewModels
 
                 IsLoading = true;
 
-                // Approve the batch (Draft → Posted)
+                // Approve the batch (Draft → Approved)
                 var approvedBy = App.CurrentUser?.Username ?? "SYSTEM";
                 var success = await _batchService.ApproveBatchAsync(
                     SelectedBatch.PaymentBatchId,
@@ -520,8 +523,8 @@ namespace WPFGrowerApp.ViewModels
                 if (success)
                 {
                     await _dialogService.ShowMessageBoxAsync(
-                        $"Batch {SelectedBatch.BatchNumber} has been approved and posted.\n\n" +
-                        $"Status: Posted (Ready for payment processing)",
+                        $"Batch {SelectedBatch.BatchNumber} has been approved.\n\n" +
+                        $"Status: Approved (Ready for posting)",
                         "Batch Approved");
 
                     // Refresh list
@@ -539,6 +542,56 @@ namespace WPFGrowerApp.ViewModels
             }
         }
 
+        private async Task PostBatchAsync()
+        {
+            if (SelectedBatch == null)
+                return;
+
+            try
+            {
+                // Confirm posting
+                var confirm = await _dialogService.ShowConfirmationAsync(
+                    $"This will post the batch and create payment records.\n\n" +
+                    $"Batch: {SelectedBatch.BatchNumber}\n" +
+                    $"Amount: ${SelectedBatch.TotalAmount:N2}\n" +
+                    $"Growers: {SelectedBatch.TotalGrowers}\n\n" +
+                    $"After posting, you can generate cheques or leave as payables.\n" +
+                    $"Continue with posting?",
+                    $"Post Batch {SelectedBatch.BatchNumber}?");
+
+                if (confirm != true)
+                    return;
+
+                IsLoading = true;
+
+                // Post the batch (Approved → Posted)
+                var postedBy = App.CurrentUser?.Username ?? "SYSTEM";
+                var success = await _batchService.PostBatchAsync(
+                    SelectedBatch.PaymentBatchId,
+                    postedBy);
+
+                if (success)
+                {
+                    await _dialogService.ShowMessageBoxAsync(
+                        $"Batch {SelectedBatch.BatchNumber} has been posted.\n\n" +
+                        $"Status: Posted (Ready for payment distribution)",
+                        "Batch Posted");
+
+                    // Refresh list
+                    await LoadBatchesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error posting batch", ex);
+                await _dialogService.ShowMessageBoxAsync($"Error posting batch: {ex.Message}", "Error");
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
         private async Task ProcessPaymentsAsync()
         {
             if (SelectedBatch == null)
@@ -546,21 +599,21 @@ namespace WPFGrowerApp.ViewModels
 
             try
             {
-                // Confirm processing
+                // Confirm finalization
                 var confirm = await _dialogService.ShowConfirmationAsync(
-                    $"This will finalize the batch and process all payments.\n\n" +
+                    $"This will finalize the batch and lock all payment records.\n\n" +
                     $"Batch: {SelectedBatch.BatchNumber}\n" +
                     $"Amount: ${SelectedBatch.TotalAmount:N2}\n" +
                     $"Growers: {SelectedBatch.TotalGrowers}\n\n" +
                     $"This action cannot be undone. Continue?",
-                    $"Process Payments for Batch {SelectedBatch.BatchNumber}?");
+                    $"Finalize Batch {SelectedBatch.BatchNumber}?");
 
                 if (confirm != true)
                     return;
 
                 IsLoading = true;
 
-                // Process payments (Posted → Finalized)
+                // Finalize payments (Posted → Finalized)
                 var processedBy = App.CurrentUser?.Username ?? "SYSTEM";
                 var success = await _batchService.ProcessPaymentsAsync(
                     SelectedBatch.PaymentBatchId,
@@ -569,9 +622,9 @@ namespace WPFGrowerApp.ViewModels
                 if (success)
                 {
                     await _dialogService.ShowMessageBoxAsync(
-                        $"Payments for batch {SelectedBatch.BatchNumber} have been processed successfully.\n\n" +
-                        $"Status: Finalized (Payments completed)",
-                        "Payments Processed");
+                        $"Batch {SelectedBatch.BatchNumber} has been finalized.\n\n" +
+                        $"Status: Finalized (Payments locked)",
+                        "Batch Finalized");
 
                     // Refresh list
                     await LoadBatchesAsync();
@@ -579,8 +632,8 @@ namespace WPFGrowerApp.ViewModels
             }
             catch (Exception ex)
             {
-                Logger.Error("Error processing payments", ex);
-                await _dialogService.ShowMessageBoxAsync($"Error processing payments: {ex.Message}", "Error");
+                Logger.Error("Error finalizing batch", ex);
+                await _dialogService.ShowMessageBoxAsync($"Error finalizing batch: {ex.Message}", "Error");
             }
             finally
             {
@@ -595,6 +648,13 @@ namespace WPFGrowerApp.ViewModels
                    !SelectedBatch.IsDeleted;
         }
 
+        private bool CanPostBatch()
+        {
+            return SelectedBatch != null &&
+                   SelectedBatch.Status == "Approved" &&
+                   !SelectedBatch.IsDeleted;
+        }
+
         private bool CanProcessPayments()
         {
             return SelectedBatch != null &&
@@ -605,7 +665,7 @@ namespace WPFGrowerApp.ViewModels
         private bool CanVoidBatch()
         {
             return SelectedBatch != null &&
-                   (SelectedBatch.Status == "Draft" || SelectedBatch.Status == "Posted") &&
+                   (SelectedBatch.Status == "Draft" || SelectedBatch.Status == "Approved" || SelectedBatch.Status == "Posted") &&
                    !SelectedBatch.IsDeleted;
         }
 

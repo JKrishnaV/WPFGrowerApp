@@ -49,6 +49,8 @@ namespace WPFGrowerApp
             services.AddTransient<IPaymentMethodService, PaymentMethodService>(); // Added for payment methods
             services.AddTransient<IPriceClassService, PriceClassService>(); // Added for price classes
             services.AddTransient<IPaymentBatchManagementService, PaymentBatchManagementService>(); // Added for payment batch management
+            services.AddTransient<IGrowerAccountService, GrowerAccountService>(); // Added for grower accounts
+            services.AddTransient<IPriceScheduleLockService, PriceScheduleLockService>(); // Added for price schedule locks
             services.AddTransient<IChequeGenerationService, ChequeGenerationService>(); // Added for cheque generation
             services.AddTransient<IChequePrintingService, ChequePrintingService>(); // Added for cheque printing
             services.AddTransient<IStatementPrintingService, StatementPrintingService>(); // Added for statement printing

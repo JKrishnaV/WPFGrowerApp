@@ -58,7 +58,7 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         Task<bool> UpdatePaymentBatchTotalsOnlyAsync(int paymentBatchId, int totalGrowers, int totalReceipts, decimal totalAmount, SqlConnection connection, SqlTransaction transaction);
 
         /// <summary>
-        /// Approves a payment batch (Draft → Posted).
+        /// Approves a payment batch (Draft → Approved).
         /// </summary>
         /// <param name="paymentBatchId">The ID of the batch to approve.</param>
         /// <param name="approvedBy">The user who approved the batch.</param>
@@ -66,10 +66,18 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         Task<bool> ApproveBatchAsync(int paymentBatchId, string approvedBy);
 
         /// <summary>
-        /// Processes payments for a batch (Posted → Finalized).
+        /// Posts a payment batch (Approved → Posted).
         /// </summary>
-        /// <param name="paymentBatchId">The ID of the batch to process payments for.</param>
-        /// <param name="processedBy">The user who processed the payments.</param>
+        /// <param name="paymentBatchId">The ID of the batch to post.</param>
+        /// <param name="postedBy">The user who posted the batch.</param>
+        /// <returns>True if update was successful.</returns>
+        Task<bool> PostBatchAsync(int paymentBatchId, string postedBy);
+
+        /// <summary>
+        /// Finalizes payments for a batch (Posted → Finalized).
+        /// </summary>
+        /// <param name="paymentBatchId">The ID of the batch to finalize.</param>
+        /// <param name="processedBy">The user who finalized the payments.</param>
         /// <returns>True if update was successful.</returns>
         Task<bool> ProcessPaymentsAsync(int paymentBatchId, string processedBy);
 
