@@ -341,7 +341,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         // Format cheque number with series
                         string chequeNum = cheque.SeriesCode != null ? 
                             $"{cheque.SeriesCode}-{cheque.ChequeNumber}" : 
-                            cheque.ChequeNumber.ToString();
+                            cheque.ChequeNumber;
                             
                         sheet.Range[$"A{currentRow}"].Text = chequeNum;
                         sheet.Range[$"B{currentRow}"].Text = cheque.GrowerName ?? "";
@@ -845,7 +845,7 @@ namespace WPFGrowerApp.DataAccess.Services
                 // Format cheque number with series
                 string chequeNum = cheque.SeriesCode != null ? 
                     $"{cheque.SeriesCode}-{cheque.ChequeNumber}" : 
-                    cheque.ChequeNumber.ToString();
+                    cheque.ChequeNumber;
                     
                 sheet.Range[$"A{currentRow}"].Text = chequeNum;
                 sheet.Range[$"B{currentRow}"].Text = cheque.GrowerName ?? "";

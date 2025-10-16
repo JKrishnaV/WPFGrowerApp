@@ -52,7 +52,7 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// <param name="chequeSeriesId">Cheque series ID</param>
         /// <param name="fiscalYear">Fiscal year</param>
         /// <returns>Next cheque number</returns>
-        Task<int> GetNextChequeNumberAsync(int chequeSeriesId, int fiscalYear);
+        Task<string> GetNextChequeNumberAsync(int chequeSeriesId, int fiscalYear);
 
         /// <summary>
         /// Reserve a range of cheque numbers for batch processing

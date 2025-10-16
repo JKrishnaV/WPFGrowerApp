@@ -48,6 +48,7 @@ namespace WPFGrowerApp.ViewModels
             NavigateToPaymentBatchesCommand = new RelayCommand(async p => await NavigateToAsync<PaymentBatchViewModel>("Payment Batches", p), CanNavigate);
             NavigateToChequeManagementCommand = new RelayCommand(async p => await NavigateToAsync<ChequeManagementViewModel>("Cheque Management", p), CanNavigate);
             NavigateToFinalPaymentCommand = new RelayCommand(async p => await NavigateToAsync<FinalPaymentViewModel>("Final Payment", p), CanNavigate);
+            NavigateToPaymentDistributionCommand = new RelayCommand(async p => await NavigateToPaymentDistributionAsync(p), CanNavigate);
 
             // Set default view model to Dashboard
             _ = NavigateToAsync<DashboardViewModel>("Dashboard"); // Call async method, discard task
@@ -170,6 +171,7 @@ namespace WPFGrowerApp.ViewModels
         public ICommand NavigateToPaymentBatchesCommand { get; }
         public ICommand NavigateToChequeManagementCommand { get; }
         public ICommand NavigateToFinalPaymentCommand { get; }
+        public ICommand NavigateToPaymentDistributionCommand { get; }
 
         private bool CanNavigate(object? parameter) => !_isNavigating; // Changed parameter to object?
 
@@ -321,6 +323,23 @@ namespace WPFGrowerApp.ViewModels
         }
 
         // --- End Header Features ---
+
+        private async Task NavigateToPaymentDistributionAsync(object? parameter)
+        {
+            if (!CanNavigate(parameter)) return;
+
+            try
+            {
+                var viewModel = _serviceProvider.GetRequiredService<PaymentDistributionViewModel>();
+                CurrentViewModel = viewModel;
+                IsMenuOpen = false; // Close menu after navigation
+            }
+            catch (Exception ex)
+            {
+                Infrastructure.Logging.Logger.Error($"Error navigating to Payment Distribution: {ex.Message}", ex);
+                await _dialogService.ShowMessageBoxAsync($"Error navigating to Payment Distribution: {ex.Message}", "Navigation Error");
+            }
+        }
 
     } // End of MainViewModel class
 } // End of namespace

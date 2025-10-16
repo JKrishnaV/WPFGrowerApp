@@ -162,6 +162,7 @@ namespace WPFGrowerApp.DataAccess.Models
         private DateTime? _cutoffDate;
         private string? _filterPayGroup;
         private int? _filterGrower;
+        private bool _isSelected;
 
         /// <summary>
         /// Payment type name for display (e.g., "Advance 1", "Advance 2", "Final Payment")
@@ -206,6 +207,15 @@ namespace WPFGrowerApp.DataAccess.Models
         {
             get => _filterGrower;
             set => SetProperty(ref _filterGrower, value);
+        }
+
+        /// <summary>
+        /// UI property for selection in payment distribution
+        /// </summary>
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set => SetProperty(ref _isSelected, value);
         }
 
         // ======================================================================

@@ -1,0 +1,131 @@
+<UserControl x:Class="WPFGrowerApp.Views.Dialogs.VoidReceiptDialog"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
+    
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header -->
+        <materialDesign:ColorZone Grid.Row="0" Style="{StaticResource HeaderBarStyle}">
+            <TextBlock Text="Void Receipt Confirmation" 
+                       Style="{StaticResource PageTitleStyle}"/>
+        </materialDesign:ColorZone>
+        
+        <!-- Warning Icon and Message -->
+        <Grid Grid.Row="1" Margin="0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <materialDesign:PackIcon Grid.Column="0" 
+                                     Kind="AlertCircle" 
+                                     Width="48" 
+                                     Height="48" 
+                                     Foreground="Orange"
+                                     Margin="0,0,20,0"
+                                     VerticalAlignment="Top"/>
+            
+            <StackPanel Grid.Column="1">
+                <TextBlock Text="Warning: This receipt is in a POSTED batch" 
+                           Style="{StaticResource MaterialDesignHeadline6}"
+                           Foreground="Orange"
+                           Margin="0,0,0,10"/>
+                
+                <TextBlock Text="{Binding WarningMessage}" 
+                           Style="{StaticResource MaterialDesignBody1}"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,10"/>
+                
+                <TextBlock Text="This action will:" 
+                           Style="{StaticResource MaterialDesignSubtitle1}"
+                           Margin="0,10,0,5"/>
+                
+                <StackPanel Margin="20,0,0,0">
+                    <TextBlock Text="• Void the receipt and mark it as cancelled" 
+                               Style="{StaticResource MaterialDesignBody2}"/>
+                    <TextBlock Text="• Revert the batch to Draft status" 
+                               Style="{StaticResource MaterialDesignBody2}"/>
+                    <TextBlock Text="• Remove grower account entries" 
+                               Style="{StaticResource MaterialDesignBody2}"/>
+                    <TextBlock Text="• Remove price schedule locks" 
+                               Style="{StaticResource MaterialDesignBody2}"/>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+        
+        <!-- Batch Information -->
+        <materialDesign:Card Grid.Row="2" Style="{StaticResource InfoCardStyle}" Margin="0,20">
+            <Grid Margin="20">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Grid.Row="0" 
+                           Text="Batch Information" 
+                           Style="{StaticResource MaterialDesignSubtitle1}"
+                           Margin="0,0,0,10"/>
+                
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBlock Grid.Column="0" Text="Batch:" Margin="0,0,10,0"/>
+                    <TextBlock Grid.Column="1" Text="{Binding BatchNumber}" FontWeight="Bold"/>
+                    <TextBlock Grid.Column="2" Text="Amount:" Margin="20,0,10,0"/>
+                    <TextBlock Grid.Column="3" Text="{Binding AmountVoided, StringFormat=C}" FontWeight="Bold"/>
+                </Grid>
+                
+                <TextBlock Grid.Row="2" 
+                           Text="Affected Growers:" 
+                           Margin="0,10,0,5"/>
+                <TextBlock Grid.Row="2" 
+                           Text="{Binding AffectedGrowersText}" 
+                           Style="{StaticResource MaterialDesignBody2}"
+                           TextWrapping="Wrap"
+                           Margin="20,0,0,0"/>
+            </Grid>
+        </materialDesign:Card>
+        
+        <!-- Reason Input -->
+        <GroupBox Grid.Row="3" Header="Reason for Void" Margin="0,20">
+            <TextBox Text="{Binding VoidReason, UpdateSourceTrigger=PropertyChanged}"
+                     materialDesign:HintAssist.Hint="Enter reason for voiding this receipt..."
+                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                     Margin="10"
+                     MaxLength="500"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     Height="80"/>
+        </GroupBox>
+        
+        <!-- Action Buttons -->
+        <StackPanel Grid.Row="4" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right"
+                    Margin="0,20,0,0">
+            <Button Content="Cancel" 
+                    Command="{Binding CancelCommand}"
+                    Style="{StaticResource MaterialDesignFlatButton}"
+                    Margin="0,0,10,0"/>
+            <Button Content="Void Receipt" 
+                    Command="{Binding VoidReceiptCommand}"
+                    Style="{StaticResource MaterialDesignRaisedButton}"
+                    Background="Red"
+                    Foreground="White"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

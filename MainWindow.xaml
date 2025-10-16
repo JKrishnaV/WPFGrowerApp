@@ -68,6 +68,10 @@
                <views:FinalPaymentView/>
            </DataTemplate>
            
+           <DataTemplate DataType="{x:Type vm:PaymentDistributionViewModel}">
+               <views:PaymentDistributionView/>
+           </DataTemplate>
+           
            <DataTemplate DataType="{x:Type vm:ChangePasswordViewModel}">
                <views:ChangePasswordView/>
            </DataTemplate>

@@ -211,7 +211,7 @@ namespace WPFGrowerApp.ViewModels
             _batchCheques = new ObservableCollection<Cheque>();
             _filteredCheques = new ObservableCollection<Cheque>();
             GrowerFilterOptions = new ObservableCollection<GrowerFilterOption>();
-            ChequeStatusOptions = new ObservableCollection<string> { "All", "Issued", "Cleared", "Voided", "Stopped" };
+            ChequeStatusOptions = new ObservableCollection<string> { "All", "Generated", "Issued", "Cleared", "Voided", "Stopped" };
 
             // Initialize commands
             NavigateBackToBatchListCommand = new RelayCommand(NavigateBackToBatchListExecute);

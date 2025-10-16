@@ -431,9 +431,9 @@
                                   materialDesign:DataGridAssist.CellPadding="13 8 8 8"
                                   materialDesign:DataGridAssist.ColumnHeaderPadding="13 10 8 10">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Cheque #" Binding="{Binding DisplayChequeNumber}" Width="100"/>
-                                <DataGridTextColumn Header="Grower" Binding="{Binding GrowerName}" Width="*"/>
-                                <DataGridTextColumn Header="Amount" Binding="{Binding ChequeAmount, StringFormat='${0:N2}'}" Width="120">
+                                <DataGridTextColumn Header="Cheque #" Binding="{Binding DisplayChequeNumber, TargetNullValue='', FallbackValue=''}" Width="Auto"/>
+                                <DataGridTextColumn Header="Grower" Binding="{Binding GrowerName, TargetNullValue='', FallbackValue=''}" Width="Auto"/>
+                                <DataGridTextColumn Header="Amount" Binding="{Binding ChequeAmount, StringFormat='${0:N2}', TargetNullValue='', FallbackValue=''}" Width="120">
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -457,13 +457,13 @@
                                                         </Style.Triggers>
                                                     </Style>
                                                 </Border.Style>
-                                                <TextBlock Text="{Binding Status}" Foreground="White" FontWeight="SemiBold" FontSize="11"/>
+                                                <TextBlock Text="{Binding Status, TargetNullValue='', FallbackValue=''}" Foreground="White" FontWeight="SemiBold" FontSize="11"/>
                                             </Border>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
-                                <DataGridTextColumn Header="Printed" Binding="{Binding PrintedAt, StringFormat='{}{0:MMM dd, yyyy}'}" Width="100"/>
-                                <DataGridTextColumn Header="Cleared" Binding="{Binding ClearedDate, StringFormat='{}{0:MMM dd, yyyy}'}" Width="100"/>
+                                <DataGridTextColumn Header="Printed" Binding="{Binding PrintedAt, StringFormat='{}{0:MMM dd, yyyy}', TargetNullValue='', FallbackValue=''}" Width="100"/>
+                                <DataGridTextColumn Header="Cleared" Binding="{Binding ClearedDate, StringFormat='{}{0:MMM dd, yyyy}', TargetNullValue='', FallbackValue=''}" Width="100"/>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Grid>

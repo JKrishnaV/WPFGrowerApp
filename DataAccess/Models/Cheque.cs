@@ -16,7 +16,7 @@ namespace WPFGrowerApp.DataAccess.Models
         
         private int _chequeId;
         private int _chequeSeriesId;
-        private int _chequeNumber;
+        private string _chequeNumber = string.Empty;
         private int _fiscalYear;
 
         public int ChequeId
@@ -31,7 +31,7 @@ namespace WPFGrowerApp.DataAccess.Models
             set => SetProperty(ref _chequeSeriesId, value);
         }
 
-        public int ChequeNumber
+        public string ChequeNumber
         {
             get => _chequeNumber;
             set => SetProperty(ref _chequeNumber, value);
@@ -119,7 +119,7 @@ namespace WPFGrowerApp.DataAccess.Models
         private string? _voidedReason;
 
         /// <summary>
-        /// Cheque status: Issued, Cleared, Voided, Stopped
+        /// Cheque status: Generated, Issued, Cleared, Voided, Stopped
         /// </summary>
         public string Status
         {
@@ -238,14 +238,16 @@ namespace WPFGrowerApp.DataAccess.Models
         public bool IsCleared => Status == "Cleared";
 
         /// <summary>
-        /// Can this cheque be voided? (Only issued cheques can be voided)
+        /// Can this cheque be voided? (Only generated and issued cheques can be voided)
         /// </summary>
-        public bool CanBeVoided => Status == "Issued";
+        public bool CanBeVoided => Status == "Generated" || Status == "Issued";
 
         /// <summary>
-        /// Full cheque number for display (e.g., "A-1234")
+        /// Full cheque number for display (e.g., "A-1234" or "CHQ-20251015-231733336-469")
         /// </summary>
-        public string DisplayChequeNumber => $"{SeriesCode ?? "?"}-{ChequeNumber}";
+        public string DisplayChequeNumber => !string.IsNullOrEmpty(SeriesCode) && !ChequeNumber.StartsWith("CHQ-") 
+            ? $"{SeriesCode}-{ChequeNumber}" 
+            : ChequeNumber;
 
         // ======================================================================
         // INOTIFYPROPERTYCHANGED IMPLEMENTATION

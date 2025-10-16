@@ -1,0 +1,278 @@
+<UserControl x:Class="WPFGrowerApp.Views.PaymentDistributionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:converters="clr-namespace:WPFGrowerApp.Converters"
+             Background="{DynamicResource MaterialDesignPaper}">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Styles/StandardizedViewTemplate.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisConverter"/>
+            <converters:StatusToVisibilityConverter x:Key="StatusToVisibilityConverter"/>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>  <!-- Breadcrumb -->
+            <RowDefinition Height="Auto"/>  <!-- Title -->
+            <RowDefinition Height="Auto"/>  <!-- Search/Filter Bar -->
+            <RowDefinition Height="*"/>      <!-- Main Content -->
+            <RowDefinition Height="Auto"/>  <!-- Status Bar -->
+        </Grid.RowDefinitions>
+
+        <!-- Breadcrumb Navigation -->
+        <materialDesign:ColorZone Grid.Row="0" Style="{StaticResource BreadcrumbNavigationStyle}">
+            <StackPanel Orientation="Horizontal">
+                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                        Padding="5,0"
+                        Command="{Binding NavigateToDashboardCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Home" Width="16" Height="16" 
+                                               VerticalAlignment="Center" Margin="0,0,5,0"/>
+                        <TextBlock Text="Dashboard" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+                <materialDesign:PackIcon Kind="ChevronRight" Width="16" Height="16" 
+                                       VerticalAlignment="Center" Margin="5,0"/>
+                <TextBlock Text="Payment Distribution" FontSize="12" VerticalAlignment="Center"/>
+            </StackPanel>
+        </materialDesign:ColorZone>
+
+        <!-- Title -->
+        <TextBlock Grid.Row="1" 
+                   Text="Payment Distribution" 
+                   Style="{StaticResource StandardizedViewTitleStyle}"/>
+
+        <!-- Search/Filter Bar -->
+        <materialDesign:Card Grid.Row="2" Style="{StaticResource FiltersActionsPanelStyle}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBox Grid.Column="0" 
+                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                         materialDesign:HintAssist.Hint="Search batches..."
+                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                         Margin="0,0,10,0"/>
+                
+                <Button Grid.Column="1" 
+                        Content="Search" 
+                        Command="{Binding SearchCommand}"
+                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        Margin="5,0"/>
+                
+                <Button Grid.Column="2" 
+                        Content="Clear" 
+                        Command="{Binding ClearFiltersCommand}"
+                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        Margin="5,0"/>
+                
+                <Button Grid.Column="3" 
+                        Content="Refresh" 
+                        Command="{Binding RefreshCommand}"
+                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        Margin="5,0"/>
+            </Grid>
+        </materialDesign:Card>
+        
+        <!-- Main Content -->
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="1*"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- Available Batches -->
+            <materialDesign:Card Grid.Column="0" Style="{StaticResource MainContentAreaStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" 
+                               Text="Available Batches" 
+                               Style="{StaticResource SectionHeaderStyle}"
+                               Margin="20,20,20,10"/>
+                    
+                    <DataGrid Grid.Row="1" 
+                              ItemsSource="{Binding AvailableBatches}"
+                              Style="{StaticResource StandardizedDataGridStyle}">
+                        <DataGrid.Columns>
+                            <DataGridCheckBoxColumn Header="Select" 
+                                                   Binding="{Binding IsSelected}"
+                                                   Width="60"/>
+                            <DataGridTextColumn Header="Batch Number" 
+                                               Binding="{Binding BatchNumber}"
+                                               Width="150"/>
+                            <DataGridTextColumn Header="Type" 
+                                               Binding="{Binding PaymentTypeName}"
+                                               Width="100"/>
+                            <DataGridTextColumn Header="Status" 
+                                               Binding="{Binding Status}"
+                                               Width="80"/>
+                            <DataGridTextColumn Header="Amount" 
+                                               Binding="{Binding TotalAmount, StringFormat=C}"
+                                               Width="100"/>
+                            <DataGridTextColumn Header="Growers" 
+                                               Binding="{Binding TotalGrowers}"
+                                               Width="80"/>
+                            <DataGridTextColumn Header="Created" 
+                                               Binding="{Binding CreatedAt, StringFormat=yyyy-MM-dd}"
+                                               Width="100"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </materialDesign:Card>
+            
+            <!-- Divider -->
+            <GridSplitter Grid.Column="1" 
+                          HorizontalAlignment="Stretch" 
+                          VerticalAlignment="Stretch"
+                          Background="{DynamicResource MaterialDesignDivider}"/>
+            
+            <!-- Distribution Options -->
+            <materialDesign:Card Grid.Column="2" Style="{StaticResource MainContentAreaStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" 
+                               Text="Distribution Options" 
+                               Style="{StaticResource SectionHeaderStyle}"
+                               Margin="20,20,20,10"/>
+                    
+                    <!-- Distribution Method -->
+                    <GroupBox Grid.Row="1" Header="Distribution Method" Margin="20,10">
+                        <StackPanel Margin="10">
+                            <RadioButton Content="By Grower (Consolidated)" 
+                                        IsChecked="{Binding IsByGrower}"
+                                        Margin="0,5"/>
+                            <RadioButton Content="By Batch (Individual)" 
+                                        IsChecked="{Binding IsByBatch}"
+                                        Margin="0,5"/>
+                            <RadioButton Content="All Pending (Bulk)" 
+                                        IsChecked="{Binding IsAllPending}"
+                                        Margin="0,5"/>
+                        </StackPanel>
+                    </GroupBox>
+                    
+                    <!-- Payment Method Selection -->
+                    <GroupBox Grid.Row="2" Header="Payment Method Selection" Margin="20,10">
+                        <StackPanel Margin="10">
+                            <!-- Global Payment Method -->
+                            <TextBlock Text="Default Payment Method:" FontWeight="Bold" Margin="0,0,0,5"/>
+                            <ComboBox ItemsSource="{Binding PaymentMethods}" 
+                                      SelectedItem="{Binding SelectedPaymentMethod}"
+                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                      Margin="0,0,0,10"/>
+                            
+                            <!-- Hybrid Mode Toggle -->
+                            <CheckBox Content="Enable Hybrid Mode (Select payment method per grower)" 
+                                      IsChecked="{Binding IsHybridMode}"
+                                      Margin="0,10,0,5"/>
+                            
+                            <!-- Hybrid Mode Instructions -->
+                            <TextBlock Text="In Hybrid Mode, you can select different payment methods for individual growers. Leave unchecked to use the default method for all growers."
+                                      FontStyle="Italic" 
+                                      Foreground="Gray"
+                                      TextWrapping="Wrap"
+                                      Margin="0,5,0,0"
+                                      Visibility="{Binding IsHybridMode, Converter={StaticResource BoolToVisConverter}}"/>
+                        </StackPanel>
+                    </GroupBox>
+                    
+                    <!-- Preview -->
+                    <GroupBox Grid.Row="3" Header="Preview" Margin="20,10">
+                        <DataGrid ItemsSource="{Binding DistributionItems}"
+                                  AutoGenerateColumns="False"
+                                  CanUserAddRows="False"
+                                  CanUserDeleteRows="False"
+                                  MaxHeight="200"
+                                  Margin="10"
+                                  Style="{StaticResource StandardizedDataGridStyle}">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Grower" 
+                                                   Binding="{Binding GrowerName}"
+                                                   Width="Auto"/>
+                                <DataGridTextColumn Header="Amount" 
+                                                   Binding="{Binding Amount, StringFormat=C}"
+                                                   Width="80"/>
+                                <DataGridTemplateColumn Header="Payment Method" Width="150">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <ComboBox ItemsSource="{Binding DataContext.PaymentMethods, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                      SelectedItem="{Binding PaymentMethod}"
+                                                      IsEnabled="{Binding DataContext.IsHybridMode, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                                      Margin="2"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="Status" 
+                                                   Binding="{Binding Status}"
+                                                   Width="80"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </GroupBox>
+                    
+                    <!-- Action Buttons -->
+                    <StackPanel Grid.Row="5" 
+                                Orientation="Horizontal" 
+                                HorizontalAlignment="Center"
+                                Margin="20,20">
+                        <Button Content="Generate Payments" 
+                                Command="{Binding GeneratePaymentsCommand}"
+                                Style="{StaticResource MaterialDesignRaisedButton}"
+                                Margin="5,0"/>
+                        <Button Content="Preview" 
+                                Command="{Binding PreviewCommand}"
+                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                Margin="5,0"/>
+                        <Button Content="Cancel" 
+                                Command="{Binding CancelCommand}"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                Margin="5,0"/>
+                    </StackPanel>
+                </Grid>
+            </materialDesign:Card>
+        </Grid>
+        
+        <!-- Status Bar -->
+        <materialDesign:ColorZone Grid.Row="4" Style="{StaticResource StatusBarColorZoneStyle}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock Grid.Column="0" 
+                           Text="{Binding StatusMessage}"
+                           Style="{StaticResource StatusBarMessageStyle}"
+                           VerticalAlignment="Center"/>
+                
+                <ProgressBar Grid.Column="1" 
+                             IsIndeterminate="True"
+                             Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisConverter}}"
+                             Width="100"
+                             Height="20"/>
+            </Grid>
+        </materialDesign:ColorZone>
+    </Grid>
+</UserControl>

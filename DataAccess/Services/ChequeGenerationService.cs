@@ -51,7 +51,7 @@ namespace WPFGrowerApp.DataAccess.Services
                 int fiscalYear = chequeDate.Year;
                 
                 // Get next cheque number
-                int chequeNumber = await GetNextChequeNumberAsync(chequeSeriesId, fiscalYear);
+                string chequeNumber = await GetNextChequeNumberAsync(chequeSeriesId, fiscalYear);
                 
                 var createdBy = App.CurrentUser?.Username ?? "SYSTEM";
 
@@ -150,7 +150,7 @@ namespace WPFGrowerApp.DataAccess.Services
                             payment,
                             batch,
                             chequeSeriesId,
-                            currentNumber);
+                            currentNumber.ToString());
                         
                         cheques.Add(cheque);
                         currentNumber++;
@@ -176,7 +176,7 @@ namespace WPFGrowerApp.DataAccess.Services
             GrowerPaymentAmount payment,
             PaymentBatch batch,
             int chequeSeriesId,
-            int chequeNumber)
+            string chequeNumber)
         {
             var createdBy = App.CurrentUser?.Username ?? "SYSTEM";
 
@@ -220,7 +220,7 @@ namespace WPFGrowerApp.DataAccess.Services
         /// <summary>
         /// Get the next available cheque number for a series and year
         /// </summary>
-        public async Task<int> GetNextChequeNumberAsync(int chequeSeriesId, int fiscalYear)
+        public async Task<string> GetNextChequeNumberAsync(int chequeSeriesId, int fiscalYear)
         {
             try
             {
@@ -229,10 +229,11 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     
                     var sql = @"
-                        SELECT ISNULL(MAX(ChequeNumber), 0) + 1
+                        SELECT ISNULL(MAX(CAST(ChequeNumber AS INT)), 0) + 1
                         FROM Cheques
                         WHERE ChequeSeriesId = @ChequeSeriesId 
-                          AND FiscalYear = @FiscalYear";
+                          AND FiscalYear = @FiscalYear
+                          AND ISNUMERIC(ChequeNumber) = 1";
 
                     var nextNumber = await connection.QuerySingleAsync<int>(sql, new
                     {
@@ -258,7 +259,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         }
                     }
 
-                    return nextNumber;
+                    return nextNumber.ToString();
                 }
             }
             catch (Exception ex)
@@ -278,7 +279,8 @@ namespace WPFGrowerApp.DataAccess.Services
             {
                 // Get next number and immediately reserve the range by inserting placeholder records
                 // This ensures no duplicate numbers even in concurrent scenarios
-                int startingNumber = await GetNextChequeNumberAsync(chequeSeriesId, fiscalYear);
+                var startingNumberStr = await GetNextChequeNumberAsync(chequeSeriesId, fiscalYear);
+                int startingNumber = int.Parse(startingNumberStr);
                 
                 Logger.Info($"Reserved cheque numbers {startingNumber} to {startingNumber + count - 1} for series {chequeSeriesId}, year {fiscalYear}");
                 return startingNumber;
@@ -460,7 +462,7 @@ namespace WPFGrowerApp.DataAccess.Services
                                 transaction);
 
                             // Get next cheque number for reissue
-                            int newChequeNumber = await GetNextChequeNumberAsync(
+                            string newChequeNumber = await GetNextChequeNumberAsync(
                                 originalCheque.ChequeSeriesId, 
                                 newChequeDate.Year);
 
@@ -489,7 +491,7 @@ namespace WPFGrowerApp.DataAccess.Services
                                 ChequeAmount = originalCheque.ChequeAmount,
                                 CurrencyCode = originalCheque.CurrencyCode,
                                 PayeeName = originalCheque.PayeeName,
-                                Memo = $"Reissue of cheque #{originalCheque.ChequeNumber} (orig date: {originalCheque.ChequeDate:yyyy-MM-dd})",
+                                Memo = $"Reissue of cheque {originalCheque.ChequeNumber} (orig date: {originalCheque.ChequeDate:yyyy-MM-dd})",
                                 Status = "Issued",
                                 CreatedAt = DateTime.Now,
                                 CreatedBy = reissuedBy
@@ -497,7 +499,7 @@ namespace WPFGrowerApp.DataAccess.Services
 
                             transaction.Commit();
                             
-                            Logger.Info($"Reissued cheque: old #{originalCheque.ChequeNumber}, new #{newChequeNumber}");
+                            Logger.Info($"Reissued cheque: old {originalCheque.ChequeNumber}, new {newChequeNumber}");
                             return newCheque;
                         }
                         catch
@@ -647,7 +649,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         FROM Cheques c
                         INNER JOIN Growers g ON c.GrowerId = g.GrowerId
                         INNER JOIN ChequeSeries cs ON c.ChequeSeriesId = cs.ChequeSeriesId
-                        WHERE CAST(c.ChequeNumber AS NVARCHAR) LIKE @SearchPattern
+                        WHERE c.ChequeNumber LIKE @SearchPattern
                           AND c.DeletedAt IS NULL
                         ORDER BY c.ChequeDate DESC, c.ChequeNumber DESC";
 

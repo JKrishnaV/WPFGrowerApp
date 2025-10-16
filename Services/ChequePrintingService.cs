@@ -113,7 +113,7 @@ namespace WPFGrowerApp.Services
                 // Create sample cheque data
                 var sampleCheque = new Cheque
                 {
-                    ChequeNumber = 12345,
+                    ChequeNumber = "12345",
                     ChequeDate = DateTime.Today,
                     ChequeAmount = 1234.56m,
                     PayeeName = "SAMPLE GROWER NAME",

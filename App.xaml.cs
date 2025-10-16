@@ -12,14 +12,13 @@ using WPFGrowerApp.Infrastructure.Logging;
 using System.Threading.Tasks;
 using WPFGrowerApp.DataAccess.Models;
 using WPFGrowerApp.Properties;
-using WPFGrowerApp.Services; // Added for UISettingsService
 
 namespace WPFGrowerApp
 {
     public partial class App : Application
     {
-        public static IServiceProvider ServiceProvider { get; private set; }
-        public static User CurrentUser { get; private set; } 
+        public static IServiceProvider ServiceProvider { get; private set; } = null!;
+        public static User CurrentUser { get; private set; } = null!; 
 
         public App()
         {
@@ -52,6 +51,8 @@ namespace WPFGrowerApp
             services.AddTransient<IGrowerAccountService, GrowerAccountService>(); // Added for grower accounts
             services.AddTransient<IPriceScheduleLockService, PriceScheduleLockService>(); // Added for price schedule locks
             services.AddTransient<IChequeGenerationService, ChequeGenerationService>(); // Added for cheque generation
+            services.AddTransient<IPaymentDistributionService, PaymentDistributionService>(); // Added for payment distribution
+            services.AddTransient<IReceiptVoidService, ReceiptVoidService>(); // Added for receipt voiding
             services.AddTransient<IChequePrintingService, ChequePrintingService>(); // Added for cheque printing
             services.AddTransient<IStatementPrintingService, StatementPrintingService>(); // Added for statement printing
             services.AddTransient<IPaymentService, PaymentService>();
@@ -103,6 +104,7 @@ namespace WPFGrowerApp
             services.AddTransient<PaymentBatchViewModel>(); // Phase 1 - Payment Batch Management
             services.AddTransient<ChequeManagementViewModel>(); // Phase 1 - Cheque Management
             services.AddTransient<FinalPaymentViewModel>(); // Phase 1 - Final Payment
+            services.AddTransient<PaymentDistributionViewModel>(); // Added for payment distribution
             services.AddTransient<LoginViewModel>();
             services.AddTransient<ChangePasswordViewModel>();
             services.AddTransient<UserManagementViewModel>();
@@ -172,7 +174,7 @@ namespace WPFGrowerApp
                 {
                     // Get the authenticated user from the LoginViewModel
                     var loginViewModel = loginView.DataContext as LoginViewModel;
-                    CurrentUser = loginViewModel?.AuthenticatedUser; 
+                    CurrentUser = loginViewModel?.AuthenticatedUser ?? throw new InvalidOperationException("Authenticated user is null"); 
 
                     if (CurrentUser == null)
                     {
@@ -260,7 +262,7 @@ namespace WPFGrowerApp
             };
             AppDomain.CurrentDomain.UnhandledException += (s, e) =>
             {
-                 Logger.Fatal("Unhandled non-UI thread exception occurred.", e.ExceptionObject as Exception);
+                 Logger.Fatal("Unhandled non-UI thread exception occurred.", e.ExceptionObject as Exception ?? new Exception("Unknown exception"));
             };
              Logger.Info("Global exception handlers configured.");
         }
