@@ -48,28 +48,56 @@
            </DataTemplate>
            
            
-           <DataTemplate DataType="{x:Type vm:PaymentRunViewModel}">
-               <views:PaymentRunView/>
+           <DataTemplate DataType="{x:Type vm:PaymentManagementHubViewModel}">
+               <views:PaymentManagementHubView/>
            </DataTemplate>
            
-           <DataTemplate DataType="{x:Type vm:SettingsHostViewModel}">
-               <views:SettingsHostView/>
+           <DataTemplate DataType="{x:Type vm:PaymentDistributionViewModel}">
+               <views:PaymentDistributionView/>
+           </DataTemplate>
+           
+           <DataTemplate DataType="{x:Type vm:PaymentRunViewModel}">
+               <views:PaymentRunView/>
            </DataTemplate>
            
            <DataTemplate DataType="{x:Type vm:PaymentBatchViewModel}">
                <views:PaymentBatchListView/>
            </DataTemplate>
            
-           <DataTemplate DataType="{x:Type vm:ChequeManagementViewModel}">
-               <views:ChequeManagementView/>
+           <DataTemplate DataType="{x:Type vm:ChequeReviewViewModel}">
+               <views:ChequeReviewView/>
            </DataTemplate>
            
            <DataTemplate DataType="{x:Type vm:FinalPaymentViewModel}">
                <views:FinalPaymentView/>
            </DataTemplate>
            
-           <DataTemplate DataType="{x:Type vm:PaymentDistributionViewModel}">
-               <views:PaymentDistributionView/>
+           <DataTemplate DataType="{x:Type vm:ChequePreparationViewModel}">
+               <views:ChequePreparationView/>
+           </DataTemplate>
+           
+           <DataTemplate DataType="{x:Type vm:ChequeDeliveryViewModel}">
+               <views:ChequeDeliveryView/>
+           </DataTemplate>
+           
+           <DataTemplate DataType="{x:Type vm:ElectronicPaymentProcessingViewModel}">
+               <views:ElectronicPaymentProcessingView/>
+           </DataTemplate>
+           
+           <DataTemplate DataType="{x:Type vm:PaymentStatusDashboardViewModel}">
+               <views:PaymentStatusDashboardView/>
+           </DataTemplate>
+           
+           <DataTemplate DataType="{x:Type vm:PaymentReconciliationViewModel}">
+               <views:PaymentReconciliationView/>
+           </DataTemplate>
+           
+           <DataTemplate DataType="{x:Type vm:PaymentGroupViewModel}">
+               <views:PaymentGroupView/>
+           </DataTemplate>
+           
+           <DataTemplate DataType="{x:Type vm:SettingsHostViewModel}">
+               <views:SettingsHostView/>
            </DataTemplate>
            
            <DataTemplate DataType="{x:Type vm:ChangePasswordViewModel}">

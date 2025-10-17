@@ -38,5 +38,25 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// <returns>A list of Cheque objects.</returns>
         Task<List<Cheque>> GetTemporaryChequesAsync(string currency, string tempChequeSeries, decimal tempChequeNumberStart);
 
+        // New methods for enhanced cheque processing
+        Task<List<Cheque>> GetChequesByStatusAsync(string status);
+        Task<bool> UpdateChequeStatusAsync(int chequeId, string newStatus, string updatedBy);
+        
+        // Search methods for ChequeReviewViewModel
+        Task<List<Cheque>> SearchChequesByNumberAsync(string chequeNumber);
+        Task<bool> MarkChequesAsPrintedAsync(List<int> chequeIds, string printedBy);
+        Task<bool> MarkChequesAsIssuedAsync(List<int> chequeIds, string issuedBy);
+        Task<byte[]> GenerateChequePdfAsync(int chequeId);
+        Task<byte[]> GenerateBatchChequePdfAsync(List<int> chequeIds);
+        
+        // Enhanced cheque management methods
+        Task VoidChequesAsync(List<int> chequeIds, string reason, string voidedBy);
+        Task StopPaymentAsync(List<int> chequeIds, string reason, string stoppedBy);
+        Task LogReprintActivityAsync(List<int> chequeIds, string reason, string reprintedBy);
+
+        // New simplified workflow methods
+        Task<bool> MarkChequesAsDeliveredAsync(List<int> chequeIds, string deliveryMethod, string deliveredBy);
+        Task<bool> ApproveChequesForDeliveryAsync(List<int> chequeIds, string approvedBy);
+
     }
 }

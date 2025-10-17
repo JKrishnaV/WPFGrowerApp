@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using WPFGrowerApp.Infrastructure.Logging;
 
 namespace WPFGrowerApp.DataAccess.Models
 {
@@ -113,17 +114,17 @@ namespace WPFGrowerApp.DataAccess.Models
         // STATUS & CLEARING
         // ======================================================================
         
-        private string _status = "Issued";
+        private string _status = "Generated";
         private DateTime? _clearedDate;
         private DateTime? _voidedDate;
         private string? _voidedReason;
 
         /// <summary>
-        /// Cheque status: Generated, Issued, Cleared, Voided, Stopped
+        /// Cheque status: Generated, Printed, Delivered, Voided, Stopped
         /// </summary>
         public string Status
         {
-            get => _status ?? "Issued";
+            get => _status ?? "Generated";
             set => SetProperty(ref _status, value);
         }
 
@@ -153,7 +154,13 @@ namespace WPFGrowerApp.DataAccess.Models
         private string? _createdBy;
         private DateTime? _printedAt;
         private string? _printedBy;
+        private DateTime? _issuedDate;
+        private string? _issuedBy;
+        private DateTime? _printedDate;
         private string? _voidedBy;
+        private DateTime? _deliveredAt;
+        private string? _deliveredBy;
+        private string? _deliveryMethod;
 
         public DateTime CreatedAt
         {
@@ -182,10 +189,61 @@ namespace WPFGrowerApp.DataAccess.Models
             set => SetProperty(ref _printedBy, value);
         }
 
+        /// <summary>
+        /// When the cheque was issued (added for tracking)
+        /// </summary>
+        public DateTime? IssuedDate
+        {
+            get => _issuedDate;
+            set => SetProperty(ref _issuedDate, value);
+        }
+
+        public string? IssuedBy
+        {
+            get => _issuedBy;
+            set => SetProperty(ref _issuedBy, value);
+        }
+
+        /// <summary>
+        /// When the cheque was printed (added for tracking)
+        /// </summary>
+        public DateTime? PrintedDate
+        {
+            get => _printedDate;
+            set => SetProperty(ref _printedDate, value);
+        }
+
         public string? VoidedBy
         {
             get => _voidedBy;
             set => SetProperty(ref _voidedBy, value);
+        }
+
+        /// <summary>
+        /// When the cheque was delivered to the grower
+        /// </summary>
+        public DateTime? DeliveredAt
+        {
+            get => _deliveredAt;
+            set => SetProperty(ref _deliveredAt, value);
+        }
+
+        /// <summary>
+        /// Who delivered the cheque
+        /// </summary>
+        public string? DeliveredBy
+        {
+            get => _deliveredBy;
+            set => SetProperty(ref _deliveredBy, value);
+        }
+
+        /// <summary>
+        /// How the cheque was delivered (Mail, Pickup, Courier, etc.)
+        /// </summary>
+        public string? DeliveryMethod
+        {
+            get => _deliveryMethod;
+            set => SetProperty(ref _deliveryMethod, value);
         }
 
         // ======================================================================
@@ -195,6 +253,8 @@ namespace WPFGrowerApp.DataAccess.Models
         private string? _growerName;
         private string? _seriesCode;
         private string? _paymentTypeName;
+        private bool _isSelected;
+        private ChequeSeries? _chequeSeries;
 
         /// <summary>
         /// Grower name for display purposes
@@ -235,12 +295,12 @@ namespace WPFGrowerApp.DataAccess.Models
         /// <summary>
         /// Is this cheque cleared?
         /// </summary>
-        public bool IsCleared => Status == "Cleared";
+        public bool IsCleared => Status == "Delivered";
 
         /// <summary>
         /// Can this cheque be voided? (Only generated and issued cheques can be voided)
         /// </summary>
-        public bool CanBeVoided => Status == "Generated" || Status == "Issued";
+        public bool CanBeVoided => Status == "Generated" || Status == "Printed";
 
         /// <summary>
         /// Full cheque number for display (e.g., "A-1234" or "CHQ-20251015-231733336-469")
@@ -248,6 +308,22 @@ namespace WPFGrowerApp.DataAccess.Models
         public string DisplayChequeNumber => !string.IsNullOrEmpty(SeriesCode) && !ChequeNumber.StartsWith("CHQ-") 
             ? $"{SeriesCode}-{ChequeNumber}" 
             : ChequeNumber;
+
+        /// <summary>
+        /// For UI selection purposes
+        /// </summary>
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set => SetProperty(ref _isSelected, value);
+        }
+
+        // Navigation properties
+        public ChequeSeries? ChequeSeries
+        {
+            get => _chequeSeries;
+            set => SetProperty(ref _chequeSeries, value);
+        }
 
         // ======================================================================
         // INOTIFYPROPERTYCHANGED IMPLEMENTATION
@@ -264,6 +340,8 @@ namespace WPFGrowerApp.DataAccess.Models
         {
             if (Equals(field, value)) return false;
             field = value;
+            // Add diagnostic logging to see if SetProperty is called for any property change
+            Logger.Info($"Cheque.SetProperty: Property '{propertyName}' changed to '{value}' for ChequeId={ChequeId}");
             OnPropertyChanged(propertyName);
             return true;
         }

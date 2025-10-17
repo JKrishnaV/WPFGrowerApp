@@ -1,0 +1,307 @@
+<UserControl x:Class="WPFGrowerApp.Views.PaymentStatusDashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d" 
+             d:DesignHeight="800" d:DesignWidth="1200">
+    
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Project Styles -->
+                <ResourceDictionary Source="/Styles/StandardizedViewTemplate.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Breadcrumb -->
+            <RowDefinition Height="Auto"/> <!-- Header -->
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Breadcrumb Navigation -->
+        <materialDesign:ColorZone Grid.Row="0" Style="{StaticResource BreadcrumbNavigationStyle}">
+            <StackPanel Orientation="Horizontal">
+                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                        Padding="5,0"
+                        Command="{Binding NavigateToDashboardCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Home" Width="16" Height="16" 
+                                               VerticalAlignment="Center" Margin="0,0,5,0"/>
+                        <TextBlock Text="Dashboard" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+                <materialDesign:PackIcon Kind="ChevronRight" Width="16" Height="16" 
+                                       VerticalAlignment="Center" Margin="5,0"/>
+                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                        Padding="5,0"
+                        Command="{Binding NavigateToPaymentManagementCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="CreditCard" Width="16" Height="16" 
+                                               VerticalAlignment="Center" Margin="0,0,5,0"/>
+                        <TextBlock Text="Payment Management" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+                <materialDesign:PackIcon Kind="ChevronRight" Width="16" Height="16" 
+                                       VerticalAlignment="Center" Margin="5,0"/>
+                <TextBlock Text="Payment Status Dashboard" FontSize="12" VerticalAlignment="Center"/>
+            </StackPanel>
+        </materialDesign:ColorZone>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,20">
+            <materialDesign:PackIcon Kind="ViewDashboard" Width="32" Height="32" VerticalAlignment="Center" Margin="0,0,10,0"/>
+            <TextBlock Text="Payment Status Dashboard" FontSize="24" FontWeight="Bold" VerticalAlignment="Center"/>
+            <Button Content="Refresh" 
+                    Command="{Binding RefreshDashboardCommand}"
+                    Style="{StaticResource MaterialDesignRaisedButton}"
+                    Margin="20,0,0,0"
+                    VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Main Content -->
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <!-- Status Summary Cards -->
+                <GroupBox Header="Payment Status Summary" Margin="0,0,0,20">
+                    <Grid Margin="20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Total Distributions -->
+                        <Border Grid.Row="0" Grid.Column="0" 
+                                Background="{DynamicResource MaterialDesignPaper}" 
+                                BorderBrush="#E0E0E0" 
+                                BorderThickness="1" 
+                                CornerRadius="4" 
+                                Margin="5" 
+                                Padding="15">
+                            <StackPanel>
+                                <TextBlock Text="Total Distributions" FontSize="12" Foreground="Gray"/>
+                                <TextBlock Text="{Binding StatusSummary.TotalDistributions}" 
+                                           FontSize="24" FontWeight="Bold" 
+                                           Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Total Cheques -->
+                        <Border Grid.Row="0" Grid.Column="1" 
+                                Background="{DynamicResource MaterialDesignPaper}" 
+                                BorderBrush="#E0E0E0" 
+                                BorderThickness="1" 
+                                CornerRadius="4" 
+                                Margin="5" 
+                                Padding="15">
+                            <StackPanel>
+                                <TextBlock Text="Total Cheques" FontSize="12" Foreground="Gray"/>
+                                <TextBlock Text="{Binding StatusSummary.TotalCheques}" 
+                                           FontSize="24" FontWeight="Bold" 
+                                           Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Total Electronic Payments -->
+                        <Border Grid.Row="0" Grid.Column="2" 
+                                Background="{DynamicResource MaterialDesignPaper}" 
+                                BorderBrush="#E0E0E0" 
+                                BorderThickness="1" 
+                                CornerRadius="4" 
+                                Margin="5" 
+                                Padding="15">
+                            <StackPanel>
+                                <TextBlock Text="Electronic Payments" FontSize="12" Foreground="Gray"/>
+                                <TextBlock Text="{Binding StatusSummary.TotalElectronicPayments}" 
+                                           FontSize="24" FontWeight="Bold" 
+                                           Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Cheques Generated -->
+                        <Border Grid.Row="0" Grid.Column="3" 
+                                Background="{DynamicResource MaterialDesignPaper}" 
+                                BorderBrush="#E0E0E0" 
+                                BorderThickness="1" 
+                                CornerRadius="4" 
+                                Margin="5" 
+                                Padding="15">
+                            <StackPanel>
+                                <TextBlock Text="Cheques Generated" FontSize="12" Foreground="Gray"/>
+                                <TextBlock Text="{Binding StatusSummary.ChequesGenerated}" 
+                                           FontSize="24" FontWeight="Bold" 
+                                           Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Cheques Printed -->
+                        <Border Grid.Row="1" Grid.Column="0" 
+                                Background="{DynamicResource MaterialDesignPaper}" 
+                                BorderBrush="#E0E0E0" 
+                                BorderThickness="1" 
+                                CornerRadius="4" 
+                                Margin="5" 
+                                Padding="15">
+                            <StackPanel>
+                                <TextBlock Text="Cheques Printed" FontSize="12" Foreground="Gray"/>
+                                <TextBlock Text="{Binding StatusSummary.ChequesPrinted}" 
+                                           FontSize="24" FontWeight="Bold" 
+                                           Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Cheques Issued -->
+                        <Border Grid.Row="1" Grid.Column="1" 
+                                Background="{DynamicResource MaterialDesignPaper}" 
+                                BorderBrush="#E0E0E0" 
+                                BorderThickness="1" 
+                                CornerRadius="4" 
+                                Margin="5" 
+                                Padding="15">
+                            <StackPanel>
+                                <TextBlock Text="Cheques Issued" FontSize="12" Foreground="Gray"/>
+                                <TextBlock Text="{Binding StatusSummary.ChequesIssued}" 
+                                           FontSize="24" FontWeight="Bold" 
+                                           Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Cheques Cleared -->
+                        <Border Grid.Row="1" Grid.Column="2" 
+                                Background="{DynamicResource MaterialDesignPaper}" 
+                                BorderBrush="#E0E0E0" 
+                                BorderThickness="1" 
+                                CornerRadius="4" 
+                                Margin="5" 
+                                Padding="15">
+                            <StackPanel>
+                                <TextBlock Text="Cheques Cleared" FontSize="12" Foreground="Gray"/>
+                                <TextBlock Text="{Binding StatusSummary.ChequesCleared}" 
+                                           FontSize="24" FontWeight="Bold" 
+                                           Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Electronic Payments Processed -->
+                        <Border Grid.Row="1" Grid.Column="3" 
+                                Background="{DynamicResource MaterialDesignPaper}" 
+                                BorderBrush="#E0E0E0" 
+                                BorderThickness="1" 
+                                CornerRadius="4" 
+                                Margin="5" 
+                                Padding="15">
+                            <StackPanel>
+                                <TextBlock Text="EFT Processed" FontSize="12" Foreground="Gray"/>
+                                <TextBlock Text="{Binding StatusSummary.ElectronicPaymentsProcessed}" 
+                                           FontSize="24" FontWeight="Bold" 
+                                           Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </GroupBox>
+
+                <!-- Recent Activity -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Recent Distributions -->
+                    <GroupBox Grid.Column="0" Header="Recent Distributions" Margin="0,0,10,0">
+                        <DataGrid ItemsSource="{Binding RecentDistributions}" 
+                                  AutoGenerateColumns="False" 
+                                  CanUserAddRows="False" 
+                                  CanUserDeleteRows="False"
+                                  IsReadOnly="True"
+                                  GridLinesVisibility="Horizontal"
+                                  HeadersVisibility="Column"
+                                  Margin="10">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Distribution ID" Binding="{Binding PaymentDistributionId}" Width="120"/>
+                                 <DataGridTextColumn Header="Date" Binding="{Binding DistributionDate, StringFormat='{}{0:MMM dd, yyyy}'}" Width="100"/>
+                                <DataGridTextColumn Header="Total Amount" Binding="{Binding TotalAmount, StringFormat=C}" Width="120"/>
+                                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </GroupBox>
+
+                    <!-- Pending Cheques -->
+                    <GroupBox Grid.Column="1" Header="Pending Cheques" Margin="10,0,0,0">
+                        <DataGrid ItemsSource="{Binding PendingCheques}" 
+                                  AutoGenerateColumns="False" 
+                                  CanUserAddRows="False" 
+                                  CanUserDeleteRows="False"
+                                  IsReadOnly="True"
+                                  GridLinesVisibility="Horizontal"
+                                  HeadersVisibility="Column"
+                                  Margin="10">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Cheque #" Binding="{Binding ChequeNumber}" Width="120"/>
+                                <DataGridTextColumn Header="Grower" Binding="{Binding GrowerName}" Width="150"/>
+                                <DataGridTextColumn Header="Amount" Binding="{Binding ChequeAmount, StringFormat=C}" Width="100"/>
+                                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </GroupBox>
+                </Grid>
+
+                <!-- Electronic Payments and Deliveries -->
+                <Grid Margin="0,20,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Pending Electronic Payments -->
+                    <GroupBox Grid.Column="0" Header="Pending Electronic Payments" Margin="0,0,10,0">
+                        <DataGrid ItemsSource="{Binding PendingElectronicPayments}" 
+                                  AutoGenerateColumns="False" 
+                                  CanUserAddRows="False" 
+                                  CanUserDeleteRows="False"
+                                  IsReadOnly="True"
+                                  GridLinesVisibility="Horizontal"
+                                  HeadersVisibility="Column"
+                                  Margin="10">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Reference" Binding="{Binding ReferenceNumber}" Width="150"/>
+                                <DataGridTextColumn Header="Grower" Binding="{Binding GrowerName}" Width="150"/>
+                                <DataGridTextColumn Header="Amount" Binding="{Binding Amount, StringFormat=C}" Width="100"/>
+                                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </GroupBox>
+
+                    <!-- Recent Deliveries -->
+                    <GroupBox Grid.Column="1" Header="Recent Deliveries" Margin="10,0,0,0">
+                        <DataGrid ItemsSource="{Binding RecentDeliveries}" 
+                                  AutoGenerateColumns="False" 
+                                  CanUserAddRows="False" 
+                                  CanUserDeleteRows="False"
+                                  IsReadOnly="True"
+                                  GridLinesVisibility="Horizontal"
+                                  HeadersVisibility="Column"
+                                  Margin="10">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Cheque #" Binding="{Binding Cheque.ChequeNumber}" Width="120"/>
+                                <DataGridTextColumn Header="Method" Binding="{Binding DeliveryMethod}" Width="100"/>
+                                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>
+                                 <DataGridTextColumn Header="Date" Binding="{Binding MailedDate, StringFormat='{}{0:MMM dd}'}" Width="80"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </GroupBox>
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

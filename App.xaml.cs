@@ -55,6 +55,11 @@ namespace WPFGrowerApp
             services.AddTransient<IReceiptVoidService, ReceiptVoidService>(); // Added for receipt voiding
             services.AddTransient<IChequePrintingService, ChequePrintingService>(); // Added for cheque printing
             services.AddTransient<IStatementPrintingService, StatementPrintingService>(); // Added for statement printing
+            
+            // Phase 2 - Enhanced payment processing services
+            services.AddTransient<IChequeDeliveryService, ChequeDeliveryService>(); // Added for cheque delivery tracking
+            services.AddTransient<IElectronicPaymentService, ElectronicPaymentService>(); // Added for electronic payments
+            services.AddTransient<IPaymentReconciliationService, PaymentReconciliationService>(); // Added for payment reconciliation
             services.AddTransient<IPaymentService, PaymentService>();
             services.AddTransient<IPaymentBatchExportService, PaymentBatchExportService>(); // Phase 3 - Export Service
             services.AddTransient<IDepotService, DepotService>();
@@ -72,6 +77,8 @@ namespace WPFGrowerApp
 
             // Register Other Services
             services.AddTransient<ReportExportService>();
+            services.AddTransient<ChequePdfGenerator>(); // Added for PDF generation
+            services.AddTransient<NachaFileGenerator>(); // Added for NACHA file generation
             services.AddSingleton<IDialogService, DialogService>();
             services.AddSingleton<IUISettingsService, UISettingsService>(); // Register UI Settings Service
             services.AddSingleton<IThemeService, ThemeService>(); // Register Theme Service
@@ -102,9 +109,18 @@ namespace WPFGrowerApp
             services.AddTransient<PaymentGroupViewModel>(); // Added Payment Group VM
             services.AddTransient<PaymentRunViewModel>();
             services.AddTransient<PaymentBatchViewModel>(); // Phase 1 - Payment Batch Management
-            services.AddTransient<ChequeManagementViewModel>(); // Phase 1 - Cheque Management
+            services.AddTransient<ChequeReviewViewModel>(); // Phase 1 - Cheque Review
             services.AddTransient<FinalPaymentViewModel>(); // Phase 1 - Final Payment
             services.AddTransient<PaymentDistributionViewModel>(); // Added for payment distribution
+            
+            // Phase 2 - Enhanced payment processing ViewModels
+            services.AddTransient<ChequePreparationViewModel>(); // Added for cheque preparation
+            services.AddTransient<ChequeDeliveryViewModel>(); // Added for cheque delivery
+            services.AddTransient<ElectronicPaymentProcessingViewModel>(); // Added for electronic payments
+            services.AddTransient<PaymentStatusDashboardViewModel>(); // Added for payment status dashboard
+            services.AddTransient<PaymentReconciliationViewModel>(); // Added for payment reconciliation
+            services.AddTransient<PaymentManagementHubViewModel>(); // Added for payment management hub
+            
             services.AddTransient<LoginViewModel>();
             services.AddTransient<ChangePasswordViewModel>();
             services.AddTransient<UserManagementViewModel>();

@@ -1,5 +1,7 @@
 using System;
 using System.Security; // For SecureString
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using WPFGrowerApp.Commands;
@@ -19,6 +21,8 @@ namespace WPFGrowerApp.ViewModels
         private bool _isLoggingIn;
         private User _authenticatedUser; // Added field to store the user
         private bool _isPasswordVisible; // Added for password toggle
+        private bool _rememberPassword; // Added for remember password functionality
+        private string _rememberedPassword; // Added for storing remembered password
 
         // Action to be called by the View to close the window
         public Action<bool> CloseAction { get; set; }
@@ -32,17 +36,21 @@ namespace WPFGrowerApp.ViewModels
             LoginCommand = new RelayCommand(LoginExecuteAsync, CanLoginExecute);
             TogglePasswordVisibilityCommand = new RelayCommand(TogglePasswordVisibilityExecute); // Added command
 
-            // Load last username from settings
+            // Load last username and remember password setting from settings
             try
             {
                 Username = Properties.Settings.Default.LastUsername;
-                Logger.Info($"Loaded last username: {Username}");
+                RememberPassword = Properties.Settings.Default.RememberPassword;
+                _rememberedPassword = DecryptPassword(Properties.Settings.Default.RememberedPassword);
+                Logger.Info($"Loaded last username: {Username}, RememberPassword: {RememberPassword}");
             }
             catch (Exception ex)
             {
                 // Log error but don't prevent startup
-                Logger.Error("Failed to load LastUsername setting.", ex);
+                Logger.Error("Failed to load settings.", ex);
                 Username = string.Empty; // Default to empty if loading fails
+                RememberPassword = false; // Default to false if loading fails
+                _rememberedPassword = string.Empty;
             }
         }
 
@@ -94,6 +102,18 @@ namespace WPFGrowerApp.ViewModels
         // Property to return the correct icon kind based on visibility state
         public PackIconKind PasswordToggleIconKind => IsPasswordVisible ? PackIconKind.Eye : PackIconKind.EyeOff;
 
+        public bool RememberPassword
+        {
+            get => _rememberPassword;
+            set => SetProperty(ref _rememberPassword, value);
+        }
+
+        public string RememberedPassword
+        {
+            get => _rememberedPassword;
+            set => SetProperty(ref _rememberedPassword, value);
+        }
+
         public ICommand LoginCommand { get; }
         public ICommand TogglePasswordVisibilityCommand { get; } // Added command property
 
@@ -138,6 +158,32 @@ namespace WPFGrowerApp.ViewModels
                 {
                     _authenticatedUser = user; // Store the authenticated user
                     Logger.Info($"User '{Username}' logged in successfully.");
+                    
+                    // Save username and remember password setting
+                    try
+                    {
+                        Properties.Settings.Default.LastUsername = Username;
+                        Properties.Settings.Default.RememberPassword = RememberPassword;
+                        
+                        // Save password if remember is enabled
+                        if (RememberPassword)
+                        {
+                            Properties.Settings.Default.RememberedPassword = EncryptPassword(plainPassword);
+                        }
+                        else
+                        {
+                            Properties.Settings.Default.RememberedPassword = string.Empty;
+                        }
+                        
+                        Properties.Settings.Default.Save();
+                        Logger.Info($"Saved login settings: Username={Username}, RememberPassword={RememberPassword}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error("Failed to save login settings.", ex);
+                        // Don't prevent login if settings save fails
+                    }
+                    
                     // Signal success and close the login window
                     CloseAction?.Invoke(true);
                 }
@@ -167,6 +213,52 @@ namespace WPFGrowerApp.ViewModels
         private void TogglePasswordVisibilityExecute(object parameter)
         {
             IsPasswordVisible = !IsPasswordVisible;
+        }
+
+        // Simple encryption/decryption for password storage
+        // Note: This is basic obfuscation, not enterprise-grade security
+        private string EncryptPassword(string password)
+        {
+            if (string.IsNullOrEmpty(password))
+                return string.Empty;
+
+            try
+            {
+                // Simple base64 encoding with a basic key
+                var key = "BerryFarms2024!";
+                var bytes = Encoding.UTF8.GetBytes(password + key);
+                return Convert.ToBase64String(bytes);
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+
+        private string DecryptPassword(string encryptedPassword)
+        {
+            if (string.IsNullOrEmpty(encryptedPassword))
+                return string.Empty;
+
+            try
+            {
+                // Simple base64 decoding with key removal
+                var key = "BerryFarms2024!";
+                var bytes = Convert.FromBase64String(encryptedPassword);
+                var decrypted = Encoding.UTF8.GetString(bytes);
+                
+                // Remove the key suffix
+                if (decrypted.EndsWith(key))
+                {
+                    return decrypted.Substring(0, decrypted.Length - key.Length);
+                }
+                
+                return string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
         }
     }
 }

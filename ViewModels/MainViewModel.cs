@@ -40,15 +40,13 @@ namespace WPFGrowerApp.ViewModels
             // Update Reports command to navigate to the new ReportsHostViewModel
             NavigateToReportsCommand = new RelayCommand(async p => await NavigateToAsync<ReportsHostViewModel>("Reports", p), CanNavigate); // Use async lambda
             NavigateToInventoryCommand = new RelayCommand(async p => await NavigateToAsync<InventoryViewModel>("Inventory", p), CanNavigate); // Use async lambda
-            NavigateToPaymentRunCommand = new RelayCommand(async p => await NavigateToAsync<PaymentRunViewModel>("Payment Run", p), CanNavigate); // Use async lambda
+            // Payment Management Hub - consolidated payment functionality
+            NavigateToPaymentManagementCommand = new RelayCommand(async p => await NavigateToAsync<PaymentManagementHubViewModel>("Payment Management", p), CanNavigate);
             // Update Settings command to navigate to the new SettingsHostViewModel
             NavigateToSettingsCommand = new RelayCommand(async p => await NavigateToAsync<SettingsHostViewModel>("Settings", p), CanNavigate); // Use async lambda
-            
-            // Phase 1 - New payment management navigation commands
-            NavigateToPaymentBatchesCommand = new RelayCommand(async p => await NavigateToAsync<PaymentBatchViewModel>("Payment Batches", p), CanNavigate);
-            NavigateToChequeManagementCommand = new RelayCommand(async p => await NavigateToAsync<ChequeManagementViewModel>("Cheque Management", p), CanNavigate);
-            NavigateToFinalPaymentCommand = new RelayCommand(async p => await NavigateToAsync<FinalPaymentViewModel>("Final Payment", p), CanNavigate);
-            NavigateToPaymentDistributionCommand = new RelayCommand(async p => await NavigateToPaymentDistributionAsync(p), CanNavigate);
+
+            // Subscribe to PaymentManagementHub navigation events
+            PaymentManagementHubViewModel.NavigationRequested += OnPaymentHubNavigationRequested;
 
             // Set default view model to Dashboard
             _ = NavigateToAsync<DashboardViewModel>("Dashboard"); // Call async method, discard task
@@ -162,16 +160,10 @@ namespace WPFGrowerApp.ViewModels
         public ICommand NavigateToImportCommand { get; }
         public ICommand NavigateToReportsCommand { get; }
         public ICommand NavigateToInventoryCommand { get; }
-        public ICommand NavigateToPaymentRunCommand { get; } // Added
+        public ICommand NavigateToPaymentManagementCommand { get; } // Payment Management Hub
         public ICommand NavigateToSettingsCommand { get; }
         public ICommand NavigateToChangePasswordCommand { get; } // Added
         public ICommand LogoutCommand { get; } // Added
-        
-        // Phase 1 - Payment management navigation
-        public ICommand NavigateToPaymentBatchesCommand { get; }
-        public ICommand NavigateToChequeManagementCommand { get; }
-        public ICommand NavigateToFinalPaymentCommand { get; }
-        public ICommand NavigateToPaymentDistributionCommand { get; }
 
         private bool CanNavigate(object? parameter) => !_isNavigating; // Changed parameter to object?
 
@@ -324,20 +316,27 @@ namespace WPFGrowerApp.ViewModels
 
         // --- End Header Features ---
 
-        private async Task NavigateToPaymentDistributionAsync(object? parameter)
+        // Event handler for PaymentManagementHub navigation requests
+        private async void OnPaymentHubNavigationRequested(Type viewModelType, string viewName)
         {
-            if (!CanNavigate(parameter)) return;
-
             try
             {
-                var viewModel = _serviceProvider.GetRequiredService<PaymentDistributionViewModel>();
-                CurrentViewModel = viewModel;
-                IsMenuOpen = false; // Close menu after navigation
+                // Use reflection to call NavigateToAsync with the correct generic type
+                var method = typeof(MainViewModel).GetMethod(nameof(NavigateToAsync));
+                var genericMethod = method?.MakeGenericMethod(viewModelType);
+                if (genericMethod != null)
+                {
+                    var task = (Task)genericMethod.Invoke(this, new object[] { viewName, null });
+                    if (task != null)
+                    {
+                        await task;
+                    }
+                }
             }
             catch (Exception ex)
             {
-                Infrastructure.Logging.Logger.Error($"Error navigating to Payment Distribution: {ex.Message}", ex);
-                await _dialogService.ShowMessageBoxAsync($"Error navigating to Payment Distribution: {ex.Message}", "Navigation Error");
+                // Log the error or handle it appropriately
+                System.Diagnostics.Debug.WriteLine($"Error navigating to {viewName}: {ex.Message}");
             }
         }
 

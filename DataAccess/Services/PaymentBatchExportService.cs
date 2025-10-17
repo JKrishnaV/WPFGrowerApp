@@ -347,16 +347,19 @@ namespace WPFGrowerApp.DataAccess.Services
                         sheet.Range[$"B{currentRow}"].Text = cheque.GrowerName ?? "";
                         sheet.Range[$"C{currentRow}"].Number = (double)cheque.ChequeAmount;
                         sheet.Range[$"C{currentRow}"].NumberFormat = "$#,##0.00";
-                        sheet.Range[$"D{currentRow}"].Text = cheque.Status ?? "Issued";
+                        sheet.Range[$"D{currentRow}"].Text = cheque.Status ?? "Generated";
 
                         // Color code by status
-                        var status = cheque.Status ?? "Issued";
+                        var status = cheque.Status ?? "Generated";
                         switch (status)
                         {
-                            case "Issued":
+                            case "Generated":
+                                sheet.Range[$"D{currentRow}"].CellStyle.Color = Color.FromArgb(156, 39, 176);
+                                break;
+                            case "Printed":
                                 sheet.Range[$"D{currentRow}"].CellStyle.Color = Color.FromArgb(76, 175, 80);
                                 break;
-                            case "Cleared":
+                            case "Delivered":
                                 sheet.Range[$"D{currentRow}"].CellStyle.Color = Color.FromArgb(33, 150, 243);
                                 break;
                             case "Voided":
@@ -851,7 +854,7 @@ namespace WPFGrowerApp.DataAccess.Services
                 sheet.Range[$"B{currentRow}"].Text = cheque.GrowerName ?? "";
                 sheet.Range[$"C{currentRow}"].Number = (double)cheque.ChequeAmount;
                 sheet.Range[$"C{currentRow}"].NumberFormat = "$#,##0.00";
-                sheet.Range[$"D{currentRow}"].Text = cheque.Status ?? "Issued";
+                sheet.Range[$"D{currentRow}"].Text = cheque.Status ?? "Generated";
                 sheet.Range[$"E{currentRow}"].DateTime = cheque.CreatedAt;
                 sheet.Range[$"E{currentRow}"].NumberFormat = "MMM dd, yyyy";
 

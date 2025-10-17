@@ -106,6 +106,13 @@ namespace WPFGrowerApp.DataAccess.Models
             set => SetProperty(ref _items, value);
         }
 
+        // Navigation properties
+        public int PaymentDistributionId
+        {
+            get => _distributionId;
+            set => SetProperty(ref _distributionId, value);
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)

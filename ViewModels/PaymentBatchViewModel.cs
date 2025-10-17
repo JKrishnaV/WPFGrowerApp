@@ -143,6 +143,7 @@ namespace WPFGrowerApp.ViewModels
         public ICommand PostBatchCommand { get; }
         public ICommand ProcessPaymentsCommand { get; }
         public ICommand NavigateToDashboardCommand { get; }
+        public ICommand NavigateToPaymentManagementCommand { get; }
 
         public PaymentBatchViewModel(
             IPaymentBatchManagementService batchService,
@@ -175,6 +176,7 @@ namespace WPFGrowerApp.ViewModels
             PostBatchCommand = new RelayCommand(async o => await PostBatchAsync(), o => CanPostBatch());
             ProcessPaymentsCommand = new RelayCommand(async o => await ProcessPaymentsAsync(), o => CanProcessPayments());
             NavigateToDashboardCommand = new RelayCommand(NavigateToDashboardExecute);
+            NavigateToPaymentManagementCommand = new RelayCommand(NavigateToPaymentManagementExecute);
 
             // Initialize filters
             InitializeFilters();
@@ -685,6 +687,25 @@ namespace WPFGrowerApp.ViewModels
             catch (Exception ex)
             {
                 Logger.Error("Error navigating to Dashboard", ex);
+            }
+        }
+
+        private void NavigateToPaymentManagementExecute(object? parameter)
+        {
+            try
+            {
+                if (System.Windows.Application.Current?.MainWindow?.DataContext is MainViewModel mainViewModel)
+                {
+                    // Execute the payment management navigation command
+                    if (mainViewModel.NavigateToPaymentManagementCommand?.CanExecute(null) == true)
+                    {
+                        mainViewModel.NavigateToPaymentManagementCommand.Execute(null);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error navigating to Payment Management", ex);
             }
         }
     }

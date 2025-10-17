@@ -211,7 +211,7 @@ namespace WPFGrowerApp.ViewModels
             _batchCheques = new ObservableCollection<Cheque>();
             _filteredCheques = new ObservableCollection<Cheque>();
             GrowerFilterOptions = new ObservableCollection<GrowerFilterOption>();
-            ChequeStatusOptions = new ObservableCollection<string> { "All", "Generated", "Issued", "Cleared", "Voided", "Stopped" };
+            ChequeStatusOptions = new ObservableCollection<string> { "All", "Generated", "Printed", "Delivered", "Voided", "Stopped" };
 
             // Initialize commands
             NavigateBackToBatchListCommand = new RelayCommand(NavigateBackToBatchListExecute);
@@ -527,10 +527,10 @@ namespace WPFGrowerApp.ViewModels
                     }
                     else
                     {
-                        // Fallback: trigger navigation to create new instance
-                        if (mainViewModel.NavigateToPaymentBatchesCommand?.CanExecute(null) == true)
+                        // Fallback: trigger navigation to Payment Management Hub
+                        if (mainViewModel.NavigateToPaymentManagementCommand?.CanExecute(null) == true)
                         {
-                            mainViewModel.NavigateToPaymentBatchesCommand.Execute(null);
+                            mainViewModel.NavigateToPaymentManagementCommand.Execute(null);
                         }
                     }
                 }

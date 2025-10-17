@@ -49,6 +49,12 @@ namespace WPFGrowerApp.Views
 
         private void LoginView_Loaded(object sender, RoutedEventArgs e)
         {
+            // Pre-fill password if remembered
+            if (_viewModel.RememberPassword && !string.IsNullOrEmpty(_viewModel.RememberedPassword))
+            {
+                _passwordBox.Password = _viewModel.RememberedPassword;
+            }
+
             // Set initial focus based on whether username is pre-filled
             if (this.FindName("UsernameTextBox") is TextBox usernameBox)
             {

@@ -116,12 +116,33 @@
         <views:PaymentBatchDetailView />
     </DataTemplate>
     
-    <DataTemplate DataType="{x:Type viewmodels:ChequeManagementViewModel}">
-        <views:ChequeManagementView />
+    <DataTemplate DataType="{x:Type viewmodels:ChequeReviewViewModel}">
+        <views:ChequeReviewView />
     </DataTemplate>
     
     <DataTemplate DataType="{x:Type viewmodels:FinalPaymentViewModel}">
         <views:FinalPaymentView />
+    </DataTemplate>
+    
+    <!-- Phase 2 - Enhanced Payment Processing View Mappings -->
+    <DataTemplate DataType="{x:Type viewmodels:ChequePreparationViewModel}">
+        <views:ChequePreparationView />
+    </DataTemplate>
+    
+    <DataTemplate DataType="{x:Type viewmodels:ChequeDeliveryViewModel}">
+        <views:ChequeDeliveryView />
+    </DataTemplate>
+    
+    <DataTemplate DataType="{x:Type viewmodels:ElectronicPaymentProcessingViewModel}">
+        <views:ElectronicPaymentProcessingView />
+    </DataTemplate>
+    
+    <DataTemplate DataType="{x:Type viewmodels:PaymentStatusDashboardViewModel}">
+        <views:PaymentStatusDashboardView />
+    </DataTemplate>
+    
+    <DataTemplate DataType="{x:Type viewmodels:PaymentReconciliationViewModel}">
+        <views:PaymentReconciliationView />
     </DataTemplate>
     
     <!-- Add other dialog mappings here if needed -->

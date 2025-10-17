@@ -164,7 +164,6 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 
                     <!-- Grower Management Card -->
@@ -241,19 +240,19 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Payment Run Card -->
+                    <!-- Payment Management Card -->
                     <Border Grid.Row="1" Grid.Column="1" 
                             Style="{StaticResource DashboardCardStyle}">
                         <Border.InputBindings>
                             <MouseBinding MouseAction="LeftClick" 
-                                          Command="{Binding DataContext.NavigateToPaymentRunCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/>
+                                          Command="{Binding DataContext.NavigateToPaymentManagementCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/>
                         </Border.InputBindings>
                         <StackPanel>
                             <TextBlock Text="💰" Style="{StaticResource DashboardIconStyle}"/>
-                            <TextBlock Text="Payment Run" Style="{StaticResource CardTitleStyle}"/>
+                            <TextBlock Text="Payment Management" Style="{StaticResource CardTitleStyle}"/>
                             <TextBlock Text="{Binding PendingPayments, StringFormat='{}{0:N0}'}" Style="{StaticResource StatsTextStyle}"/>
                             <TextBlock Text="Pending Payments" Style="{StaticResource DarkBodyTextStyle}" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Ready to Process" Style="{StaticResource DarkBodyTextStyle}" 
+                            <TextBlock Text="Manage All Payments" Style="{StaticResource DarkBodyTextStyle}" 
                                        HorizontalAlignment="Center"
                                        Foreground="{DynamicResource TextSecondary}"/>
                         </StackPanel>
@@ -277,59 +276,6 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Final Payment Card -->
-                    <Border Grid.Row="2" Grid.Column="0" 
-                            Style="{StaticResource DashboardCardStyle}">
-                        <Border.InputBindings>
-                            <MouseBinding MouseAction="LeftClick" 
-                                          Command="{Binding DataContext.NavigateToFinalPaymentCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/>
-                        </Border.InputBindings>
-                        <StackPanel>
-                            <TextBlock Text="🏁" Style="{StaticResource DashboardIconStyle}"/>
-                            <TextBlock Text="Final Payment" Style="{StaticResource CardTitleStyle}"/>
-                            <TextBlock Text="Year-End" Style="{StaticResource StatsTextStyle}" FontSize="18"/>
-                            <TextBlock Text="Final Payments" Style="{StaticResource DarkBodyTextStyle}" HorizontalAlignment="Center"/>
-                            <TextBlock Text="After All Advances" Style="{StaticResource DarkBodyTextStyle}" 
-                                       HorizontalAlignment="Center"
-                                       Foreground="{DynamicResource TextSecondary}"/>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Payment Batch Management Card -->
-                    <Border Grid.Row="2" Grid.Column="1" 
-                            Style="{StaticResource DashboardCardStyle}">
-                        <Border.InputBindings>
-                            <MouseBinding MouseAction="LeftClick" 
-                                          Command="{Binding DataContext.NavigateToPaymentBatchesCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/>
-                        </Border.InputBindings>
-                        <StackPanel>
-                            <TextBlock Text="📦" Style="{StaticResource DashboardIconStyle}"/>
-                            <TextBlock Text="Payment Batches" Style="{StaticResource CardTitleStyle}"/>
-                            <TextBlock Text="Batch Mgmt" Style="{StaticResource StatsTextStyle}" FontSize="18"/>
-                            <TextBlock Text="Batch Management" Style="{StaticResource DarkBodyTextStyle}" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Track &amp; Void" Style="{StaticResource DarkBodyTextStyle}" 
-                                       HorizontalAlignment="Center"
-                                       Foreground="{DynamicResource TextSecondary}"/>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Cheque Management Card -->
-                    <Border Grid.Row="2" Grid.Column="2" 
-                            Style="{StaticResource DashboardCardStyle}">
-                        <Border.InputBindings>
-                            <MouseBinding MouseAction="LeftClick" 
-                                          Command="{Binding DataContext.NavigateToChequeManagementCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"/>
-                        </Border.InputBindings>
-                        <StackPanel>
-                            <TextBlock Text="💳" Style="{StaticResource DashboardIconStyle}"/>
-                            <TextBlock Text="Cheque Management" Style="{StaticResource CardTitleStyle}"/>
-                            <TextBlock Text="Cheque Mgmt" Style="{StaticResource StatsTextStyle}" FontSize="18"/>
-                            <TextBlock Text="Void &amp; Reissue" Style="{StaticResource DarkBodyTextStyle}" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Search &amp; Track" Style="{StaticResource DarkBodyTextStyle}" 
-                                       HorizontalAlignment="Center"
-                                       Foreground="{DynamicResource TextSecondary}"/>
-                        </StackPanel>
-                    </Border>
                 </Grid>
                 
                 <!-- Loading Indicator - Theme Aware -->

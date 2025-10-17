@@ -198,6 +198,8 @@ namespace WPFGrowerApp.ViewModels
         public ICommand ViewBatchDetailsCommand { get; }
         public ICommand ShowHelpCommand { get; }
         public ICommand RefreshCommand { get; }
+        public ICommand NavigateToDashboardCommand { get; }
+        public ICommand NavigateToPaymentManagementCommand { get; }
 
         public FinalPaymentViewModel(
             IPaymentService paymentService,
@@ -241,6 +243,8 @@ namespace WPFGrowerApp.ViewModels
             ViewBatchDetailsCommand = new RelayCommand(async o => await ViewBatchDetailsAsync(), o => CurrentBatch != null);
             ShowHelpCommand = new RelayCommand(o => ShowHelp());
             RefreshCommand = new RelayCommand(async o => await RefreshAsync());
+            NavigateToDashboardCommand = new RelayCommand(NavigateToDashboardExecute);
+            NavigateToPaymentManagementCommand = new RelayCommand(NavigateToPaymentManagementExecute);
 
             // Initialize crop years
             for (int i = 0; i < 5; i++)
@@ -680,6 +684,42 @@ namespace WPFGrowerApp.ViewModels
         {
             var helpContent = _helpContentProvider.GetHelpContent("FinalPayment");
             await _dialogService.ShowMessageBoxAsync(helpContent?.Content ?? "Help content not available.", "Final Payment Help");
+        }
+
+        private void NavigateToDashboardExecute(object? parameter)
+        {
+            try
+            {
+                if (System.Windows.Application.Current?.MainWindow?.DataContext is MainViewModel mainViewModel)
+                {
+                    if (mainViewModel.NavigateToDashboardCommand?.CanExecute(null) == true)
+                    {
+                        mainViewModel.NavigateToDashboardCommand.Execute(null);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error navigating to Dashboard", ex);
+            }
+        }
+
+        private void NavigateToPaymentManagementExecute(object? parameter)
+        {
+            try
+            {
+                if (System.Windows.Application.Current?.MainWindow?.DataContext is MainViewModel mainViewModel)
+                {
+                    if (mainViewModel.NavigateToPaymentManagementCommand?.CanExecute(null) == true)
+                    {
+                        mainViewModel.NavigateToPaymentManagementCommand.Execute(null);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error navigating to Payment Management", ex);
+            }
         }
 
         // IProgress<string> implementation

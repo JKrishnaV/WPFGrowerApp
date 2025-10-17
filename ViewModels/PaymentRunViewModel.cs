@@ -647,6 +647,10 @@ namespace WPFGrowerApp.ViewModels
         public ICommand SelectAllPayGroupsCommand => new RelayCommand(o => SelectAllPayGroups());
         public ICommand ClearAllPayGroupsCommand => new RelayCommand(o => ClearAllPayGroups());
         
+        // Navigation Commands
+        public ICommand NavigateToDashboardCommand => new RelayCommand(NavigateToDashboardExecute);
+        public ICommand NavigateToPaymentManagementCommand => new RelayCommand(NavigateToPaymentManagementExecute);
+        
         // Run Log Commands
         public ICommand CopyRunLogCommand => new RelayCommand(o => CopyRunLogToClipboard());
         public ICommand CopySelectedRunLogCommand => new RelayCommand(o => CopySelectedRunLogToClipboard());
@@ -2163,6 +2167,46 @@ namespace WPFGrowerApp.ViewModels
             sb.AppendLine("(Only valid receipts will be included in the payment.)");
             
             return sb.ToString();
+        }
+
+        #endregion
+
+        #region Navigation Methods
+
+        private void NavigateToDashboardExecute(object? parameter)
+        {
+            try
+            {
+                if (System.Windows.Application.Current?.MainWindow?.DataContext is MainViewModel mainViewModel)
+                {
+                    if (mainViewModel.NavigateToDashboardCommand?.CanExecute(null) == true)
+                    {
+                        mainViewModel.NavigateToDashboardCommand.Execute(null);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error navigating to Dashboard: {ex.Message}";
+            }
+        }
+
+        private void NavigateToPaymentManagementExecute(object? parameter)
+        {
+            try
+            {
+                if (System.Windows.Application.Current?.MainWindow?.DataContext is MainViewModel mainViewModel)
+                {
+                    if (mainViewModel.NavigateToPaymentManagementCommand?.CanExecute(null) == true)
+                    {
+                        mainViewModel.NavigateToPaymentManagementCommand.Execute(null);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error navigating to Payment Management: {ex.Message}";
+            }
         }
 
         #endregion

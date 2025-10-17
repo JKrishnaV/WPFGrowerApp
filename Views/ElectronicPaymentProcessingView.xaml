@@ -1,0 +1,123 @@
+<UserControl x:Class="WPFGrowerApp.Views.ElectronicPaymentProcessingView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             mc:Ignorable="d" 
+             d:DesignHeight="800" d:DesignWidth="1200">
+    
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign2.Defaults.xaml" />
+                <ResourceDictionary Source="/Styles/StandardizedViewTemplate.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Breadcrumb -->
+            <RowDefinition Height="Auto"/> <!-- Header -->
+            <RowDefinition Height="Auto"/> <!-- Content -->
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Breadcrumb Navigation -->
+        <materialDesign:ColorZone Grid.Row="0" Style="{StaticResource BreadcrumbNavigationStyle}">
+            <StackPanel Orientation="Horizontal">
+                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                        Padding="5,0"
+                        Command="{Binding NavigateToDashboardCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Home" Width="16" Height="16" 
+                                               VerticalAlignment="Center" Margin="0,0,5,0"/>
+                        <TextBlock Text="Dashboard" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+                <materialDesign:PackIcon Kind="ChevronRight" Width="16" Height="16" 
+                                       VerticalAlignment="Center" Margin="5,0"/>
+                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                        Padding="5,0"
+                        Command="{Binding NavigateToPaymentManagementCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="CreditCard" Width="16" Height="16" 
+                                               VerticalAlignment="Center" Margin="0,0,5,0"/>
+                        <TextBlock Text="Payment Management" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+                <materialDesign:PackIcon Kind="ChevronRight" Width="16" Height="16" 
+                                       VerticalAlignment="Center" Margin="5,0"/>
+                <TextBlock Text="Electronic Payment Processing" FontSize="12" VerticalAlignment="Center"/>
+            </StackPanel>
+        </materialDesign:ColorZone>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,20">
+            <materialDesign:PackIcon Kind="Bank" Width="32" Height="32" VerticalAlignment="Center" Margin="0,0,10,0"/>
+            <TextBlock Text="Electronic Payment Processing" FontSize="24" FontWeight="Bold" VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Controls -->
+        <GroupBox Grid.Row="2" Header="Processing Controls" Margin="0,0,0,20">
+            <StackPanel Margin="20" Orientation="Horizontal">
+                <Button Content="Select All" 
+                        Command="{Binding SelectAllCommand}"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Margin="0,0,10,0"/>
+                <Button Content="Clear Selection" 
+                        Command="{Binding ClearSelectionCommand}"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Margin="0,0,10,0"/>
+                <Button Content="Generate NACHA File" 
+                        Command="{Binding GenerateNachaFileCommand}"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Margin="0,0,10,0"/>
+                <Button Content="Mark as Processed" 
+                        Command="{Binding MarkAsProcessedCommand}"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Margin="0,0,10,0"/>
+                <Button Content="Refresh" 
+                        Command="{Binding RefreshCommand}"
+                        Style="{StaticResource MaterialDesignRaisedButton}"/>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- Electronic Payments List -->
+        <GroupBox Grid.Row="3" Header="Electronic Payments">
+            <DataGrid ItemsSource="{Binding ElectronicPayments}" 
+                      AutoGenerateColumns="False" 
+                      CanUserAddRows="False" 
+                      CanUserDeleteRows="False"
+                      GridLinesVisibility="Horizontal"
+                      HeadersVisibility="Column"
+                      Margin="10"
+                      SelectionMode="Extended">
+                <DataGrid.Columns>
+                    <DataGridCheckBoxColumn Header="Select" 
+                                            Binding="{Binding IsSelected}" 
+                                            Width="60"/>
+                    <DataGridTextColumn Header="Reference" 
+                                        Binding="{Binding ReferenceNumber}" 
+                                        Width="200"/>
+                    <DataGridTextColumn Header="Grower" 
+                                        Binding="{Binding GrowerName}" 
+                                        Width="200"/>
+                    <DataGridTextColumn Header="Amount" 
+                                        Binding="{Binding Amount, StringFormat=C}" 
+                                        Width="120"/>
+                    <DataGridTextColumn Header="Payment Date" 
+                                        Binding="{Binding PaymentDate, StringFormat='{}{0:MMM dd, yyyy}'}" 
+                                        Width="120"/>
+                    <DataGridTextColumn Header="Status" 
+                                        Binding="{Binding Status}" 
+                                        Width="100"/>
+                    <DataGridTextColumn Header="Method" 
+                                        Binding="{Binding PaymentMethod}" 
+                                        Width="150"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </GroupBox>
+    </Grid>
+</UserControl>

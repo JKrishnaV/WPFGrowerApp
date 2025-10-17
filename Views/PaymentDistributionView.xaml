@@ -11,7 +11,7 @@
                 <ResourceDictionary Source="/Styles/StandardizedViewTemplate.xaml"/>
             </ResourceDictionary.MergedDictionaries>
             
-            <converters:BoolToVisibilityConverter x:Key="BoolToVisConverter"/>
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
             <converters:StatusToVisibilityConverter x:Key="StatusToVisibilityConverter"/>
         </ResourceDictionary>
     </UserControl.Resources>
@@ -35,6 +35,17 @@
                         <materialDesign:PackIcon Kind="Home" Width="16" Height="16" 
                                                VerticalAlignment="Center" Margin="0,0,5,0"/>
                         <TextBlock Text="Dashboard" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+                <materialDesign:PackIcon Kind="ChevronRight" Width="16" Height="16" 
+                                       VerticalAlignment="Center" Margin="5,0"/>
+                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                        Padding="5,0"
+                        Command="{Binding NavigateToPaymentManagementCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="CreditCard" Width="16" Height="16" 
+                                               VerticalAlignment="Center" Margin="0,0,5,0"/>
+                        <TextBlock Text="Payment Management" FontSize="12"/>
                     </StackPanel>
                 </Button>
                 <materialDesign:PackIcon Kind="ChevronRight" Width="16" Height="16" 
@@ -194,7 +205,7 @@
                                       Foreground="Gray"
                                       TextWrapping="Wrap"
                                       Margin="0,5,0,0"
-                                      Visibility="{Binding IsHybridMode, Converter={StaticResource BoolToVisConverter}}"/>
+                                      Visibility="{Binding IsHybridMode, Converter={StaticResource BoolToVisibilityConverter}}"/>
                         </StackPanel>
                     </GroupBox>
                     
@@ -250,6 +261,74 @@
                                 Style="{StaticResource MaterialDesignFlatButton}"
                                 Margin="5,0"/>
                     </StackPanel>
+                    
+                    <!-- Next Steps Panel -->
+                    <GroupBox Grid.Row="6" Header="Next Steps" Margin="20,10" Visibility="{Binding ShowNextSteps, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <StackPanel Margin="20">
+                            <TextBlock Text="After generating payments, you can proceed with the following steps:" 
+                                       Style="{StaticResource BodyTextStyle}"
+                                       Margin="0,0,0,15"/>
+                            
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <!-- Cheque Processing -->
+                                <materialDesign:Card Grid.Column="0" Margin="0,0,10,0" Style="{StaticResource StatisticsCardStyle}">
+                                    <StackPanel Margin="20">
+                                        <materialDesign:PackIcon Kind="Printer" Width="32" Height="32" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                                        <TextBlock Text="Cheque Printing" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                                        <TextBlock Text="Print generated cheques for physical distribution" 
+                                                   TextWrapping="Wrap" 
+                                                   HorizontalAlignment="Center"
+                                                   Style="{StaticResource BodyTextStyle}"
+                                                   Margin="0,0,0,10"/>
+                                        <Button Content="Go to Cheque Preparation" 
+                                                Command="{Binding NavigateToChequePreparationCommand}"
+                                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </materialDesign:Card>
+                                
+                                <!-- Electronic Payment Processing -->
+                                <materialDesign:Card Grid.Column="1" Margin="5,0" Style="{StaticResource StatisticsCardStyle}">
+                                    <StackPanel Margin="20">
+                                        <materialDesign:PackIcon Kind="Bank" Width="32" Height="32" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                                        <TextBlock Text="Electronic Payments" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                                        <TextBlock Text="Generate NACHA files for electronic payment processing" 
+                                                   TextWrapping="Wrap" 
+                                                   HorizontalAlignment="Center"
+                                                   Style="{StaticResource BodyTextStyle}"
+                                                   Margin="0,0,0,10"/>
+                                        <Button Content="Go to Electronic Payments" 
+                                                Command="{Binding NavigateToElectronicPaymentsCommand}"
+                                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </materialDesign:Card>
+                                
+                                <!-- Payment Status Dashboard -->
+                                <materialDesign:Card Grid.Column="2" Margin="10,0,0,0" Style="{StaticResource StatisticsCardStyle}">
+                                    <StackPanel Margin="20">
+                                        <materialDesign:PackIcon Kind="ViewDashboard" Width="32" Height="32" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                                        <TextBlock Text="Payment Status" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                                        <TextBlock Text="Monitor payment status and delivery tracking" 
+                                                   TextWrapping="Wrap" 
+                                                   HorizontalAlignment="Center"
+                                                   Style="{StaticResource BodyTextStyle}"
+                                                   Margin="0,0,0,10"/>
+                                        <Button Content="Go to Payment Status" 
+                                                Command="{Binding NavigateToPaymentStatusCommand}"
+                                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </materialDesign:Card>
+                            </Grid>
+                        </StackPanel>
+                    </GroupBox>
                 </Grid>
             </materialDesign:Card>
         </Grid>
@@ -269,7 +348,7 @@
                 
                 <ProgressBar Grid.Column="1" 
                              IsIndeterminate="True"
-                             Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisConverter}}"
+                             Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"
                              Width="100"
                              Height="20"/>
             </Grid>

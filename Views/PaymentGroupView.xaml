@@ -65,12 +65,12 @@
                 <materialDesign:PackIcon Kind="ChevronRight" Width="16" Height="16" 
                                         VerticalAlignment="Center" Margin="5,0"/>
                 <Button Style="{StaticResource MaterialDesignFlatButton}"
-                        Command="{Binding NavigateToSettingsCommand}"
+                        Command="{Binding NavigateToPaymentManagementCommand}"
                         Padding="5,0">
                     <StackPanel Orientation="Horizontal">
-                        <materialDesign:PackIcon Kind="Cog" Width="16" Height="16" 
+                        <materialDesign:PackIcon Kind="CreditCard" Width="16" Height="16" 
                                                VerticalAlignment="Center" Margin="0,0,5,0"/>
-                        <TextBlock Text="Settings" FontSize="12"/>
+                        <TextBlock Text="Payment Management" FontSize="12"/>
                     </StackPanel>
                 </Button>
                 <materialDesign:PackIcon Kind="ChevronRight" Width="16" Height="16" 

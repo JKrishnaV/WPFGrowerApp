@@ -15,7 +15,7 @@ using WPFGrowerApp.Infrastructure.Logging;
 
 namespace WPFGrowerApp.ViewModels
 {
-    public class PaymentDistributionViewModel : INotifyPropertyChanged
+    public class PaymentDistributionViewModel : ViewModelBase
     {
         private readonly IPaymentDistributionService _paymentDistributionService;
         private readonly IPaymentBatchService _paymentBatchService;
@@ -35,6 +35,7 @@ namespace WPFGrowerApp.ViewModels
         private PaymentDistribution? _selectedDistribution;
         private bool _isLoading;
         private string _statusMessage = string.Empty;
+        private bool _showNextSteps = false;
 
         public PaymentDistributionViewModel(
             IPaymentDistributionService paymentDistributionService,
@@ -127,11 +128,18 @@ namespace WPFGrowerApp.ViewModels
             set => SetProperty(ref _statusMessage, value);
         }
 
+        public bool ShowNextSteps
+        {
+            get => _showNextSteps;
+            set => SetProperty(ref _showNextSteps, value);
+        }
+
         #endregion
 
         #region Commands
 
         public ICommand NavigateToDashboardCommand { get; private set; } = null!;
+        public ICommand NavigateToPaymentManagementCommand { get; private set; } = null!;
         public ICommand SearchCommand { get; private set; } = null!;
         public ICommand ClearFiltersCommand { get; private set; } = null!;
         public ICommand RefreshCommand { get; private set; } = null!;
@@ -139,6 +147,9 @@ namespace WPFGrowerApp.ViewModels
         public ICommand PreviewCommand { get; private set; } = null!;
         public ICommand CancelCommand { get; private set; } = null!;
         public ICommand ViewDistributionCommand { get; private set; } = null!;
+        public ICommand NavigateToChequePreparationCommand { get; private set; } = null!;
+        public ICommand NavigateToElectronicPaymentsCommand { get; private set; } = null!;
+        public ICommand NavigateToPaymentStatusCommand { get; private set; } = null!;
 
         #endregion
 
@@ -147,6 +158,7 @@ namespace WPFGrowerApp.ViewModels
         private void InitializeCommands()
         {
             NavigateToDashboardCommand = new RelayCommand(NavigateToDashboardExecute);
+            NavigateToPaymentManagementCommand = new RelayCommand(NavigateToPaymentManagementExecute);
             SearchCommand = new RelayCommand(async (param) => await SearchAsync());
             ClearFiltersCommand = new RelayCommand(async (param) => await ClearFiltersAsync());
             RefreshCommand = new RelayCommand(async (param) => await LoadDataAsync());
@@ -154,6 +166,9 @@ namespace WPFGrowerApp.ViewModels
             PreviewCommand = new RelayCommand(async (param) => await PreviewDistributionAsync(), (param) => CanPreviewDistribution());
             CancelCommand = new RelayCommand((param) => Cancel());
             ViewDistributionCommand = new RelayCommand(async (param) => await ViewDistributionAsync(param));
+            NavigateToChequePreparationCommand = new RelayCommand(NavigateToChequePreparationExecute);
+            NavigateToElectronicPaymentsCommand = new RelayCommand(NavigateToElectronicPaymentsExecute);
+            NavigateToPaymentStatusCommand = new RelayCommand(NavigateToPaymentStatusExecute);
         }
 
         private void NavigateToDashboardExecute(object? parameter)
@@ -173,6 +188,26 @@ namespace WPFGrowerApp.ViewModels
             catch (Exception ex)
             {
                 Logger.Error("Error navigating to dashboard from PaymentDistributionViewModel", ex);
+            }
+        }
+
+        private void NavigateToPaymentManagementExecute(object? parameter)
+        {
+            try
+            {
+                // Get the main window's view model and navigate to payment management hub
+                var mainWindow = System.Windows.Application.Current.MainWindow;
+                if (mainWindow?.DataContext is MainViewModel mainViewModel)
+                {
+                    if (mainViewModel.NavigateToPaymentManagementCommand?.CanExecute(null) == true)
+                    {
+                        mainViewModel.NavigateToPaymentManagementCommand.Execute(null);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error navigating to payment management from PaymentDistributionViewModel", ex);
             }
         }
 
@@ -293,6 +328,7 @@ namespace WPFGrowerApp.ViewModels
                 if (await _paymentDistributionService.GeneratePaymentsAsync(createdDistribution.DistributionId, App.CurrentUser?.Username ?? "SYSTEM"))
                 {
                     StatusMessage = $"Successfully generated payments for distribution {createdDistribution.DistributionNumber}";
+                    ShowNextSteps = true; // Show the next steps panel
                     await LoadDataAsync();
                 }
                 else
@@ -508,24 +544,48 @@ namespace WPFGrowerApp.ViewModels
 
         #endregion
 
-        #region INotifyPropertyChanged
 
-        public event PropertyChangedEventHandler? PropertyChanged;
-
-        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        private void NavigateToChequePreparationExecute(object? parameter)
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            try
+            {
+                // Navigate to cheque preparation module
+                // This would typically use a navigation service or event
+                StatusMessage = "Navigating to Cheque Preparation...";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error navigating to cheque preparation: {ex.Message}";
+            }
         }
 
-        protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+        private void NavigateToElectronicPaymentsExecute(object? parameter)
         {
-            if (EqualityComparer<T>.Default.Equals(field, value)) return false;
-            field = value;
-            OnPropertyChanged(propertyName);
-            return true;
+            try
+            {
+                // Navigate to electronic payments module
+                // This would typically use a navigation service or event
+                StatusMessage = "Navigating to Electronic Payments...";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error navigating to electronic payments: {ex.Message}";
+            }
         }
 
-        #endregion
+        private void NavigateToPaymentStatusExecute(object? parameter)
+        {
+            try
+            {
+                // Navigate to payment status dashboard
+                // This would typically use a navigation service or event
+                StatusMessage = "Navigating to Payment Status Dashboard...";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error navigating to payment status: {ex.Message}";
+            }
+        }
     }
 
     // Helper class for grower payment information

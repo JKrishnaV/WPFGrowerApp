@@ -101,6 +101,7 @@ namespace WPFGrowerApp.ViewModels
         public ICommand SearchCommand { get; }
         public ICommand ClearFiltersCommand { get; }
         public ICommand NavigateToDashboardCommand { get; }
+        public ICommand NavigateToPaymentManagementCommand { get; }
         public ICommand NavigateToSettingsCommand { get; }
         public ICommand ShowHelpCommand { get; }
 
@@ -124,6 +125,7 @@ namespace WPFGrowerApp.ViewModels
             SearchCommand = new RelayCommand(_ => FilterPayGroups());
             ClearFiltersCommand = new RelayCommand(_ => ClearFilters());
             NavigateToDashboardCommand = new RelayCommand(_ => NavigateToDashboard());
+            NavigateToPaymentManagementCommand = new RelayCommand(_ => NavigateToPaymentManagement());
             NavigateToSettingsCommand = new RelayCommand(_ => NavigateToSettings());
             ShowHelpCommand = new RelayCommand(_ => ShowHelp());
 
@@ -449,6 +451,26 @@ namespace WPFGrowerApp.ViewModels
             {
                 System.Diagnostics.Debug.WriteLine($"Error navigating to settings: {ex.Message}");
                 StatusMessage = "Error navigating to settings";
+            }
+        }
+
+        private void NavigateToPaymentManagement()
+        {
+            try
+            {
+                var mainWindow = Application.Current.MainWindow;
+                if (mainWindow?.DataContext is MainViewModel mainViewModel)
+                {
+                    if (mainViewModel.NavigateToPaymentManagementCommand?.CanExecute(null) == true)
+                    {
+                        mainViewModel.NavigateToPaymentManagementCommand.Execute(null);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error navigating to payment management: {ex.Message}");
+                StatusMessage = "Error navigating to payment management";
             }
         }
 

@@ -122,6 +122,11 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// </summary>
         Task<List<Cheque>> GetUnprintedChequesAsync(int? paymentBatchId = null);
 
+        /// <summary>
+        /// Get all cheques (regardless of print status)
+        /// </summary>
+        Task<List<Cheque>> GetAllChequesAsync(int? paymentBatchId = null);
+
         // ==============================================================
         // PRINTING SUPPORT
         // ==============================================================

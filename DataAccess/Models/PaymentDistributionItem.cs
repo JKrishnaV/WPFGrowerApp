@@ -21,6 +21,8 @@ namespace WPFGrowerApp.DataAccess.Models
         private string _createdBy;
         private DateTime? _processedAt;
         private string _processedBy;
+        private int? _chequeId;
+        private int? _electronicPaymentId;
 
         public int ItemId
         {
@@ -111,6 +113,8 @@ namespace WPFGrowerApp.DataAccess.Models
             get => _processedBy;
             set => SetProperty(ref _processedBy, value);
         }
+
+
 
         public event PropertyChangedEventHandler? PropertyChanged;
 

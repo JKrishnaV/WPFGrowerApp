@@ -35,6 +35,8 @@ namespace WPFGrowerApp.Services
             services.AddSingleton<IPaymentBatchManagementService, PaymentBatchManagementService>();
             services.AddSingleton<IChequeGenerationService, ChequeGenerationService>();
             services.AddSingleton<IPaymentService, PaymentService>();
+            services.AddSingleton<IElectronicPaymentService, ElectronicPaymentService>();
+            services.AddSingleton<IPaymentBatchService, PaymentBatchService>();
             
             // Register Application Services (Printing)
             services.AddSingleton<IChequePrintingService, ChequePrintingService>();
@@ -49,8 +51,11 @@ namespace WPFGrowerApp.Services
             // Register Payment ViewModels (Phase 1)
             services.AddTransient<PaymentRunViewModel>();
             services.AddTransient<PaymentBatchViewModel>();
-            services.AddTransient<ChequeManagementViewModel>();
+            services.AddTransient<ChequeReviewViewModel>();
+            services.AddTransient<ChequePreparationViewModel>();
+            services.AddTransient<ChequeDeliveryViewModel>();
             services.AddTransient<FinalPaymentViewModel>();
+            services.AddTransient<PaymentManagementHubViewModel>();
 
             _serviceProvider = services.BuildServiceProvider();
         }

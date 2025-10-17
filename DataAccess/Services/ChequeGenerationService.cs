@@ -84,7 +84,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         CurrencyCode = !string.IsNullOrWhiteSpace(grower.CurrencyCode) ? grower.CurrencyCode : "CAD",
                         PayeeName = !string.IsNullOrWhiteSpace(grower.ChequeName) ? grower.ChequeName : grower.GrowerName,
                         Memo = memo,
-                        Status = "Issued",
+                        Status = "Generated",
                         CreatedAt = DateTime.Now,
                         CreatedBy = createdBy
                     });
@@ -204,7 +204,7 @@ namespace WPFGrowerApp.DataAccess.Services
                 ChequeAmount = payment.PaymentAmount,
                 PayeeName = payment.GrowerName,
                 Memo = payment.Memo,
-                Status = "Issued",
+                Status = "Generated",
                 CreatedAt = DateTime.Now,
                 CreatedBy = createdBy
             });
@@ -492,7 +492,7 @@ namespace WPFGrowerApp.DataAccess.Services
                                 CurrencyCode = originalCheque.CurrencyCode,
                                 PayeeName = originalCheque.PayeeName,
                                 Memo = $"Reissue of cheque {originalCheque.ChequeNumber} (orig date: {originalCheque.ChequeDate:yyyy-MM-dd})",
-                                Status = "Issued",
+                                Status = "Generated",
                                 CreatedAt = DateTime.Now,
                                 CreatedBy = reissuedBy
                             }, transaction);
@@ -664,6 +664,45 @@ namespace WPFGrowerApp.DataAccess.Services
             catch (Exception ex)
             {
                 Logger.Error($"Error searching cheques: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get all cheques (regardless of print status)
+        /// </summary>
+        public async Task<List<Cheque>> GetAllChequesAsync(int? paymentBatchId = null)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    
+                    var sql = @"
+                        SELECT 
+                            c.*,
+                            g.FullName AS GrowerName,
+                            cs.SeriesCode
+                        FROM Cheques c
+                        INNER JOIN Growers g ON c.GrowerId = g.GrowerId
+                        INNER JOIN ChequeSeries cs ON c.ChequeSeriesId = cs.ChequeSeriesId
+                        WHERE c.DeletedAt IS NULL
+                          AND (@PaymentBatchId IS NULL OR c.PaymentBatchId = @PaymentBatchId)
+                        ORDER BY c.ChequeDate DESC, c.ChequeNumber DESC";
+
+                    var cheques = (await connection.QueryAsync<Cheque>(sql, new
+                    {
+                        PaymentBatchId = paymentBatchId
+                    })).ToList();
+
+                    Logger.Info($"Found {cheques.Count} total cheques");
+                    return cheques;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting all cheques: {ex.Message}", ex);
                 throw;
             }
         }

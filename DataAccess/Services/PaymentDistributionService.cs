@@ -441,5 +441,27 @@ namespace WPFGrowerApp.DataAccess.Services
                 ModifiedBy = App.CurrentUser?.Username ?? "SYSTEM"
             }, transaction);
         }
+
+        public async Task<List<PaymentDistribution>> GetAllDistributionsAsync()
+        {
+            try
+            {
+                using var connection = new SqlConnection(_connectionString);
+                await connection.OpenAsync();
+
+                var sql = @"
+                    SELECT *
+                    FROM PaymentDistributions
+                    ORDER BY DistributionDate DESC";
+
+                var distributions = await connection.QueryAsync<PaymentDistribution>(sql);
+                return distributions.ToList();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error retrieving all distributions: {ex.Message}", ex);
+                throw;
+            }
+        }
     }
 }

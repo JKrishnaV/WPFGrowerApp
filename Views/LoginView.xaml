@@ -51,6 +51,11 @@
                             Margin="0,0,0,10"
                             Style="{StaticResource MaterialDesignFloatingHintRevealPasswordBox}"/>                    
                 
+            <!-- Remember Password Checkbox -->
+            <CheckBox Content="Remember Password"
+                      IsChecked="{Binding RememberPassword}"
+                      Margin="0,0,0,10"
+                      Style="{StaticResource MaterialDesignCheckBox}"/>
 
             <!-- Error Message -->
              <TextBlock Text="{Binding ErrorMessage}"

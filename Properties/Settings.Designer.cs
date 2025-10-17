@@ -34,7 +34,7 @@ namespace WPFGrowerApp.Properties {
                 this["LastUsername"] = value;
             }
         }
-    [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("1.0")]
         public double FontScalingFactor {
@@ -43,6 +43,30 @@ namespace WPFGrowerApp.Properties {
             }
             set {
                 this["FontScalingFactor"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool RememberPassword {
+            get {
+                return ((bool)(this["RememberPassword"]));
+            }
+            set {
+                this["RememberPassword"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string RememberedPassword {
+            get {
+                return ((string)(this["RememberedPassword"]));
+            }
+            set {
+                this["RememberedPassword"] = value;
             }
         }
     }
