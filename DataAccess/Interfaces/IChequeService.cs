@@ -8,11 +8,13 @@ namespace WPFGrowerApp.DataAccess.Interfaces
     public interface IChequeService : IDatabaseService
     {
         Task<List<Cheque>> GetAllChequesAsync();
+        Task<Cheque> GetChequeByIdAsync(int chequeId);
         Task<Cheque> GetChequeBySeriesAndNumberAsync(string series, decimal chequeNumber);
         Task<List<Cheque>> GetChequesByGrowerNumberAsync(decimal growerNumber);
         Task<List<Cheque>> GetChequesByDateRangeAsync(DateTime startDate, DateTime endDate);
         Task<bool> SaveChequeAsync(Cheque cheque); // Used for manual cheque entry? Keep for now.
         Task<bool> VoidChequeAsync(string series, decimal chequeNumber);
+        Task<bool> VoidChequeAsync(int chequeId, string reason, string voidedBy);
 
         /// <summary>
         /// Gets the next available cheque number for a given series.
@@ -41,6 +43,7 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         // New methods for enhanced cheque processing
         Task<List<Cheque>> GetChequesByStatusAsync(string status);
         Task<bool> UpdateChequeStatusAsync(int chequeId, string newStatus, string updatedBy);
+        Task<List<AdvanceDeduction>> GetAdvanceDeductionsByChequeNumberAsync(string chequeNumber);
         
         // Search methods for ChequeReviewViewModel
         Task<List<Cheque>> SearchChequesByNumberAsync(string chequeNumber);

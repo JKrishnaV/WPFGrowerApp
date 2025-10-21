@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Dapper;
 using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
+using WPFGrowerApp.Infrastructure.Logging;
 using System.Linq;
 
 namespace WPFGrowerApp.DataAccess.Services
@@ -13,20 +14,25 @@ namespace WPFGrowerApp.DataAccess.Services
     public class ImportBatchService : BaseDatabaseService, IImportBatchService
     {
 
-        public async Task<ImportBatch> CreateImportBatchAsync(int depotId, string impFile)
+        public async Task<ImportBatch> CreateImportBatchAsync(int depotId, string impFile, string? originalBatchNumber = null, bool isFromMultiBatchFile = false, int? batchGroupId = null)
         {
             try
             {
                 var importBatch = new ImportBatch
                 {
-                    ImpBatch = await GetNextImportBatchNumberAsync(),
-                    Date = DateTime.Now,
-                    DataDate = DateTime.Now,
-                    Depot = depotId.ToString(), // Legacy string field retains numeric id as string representation
-                    ImpFile = impFile,
-                    NoTrans = 0,
-                    Voids = 0,
-                    Receipts = 0
+                    BatchNumber = !string.IsNullOrEmpty(originalBatchNumber) ? originalBatchNumber : await GetNextImportBatchNumberAsync(),
+                    OriginalBatchNumber = originalBatchNumber,
+                    SourceFileName = impFile,
+                    IsFromMultiBatchFile = isFromMultiBatchFile,
+                    BatchGroupId = batchGroupId,
+                    ImportDate = DateTime.Now,
+                    DepotId = depotId,
+                    TotalReceipts = 0,
+                    Status = "Draft",
+                    ImportedAt = DateTime.Now,
+                    ImportedBy = App.CurrentUser?.Username ?? "SYSTEM",
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = App.CurrentUser?.Username ?? "SYSTEM"
                 };
 
                 using (var connection = new SqlConnection(_connectionString))
@@ -36,20 +42,29 @@ namespace WPFGrowerApp.DataAccess.Services
                     var sql = @"
                         INSERT INTO ImportBatches (
                             BatchNumber, ImportDate, DepotId, TotalReceipts,
-                            TotalGrossWeight, TotalNetWeight, Status, ImportedAt, ImportedBy, Notes
+                            TotalGrossWeight, TotalNetWeight, Status, ImportedAt, ImportedBy, Notes,
+                            OriginalBatchNumber, SourceFileName, IsFromMultiBatchFile, BatchGroupId
                         ) VALUES (
-                            @ImpBatch, @Date, @DepotId, @Receipts,
-                            0, 0, 'Draft', GETDATE(), 'SYSTEM', @ImpFile
+                            @BatchNumber, @ImportDate, @DepotId, @TotalReceipts,
+                            0, 0, @Status, @ImportedAt, @ImportedBy, @Notes,
+                            @OriginalBatchNumber, @SourceFileName, @IsFromMultiBatchFile, @BatchGroupId
                         );
                         SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
                     var importBatchId = await connection.ExecuteScalarAsync<int>(sql, new 
                     { 
-                        importBatch.ImpBatch,
-                        importBatch.Date,
-                        DepotId = depotId,
-                        importBatch.Receipts,
-                        importBatch.ImpFile
+                        importBatch.BatchNumber,
+                        importBatch.ImportDate,
+                        importBatch.DepotId,
+                        importBatch.TotalReceipts,
+                        importBatch.Status,
+                        importBatch.ImportedAt,
+                        importBatch.ImportedBy,
+                        Notes = (string?)null,
+                        importBatch.OriginalBatchNumber,
+                        importBatch.SourceFileName,
+                        importBatch.IsFromMultiBatchFile,
+                        importBatch.BatchGroupId
                     });
                     
                     // Set the ImportBatchId on the object
@@ -66,21 +81,144 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        public async Task<ImportBatch> GetImportBatchAsync(decimal impBatch)
+        public async Task<ImportBatch> CreateImportBatchWithConflictResolutionAsync(
+            int depotId, 
+            string impFile, 
+            string? originalBatchNumber, 
+            bool isFromMultiBatchFile = false, 
+            int? batchGroupId = null)
+        {
+            try
+            {
+                // Check if batch number already exists (including soft-deleted ones)
+                if (!string.IsNullOrEmpty(originalBatchNumber) && decimal.TryParse(originalBatchNumber, out var parsedBatchNo))
+                {
+                    // Check for existing batch including soft-deleted ones
+                    var existingBatch = await GetImportBatchIncludingDeletedAsync(originalBatchNumber);
+                    if (existingBatch != null)
+                    {
+                        if (existingBatch.DeletedAt.HasValue)
+                        {
+                            // Batch exists but is soft-deleted - undelete and reuse it
+                            Logger.Info($"Reusing soft-deleted batch {originalBatchNumber} for file {impFile}");
+                            return await UndeleteImportBatchAsync(existingBatch, depotId, impFile, isFromMultiBatchFile, batchGroupId);
+                        }
+                        else
+                        {
+                            // Batch exists and is active - generate new sequential number
+                            var newBatchNumber = await GetNextImportBatchNumberAsync();
+                            
+                            Logger.Info($"Batch number {originalBatchNumber} already exists and is active. " +
+                                     $"Using generated batch number {newBatchNumber} for file {impFile}");
+                            
+                            return await CreateImportBatchAsync(
+                                depotId, 
+                                impFile, 
+                                newBatchNumber.ToString(), // Use new batch number
+                                isFromMultiBatchFile, 
+                                batchGroupId);
+                        }
+                    }
+                }
+                
+                // No conflict, use original batch number
+                return await CreateImportBatchAsync(depotId, impFile, originalBatchNumber, isFromMultiBatchFile, batchGroupId);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error in CreateImportBatchWithConflictResolutionAsync: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task<List<ImportBatch>> CreateMultipleImportBatchesAsync(int depotId, string fileName, Dictionary<string, List<Receipt>> batchGroups)
+        {
+            try
+            {
+                var importBatches = new List<ImportBatch>();
+                var batchGroupId = await GetNextBatchGroupIdAsync();
+                
+                foreach (var batchGroup in batchGroups)
+                {
+                    var batchNumber = batchGroup.Key;
+                    var receipts = batchGroup.Value;
+                    
+                    var importBatch = await CreateImportBatchAsync(
+                        depotId, 
+                        fileName, 
+                        batchNumber, 
+                        batchGroups.Count > 1, // isFromMultiBatchFile
+                        batchGroupId
+                    );
+                    
+                    importBatches.Add(importBatch);
+                }
+                
+                return importBatches;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error in CreateMultipleImportBatchesAsync: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task<int> GetNextBatchGroupIdAsync()
         {
             try
             {
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    var sql = "SELECT * FROM ImportBatches WHERE BatchNumber = @ImpBatch";
-                    var parameters = new { ImpBatch = impBatch.ToString() };
+                    var sql = @"
+                        SELECT ISNULL(MAX(BatchGroupId), 0) + 1 
+                        FROM ImportBatches 
+                        WHERE BatchGroupId IS NOT NULL";
+                    var result = await connection.ExecuteScalarAsync<int>(sql);
+                    return result;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error in GetNextBatchGroupIdAsync: {ex.Message}");
+                return 1; // Default fallback
+            }
+        }
+
+        public async Task<ImportBatch> GetImportBatchAsync(string batchNumber)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = "SELECT * FROM ImportBatches WHERE BatchNumber = @BatchNumber AND DeletedAt IS NULL";
+                    var parameters = new { BatchNumber = batchNumber };
                     return await connection.QueryFirstOrDefaultAsync<ImportBatch>(sql, parameters);
                 }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error in GetImportBatchAsync: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task<ImportBatch?> GetImportBatchIncludingDeletedAsync(string batchNumber)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = "SELECT * FROM ImportBatches WHERE BatchNumber = @BatchNumber";
+                    var parameters = new { BatchNumber = batchNumber };
+                    return await connection.QueryFirstOrDefaultAsync<ImportBatch>(sql, parameters);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error in GetImportBatchIncludingDeletedAsync: {ex.Message}");
                 throw;
             }
         }
@@ -93,34 +231,59 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     var sql = @"
-                        SELECT * FROM ImportBatches 
-                        WHERE 1=1
-                        @StartDateFilter
-                        @EndDateFilter
-                        ORDER BY ImportDate DESC";
+                        SELECT 
+                            ib.ImportBatchId,
+                            ib.BatchNumber,
+                            ib.ImportDate,
+                            ib.DepotId,
+                            ib.TotalReceipts,
+                            ib.TotalGrossWeight,
+                            ib.TotalNetWeight,
+                            ib.Status,
+                            ib.ImportedAt,
+                            ib.ImportedBy,
+                            ib.Notes,
+                            ib.CreatedAt,
+                            ib.CreatedBy,
+                            ib.ModifiedAt,
+                            ib.ModifiedBy,
+                            ib.DeletedAt,
+                            ib.DeletedBy,
+                            ib.OriginalBatchNumber,
+                            ib.SourceFileName,
+                            ib.IsFromMultiBatchFile,
+                            ib.BatchGroupId,
+                            d.DepotName
+                        FROM ImportBatches ib
+                        LEFT JOIN Depots d ON ib.DepotId = d.DepotId
+                        WHERE ib.DeletedAt IS NULL
+                        @StartImportDateFilter
+                        @EndImportDateFilter
+                        ORDER BY ib.ImportDate DESC";
 
                     var parameters = new DynamicParameters();
                     if (startDate.HasValue)
                     {
-                        sql = sql.Replace("@StartDateFilter", "AND ImportDate >= @StartDate");
-                        parameters.Add("@StartDate", startDate.Value);
+                        sql = sql.Replace("@StartImportDateFilter", "AND ib.ImportDate >= @StartImportDate");
+                        parameters.Add("@StartImportDate", startDate.Value);
                     }
                     else
                     {
-                        sql = sql.Replace("@StartDateFilter", "");
+                        sql = sql.Replace("@StartImportDateFilter", "");
                     }
 
                     if (endDate.HasValue)
                     {
-                        sql = sql.Replace("@EndDateFilter", "AND ImportDate <= @EndDate");
-                        parameters.Add("@EndDate", endDate.Value);
+                        sql = sql.Replace("@EndImportDateFilter", "AND ib.ImportDate <= @EndImportDate");
+                        parameters.Add("@EndImportDate", endDate.Value);
                     }
                     else
                     {
-                        sql = sql.Replace("@EndDateFilter", "");
+                        sql = sql.Replace("@EndImportDateFilter", "");
                     }
 
-                    return (await connection.QueryAsync<ImportBatch>(sql, parameters)).ToList();
+                    var batches = await connection.QueryAsync<ImportBatch>(sql, parameters);
+                    return batches.ToList();
                 }
             }
             catch (Exception ex)
@@ -139,14 +302,14 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = @"
                         UPDATE ImportBatches 
-                        SET TotalReceipts = @Receipts,
+                        SET TotalReceipts = @TotalReceipts,
                             Status = 'Posted'
-                        WHERE BatchNumber = @ImpBatch";
+                        WHERE BatchNumber = @BatchNumber";
 
                     var result = await connection.ExecuteAsync(sql, new 
                     { 
-                        importBatch.ImpBatch,
-                        importBatch.Receipts
+                        importBatch.BatchNumber,
+                        importBatch.TotalReceipts
                     });
                     return result > 0;
                 }
@@ -158,7 +321,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        public async Task<decimal> GetNextImportBatchNumberAsync()
+        public async Task<string> GetNextImportBatchNumberAsync()
         {
             try
             {
@@ -173,7 +336,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         FROM ImportBatches 
                         WHERE BatchNumber NOT LIKE '%[^0-9]%'";
                     var result = await connection.ExecuteScalarAsync<decimal?>(sql);
-                    return result ?? 1;
+                    return (result ?? 1).ToString();
                 }
             }
             catch (Exception ex)
@@ -192,7 +355,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
 
                     // Check if import batch exists
-                    var existingBatch = await GetImportBatchAsync(importBatch.ImpBatch);
+                    var existingBatch = await GetImportBatchAsync(importBatch.BatchNumber);
                     if (existingBatch == null)
                     {
                         return false;
@@ -201,7 +364,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     // Validate depot exists
                     var depotCount = await connection.ExecuteScalarAsync<int>(
                         "SELECT COUNT(*) FROM Depots WHERE DepotCode = @Depot AND IsActive = 1",
-                        new { importBatch.Depot });
+                        new { Depot = importBatch.DepotId });
                     if (depotCount == 0)
                     {
                         return false;
@@ -217,7 +380,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        public async Task<bool> CloseImportBatchAsync(decimal impBatch)
+        public async Task<bool> CloseImportBatchAsync(string batchNumber)
         {
             try
             {
@@ -226,14 +389,14 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = @"
                         UPDATE ImportBatches 
-                        SET TotalReceipts = (SELECT COUNT(*) FROM Receipts WHERE ImportBatchId = ib.ImportBatchId),
-                            TotalGrossWeight = (SELECT ISNULL(SUM(GrossWeight), 0) FROM Receipts WHERE ImportBatchId = ib.ImportBatchId),
-                            TotalNetWeight = (SELECT ISNULL(SUM(NetWeight), 0) FROM Receipts WHERE ImportBatchId = ib.ImportBatchId),
+                        SET TotalReceipts = (SELECT COUNT(*) FROM Receipts WHERE ImportBatchId = ib.ImportBatchId AND DeletedAt IS NULL),
+                            TotalGrossWeight = (SELECT ISNULL(SUM(GrossWeight), 0) FROM Receipts WHERE ImportBatchId = ib.ImportBatchId AND DeletedAt IS NULL),
+                            TotalNetWeight = (SELECT ISNULL(SUM(NetWeight), 0) FROM Receipts WHERE ImportBatchId = ib.ImportBatchId AND DeletedAt IS NULL),
                             Status = 'Posted'
                         FROM ImportBatches ib
-                        WHERE ib.BatchNumber = @ImpBatch";
+                        WHERE ib.BatchNumber = @BatchNumber";
 
-                    var parameters = new { ImpBatch = impBatch.ToString() };
+                    var parameters = new { BatchNumber = batchNumber };
                     var result = await connection.ExecuteAsync(sql, parameters);
                     return result > 0;
                 }
@@ -245,7 +408,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        public async Task<bool> ReopenImportBatchAsync(decimal impBatch)
+        public async Task<bool> ReopenImportBatchAsync(string batchNumber)
         {
             try
             {
@@ -258,9 +421,9 @@ namespace WPFGrowerApp.DataAccess.Services
                             TotalGrossWeight = 0,
                             TotalNetWeight = 0,
                             Status = 'Draft'
-                        WHERE BatchNumber = @ImpBatch";
+                        WHERE BatchNumber = @BatchNumber";
 
-                    var parameters = new { ImpBatch = impBatch.ToString() };
+                    var parameters = new { BatchNumber = batchNumber };
                     var result = await connection.ExecuteAsync(sql, parameters);
                     return result > 0;
                 }
@@ -287,8 +450,8 @@ namespace WPFGrowerApp.DataAccess.Services
                     var parameters = new DynamicParameters();
                     if (startDate.HasValue)
                     {
-                        sql += " AND ImportDate >= @StartDate";
-                        parameters.Add("@StartDate", startDate.Value);
+                        sql += " AND ImportDate >= @StartImportDate";
+                        parameters.Add("@StartImportDate", startDate.Value);
                     }
                     
                     return await connection.ExecuteScalarAsync<int>(sql, parameters);
@@ -297,6 +460,145 @@ namespace WPFGrowerApp.DataAccess.Services
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error in GetRecentImportsCountAsync: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task<List<ImportBatch>> GetBatchesByGroupIdAsync(int batchGroupId)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = @"
+                        SELECT * FROM ImportBatches 
+                        WHERE BatchGroupId = @BatchGroupId
+                        ORDER BY BatchNumber";
+                    var parameters = new { BatchGroupId = batchGroupId };
+                    return (await connection.QueryAsync<ImportBatch>(sql, parameters)).ToList();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error in GetBatchesByGroupIdAsync: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task<bool> DeleteImportBatchAsync(string batchNumber)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    
+                    // Get the current user for audit trail
+                    var deletedBy = App.CurrentUser?.Username ?? "SYSTEM";
+                    
+                    // First, get the ImportBatchId for the given batch number
+                    var batchIdSql = @"
+                        SELECT ImportBatchId FROM ImportBatches 
+                        WHERE BatchNumber = @BatchNumber";
+                    var batchId = await connection.ExecuteScalarAsync<int?>(batchIdSql, new { BatchNumber = batchNumber });
+                    
+                    var receiptCount = 0;
+                    if (batchId.HasValue)
+                    {
+                        // Check if batch has any receipts
+                        var receiptCountSql = @"
+                            SELECT COUNT(*) FROM Receipts 
+                            WHERE ImportBatchId = @ImportBatchId AND DeletedAt IS NULL";
+                        receiptCount = await connection.ExecuteScalarAsync<int>(receiptCountSql, new { ImportBatchId = batchId.Value });
+                        
+                        if (receiptCount > 0)
+                        {
+                            // Soft delete all receipts in this batch first
+                            var softDeleteReceiptsSql = @"
+                                UPDATE Receipts 
+                                SET DeletedAt = GETDATE(), 
+                                    DeletedBy = @DeletedBy,
+                                    ImportBatchId = NULL
+                                WHERE ImportBatchId = @ImportBatchId AND DeletedAt IS NULL";
+                            await connection.ExecuteAsync(softDeleteReceiptsSql, new { ImportBatchId = batchId.Value, DeletedBy = deletedBy });
+                        }
+                    }
+                    
+                    // Then soft delete the batch record
+                    var softDeleteBatchSql = @"
+                        UPDATE ImportBatches 
+                        SET DeletedAt = GETDATE(), 
+                            DeletedBy = @DeletedBy
+                        WHERE BatchNumber = @BatchNumber";
+                    
+                    var result = await connection.ExecuteAsync(softDeleteBatchSql, new { BatchNumber = batchNumber, DeletedBy = deletedBy });
+                    
+                    Logger.Info($"Deleted import batch {batchNumber} with {receiptCount} receipts");
+                    return result > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error in DeleteImportBatchAsync: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task<ImportBatch> UndeleteImportBatchAsync(ImportBatch existingBatch, int depotId, string impFile, bool isFromMultiBatchFile, int? batchGroupId)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    
+                    var currentUser = App.CurrentUser?.Username ?? "SYSTEM";
+                    
+                    // Undelete the batch by clearing DeletedAt and DeletedBy
+                    var undeleteBatchSql = @"
+                        UPDATE ImportBatches 
+                        SET DeletedAt = NULL, 
+                            DeletedBy = NULL,
+                            ImportDate = @ImportDate,
+                            DepotId = @DepotId,
+                            SourceFileName = @SourceFileName,
+                            IsFromMultiBatchFile = @IsFromMultiBatchFile,
+                            BatchGroupId = @BatchGroupId,
+                            ModifiedAt = GETDATE(),
+                            ModifiedBy = @ModifiedBy
+                        WHERE ImportBatchId = @ImportBatchId";
+                    
+                    await connection.ExecuteAsync(undeleteBatchSql, new 
+                    { 
+                        ImportBatchId = existingBatch.ImportBatchId,
+                        ImportDate = DateTime.Now,
+                        DepotId = depotId,
+                        SourceFileName = impFile,
+                        IsFromMultiBatchFile = isFromMultiBatchFile,
+                        BatchGroupId = batchGroupId,
+                        ModifiedBy = currentUser
+                    });
+                    
+                    // Also undelete any associated receipts
+                    var undeleteReceiptsSql = @"
+                        UPDATE Receipts 
+                        SET DeletedAt = NULL, 
+                            DeletedBy = NULL,
+                            ImportBatchId = @ImportBatchId
+                        WHERE ImportBatchId = @ImportBatchId";
+                    
+                    await connection.ExecuteAsync(undeleteReceiptsSql, new { ImportBatchId = existingBatch.ImportBatchId });
+                    
+                    Logger.Info($"Undeleted import batch {existingBatch.BatchNumber} for file {impFile}");
+                    
+                    // Return the updated batch
+                    return await GetImportBatchAsync(existingBatch.BatchNumber);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error in UndeleteImportBatchAsync: {ex.Message}");
                 throw;
             }
         }

@@ -233,7 +233,7 @@ namespace WPFGrowerApp.ViewModels
             if (file != null && !IsImporting)
             {
                 SelectedFiles.Remove(file);
-                if (_currentBatch != null && file.FilePath.EndsWith(_currentBatch.ImpFile))
+                if (_currentBatch != null && file.FilePath.EndsWith(_currentBatch.SourceFileName))
                 {
                     Errors.Clear();
                     StatusMessage = string.Empty;
@@ -276,86 +276,54 @@ namespace WPFGrowerApp.ViewModels
                             continue;
                         }
 
-                        // Use SelectedDepotId which is updated when SelectedDepot changes
-                        batchForThisFile = await _importBatchProcessor.StartImportBatchAsync(SelectedDepotId ?? 0, System.IO.Path.GetFileName(file.FilePath));
-                        _currentBatch = batchForThisFile; // Track the latest batch attempted
+                        // Use smart import with duplicate detection and conflict resolution
+                        var smartImportResult = await _importBatchProcessor.StartSmartImportAsync(SelectedDepotId ?? 0, file.FilePath);
+                        
+                        if (!smartImportResult.Success)
+                        {
+                            file.Status = "Import failed";
+                            Errors.Add($"Smart import failed for {System.IO.Path.GetFileName(file.FilePath)}: {smartImportResult.Message}");
+                            overallFailedFiles++;
+                            continue;
+                        }
 
-                        await _validationService.ValidateImportBatchAsync(batchForThisFile);
+                        _currentBatch = smartImportResult.ImportBatches.FirstOrDefault(); // Track the first batch for UI
 
-                        var (receipts, fileErrors) = await _fileImportService.ReadReceiptsFromFileAsync(file.FilePath, null, CancellationToken.None);
-                        var receiptList = receipts.ToList();
-                        var totalReceiptsInFile = receiptList.Count;
-                        var processedReceiptsInFile = 0; // Initialize counter
+                        // Calculate totals from smart import results
+                        var totalReceiptsInFile = smartImportResult.ImportResults.Sum(r => r.TotalReceipts);
+                        var processedReceiptsInFile = smartImportResult.ImportResults.Sum(r => r.ImportedReceipts.Count + r.UpdatedReceipts.Count);
                         var fileHadErrors = false;
 
-                        // Get total receipts including Stage 1 parsing errors
-                        var stage1ErrorCount = fileErrors?.Count ?? 0;
-                        var totalReceiptsIncludingErrors = totalReceiptsInFile + stage1ErrorCount;
-                        file.TotalReceiptCount = totalReceiptsIncludingErrors; // Store total for display
-
-                        // Display file reading errors in UI
-                        if (fileErrors != null && fileErrors.Any())
-                        {
-                            foreach (var error in fileErrors)
-                            {
-                                Errors.Add($"{System.IO.Path.GetFileName(file.FilePath)}: {error}");
-                            }
-                            fileHadErrors = true;
-                        }
-
-                        for (int idx = 0; idx < totalReceiptsInFile; idx++)
-                        {
-                            var receipt = receiptList[idx];
-                            if (receipt == null) {
-                                Errors.Add($"{System.IO.Path.GetFileName(file.FilePath)}: Error reading receipt data at line {idx + 2}.");
-                                fileHadErrors = true;
-                                continue;
-                            }
-                            var receiptIdentifier = $"Receipt# {receipt.ReceiptNumber} (Grower: {receipt.GrowerNumber})";
-
-                            try
-                            {
-                                await _validationService.ValidateReceiptAsync(receipt);
-                                bool success = await _importBatchProcessor.ProcessSingleReceiptAsync(batchForThisFile, receipt, CancellationToken.None);
-                                if (!success) {
-                                    fileHadErrors = true;
-                                    Errors.Add($"{System.IO.Path.GetFileName(file.FilePath)}: Error saving {receiptIdentifier}. See logs.");
-                                } else {
-                                    processedReceiptsInFile++; // Increment counter on success
-                                }
-                            }
-                            catch (MissingReferenceDataException ex) {
-                                // Skip receipt with missing reference data and log detailed information
-                                fileHadErrors = true;
-                                Errors.Add($"{System.IO.Path.GetFileName(file.FilePath)}: Skipped {receiptIdentifier} - Missing: {string.Join(", ", ex.MissingItems)}");
-                                Logger.Warn($"Skipped {receiptIdentifier} due to missing reference data: {string.Join(", ", ex.MissingItems)}");
-                            }
-                            catch (ImportValidationException ex) {
-                                fileHadErrors = true;
-                                foreach (var error in ex.ValidationErrors) { Errors.Add($"{System.IO.Path.GetFileName(file.FilePath)}: {receiptIdentifier} - {error}"); }
-                            }
-                            catch (Exception ex) {
-                                fileHadErrors = true;
-                                Errors.Add($"{System.IO.Path.GetFileName(file.FilePath)}: Error processing {receiptIdentifier}: {ex.Message}");
-                                Logger.Error($"Error processing {receiptIdentifier}", ex);
-                            }
-                            file.Progress = (int)(((idx + 1) * 100.0) / totalReceiptsInFile);
-                        } // End receipt loop
-
-                        // Assign counts AFTER the loop finishes for the file
+                        file.TotalReceiptCount = totalReceiptsInFile;
                         file.ProcessedReceiptCount = processedReceiptsInFile;
 
-                        await _importBatchProcessor.UpdateBatchStatisticsAsync(batchForThisFile);
-                        await _importBatchProcessor.FinalizeBatchAsync(batchForThisFile);
-
-                        if (fileHadErrors) {
-                            file.Status = "Completed with errors";
-                            overallFailedFiles++;
-                        } else {
-                            file.Status = "Completed";
-                            overallProcessedFiles++;
-                        }
+                        // Update progress
                         file.Progress = 100;
+                        var overallProgress = (int)((overallProcessedFiles + 1) * 100.0 / totalFiles);
+                        Progress = overallProgress;
+                        
+                        StatusMessage = $"Smart import completed for {System.IO.Path.GetFileName(file.FilePath)}: {processedReceiptsInFile} receipts processed";
+                        
+                        // Log conflicts if any
+                        if (smartImportResult.Conflicts.Any())
+                        {
+                            foreach (var conflict in smartImportResult.Conflicts)
+                            {
+                                Logger.Info($"Batch conflict resolved for {conflict.BatchNumber}: {conflict.Summary}");
+                            }
+                        }
+
+                        // Log import results
+                        foreach (var importResult in smartImportResult.ImportResults)
+                        {
+                            if (!string.IsNullOrEmpty(importResult.Message))
+                            {
+                                Logger.Info($"Import result: {importResult.Message}");
+                            }
+                        }
+
+                        file.Status = "Completed";
+                        overallProcessedFiles++;
                     }
                     catch (ImportValidationException ex) {
                         Logger.Error($"Validation error for batch related to file {file.FilePath}", ex);
@@ -394,7 +362,7 @@ namespace WPFGrowerApp.ViewModels
             {
                 // Consider asking for confirmation
                 _importBatchProcessor.RollbackBatchAsync(_currentBatch).ConfigureAwait(false);
-                StatusMessage = $"Import cancelled. Batch {_currentBatch.ImpBatch} rolled back.";
+                StatusMessage = $"Import cancelled. Batch {_currentBatch.BatchNumber} rolled back.";
                 _currentBatch = null;
                  ((RelayCommand)RevertImportCommand).RaiseCanExecuteChanged();
             } else {
@@ -413,21 +381,21 @@ namespace WPFGrowerApp.ViewModels
             }
 
             // TODO: Implement proper confirmation dialog in IDialogService
-            await _dialogService.ShowMessageBoxAsync($"Revert all changes from batch {_currentBatch.ImpBatch} (File: {_currentBatch.ImpFile})?", "Confirm Revert");
+            await _dialogService.ShowMessageBoxAsync($"Revert all batches from file {System.IO.Path.GetFileName(_currentBatch.SourceFileName)}? This will revert all batches that were imported from this file.", "Confirm Revert");
             bool confirmed = true; // Placeholder - Replace with actual dialog result
 
             if (confirmed)
             {
                 IsImporting = true; // Use IsImporting to disable buttons during revert
-                StatusMessage = $"Reverting batch {_currentBatch.ImpBatch}...";
+                StatusMessage = $"Reverting all batches from file {System.IO.Path.GetFileName(_currentBatch.SourceFileName)}...";
                 try
                 {
-                    await _importBatchProcessor.RollbackBatchAsync(_currentBatch);
-                    StatusMessage = $"Batch {_currentBatch.ImpBatch} successfully reverted.";
+                    await _importBatchProcessor.RollbackBatchGroupAsync(_currentBatch);
+                    StatusMessage = $"All batches from file {System.IO.Path.GetFileName(_currentBatch.SourceFileName)} successfully reverted.";
                     Errors.Clear(); // Clear errors related to the reverted batch
 
                     // Reset file status in SelectedFiles list
-                    var fileInfoToReset = SelectedFiles.FirstOrDefault(f => f.FilePath.EndsWith(_currentBatch.ImpFile)); // Basic match
+                    var fileInfoToReset = SelectedFiles.FirstOrDefault(f => f.FilePath.EndsWith(_currentBatch.SourceFileName)); // Basic match
                     if (fileInfoToReset != null)
                     {
                         fileInfoToReset.Status = "Reverted";
@@ -441,8 +409,8 @@ namespace WPFGrowerApp.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    StatusMessage = $"Error reverting batch {_currentBatch.ImpBatch}.";
-                    Logger.Error($"Error reverting batch {_currentBatch.ImpBatch}", ex);
+                    StatusMessage = $"Error reverting batch {_currentBatch.BatchNumber}.";
+                    Logger.Error($"Error reverting batch {_currentBatch.BatchNumber}", ex);
                     await _dialogService.ShowMessageBoxAsync($"Failed to revert batch: {ex.Message}", "Revert Error");
                 }
                 finally

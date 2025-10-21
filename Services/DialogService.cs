@@ -133,6 +133,20 @@ namespace WPFGrowerApp.Services
         }
 
         /// <summary>
+        /// Shows a help dialog with proper sizing and scrolling.
+        /// </summary>
+        /// <param name="content">The help content to display</param>
+        /// <param name="title">The title of the help dialog</param>
+        public async Task ShowHelpDialogAsync(string content, string title = "Help")
+        {
+            var view = new HelpDialogView();
+            view.SetContent(content, title);
+
+            // Show the view as a dialog using the DialogHost
+            await DialogHost.Show(view, RootDialogHostId);
+        }
+
+        /// <summary>
         /// Shows a confirmation dialog.
         /// </summary>
         public async Task<bool?> ShowConfirmationAsync(string message, string title)

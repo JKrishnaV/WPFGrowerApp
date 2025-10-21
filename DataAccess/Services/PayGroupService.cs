@@ -118,7 +118,7 @@ namespace WPFGrowerApp.DataAccess.Services
         /// </summary>
         public async Task<bool> AddPayGroupAsync(PayGroup payGroup)
         {
-            var currentUser = "SYSTEM"; // Temporary placeholder
+            var currentUser = App.CurrentUser?.Username ?? "SYSTEM"; // Temporary placeholder
             payGroup.CreatedAt = DateTime.Now;
             payGroup.CreatedBy = currentUser;
             payGroup.IsActive = true;
@@ -139,7 +139,7 @@ namespace WPFGrowerApp.DataAccess.Services
         /// </summary>
         public async Task<bool> UpdatePayGroupAsync(PayGroup payGroup)
         {
-            var currentUser = "SYSTEM"; // Temporary placeholder
+            var currentUser = App.CurrentUser?.Username ?? "SYSTEM"; // Temporary placeholder
             payGroup.ModifiedAt = DateTime.Now;
             payGroup.ModifiedBy = currentUser;
 
@@ -166,7 +166,7 @@ namespace WPFGrowerApp.DataAccess.Services
         /// </summary>
         public async Task<bool> DeletePayGroupAsync(string payGroupId)
         {
-            var currentUser = "SYSTEM"; // Temporary placeholder
+            var currentUser = App.CurrentUser?.Username ?? "SYSTEM"; // Temporary placeholder
             var deleteTime = DateTime.Now;
 
             const string sql = @"

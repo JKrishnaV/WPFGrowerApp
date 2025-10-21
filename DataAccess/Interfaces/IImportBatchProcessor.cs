@@ -14,6 +14,16 @@ namespace WPFGrowerApp.DataAccess.Interfaces
     Task<ImportBatch> StartImportBatchAsync(int depotId, string fileName);
 
         /// <summary>
+        /// Starts multiple import batches for a file with different batch numbers
+        /// </summary>
+        Task<List<ImportBatch>> StartMultipleImportBatchesAsync(int depotId, string fileName);
+
+        /// <summary>
+        /// Starts smart import with duplicate detection and conflict resolution
+        /// </summary>
+        Task<SmartImportResult> StartSmartImportAsync(int depotId, string fileName);
+
+        /// <summary>
         /// Processes a single receipt within the specified import batch.
         /// Includes validation, calculation, and saving.
         /// </summary>
@@ -38,6 +48,11 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// Rolls back an import batch in case of failure
         /// </summary>
         Task RollbackBatchAsync(ImportBatch importBatch);
+
+        /// <summary>
+        /// Rolls back all batches in the same group (for multi-batch files)
+        /// </summary>
+        Task RollbackBatchGroupAsync(ImportBatch importBatch);
 
         /// <summary>
         /// Gets the current status of an import batch

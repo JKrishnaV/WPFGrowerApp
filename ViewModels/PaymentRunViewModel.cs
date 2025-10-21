@@ -161,6 +161,9 @@ namespace WPFGrowerApp.ViewModels
         private int _previewSkippedCount;
         private string _previewSummaryText = "Click 'Preview Count' to see payment summary";
         
+        // Skipped Receipt Details
+        private ObservableCollection<SkippedReceiptDetail> _skippedReceiptDetails = new ObservableCollection<SkippedReceiptDetail>();
+        
         // Filter Presets
         private ObservableCollection<FilterPreset> _filterPresets = new ObservableCollection<FilterPreset>();
         private FilterPreset? _selectedPreset;
@@ -509,6 +512,12 @@ namespace WPFGrowerApp.ViewModels
             private set => SetProperty(ref _previewSummaryText, value);
         }
 
+        public ObservableCollection<SkippedReceiptDetail> SkippedReceiptDetails
+        {
+            get => _skippedReceiptDetails;
+            private set => SetProperty(ref _skippedReceiptDetails, value);
+        }
+
         // Filter Presets
         public ObservableCollection<FilterPreset> FilterPresets => _filterPresets;
 
@@ -636,6 +645,7 @@ namespace WPFGrowerApp.ViewModels
         public ICommand LoadPresetCommand => new RelayCommand(async o => await LoadFilterPresetAsync(), o => !IsRunning && SelectedPreset != null);
         public ICommand DeletePresetCommand => new RelayCommand(async o => await DeleteFilterPresetAsync(), o => !IsRunning && SelectedPreset != null);
         public ICommand ToggleAdvancedOptionsCommand => new RelayCommand(o => ToggleAdvancedOptions());
+        public ICommand ViewSkippedDetailsCommand => new RelayCommand(async o => await ViewSkippedReceiptDetailsAsync(), o => SkippedReceiptDetails.Any());
 
         // NEW: Checkbox-based Filter Commands
         public ICommand SelectAllProductsCommand => new RelayCommand(o => SelectAllProducts());
@@ -838,7 +848,7 @@ namespace WPFGrowerApp.ViewModels
                 ProcessIds = selectedProcessIds,
                 // Populate descriptions
                 ProductDescriptions = SelectedProducts.Select(p => $"{p.ProductId} - {p.Description}".TrimStart(' ', '-')).ToList(),
-                ProcessDescriptions = SelectedProcesses.Select(p => $"{p.ProcessId} - {p.Description}".TrimStart(' ', '-')).ToList(),
+                ProcessDescriptions = SelectedProcesses.Select(p => $"{p.ProcessId} - {p.ProcessName}".TrimStart(' ', '-')).ToList(),
                 ExcludedGrowerDescriptions = SelectedExcludeGrowers.Select(g => $"{g.GrowerNumber} - {g.Name}".TrimStart(' ', '-')).ToList(),
                 ExcludedPayGroupDescriptions = SelectedExcludePayGroups.Select(pg => $"{pg.GroupCode} - {pg.Description}".TrimStart(' ', '-')).ToList()
             };
@@ -964,7 +974,7 @@ namespace WPFGrowerApp.ViewModels
                 ProductIds = selectedProductIds,
                 ProcessIds = selectedProcessIds,
                 ProductDescriptions = SelectedProducts.Select(p => $"{p.ProductId} - {p.Description}".TrimStart(' ', '-')).ToList(),
-                ProcessDescriptions = SelectedProcesses.Select(p => $"{p.ProcessId} - {p.Description}".TrimStart(' ', '-')).ToList(),
+                ProcessDescriptions = SelectedProcesses.Select(p => $"{p.ProcessId} - {p.ProcessName}".TrimStart(' ', '-')).ToList(),
                 ExcludedGrowerDescriptions = SelectedExcludeGrowers.Select(g => $"{g.GrowerNumber} - {g.Name}".TrimStart(' ', '-')).ToList(),
                 ExcludedPayGroupDescriptions = SelectedExcludePayGroups.Select(pg => $"{pg.GroupCode} - {pg.Description}".TrimStart(' ', '-')).ToList()
             };
@@ -1543,6 +1553,31 @@ namespace WPFGrowerApp.ViewModels
                 PreviewEstimatedTotal = testResult.GrowerPayments.Sum(gp => gp.TotalCalculatedPayment);
                 PreviewSkippedCount = testResult.GrowerPayments.Sum(gp => gp.ReceiptDetails.Count(rd => !string.IsNullOrEmpty(rd.ErrorMessage)));
 
+                // Populate skipped receipt details
+                SkippedReceiptDetails.Clear();
+                foreach (var growerPayment in testResult.GrowerPayments)
+                {
+                    foreach (var receiptDetail in growerPayment.ReceiptDetails.Where(rd => !string.IsNullOrEmpty(rd.ErrorMessage)))
+                    {
+                        var skippedDetail = new SkippedReceiptDetail
+                        {
+                            ReceiptNumber = receiptDetail.ReceiptNumber,
+                            ReceiptDate = receiptDetail.ReceiptDate,
+                            GrowerNumber = growerPayment.GrowerNumber,
+                            GrowerName = growerPayment.GrowerName,
+                            Product = receiptDetail.Product,
+                            Process = receiptDetail.Process,
+                            NetWeight = receiptDetail.NetWeight,
+                            ErrorMessage = receiptDetail.ErrorMessage ?? string.Empty,
+                            Reason = GetSkippedReason(receiptDetail.ErrorMessage ?? string.Empty)
+                        };
+                        SkippedReceiptDetails.Add(skippedDetail);
+                        
+                        // Enhanced Run Log - Option 3
+                        Report($"⚠ Skipped Receipt #{receiptDetail.ReceiptNumber} - Grower {growerPayment.GrowerNumber} ({growerPayment.GrowerName}): {skippedDetail.Reason}");
+                    }
+                }
+
                 // Update summary text
                 PreviewSummaryText = $"Receipts: {PreviewReceiptCount} | Growers: {PreviewGrowerCount} | Est. Total: ${PreviewEstimatedTotal:N2}";
                 if (PreviewSkippedCount > 0)
@@ -1550,16 +1585,42 @@ namespace WPFGrowerApp.ViewModels
                     PreviewSummaryText += $" | Skipped: {PreviewSkippedCount}";
                 }
 
+                // Add summary of skipped receipts if any
+                if (PreviewSkippedCount > 0 && SkippedReceiptDetails.Any())
+                {
+                    var skippedReceiptNumbers = string.Join(", ", SkippedReceiptDetails.Select(s => $"#{s.ReceiptNumber}"));
+                    Report($"📋 Skipped Receipt Summary: {skippedReceiptNumbers} ({PreviewSkippedCount} total)");
+                }
+
                 Report($"✓ Preview complete: {PreviewReceiptCount} receipts, {PreviewGrowerCount} growers, ${PreviewEstimatedTotal:N2}");
                 StatusMessage = $"Preview: {PreviewReceiptCount} receipts, ${PreviewEstimatedTotal:N2}";
 
-                await _dialogService.ShowMessageBoxAsync(
-                    $"Payment Preview:\n\n" +
+                // Build the payment preview message with skipped receipt details
+                var previewMessage = $"Payment Preview:\n\n" +
                     $"Receipts: {PreviewReceiptCount}\n" +
                     $"Growers: {PreviewGrowerCount}\n" +
                     $"Estimated Total: ${PreviewEstimatedTotal:N2}\n" +
-                    $"Skipped (no price): {PreviewSkippedCount}",
-                    "Payment Preview");
+                    $"Skipped (no price): {PreviewSkippedCount}";
+
+                // Add skipped receipt summary (not full details to avoid UI issues with large numbers)
+                if (PreviewSkippedCount > 0 && SkippedReceiptDetails.Any())
+                {
+                    // Group skipped receipts by reason for better summary
+                    var skippedByReason = SkippedReceiptDetails
+                        .GroupBy(s => s.Reason)
+                        .Select(g => $"{g.Key}: {g.Count()} receipt(s)")
+                        .ToList();
+
+                    previewMessage += $"\n\nSkipped Receipt Summary:\n";
+                    previewMessage += string.Join("\n", skippedByReason);
+                    
+                    if (PreviewSkippedCount > 5)
+                    {
+                        previewMessage += $"\n\n(Use 'View Skipped Details' button on main screen for complete list)";
+                    }
+                }
+
+                await _dialogService.ShowMessageBoxAsync(previewMessage, "Payment Preview");
             }
             catch (Exception ex)
             {
@@ -2038,7 +2099,7 @@ namespace WPFGrowerApp.ViewModels
             ProcessFilterItems.Clear();
             foreach (var process in _allProcesses)
             {
-                var displayText = $"{process.ProcessId} - {process.Description}";
+                var displayText = $"{process.ProcessId} - {process.ProcessName}";
                 ProcessFilterItems.Add(new FilterItem<Process>(process, displayText, true)); // Always selected by default
             }
 
@@ -2167,6 +2228,79 @@ namespace WPFGrowerApp.ViewModels
             sb.AppendLine("(Only valid receipts will be included in the payment.)");
             
             return sb.ToString();
+        }
+
+        #endregion
+
+        #region Helper Methods
+
+        /// <summary>
+        /// Extracts a user-friendly reason from the error message
+        /// </summary>
+        private string GetSkippedReason(string errorMessage)
+        {
+            if (string.IsNullOrEmpty(errorMessage))
+                return "Unknown reason";
+
+            // Parse common error messages to provide user-friendly reasons
+            if (errorMessage.Contains("No price record found"))
+                return "No price record found for this product/process combination";
+            if (errorMessage.Contains("Calculation error"))
+                return "Calculation error occurred";
+            if (errorMessage.Contains("Grower not found"))
+                return "Grower information not found";
+            if (errorMessage.Contains("Product not found"))
+                return "Product information not found";
+            if (errorMessage.Contains("Process not found"))
+                return "Process information not found";
+            if (errorMessage.Contains("Price not found"))
+                return "Price information not found";
+            if (errorMessage.Contains("Currency"))
+                return "Currency conversion error";
+            if (errorMessage.Contains("Weight"))
+                return "Weight calculation error";
+            if (errorMessage.Contains("Date"))
+                return "Date-related error";
+            if (errorMessage.Contains("Grade"))
+                return "Grade-related error";
+
+            // Return the original error message if no specific pattern matches
+            return errorMessage;
+        }
+
+        /// <summary>
+        /// Shows detailed information about skipped receipts in a scrollable dialog with grid
+        /// </summary>
+        private async Task ViewSkippedReceiptDetailsAsync()
+        {
+            try
+            {
+                if (!SkippedReceiptDetails.Any())
+                {
+                    await _dialogService.ShowMessageBoxAsync("No skipped receipts to display.", "No Skipped Receipts");
+                    return;
+                }
+
+                // Debug: Log the count to verify data is being passed
+                System.Diagnostics.Debug.WriteLine($"PaymentRunViewModel: {SkippedReceiptDetails.Count} receipts to show in dialog");
+
+                // Create and show the scrollable dialog
+                var dialogViewModel = new SkippedReceiptDetailsDialogViewModel(
+                    SkippedReceiptDetails,
+                    _dialogService);
+
+                // Subscribe to the dialog closed event
+                dialogViewModel.DialogClosed += (sender, e) => {
+                    // Dialog will be closed by the DialogHost
+                };
+
+                await _dialogService.ShowDialogAsync(dialogViewModel);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error showing skipped receipt details", ex);
+                await _dialogService.ShowMessageBoxAsync($"Error displaying skipped receipt details: {ex.Message}", "Error");
+            }
         }
 
         #endregion

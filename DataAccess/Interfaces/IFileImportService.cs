@@ -34,5 +34,10 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// Gets the expected file format specification
         /// </summary>
         string GetFileFormatSpecification();
+
+        /// <summary>
+        /// Analyzes batch numbers in a file and groups receipts by their original batch number
+        /// </summary>
+        Task<Dictionary<string, List<Receipt>>> AnalyzeBatchNumbersAsync(string filePath, CancellationToken cancellationToken = default);
     }
 } 

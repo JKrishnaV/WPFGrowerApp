@@ -36,17 +36,22 @@ namespace WPFGrowerApp.ViewModels
             NavigateToDashboardCommand = new RelayCommand(async p => await NavigateToAsync<DashboardViewModel>("Dashboard", p), CanNavigate); // Use async lambda
             NavigateToGrowersCommand = new RelayCommand(async p => await NavigateToAsync<GrowerManagementHostViewModel>("Growers", p), CanNavigate);
             NavigateToReceiptsCommand = new RelayCommand(NavigateToReceiptsExecuteAsync, CanNavigate); // Added Receipts navigation
-            NavigateToImportCommand = new RelayCommand(async p => await NavigateToAsync<ImportViewModel>("Import", p), CanNavigate); // Use async lambda
+            NavigateToImportCommand = new RelayCommand(async p => await NavigateToAsync<ImportHubViewModel>("Import", p), CanNavigate); // Use async lambda
             // Update Reports command to navigate to the new ReportsHostViewModel
             NavigateToReportsCommand = new RelayCommand(async p => await NavigateToAsync<ReportsHostViewModel>("Reports", p), CanNavigate); // Use async lambda
             NavigateToInventoryCommand = new RelayCommand(async p => await NavigateToAsync<InventoryViewModel>("Inventory", p), CanNavigate); // Use async lambda
             // Payment Management Hub - consolidated payment functionality
             NavigateToPaymentManagementCommand = new RelayCommand(async p => await NavigateToAsync<PaymentManagementHubViewModel>("Payment Management", p), CanNavigate);
+            // Advance Cheques - new unified payment system (moved to Payment Management Hub)
+            NavigateToAdvanceChequesCommand = new RelayCommand(async p => await NavigateToAsync<AdvanceChequeViewModel>("Advance Cheques", p), CanNavigate);
             // Update Settings command to navigate to the new SettingsHostViewModel
             NavigateToSettingsCommand = new RelayCommand(async p => await NavigateToAsync<SettingsHostViewModel>("Settings", p), CanNavigate); // Use async lambda
 
             // Subscribe to PaymentManagementHub navigation events
             PaymentManagementHubViewModel.NavigationRequested += OnPaymentHubNavigationRequested;
+            
+            // Subscribe to NavigationHelper events
+            NavigationHelper.NavigationRequested += OnNavigationHelperRequested;
 
             // Set default view model to Dashboard
             _ = NavigateToAsync<DashboardViewModel>("Dashboard"); // Call async method, discard task
@@ -161,6 +166,7 @@ namespace WPFGrowerApp.ViewModels
         public ICommand NavigateToReportsCommand { get; }
         public ICommand NavigateToInventoryCommand { get; }
         public ICommand NavigateToPaymentManagementCommand { get; } // Payment Management Hub
+        public ICommand NavigateToAdvanceChequesCommand { get; } // Advance Cheques
         public ICommand NavigateToSettingsCommand { get; }
         public ICommand NavigateToChangePasswordCommand { get; } // Added
         public ICommand LogoutCommand { get; } // Added
@@ -318,6 +324,30 @@ namespace WPFGrowerApp.ViewModels
 
         // Event handler for PaymentManagementHub navigation requests
         private async void OnPaymentHubNavigationRequested(Type viewModelType, string viewName)
+        {
+            try
+            {
+                // Use reflection to call NavigateToAsync with the correct generic type
+                var method = typeof(MainViewModel).GetMethod(nameof(NavigateToAsync));
+                var genericMethod = method?.MakeGenericMethod(viewModelType);
+                if (genericMethod != null)
+                {
+                    var task = (Task)genericMethod.Invoke(this, new object[] { viewName, null });
+                    if (task != null)
+                    {
+                        await task;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the error or handle it appropriately
+                System.Diagnostics.Debug.WriteLine($"Error navigating to {viewName}: {ex.Message}");
+            }
+        }
+
+        // Event handler for NavigationHelper navigation requests
+        private async void OnNavigationHelperRequested(Type viewModelType, string viewName)
         {
             try
             {

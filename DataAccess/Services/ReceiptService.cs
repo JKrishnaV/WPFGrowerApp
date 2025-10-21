@@ -166,6 +166,18 @@ namespace WPFGrowerApp.DataAccess.Services
                     receipt.ReceiptNumber = nextNumber.ToString();
                 }
 
+                // Check if receipt already exists (soft-deleted)
+                var existingReceipt = await GetReceiptByNumberAsync(decimal.Parse(receipt.ReceiptNumber));
+                if (existingReceipt != null && existingReceipt.DeletedAt.HasValue)
+                {
+                    // Receipt exists but is soft-deleted - undelete and update it
+                    Logger.Info($"Undeleteing soft-deleted receipt {receipt.ReceiptNumber}");
+                    await UndeleteReceiptAsync(receipt.ReceiptNumber);
+                    
+                    // Update the existing receipt with new data
+                    return await UpdateReceiptAsync(receipt);
+                }
+
                 // Calculate computed fields
                 receipt.NetWeight = receipt.GrossWeight - receipt.TareWeight;
                 receipt.DockWeight = receipt.NetWeight * (receipt.DockPercentage / 100);
@@ -311,12 +323,19 @@ namespace WPFGrowerApp.DataAccess.Services
         {
             try
             {
+                // Check if receipt can be deleted (no payments)
+                if (!await CanDeleteReceiptAsync(receiptNumber))
+                {
+                    Logger.Warn($"Cannot delete receipt {receiptNumber} - has payment allocations");
+                    throw new InvalidOperationException($"Cannot delete receipt {receiptNumber} because it has payment allocations. Please void the payments first.");
+                }
+
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
                     
                     // Get current user
-                    string currentUser = "SYSTEM"; // TODO: Get from current session/user context
+                    string currentUser = App.CurrentUser?.Username ?? "SYSTEM" ; // TODO: Get from current session/user context
                     
                     // Soft delete in modern Receipts table
                     var sql = @"
@@ -355,7 +374,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     
                     // Get current user
-                    string currentUser = "SYSTEM"; // TODO: Get from current session/user context
+                    string currentUser = App.CurrentUser?.Username ?? "SYSTEM"; // TODO: Get from current session/user context
                     
                     // Void receipt in modern Receipts table
                     var sql = @"
@@ -372,7 +391,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     var parameters = new { 
                         ReceiptNumber = receiptNumber, 
                         VoidedReason = reason,
-                                        // Removed legacy Date property; use ReceiptDate only
+                        VoidedBy = currentUser,
                         ModifiedBy = currentUser
                     };
                     var result = await connection.ExecuteAsync(sql, parameters);
@@ -468,7 +487,7 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    // Query modern Receipts table by ImportBatchId
+                    // Query modern Receipts table by ImportBatchId with Grower join
                     var sql = @"
                         SELECT 
                             r.ReceiptId, r.ReceiptNumber, r.ReceiptDate, r.ReceiptTime,
@@ -481,10 +500,11 @@ namespace WPFGrowerApp.DataAccess.Services
                             r.ImportBatchId,
                             r.CreatedAt, r.CreatedBy, r.ModifiedAt, r.ModifiedBy,
                             r.QualityCheckedAt, r.QualityCheckedBy,
-                            r.DeletedAt, r.DeletedBy
+                            r.DeletedAt, r.DeletedBy,
+                            g.FullName as GrowerName
                         FROM Receipts r
+                        LEFT JOIN Growers g ON r.GrowerId = g.GrowerId
                         WHERE r.ImportBatchId = (SELECT ImportBatchId FROM ImportBatches WHERE BatchNumber = @ImpBatch)
-                          AND r.DeletedAt IS NULL
                         ORDER BY r.ReceiptDate DESC, r.ReceiptNumber DESC";
                     var parameters = new { ImpBatch = impBatch.ToString() };
                     var receipts = (await connection.QueryAsync<Receipt>(sql, parameters)).ToList();
@@ -739,6 +759,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     // Add mandatory conditions
                 sqlBuilder.Where("r.ReceiptDate <= @CutoffDate", new { CutoffDate = cutoffDate });
                 sqlBuilder.Where("r.IsVoided = 0"); // Not voided
+                sqlBuilder.Where("r.DeletedAt IS NULL"); // Not soft deleted
                 sqlBuilder.Where("r.NetWeight > 0"); // for payment , net should be >0
                 sqlBuilder.Where("rpa.AllocationId IS NULL"); // Exclude receipts already paid for this advance (ignores voided allocations)
                 // Add PaymentTypeId parameter for the LEFT JOIN
@@ -1762,6 +1783,471 @@ namespace WPFGrowerApp.DataAccess.Services
                 Logger.Error($"Error getting receipt statistics: {ex.Message}", ex);
                 throw;
             }
+        }
+
+        #endregion
+
+        #region Payment Protection and Re-import Methods
+
+        public async Task<bool> CanDeleteReceiptAsync(string receiptNumber)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    
+                    // Get receipt ID first
+                    var receiptIdSql = "SELECT ReceiptId FROM Receipts WHERE ReceiptNumber = @ReceiptNumber AND DeletedAt IS NULL";
+                    var receiptId = await connection.ExecuteScalarAsync<int?>(receiptIdSql, new { ReceiptNumber = receiptNumber });
+                    
+                    if (!receiptId.HasValue)
+                        return true; // Receipt doesn't exist, so it can be "deleted"
+                    
+                    // Check if receipt has any payment allocations
+                    var hasPayments = await HasPaymentAllocationsAsync(receiptId.Value);
+                    return !hasPayments;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error checking if receipt {receiptNumber} can be deleted: {ex.Message}", ex);
+                return false; // Default to safe side - don't allow deletion if uncertain
+            }
+        }
+
+        public async Task<bool> HasPaymentAllocationsAsync(int receiptId)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = @"
+                        SELECT COUNT(*) 
+                        FROM ReceiptPaymentAllocations 
+                        WHERE ReceiptId = @ReceiptId 
+                          AND (Status IS NULL OR Status != 'Voided')";
+                    
+                    var count = await connection.ExecuteScalarAsync<int>(sql, new { ReceiptId = receiptId });
+                    return count > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error checking payment allocations for Receipt {receiptId}: {ex.Message}", ex);
+                return true; // Default to safe side - assume has payments if uncertain
+            }
+        }
+
+        public async Task<bool> UndeleteReceiptAsync(string receiptNumber)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var sql = @"
+                        UPDATE Receipts
+                        SET DeletedAt = NULL,
+                            DeletedBy = NULL,
+                            IsVoided = 0
+                        WHERE ReceiptNumber = @ReceiptNumber
+                          AND DeletedAt IS NOT NULL";
+                          
+                    var result = await connection.ExecuteAsync(sql, new { ReceiptNumber = receiptNumber });
+                    
+                    if (result > 0)
+                    {
+                        Logger.Info($"Receipt {receiptNumber} undeleted successfully");
+                    }
+                    
+                    return result > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error undeleting receipt {receiptNumber}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        public async Task<Receipt> UpdateReceiptAsync(Receipt receipt)
+        {
+            try
+            {
+                if (receipt == null) throw new ArgumentNullException(nameof(receipt));
+
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+
+                    // Get current user from App.CurrentUser
+                    string currentUser = App.CurrentUser?.Username ?? "SYSTEM";
+
+                    // Calculate computed fields
+                    receipt.NetWeight = receipt.GrossWeight - receipt.TareWeight;
+                    receipt.DockWeight = receipt.NetWeight * (receipt.DockPercentage / 100);
+                    receipt.FinalWeight = receipt.NetWeight - receipt.DockWeight;
+
+                    // Update the receipt
+                    var sql = @"
+                        UPDATE Receipts SET
+                            ReceiptDate = @ReceiptDate,
+                            ReceiptTime = @ReceiptTime,
+                            GrowerId = @GrowerId,
+                            ProductId = @ProductId,
+                            ProcessId = @ProcessId,
+                            ProcessTypeId = @ProcessTypeId,
+                            DepotId = @DepotId,
+                            VarietyId = @VarietyId,
+                            GrossWeight = @GrossWeight,
+                            TareWeight = @TareWeight,
+                            DockPercentage = @DockPercentage,
+                            Grade = @Grade,
+                            PriceClassId = @PriceClassId,
+                            IsVoided = @IsVoided,
+                            VoidedReason = @VoidedReason,
+                            ModifiedAt = GETDATE(),
+                            ModifiedBy = @ModifiedBy
+                        WHERE ReceiptNumber = @ReceiptNumber
+                          AND DeletedAt IS NULL";
+
+                    var parameters = new
+                    {
+                        receipt.ReceiptNumber,
+                        receipt.ReceiptDate,
+                        receipt.ReceiptTime,
+                        receipt.GrowerId,
+                        receipt.ProductId,
+                        receipt.ProcessId,
+                        receipt.ProcessTypeId,
+                        receipt.DepotId,
+                        receipt.VarietyId,
+                        receipt.GrossWeight,
+                        receipt.TareWeight,
+                        receipt.DockPercentage,
+                        receipt.Grade,
+                        receipt.PriceClassId,
+                        receipt.IsVoided,
+                        receipt.VoidedReason,
+                        ModifiedBy = currentUser
+                    };
+
+                    var result = await connection.ExecuteAsync(sql, parameters);
+
+                    if (result > 0)
+                    {
+                        Logger.Info($"Receipt {receipt.ReceiptNumber} updated successfully");
+                        
+                        // Update container transactions if provided
+                        if (receipt.ContainerData != null && receipt.ContainerData.Any())
+                        {
+                            // Delete existing container transactions
+                            await connection.ExecuteAsync(
+                                "DELETE FROM ContainerTransactions WHERE ReceiptId = @ReceiptId",
+                                new { ReceiptId = receipt.ReceiptId });
+                            
+                            // Save new container transactions
+                            await SaveContainerTransactionsAsync(connection, receipt.ReceiptId, receipt.ContainerData, currentUser);
+                        }
+                    }
+
+                    return receipt;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error updating receipt {receipt.ReceiptNumber}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        #endregion
+
+        #region Optimized Search Methods
+
+        /// <summary>
+        /// Optimized search method that uses different query strategies based on search type
+        /// </summary>
+        public async Task<(List<Receipt> Receipts, int TotalCount)> GetReceiptsWithOptimizedSearchAsync(ReceiptFilters filters)
+        {
+            try
+            {
+                // Determine search strategy based on search text
+                if (!string.IsNullOrEmpty(filters.SearchText))
+                {
+                    if (IsReceiptNumberSearch(filters.SearchText))
+                    {
+                        return await GetReceiptsByReceiptNumberAsync(filters);
+                    }
+                    else if (IsGrowerNameSearch(filters.SearchText))
+                    {
+                        return await GetReceiptsByGrowerNameAsync(filters);
+                    }
+                }
+
+                // Use optimized general search for other cases
+                return await GetReceiptsOptimizedAsync(filters);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error in optimized search: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Optimized search for receipt numbers (exact match)
+        /// </summary>
+        private async Task<(List<Receipt> Receipts, int TotalCount)> GetReceiptsByReceiptNumberAsync(ReceiptFilters filters)
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                
+                var searchText = filters.SearchText.Trim();
+                
+                // Try exact match first (fastest)
+                var exactMatchSql = @"
+                    SELECT COUNT(*)
+                    FROM Receipts r
+                    WHERE r.DeletedAt IS NULL 
+                    AND r.ReceiptNumber = @SearchText";
+                
+                var count = await connection.QuerySingleAsync<int>(exactMatchSql, new { SearchText = searchText });
+                
+                if (count > 0)
+                {
+                    // Use exact match query
+                    var sql = @"
+                        SELECT 
+                            r.ReceiptId, r.ReceiptNumber, r.ReceiptDate, r.ReceiptTime,
+                            r.GrowerId, r.ProductId, r.ProcessId, r.ProcessTypeId, r.VarietyId, r.DepotId,
+                            r.GrossWeight, r.TareWeight, r.NetWeight, r.DockPercentage, r.DockWeight, r.FinalWeight,
+                            r.Grade, r.PriceClassId, r.IsVoided, r.VoidedReason, r.VoidedAt, r.VoidedBy,
+                            r.ImportBatchId, r.CreatedAt, r.CreatedBy, r.ModifiedAt, r.ModifiedBy,
+                            r.QualityCheckedAt, r.QualityCheckedBy, r.DeletedAt, r.DeletedBy,
+                            g.FullName as GrowerName,
+                            p.ProductName,
+                            d.DepotName
+                        FROM Receipts r
+                        LEFT JOIN Growers g ON r.GrowerId = g.GrowerId
+                        LEFT JOIN Products p ON r.ProductId = p.ProductId
+                        LEFT JOIN Depots d ON r.DepotId = d.DepotId
+                        WHERE r.DeletedAt IS NULL 
+                        AND r.ReceiptNumber = @SearchText
+                        ORDER BY r.ReceiptDate DESC, r.ReceiptNumber DESC
+                        OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
+
+                    var parameters = new
+                    {
+                        SearchText = searchText,
+                        Offset = (filters.PageNumber - 1) * filters.PageSize,
+                        filters.PageSize
+                    };
+
+                    var receipts = await connection.QueryAsync<Receipt>(sql, parameters);
+                    return (receipts.ToList(), count);
+                }
+                else
+                {
+                    // Fall back to LIKE search for partial matches
+                    return await GetReceiptsWithLikeSearchAsync(filters);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Optimized search for grower names
+        /// </summary>
+        private async Task<(List<Receipt> Receipts, int TotalCount)> GetReceiptsByGrowerNameAsync(ReceiptFilters filters)
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                
+                var searchText = $"%{filters.SearchText.Trim()}%";
+                
+                // First get grower IDs that match the search
+                var growerIdsSql = @"
+                    SELECT GrowerId 
+                    FROM Growers 
+                    WHERE DeletedAt IS NULL 
+                    AND FullName LIKE @SearchText";
+                
+                var growerIds = await connection.QueryAsync<int>(growerIdsSql, new { SearchText = searchText });
+                var growerIdList = growerIds.ToList();
+                
+                if (!growerIdList.Any())
+                {
+                    return (new List<Receipt>(), 0);
+                }
+                
+                // Build optimized query with grower ID list
+                var countSql = @"
+                    SELECT COUNT(*)
+                    FROM Receipts r
+                    WHERE r.DeletedAt IS NULL 
+                    AND r.GrowerId IN @GrowerIds";
+                
+                var count = await connection.QuerySingleAsync<int>(countSql, new { GrowerIds = growerIdList });
+                
+                var sql = @"
+                    SELECT 
+                        r.ReceiptId, r.ReceiptNumber, r.ReceiptDate, r.ReceiptTime,
+                        r.GrowerId, r.ProductId, r.ProcessId, r.ProcessTypeId, r.VarietyId, r.DepotId,
+                        r.GrossWeight, r.TareWeight, r.NetWeight, r.DockPercentage, r.DockWeight, r.FinalWeight,
+                        r.Grade, r.PriceClassId, r.IsVoided, r.VoidedReason, r.VoidedAt, r.VoidedBy,
+                        r.ImportBatchId, r.CreatedAt, r.CreatedBy, r.ModifiedAt, r.ModifiedBy,
+                        r.QualityCheckedAt, r.QualityCheckedBy, r.DeletedAt, r.DeletedBy,
+                        g.FullName as GrowerName,
+                        p.ProductName,
+                        d.DepotName
+                    FROM Receipts r
+                    LEFT JOIN Growers g ON r.GrowerId = g.GrowerId
+                    LEFT JOIN Products p ON r.ProductId = p.ProductId
+                    LEFT JOIN Depots d ON r.DepotId = d.DepotId
+                    WHERE r.DeletedAt IS NULL 
+                    AND r.GrowerId IN @GrowerIds
+                    ORDER BY r.ReceiptDate DESC, r.ReceiptNumber DESC
+                    OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY";
+
+                var parameters = new
+                {
+                    GrowerIds = growerIdList,
+                    Offset = (filters.PageNumber - 1) * filters.PageSize,
+                    filters.PageSize
+                };
+
+                var receipts = await connection.QueryAsync<Receipt>(sql, parameters);
+                return (receipts.ToList(), count);
+            }
+        }
+
+        /// <summary>
+        /// Optimized general search without search text
+        /// </summary>
+        private async Task<(List<Receipt> Receipts, int TotalCount)> GetReceiptsOptimizedAsync(ReceiptFilters filters)
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                
+                // Build optimized count query
+                var countBuilder = new SqlBuilder();
+                var countSelector = countBuilder.AddTemplate(@"
+                    SELECT COUNT(*)
+                    FROM Receipts r
+                    /**where**/"
+                );
+                
+                countBuilder.Where("r.DeletedAt IS NULL");
+                AddOptimizedFilters(countBuilder, filters);
+                
+                var count = await connection.QuerySingleAsync<int>(countSelector.RawSql, countSelector.Parameters);
+                
+                // Build optimized main query
+                var sqlBuilder = new SqlBuilder();
+                var selector = sqlBuilder.AddTemplate(@"
+                    SELECT 
+                        r.ReceiptId, r.ReceiptNumber, r.ReceiptDate, r.ReceiptTime,
+                        r.GrowerId, r.ProductId, r.ProcessId, r.ProcessTypeId, r.VarietyId, r.DepotId,
+                        r.GrossWeight, r.TareWeight, r.NetWeight, r.DockPercentage, r.DockWeight, r.FinalWeight,
+                        r.Grade, r.PriceClassId, r.IsVoided, r.VoidedReason, r.VoidedAt, r.VoidedBy,
+                        r.ImportBatchId, r.CreatedAt, r.CreatedBy, r.ModifiedAt, r.ModifiedBy,
+                        r.QualityCheckedAt, r.QualityCheckedBy, r.DeletedAt, r.DeletedBy,
+                        g.FullName as GrowerName,
+                        p.ProductName,
+                        d.DepotName
+                    FROM Receipts r
+                    LEFT JOIN Growers g ON r.GrowerId = g.GrowerId
+                    LEFT JOIN Products p ON r.ProductId = p.ProductId
+                    LEFT JOIN Depots d ON r.DepotId = d.DepotId
+                    /**where**/
+                    ORDER BY r.ReceiptDate DESC, r.ReceiptNumber DESC
+                    OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY"
+                );
+                
+                sqlBuilder.Where("r.DeletedAt IS NULL");
+                AddOptimizedFilters(sqlBuilder, filters);
+                
+                // Add pagination parameters
+                sqlBuilder.AddParameters(new
+                {
+                    Offset = (filters.PageNumber - 1) * filters.PageSize,
+                    filters.PageSize
+                });
+                
+                var receipts = await connection.QueryAsync<Receipt>(selector.RawSql, selector.Parameters);
+                return (receipts.ToList(), count);
+            }
+        }
+
+        /// <summary>
+        /// Fallback method for LIKE searches
+        /// </summary>
+        private async Task<(List<Receipt> Receipts, int TotalCount)> GetReceiptsWithLikeSearchAsync(ReceiptFilters filters)
+        {
+            // Use the existing method as fallback
+            return await GetReceiptsWithFiltersAndCountAsync(filters);
+        }
+
+        /// <summary>
+        /// Add optimized filters to query builder
+        /// </summary>
+        private void AddOptimizedFilters(SqlBuilder builder, ReceiptFilters filters)
+        {
+            if (filters.StartDate.HasValue)
+                builder.Where("r.ReceiptDate >= @StartDate", new { filters.StartDate });
+            
+            if (filters.EndDate.HasValue)
+                builder.Where("r.ReceiptDate <= @EndDate", new { filters.EndDate });
+            
+            if (filters.ShowVoided.HasValue)
+                builder.Where("r.IsVoided = @ShowVoided", new { filters.ShowVoided });
+            
+            if (filters.ProductId.HasValue)
+                builder.Where("r.ProductId = @ProductId", new { filters.ProductId });
+            
+            if (filters.DepotId.HasValue)
+                builder.Where("r.DepotId = @DepotId", new { filters.DepotId });
+            
+            if (filters.GrowerId.HasValue)
+                builder.Where("r.GrowerId = @GrowerId", new { filters.GrowerId });
+            
+            if (!string.IsNullOrEmpty(filters.CreatedBy))
+                builder.Where("r.CreatedBy = @CreatedBy", new { filters.CreatedBy });
+            
+            if (filters.Grade.HasValue)
+                builder.Where("r.Grade = @Grade", new { filters.Grade });
+            
+            if (filters.IsQualityChecked.HasValue)
+            {
+                if (filters.IsQualityChecked.Value)
+                    builder.Where("r.QualityCheckedAt IS NOT NULL");
+                else
+                    builder.Where("r.QualityCheckedAt IS NULL");
+            }
+        }
+
+        /// <summary>
+        /// Check if search text is likely a receipt number
+        /// </summary>
+        private bool IsReceiptNumberSearch(string searchText)
+        {
+            // Receipt numbers are typically numeric or alphanumeric
+            return searchText.All(c => char.IsLetterOrDigit(c) || c == '-' || c == '_');
+        }
+
+        /// <summary>
+        /// Check if search text is likely a grower name
+        /// </summary>
+        private bool IsGrowerNameSearch(string searchText)
+        {
+            // Grower names typically contain letters and spaces
+            return searchText.Any(c => char.IsLetter(c)) && 
+                   (searchText.Contains(' ') || searchText.Length > 3);
         }
 
         #endregion

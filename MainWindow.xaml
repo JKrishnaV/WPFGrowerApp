@@ -39,9 +39,6 @@
                <views:ReceiptDetailView/>
            </DataTemplate>
            
-           <DataTemplate DataType="{x:Type vm:ImportViewModel}">
-               <views:ImportView/>
-           </DataTemplate>
            
            <DataTemplate DataType="{x:Type vm:ReportsHostViewModel}">
                <views:ReportsHostView/>
@@ -76,6 +73,18 @@
                <views:ChequePreparationView/>
            </DataTemplate>
            
+           <DataTemplate DataType="{x:Type vm:AdvanceChequeViewModel}">
+               <views:AdvanceChequeView/>
+           </DataTemplate>
+           
+           <DataTemplate DataType="{x:Type vm:EnhancedPaymentDistributionViewModel}">
+               <views:EnhancedPaymentDistributionView/>
+           </DataTemplate>
+           
+           <DataTemplate DataType="{x:Type vm:EnhancedChequePreparationViewModel}">
+               <views:EnhancedChequePreparationView/>
+           </DataTemplate>
+           
            <DataTemplate DataType="{x:Type vm:ChequeDeliveryViewModel}">
                <views:ChequeDeliveryView/>
            </DataTemplate>
@@ -102,6 +111,14 @@
            
            <DataTemplate DataType="{x:Type vm:ChangePasswordViewModel}">
                <views:ChangePasswordView/>
+           </DataTemplate>
+           
+           <DataTemplate DataType="{x:Type vm:ImportHubViewModel}">
+               <views:ImportHubView/>
+           </DataTemplate>
+           
+           <DataTemplate DataType="{x:Type vm:BatchManagementViewModel}">
+               <views:BatchManagementView/>
            </DataTemplate>
            
            <!-- Window Control Button Style -->

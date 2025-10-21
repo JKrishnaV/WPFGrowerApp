@@ -29,6 +29,7 @@ namespace WPFGrowerApp.DataAccess.Models
 
         // Computed properties for display
         public string GradeNames => GetGradeNamesDisplay();
+        public string DisplayName => $"{ProcessCode} - {ProcessName}";  // Better display format for dropdowns
 
         // Legacy compatibility properties for existing code
         public string ProcessDescription => ProcessName;             // Map ProcessName to Description for compatibility

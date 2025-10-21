@@ -16,7 +16,16 @@ namespace WPFGrowerApp.Converters
             {
                 return status.ToLower() switch
                 {
+                    // Unified status values for both regular and advance cheques
+                    "generated" => new SolidColorBrush(Color.FromRgb(76, 175, 80)), // Green
+                    "printed" => new SolidColorBrush(Color.FromRgb(33, 150, 243)), // Blue
+                    "delivered" => new SolidColorBrush(Color.FromRgb(139, 195, 74)), // Light Green
+                    "voided" => new SolidColorBrush(Color.FromRgb(244, 67, 54)), // Red
+                    "stopped" => new SolidColorBrush(Color.FromRgb(255, 152, 0)), // Orange
+                    // Legacy status values for backward compatibility
                     "active" => new SolidColorBrush(Color.FromRgb(76, 175, 80)), // Green
+                    "deducted" => new SolidColorBrush(Color.FromRgb(139, 195, 74)), // Light Green
+                    "cancelled" => new SolidColorBrush(Color.FromRgb(244, 67, 54)), // Red
                     "inactive" => new SolidColorBrush(Color.FromRgb(158, 158, 158)), // Gray
                     "hold" => new SolidColorBrush(Color.FromRgb(255, 152, 0)), // Orange
                     "pending" => new SolidColorBrush(Color.FromRgb(33, 150, 243)), // Blue

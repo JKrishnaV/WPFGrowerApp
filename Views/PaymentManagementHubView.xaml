@@ -342,6 +342,83 @@
                     </Grid>
                 </materialDesign:Card>
 
+                <!-- Enhanced Payment Features Section -->
+                <materialDesign:Card Margin="0,0,0,20" Style="{StaticResource MainContentAreaStyle}">
+                    <Grid Margin="20">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Section Header -->
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
+                            <materialDesign:PackIcon Kind="Rocket" Width="28" Height="28" 
+                                                   Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                                   VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <TextBlock Text="Enhanced Payment Features" 
+                                       FontSize="20" FontWeight="SemiBold"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <!-- Action Cards -->
+                        <UniformGrid Grid.Row="1" Columns="3" Margin="0,0,0,10">
+                            <!-- Advance Cheques -->
+                            <materialDesign:Card Margin="5" Style="{StaticResource ActionCardStyle}">
+                                <Button Command="{Binding NavigateToAdvanceChequesCommand}"
+                                        Style="{StaticResource ActionCardButtonStyle}">
+                                    <StackPanel>
+                                        <materialDesign:PackIcon Kind="CurrencyUsd" Width="32" Height="32" 
+                                                               Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                                               HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                                        <TextBlock Text="Advance Cheques" 
+                                                   FontWeight="SemiBold" FontSize="14"
+                                                   HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                                        <TextBlock Text="Create and manage advance payments to growers" 
+                                                   FontSize="11" TextWrapping="Wrap"
+                                                   HorizontalAlignment="Center" Opacity="0.8"/>
+                                    </StackPanel>
+                                </Button>
+                            </materialDesign:Card>
+
+                            <!-- Enhanced Payment Distribution -->
+                            <materialDesign:Card Margin="5" Style="{StaticResource ActionCardStyle}">
+                                <Button Command="{Binding NavigateToEnhancedPaymentDistributionCommand}"
+                                        Style="{StaticResource ActionCardButtonStyle}">
+                                    <StackPanel>
+                                        <materialDesign:PackIcon Kind="Share" Width="32" Height="32" 
+                                                               Foreground="{DynamicResource AccentHueMidBrush}"
+                                                               HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                                        <TextBlock Text="Enhanced Payment Distribution" 
+                                                   FontWeight="SemiBold" FontSize="14"
+                                                   HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                                        <TextBlock Text="Select payment methods and consolidate across batches" 
+                                                   FontSize="11" TextWrapping="Wrap"
+                                                   HorizontalAlignment="Center" Opacity="0.8"/>
+                                    </StackPanel>
+                                </Button>
+                            </materialDesign:Card>
+
+                            <!-- Enhanced Cheque Preparation -->
+                            <materialDesign:Card Margin="5" Style="{StaticResource ActionCardStyle}">
+                                <Button Command="{Binding NavigateToEnhancedChequePreparationCommand}"
+                                        Style="{StaticResource ActionCardButtonStyle}">
+                                    <StackPanel>
+                                        <materialDesign:PackIcon Kind="FileDocument" Width="32" Height="32" 
+                                                               Foreground="{DynamicResource SecondaryHueMidBrush}"
+                                                               HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                                        <TextBlock Text="Enhanced Cheque Preparation" 
+                                                   FontWeight="SemiBold" FontSize="14"
+                                                   HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                                        <TextBlock Text="Prepare and manage all types of cheques" 
+                                                   FontSize="11" TextWrapping="Wrap"
+                                                   HorizontalAlignment="Center" Opacity="0.8"/>
+                                    </StackPanel>
+                                </Button>
+                            </materialDesign:Card>
+                        </UniformGrid>
+                    </Grid>
+                </materialDesign:Card>
+
                 <!-- Electronic Payments Section -->
                 <materialDesign:Card Margin="0,0,0,20" Style="{StaticResource MainContentAreaStyle}">
                     <Grid Margin="20">

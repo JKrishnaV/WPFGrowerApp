@@ -68,5 +68,12 @@ namespace WPFGrowerApp.Services
         /// Shows a confirmation dialog with custom message.
         /// </summary>
         Task<bool?> ShowConfirmationAsync(string message, string title);
+
+        /// <summary>
+        /// Shows a help dialog with proper sizing and scrolling.
+        /// </summary>
+        /// <param name="content">The help content to display</param>
+        /// <param name="title">The title of the help dialog</param>
+        Task ShowHelpDialogAsync(string content, string title = "Help");
     }
 }

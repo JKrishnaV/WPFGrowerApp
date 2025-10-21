@@ -247,10 +247,57 @@ namespace WPFGrowerApp.DataAccess.Models
         }
 
         // ======================================================================
+        // UNIFIED CHEQUE SYSTEM PROPERTIES
+        // ======================================================================
+        
+        private bool _isConsolidated;
+        private string? _consolidatedFromBatches;
+        private bool _isAdvanceCheque;
+        private int? _advanceChequeId;
+
+        /// <summary>
+        /// Is this a consolidated cheque from multiple batches?
+        /// </summary>
+        public bool IsConsolidated
+        {
+            get => _isConsolidated;
+            set => SetProperty(ref _isConsolidated, value);
+        }
+
+        /// <summary>
+        /// JSON array of batch IDs that were consolidated into this cheque
+        /// </summary>
+        public string? ConsolidatedFromBatches
+        {
+            get => _consolidatedFromBatches;
+            set => SetProperty(ref _consolidatedFromBatches, value);
+        }
+
+        /// <summary>
+        /// Is this an advance cheque?
+        /// </summary>
+        public bool IsAdvanceCheque
+        {
+            get => _isAdvanceCheque;
+            set => SetProperty(ref _isAdvanceCheque, value);
+        }
+
+        /// <summary>
+        /// Reference to the advance cheque that generated this cheque
+        /// </summary>
+        public int? AdvanceChequeId
+        {
+            get => _advanceChequeId;
+            set => SetProperty(ref _advanceChequeId, value);
+        }
+
+        // ======================================================================
         // NAVIGATION PROPERTIES (Not mapped to database)
         // ======================================================================
         
         private string? _growerName;
+        private string? _growerNumber;
+        private string? _batchNumber;
         private string? _seriesCode;
         private string? _paymentTypeName;
         private bool _isSelected;
@@ -263,6 +310,24 @@ namespace WPFGrowerApp.DataAccess.Models
         {
             get => _growerName;
             set => SetProperty(ref _growerName, value);
+        }
+
+        /// <summary>
+        /// Grower number for display purposes
+        /// </summary>
+        public string? GrowerNumber
+        {
+            get => _growerNumber;
+            set => SetProperty(ref _growerNumber, value);
+        }
+
+        /// <summary>
+        /// Batch number for display purposes
+        /// </summary>
+        public string? BatchNumber
+        {
+            get => _batchNumber;
+            set => SetProperty(ref _batchNumber, value);
         }
 
         /// <summary>
@@ -301,6 +366,21 @@ namespace WPFGrowerApp.DataAccess.Models
         /// Can this cheque be voided? (Only generated and issued cheques can be voided)
         /// </summary>
         public bool CanBeVoided => Status == "Generated" || Status == "Printed";
+
+        /// <summary>
+        /// Can this cheque be printed?
+        /// </summary>
+        public bool CanBePrinted => Status == "Generated";
+
+        /// <summary>
+        /// Can this cheque be issued?
+        /// </summary>
+        public bool CanBeIssued => Status == "Printed";
+
+        /// <summary>
+        /// Get the payment type for this cheque
+        /// </summary>
+        public string PaymentType => IsAdvanceCheque ? "Advance" : IsConsolidated ? "Consolidated" : "Regular";
 
         /// <summary>
         /// Full cheque number for display (e.g., "A-1234" or "CHQ-20251015-231733336-469")

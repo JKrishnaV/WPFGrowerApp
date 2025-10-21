@@ -452,6 +452,272 @@ Ctrl+N - Add new process type (when not in dialog)"
 
                 keyboardShortcuts: "F1 - Show Help\nF5 - Refresh Data\nEsc - Close Dialog"
             );
+
+            // Advance Cheques Help
+            _helpContents["AdvanceChequeView"] = new HelpContent(
+                title: "Advance Cheques Help",
+                content: @"The Advance Cheques screen allows you to create, view, and manage advance payments issued to growers. These advances are automatically deducted from future payments.
+
+**Key Features:**
+
+• **Create Advance Cheques**: Issue advance payments to growers for various reasons such as equipment purchases, fuel costs, or emergency needs.
+
+• **View Outstanding Advances**: See all active advance cheques that haven't been deducted yet.
+
+• **Track Deductions**: Monitor when and how much has been deducted from advance cheques.
+
+• **Cancel Advances**: Cancel advance cheques that haven't been deducted yet.
+
+• **Search & Filter**: 
+  - Search by grower name, number, or reason
+  - Filter by status (Active, Deducted, Cancelled)
+  - Filter by date range
+  - Real-time filtering as you type
+
+**Advance Cheque Fields:**
+
+• **Grower**: Select the grower receiving the advance
+• **Amount**: The advance amount (must be greater than 0)
+• **Reason**: Description of why the advance is being issued
+• **Date**: When the advance was created
+• **Status**: Current status (Active, Deducted, Cancelled)
+
+**Status Meanings:**
+
+• **Active**: Advance is outstanding and will be deducted from next payment
+• **Deducted**: Advance has been fully deducted from grower payments
+• **Cancelled**: Advance was cancelled before being deducted
+
+**Automatic Deduction Process:**
+
+• When a grower receives a regular payment, any outstanding advances are automatically deducted
+• Deductions are applied in chronological order (oldest advances first)
+• If the payment amount is less than the outstanding advances, partial deductions are made
+• The system tracks all deductions for audit purposes
+
+**Best Practices:**
+
+• Use clear, descriptive reasons for advances
+• Monitor outstanding advances regularly
+• Consider the grower's payment history before issuing large advances
+• Keep advance amounts reasonable relative to expected payments
+• Document the business need for each advance
+
+**Workflow Steps:**
+
+1. **Select Grower**: Choose the grower from the dropdown list
+2. **Enter Amount**: Specify the advance amount
+3. **Add Reason**: Provide a clear reason for the advance
+4. **Create Advance**: Click 'Create Advance' to issue the advance
+5. **Monitor Status**: Track the advance status and deductions
+6. **Cancel if Needed**: Cancel advances that are no longer needed
+
+**Statistics Display:**
+
+• **Total Outstanding**: Sum of all active advance amounts
+• **Active Cheques**: Number of outstanding advances
+• **Deducted This Month**: Total amount deducted in the current month",
+                
+                quickTips: @"• Double-click any advance cheque to view details
+• Use the search box to quickly find specific advances
+• Check outstanding advances before issuing new ones
+• Advances are automatically deducted from next payments
+• Use descriptive reasons for better tracking
+• Monitor the statistics cards for system overview
+• Export data for reporting and analysis",
+                
+                keyboardShortcuts: "F1 - Show Help\nF5 - Refresh Data\nEsc - Close Dialog\nTab - Navigate between fields"
+            );
+
+            // Enhanced Payment Distribution Help
+            _helpContents["EnhancedPaymentDistributionView"] = new HelpContent(
+                title: "Enhanced Payment Distribution Help",
+                content: @"The Enhanced Payment Distribution screen allows you to manage payment distribution with advanced consolidation features. You can choose between regular batch payments and consolidated payments across multiple batches.
+
+**Key Features:**
+
+• **Payment Method Selection**: Choose between regular batch payments and consolidated payments for each grower.
+
+• **Batch Selection**: Select multiple payment batches for consolidation opportunities.
+
+• **Grower Payment Selections**: View and manage payment selections for each grower across selected batches.
+
+• **Consolidation Preview**: Preview consolidated payments before generating cheques.
+
+• **Hybrid Payment Processing**: Mix regular and consolidated payments within the same set of batches.
+
+• **Search & Filter**: 
+  - Search by grower name or batch number
+  - Filter by view mode (By Grower, By Batch)
+  - Filter by payment method
+  - Real-time filtering as you type
+
+**Payment Types:**
+
+• **Regular Batch Payment**: Standard payment within a single batch
+• **Consolidated Payment**: Payment combining amounts from multiple batches for a single grower
+
+**Workflow Steps:**
+
+1. **Select Batches**: Choose the payment batches to work with
+2. **Review Growers**: See all growers appearing in the selected batches
+3. **Choose Payment Method**: Select regular or consolidated payment for each grower
+4. **Preview Distribution**: Review the payment distribution before generating
+5. **Generate Cheques**: Create cheques based on the selected payment methods
+
+**Consolidation Benefits:**
+
+• **Reduced Cheque Count**: Fewer cheques to print and manage
+• **Simplified Tracking**: Single payment per grower across multiple batches
+• **Cost Savings**: Reduced printing and processing costs
+• **Better Cash Flow**: Consolidated payments for growers
+
+**Statistics Display:**
+
+• **Available Batches**: Number of draft batches available for processing
+• **Total Growers**: Number of growers in the selected batches
+• **Total Amount**: Sum of all payment amounts
+• **Consolidation Opportunities**: Number of growers that can be consolidated
+
+**Best Practices:**
+
+• Review consolidation opportunities before making selections
+• Consider grower preferences for payment method
+• Use consolidation for growers with multiple small payments
+• Keep regular batch payments for growers with single large payments
+• Monitor outstanding advances when making payment decisions
+
+**Advanced Features:**
+
+• **Automatic Deduction**: Outstanding advances are automatically deducted from payments
+• **Payment Method Recommendations**: System suggests optimal payment method per grower
+• **Batch Status Management**: Tracks batch status changes after consolidation
+• **Audit Trail**: Complete tracking of all payment decisions and changes",
+                
+                quickTips: @"• Use the search box to quickly find specific growers or batches
+• Check consolidation opportunities to reduce cheque count
+• Preview consolidated payments before generating cheques
+• Consider outstanding advances when selecting payment methods
+• Use the statistics cards to monitor system overview
+• Export data for reporting and analysis
+• Enable consolidation to see consolidation opportunities
+• Review payment method recommendations for each grower",
+                
+                keyboardShortcuts: "F1 - Show Help\nF5 - Refresh Data\nEsc - Close Dialog\nTab - Navigate between fields"
+            );
+
+            // Enhanced Cheque Preparation Help
+            _helpContents["EnhancedChequePreparationView"] = new HelpContent(
+                title: "Enhanced Cheque Preparation Help",
+                content: @"The Enhanced Cheque Preparation screen allows you to manage and prepare all types of cheques (regular, advance, and consolidated) in a unified interface. You can print, preview, void, and manage cheques across all payment types.
+
+**Key Features:**
+
+• **Unified Cheque Management**: View and manage regular, advance, and consolidated cheques in one place.
+
+• **Advanced Filtering**: Filter cheques by type, status, grower, date range, and more.
+
+• **Bulk Operations**: Select multiple cheques for batch operations like printing, voiding, or exporting.
+
+• **Type-Specific Actions**: Different actions available based on cheque type and status.
+
+• **Grouping Options**: Group cheques by type for better organization.
+
+• **Comprehensive Statistics**: View statistics for each cheque type and total amounts.
+
+**Cheque Types:**
+
+• **Regular Cheques**: Standard batch payment cheques
+• **Advance Cheques**: Advance payment cheques issued to growers
+• **Consolidated Cheques**: Cheques combining payments from multiple batches
+
+**Available Actions:**
+
+• **Print Selected**: Print multiple selected cheques
+• **Preview Selected**: Preview multiple selected cheques
+• **Preview Single**: Preview a single selected cheque
+• **Generate PDF**: Generate PDF files for selected cheques
+• **Void Selected**: Void multiple selected cheques
+• **Void Single**: Void a single selected cheque
+• **Stop Payment**: Stop payment on selected cheques
+• **Reprint Selected**: Reprint selected cheques
+• **Export Data**: Export cheque data for reporting
+
+**Filtering Options:**
+
+• **Search**: Search by cheque number, grower name, or amount
+• **Cheque Number**: Filter by specific cheque number
+• **Grower Number**: Filter by grower number
+• **Status**: Filter by cheque status (Generated, Printed, Delivered, Voided)
+• **Type**: Filter by payment type (Regular, Advance, Consolidated)
+• **Date Range**: Filter by cheque date range
+
+**Statistics Display:**
+
+• **Total Cheques**: Total number of cheques in the system
+• **Regular Cheques**: Count and amount of regular cheques
+• **Advance Cheques**: Count and amount of advance cheques
+• **Consolidated Cheques**: Count and amount of consolidated cheques
+• **Total Amount**: Sum of all cheque amounts
+
+**Grouping Features:**
+
+• **Group by Type**: Organize cheques by payment type
+• **Ungroup**: Return to flat list view
+• **Type Icons**: Visual indicators for each cheque type
+
+**Workflow Steps:**
+
+1. **Filter Cheques**: Use search and filter options to find specific cheques
+2. **Select Cheques**: Choose cheques for batch operations
+3. **Preview**: Preview cheques before printing
+4. **Print**: Print selected cheques
+5. **Manage**: Void, stop payment, or reprint as needed
+6. **Export**: Export data for reporting and analysis
+
+**Best Practices:**
+
+• Preview cheques before printing to ensure accuracy
+• Use bulk operations for efficiency when processing multiple cheques
+• Group by type to better organize different cheque types
+• Monitor statistics to track system activity
+• Use appropriate filters to focus on specific cheque sets
+• Export data regularly for backup and reporting purposes
+
+**Type-Specific Information:**
+
+• **Regular Cheques**: Show deduction details if advances were deducted
+• **Advance Cheques**: Display advance reason and status
+• **Consolidated Cheques**: Show source batches and breakdown
+
+**Status Management:**
+
+• **Generated**: Cheques ready for printing
+• **Printed**: Cheques that have been printed
+• **Delivered**: Cheques that have been delivered to growers
+• **Voided**: Cheques that have been voided
+
+**Advanced Features:**
+
+• **Automatic Deduction Display**: Shows advance deductions on regular cheques
+• **Source Batch Tracking**: Tracks which batches were consolidated
+• **Audit Trail**: Complete tracking of all cheque operations
+• **Performance Optimization**: Virtualization for large cheque lists
+• **Keyboard Shortcuts**: F1 for help, F5 for refresh",
+                
+                quickTips: @"• Use the search box to quickly find specific cheques
+• Group by type to organize different cheque types
+• Preview cheques before printing to ensure accuracy
+• Use bulk operations for efficiency with multiple cheques
+• Check statistics cards for system overview
+• Export data regularly for backup and reporting
+• Use appropriate filters to focus on specific cheque sets
+• Monitor deduction details on regular cheques
+• Track source batches on consolidated cheques
+• Use keyboard shortcuts for faster navigation",
+                
+                keyboardShortcuts: "F1 - Show Help\nF5 - Refresh Data\nEsc - Close Dialog\nTab - Navigate between fields"
+            );
         }
 
         /// <summary>

@@ -173,6 +173,11 @@
                             ToolTip="Run simulation and show results in the report viewer."
                             Margin="0,0,8,0"/>
                     <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                            Command="{Binding ViewSkippedDetailsCommand}"
+                            Content="View Skipped Details"
+                            ToolTip="View detailed information about skipped receipts"
+                            Margin="0,0,8,0"/>
+                    <Button Style="{StaticResource MaterialDesignRaisedButton}"
                             Command="{Binding StartPaymentRunCommand}"
                             IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBooleanConverter}}"
                             Content="Start Payment Run"/>
@@ -499,90 +504,143 @@
             </Grid>
         </materialDesign:Card>
 
-        <!-- Combined On Hold Growers & Run Log Section -->
+        <!-- Status and Logging Section -->
         <Grid Grid.Row="5" Margin="0,0,0,16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="10"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
             
             <!-- On Hold Growers Section -->
-            <GroupBox Grid.Column="0" Header="Growers Currently On Hold" 
-                      Style="{StaticResource MaterialDesignCardGroupBox}">
-                <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
-                    <ListView ItemsSource="{Binding OnHoldGrowers}" MinHeight="100">
-                         <ListView.View>
-                             <GridView>
-                                <GridViewColumn Header="Number" DisplayMemberBinding="{Binding GrowerNumber}" Width="100"/>
-                            <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="250"/>
-                             </GridView>
-                         </ListView.View>
-                     </ListView>
-                 </ScrollViewer>
-            </GroupBox>
+            <materialDesign:Card Grid.Row="0" Padding="16" Margin="0,0,0,16">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Header -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
+                        <materialDesign:PackIcon Kind="AccountAlert" Width="20" Height="20" 
+                                               VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="Growers Currently On Hold" 
+                                   Style="{StaticResource MaterialDesignSubtitle1TextBlock}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <!-- Content -->
+                    <ScrollViewer Grid.Row="1" MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                        <ListView ItemsSource="{Binding OnHoldGrowers}" 
+                                  MinHeight="100"
+                                  Background="Transparent"
+                                  BorderThickness="0">
+                            <ListView.View>
+                                <GridView>
+                                    <GridViewColumn Header="Number" 
+                                                    DisplayMemberBinding="{Binding GrowerNumber}" 
+                                                    Width="80"/>
+                                    <GridViewColumn Header="Name" 
+                                                    DisplayMemberBinding="{Binding Name}" 
+                                                    Width="300"/>
+                                </GridView>
+                            </ListView.View>
+                        </ListView>
+                    </ScrollViewer>
+                </Grid>
+            </materialDesign:Card>
 
             <!-- Run Log Section -->
-            <GroupBox Grid.Column="2" Header="Run Log" Style="{StaticResource MaterialDesignCardGroupBox}">
-                <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
-                    <ListBox x:Name="RunLogListBox" 
-                             ItemsSource="{Binding RunLog}" 
-                             SelectionMode="Extended"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                             ScrollViewer.VerticalScrollBarVisibility="Auto"
-                             SelectionChanged="RunLogListBox_SelectionChanged"
-                             VirtualizingPanel.IsVirtualizing="True"
-                             VirtualizingPanel.VirtualizationMode="Recycling"
-                             ScrollViewer.CanContentScroll="True">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="4"/>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                        
-                        <!-- Context Menu -->
-                        <ListBox.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem Header="Copy Selected" 
-                                          Command="{Binding CopySelectedRunLogCommand}"
-                                          ToolTip="Copy selected log entries to clipboard">
-                                    <MenuItem.Icon>
-                                        <materialDesign:PackIcon Kind="ContentCopy" Width="16" Height="16"/>
-                                    </MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="Copy All" 
-                                          Command="{Binding CopyRunLogCommand}"
-                                          ToolTip="Copy all log entries to clipboard">
-                                    <MenuItem.Icon>
-                                        <materialDesign:PackIcon Kind="ContentCopy" Width="16" Height="16"/>
-                                    </MenuItem.Icon>
-                                </MenuItem>
-                                <Separator/>
-                                <MenuItem Header="Select All" 
-                                          Command="ApplicationCommands.SelectAll"
-                                          ToolTip="Select all log entries">
-                                    <MenuItem.Icon>
-                                        <materialDesign:PackIcon Kind="SelectAll" Width="16" Height="16"/>
-                                    </MenuItem.Icon>
-                                </MenuItem>
-                                <MenuItem Header="Clear Selection" 
-                                          Command="{Binding ClearRunLogSelectionCommand}"
-                                          ToolTip="Clear current selection">
-                                    <MenuItem.Icon>
-                                        <materialDesign:PackIcon Kind="Close" Width="16" Height="16"/>
-                                    </MenuItem.Icon>
-                                </MenuItem>
-                            </ContextMenu>
-                        </ListBox.ContextMenu>
-                        
-                        <!-- Keyboard Input Bindings -->
-                        <ListBox.InputBindings>
-                            <KeyBinding Key="A" Modifiers="Ctrl" Command="ApplicationCommands.SelectAll"/>
-                            <KeyBinding Key="C" Modifiers="Ctrl" Command="{Binding CopySelectedRunLogCommand}"/>
-                        </ListBox.InputBindings>
-                    </ListBox>
-                </ScrollViewer>
-            </GroupBox>
+            <materialDesign:Card Grid.Row="1" Padding="16">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Header -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
+                        <materialDesign:PackIcon Kind="Console" Width="20" Height="20" 
+                                               VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="Run Log" 
+                                   Style="{StaticResource MaterialDesignSubtitle1TextBlock}"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="(Right-click for options)" 
+                                   Style="{StaticResource MaterialDesignCaptionTextBlock}"
+                                   VerticalAlignment="Center"
+                                   Margin="8,0,0,0"
+                                   Opacity="0.7"/>
+                    </StackPanel>
+                    
+                    <!-- Content -->
+                    <ScrollViewer Grid.Row="1" MaxHeight="250" MaxWidth="1000"
+                                  VerticalScrollBarVisibility="Auto" 
+                                  HorizontalScrollBarVisibility="Auto">
+                        <ListBox x:Name="RunLogListBox" 
+                                 ItemsSource="{Binding RunLog}" 
+                                 SelectionMode="Extended"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 SelectionChanged="RunLogListBox_SelectionChanged"
+                                 VirtualizingPanel.IsVirtualizing="True"
+                                 VirtualizingPanel.VirtualizationMode="Recycling"
+                                 ScrollViewer.CanContentScroll="True">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" 
+                                               TextWrapping="Wrap" 
+                                               Margin="4,2"
+                                               FontFamily="Consolas"
+                                               FontSize="11"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                            
+                            <!-- Context Menu -->
+                            <ListBox.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Copy Selected" 
+                                              Command="{Binding CopySelectedRunLogCommand}"
+                                              ToolTip="Copy selected log entries to clipboard">
+                                        <MenuItem.Icon>
+                                            <materialDesign:PackIcon Kind="ContentCopy" Width="16" Height="16"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Copy All" 
+                                              Command="{Binding CopyRunLogCommand}"
+                                              ToolTip="Copy all log entries to clipboard">
+                                        <MenuItem.Icon>
+                                            <materialDesign:PackIcon Kind="ContentCopy" Width="16" Height="16"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <Separator/>
+                                    <MenuItem Header="Select All" 
+                                              Command="ApplicationCommands.SelectAll"
+                                              ToolTip="Select all log entries">
+                                        <MenuItem.Icon>
+                                            <materialDesign:PackIcon Kind="SelectAll" Width="16" Height="16"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="Clear Selection" 
+                                              Command="{Binding ClearRunLogSelectionCommand}"
+                                              ToolTip="Clear current selection">
+                                        <MenuItem.Icon>
+                                            <materialDesign:PackIcon Kind="Close" Width="16" Height="16"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                </ContextMenu>
+                            </ListBox.ContextMenu>
+                            
+                            <!-- Keyboard Input Bindings -->
+                            <ListBox.InputBindings>
+                                <KeyBinding Key="A" Modifiers="Ctrl" Command="ApplicationCommands.SelectAll"/>
+                                <KeyBinding Key="C" Modifiers="Ctrl" Command="{Binding CopySelectedRunLogCommand}"/>
+                            </ListBox.InputBindings>
+                        </ListBox>
+                    </ScrollViewer>
+                </Grid>
+            </materialDesign:Card>
         </Grid>
 
             <!-- Status Bar -->

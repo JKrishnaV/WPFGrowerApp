@@ -62,6 +62,13 @@ namespace WPFGrowerApp
             services.AddTransient<IPaymentReconciliationService, PaymentReconciliationService>(); // Added for payment reconciliation
             services.AddTransient<IPaymentService, PaymentService>();
             services.AddTransient<IPaymentBatchExportService, PaymentBatchExportService>(); // Phase 3 - Export Service
+            
+            // Phase 3 - Unified Cheque Payment System Services
+            services.AddTransient<IAdvanceChequeService, AdvanceChequeService>(); // Added for advance cheques
+            services.AddTransient<IAdvanceDeductionService, AdvanceDeductionService>(); // Added for advance deductions
+            services.AddTransient<ICrossBatchPaymentService, CrossBatchPaymentService>(); // Added for cross-batch payments
+            services.AddTransient<IUnifiedVoidingService, UnifiedVoidingService>(); // Added for unified voiding
+            
             services.AddTransient<IDepotService, DepotService>();
             services.AddTransient<IProductService, ProductService>(); 
             services.AddTransient<IProcessService, ProcessService>(); // Already added, confirming
@@ -74,10 +81,12 @@ namespace WPFGrowerApp
             services.AddTransient<IReceiptExportService, ReceiptExportService>();
             services.AddTransient<IReceiptValidationService, ReceiptValidationService>();
             services.AddTransient<IReceiptAnalyticsService, ReceiptAnalyticsService>();
+            services.AddTransient<IDuplicateDetectionService, DuplicateDetectionService>();
 
             // Register Other Services
             services.AddTransient<ReportExportService>();
             services.AddTransient<ChequePdfGenerator>(); // Added for PDF generation
+            services.AddTransient<EnhancedChequePdfGenerator>(); // Added for enhanced PDF generation
             services.AddTransient<NachaFileGenerator>(); // Added for NACHA file generation
             services.AddSingleton<IDialogService, DialogService>();
             services.AddSingleton<IUISettingsService, UISettingsService>(); // Register UI Settings Service
@@ -97,6 +106,8 @@ namespace WPFGrowerApp
             services.AddTransient<ReceiptListViewModel>();
             services.AddTransient<ReceiptDetailViewModel>();
             services.AddTransient<ImportViewModel>();
+            services.AddTransient<ImportHubViewModel>();
+            services.AddTransient<BatchManagementViewModel>();
             services.AddTransient<ReportsViewModel>();
             services.AddTransient<InventoryViewModel>();
             services.AddTransient<SettingsViewModel>(); 
@@ -120,6 +131,11 @@ namespace WPFGrowerApp
             services.AddTransient<PaymentStatusDashboardViewModel>(); // Added for payment status dashboard
             services.AddTransient<PaymentReconciliationViewModel>(); // Added for payment reconciliation
             services.AddTransient<PaymentManagementHubViewModel>(); // Added for payment management hub
+            
+            // Phase 3 - Unified Cheque Payment System ViewModels
+            services.AddTransient<AdvanceChequeViewModel>(); // Added for advance cheques management
+            services.AddTransient<EnhancedPaymentDistributionViewModel>(); // Added for enhanced payment distribution
+            services.AddTransient<EnhancedChequePreparationViewModel>(); // Added for enhanced cheque preparation
             
             services.AddTransient<LoginViewModel>();
             services.AddTransient<ChangePasswordViewModel>();

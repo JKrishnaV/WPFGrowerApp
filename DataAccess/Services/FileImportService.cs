@@ -96,7 +96,7 @@ namespace WPFGrowerApp.DataAccess.Services
 
         public async Task<(IEnumerable<Receipt> receipts, List<string> errors)> ReadReceiptsFromFileAsync(
             string filePath,
-            IProgress<int> progress = null,
+            IProgress<int>? progress = null,
             CancellationToken cancellationToken = default)
         {
             try
@@ -159,9 +159,16 @@ namespace WPFGrowerApp.DataAccess.Services
                     var editBy = GetValueSafe(values, headerIndexes, "EDIT BY");
                     var editReason = GetValueSafe(values, headerIndexes, "EDIT REASON");
                     var dockPercentStr = GetValueSafe(values, headerIndexes, "DOCKPERCENT");
+                    var batchNoStr = GetValueSafe(values, headerIndexes, "BATCHNO");
 
                     // Basic validation and parsing
                     var growerNumber = growerIdStr;
+                    string? originalBatchNumber = null;
+                    if (!string.IsNullOrEmpty(batchNoStr))
+                    {
+                        originalBatchNumber = batchNoStr.Trim();
+                    }
+                    
                     if (!decimal.TryParse(netStr, out var net) ||
                         !decimal.TryParse(priceStr, out var price) ||
                         !decimal.TryParse(ticketNoStr, out var ticketNumber) ||
@@ -260,6 +267,9 @@ namespace WPFGrowerApp.DataAccess.Services
 
                         // ImportBatchId will be set in ImportBatchProcessor.ProcessSingleReceiptAsync
                         ImportBatchId = null,
+                        
+                        // Original batch number from CSV
+                        OriginalBatchNumber = originalBatchNumber,
 
                         // Container data
                         ContainerData = new List<ContainerInfo>()
@@ -310,6 +320,49 @@ namespace WPFGrowerApp.DataAccess.Services
                 throw;
             }
         }
+
+        public async Task<Dictionary<string, List<Receipt>>> AnalyzeBatchNumbersAsync(string filePath, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                Logger.Info($"Analyzing batch numbers in file: {filePath}");
+                
+                var (receipts, errors) = await ReadReceiptsFromFileAsync(filePath, null!, cancellationToken);
+                
+                if (errors.Any())
+                {
+                    Logger.Warn($"Found {errors.Count} errors while analyzing batch numbers: {string.Join("; ", errors)}");
+                }
+                
+                // Group receipts by their original batch number
+                var batchGroups = receipts
+                    .Where(r => !string.IsNullOrEmpty(r.OriginalBatchNumber))
+                    .GroupBy(r => r.OriginalBatchNumber!)
+                    .ToDictionary(g => g.Key, g => g.ToList());
+                
+                // Handle receipts without batch numbers
+                var receiptsWithoutBatch = receipts.Where(r => string.IsNullOrEmpty(r.OriginalBatchNumber)).ToList();
+                if (receiptsWithoutBatch.Any())
+                {
+                    Logger.Info($"Found {receiptsWithoutBatch.Count} receipts without batch numbers - they will be grouped separately");
+                    batchGroups["NO_BATCH"] = receiptsWithoutBatch; // Use "NO_BATCH" as a special batch identifier for unbatched receipts
+                }
+                
+                Logger.Info($"File analysis complete. Found {batchGroups.Count} batch groups: {string.Join(", ", batchGroups.Keys)}");
+                foreach (var group in batchGroups)
+                {
+                    Logger.Info($"  Batch {group.Key}: {group.Value.Count} receipts");
+                }
+                
+                return batchGroups;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error analyzing batch numbers in file {filePath}", ex);
+                throw;
+            }
+        }
+
         //how to use this method?   
         private (int Grade, string ProcessID) ExtractGradeAndProcessID(string gradeId)
         {
@@ -336,9 +389,9 @@ namespace WPFGrowerApp.DataAccess.Services
             return (0, gradeId.Substring(0, 2));
         }
 
-        public async Task<(bool IsValid, List<string> Errors)> ValidateReceiptsAsync(
+        public Task<(bool IsValid, List<string> Errors)> ValidateReceiptsAsync(
             IEnumerable<Receipt> receipts,
-            IProgress<int> progress = null,
+            IProgress<int>? progress = null,
             CancellationToken cancellationToken = default)
         {
             try
@@ -382,7 +435,7 @@ namespace WPFGrowerApp.DataAccess.Services
 
                 var isValid = !errors.Any();
                 Logger.Info($"Receipt validation completed. Valid: {isValid}, Error count: {errors.Count}");
-                return (isValid, errors);
+                return Task.FromResult((isValid, errors));
             }
             catch (Exception ex)
             {
@@ -427,11 +480,11 @@ namespace WPFGrowerApp.DataAccess.Services
         }
 
 
-        private async Task<decimal> GenerateDayUniqAsync(DateTime date)
+        private Task<decimal> GenerateDayUniqAsync(DateTime date)
         {
             // This should be implemented based on your business logic for generating unique daily identifiers
             // For now, returning a timestamp-based value
-            return decimal.Parse(date.ToString("yyyyMMdd"));
+            return Task.FromResult(decimal.Parse(date.ToString("yyyyMMdd")));
         }
 
         #region Foreign Key Lookup Methods with Caching

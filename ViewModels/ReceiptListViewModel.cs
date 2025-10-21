@@ -575,7 +575,7 @@ namespace WPFGrowerApp.ViewModels
                     SortDescending = true
                 };
 
-                var (receipts, totalCount) = await _receiptService.GetReceiptsWithFiltersAndCountAsync(filters);
+                var (receipts, totalCount) = await _receiptService.GetReceiptsWithOptimizedSearchAsync(filters);
                 
                 // Performance optimization: Use bulk operations instead of individual Add calls
                 var newReceipts = new ObservableCollection<Receipt>();
@@ -623,7 +623,7 @@ namespace WPFGrowerApp.ViewModels
                 Logger.Info($"=== END DEBUG ===");
 
                 // Calculate statistics asynchronously without blocking UI
-                _ = Task.Run(async () => await CalculateStatisticsAsync());
+                _ = Task.Run(CalculateStatisticsAsync);
 
                 StatusMessage = $"Loaded {Receipts.Count} receipts";
             }
@@ -638,32 +638,53 @@ namespace WPFGrowerApp.ViewModels
             }
         }
 
-        private async Task CalculateStatisticsAsync()
+        private Task CalculateStatisticsAsync()
         {
             try
             {
-                var analytics = await _analyticsService.GetReceiptAnalyticsAsync(StartDate, EndDate);
-                
                 Logger.Info($"=== STATISTICS CALCULATION ===");
-                Logger.Info($"Analytics TotalReceipts: {analytics.TotalReceipts}");
-                Logger.Info($"Analytics TotalGrossWeight: {analytics.TotalGrossWeight}");
-                Logger.Info($"Analytics TotalNetWeight: {analytics.TotalNetWeight}");
-                Logger.Info($"Analytics TotalFinalWeight: {analytics.TotalFinalWeight}");
-                Logger.Info($"Analytics AverageDockPercentage: {analytics.AverageDockPercentage}");
                 Logger.Info($"Current Receipts in collection: {Receipts.Count}");
                 Logger.Info($"Current TotalRecords: {TotalRecords}");
-                Logger.Info($"=== END STATISTICS ===");
                 
-                TotalReceipts = analytics.TotalReceipts;
-                TotalGrossWeight = analytics.TotalGrossWeight;
-                TotalNetWeight = analytics.TotalNetWeight;
-                TotalFinalWeight = analytics.TotalFinalWeight;
-                AverageDockPercentage = analytics.AverageDockPercentage;
+                // FIXED: Calculate statistics from actual loaded receipts that match the applied filters
+                // This ensures statistics match the grid data exactly
+                if (Receipts.Any())
+                {
+                    TotalReceipts = Receipts.Count;
+                    TotalGrossWeight = Receipts.Sum(r => r.GrossWeight);
+                    TotalNetWeight = Receipts.Sum(r => r.NetWeight);
+                    TotalFinalWeight = Receipts.Sum(r => r.FinalWeight);
+                    AverageDockPercentage = Receipts.Average(r => r.DockPercentage);
+                }
+                else
+                {
+                    // No receipts loaded, set statistics to 0
+                    TotalReceipts = 0;
+                    TotalGrossWeight = 0;
+                    TotalNetWeight = 0;
+                    TotalFinalWeight = 0;
+                    AverageDockPercentage = 0;
+                }
+                
+                Logger.Info($"Calculated TotalReceipts: {TotalReceipts}");
+                Logger.Info($"Calculated TotalGrossWeight: {TotalGrossWeight}");
+                Logger.Info($"Calculated TotalNetWeight: {TotalNetWeight}");
+                Logger.Info($"Calculated TotalFinalWeight: {TotalFinalWeight}");
+                Logger.Info($"Calculated AverageDockPercentage: {AverageDockPercentage}");
+                Logger.Info($"=== END STATISTICS ===");
             }
             catch (Exception ex)
             {
                 Logger.Error("Error calculating statistics", ex);
+                // Set statistics to 0 on error
+                TotalReceipts = 0;
+                TotalGrossWeight = 0;
+                TotalNetWeight = 0;
+                TotalFinalWeight = 0;
+                AverageDockPercentage = 0;
             }
+            
+            return Task.CompletedTask;
         }
 
         private void ClearFilters()

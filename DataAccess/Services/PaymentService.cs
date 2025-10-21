@@ -633,13 +633,27 @@ namespace WPFGrowerApp.DataAccess.Services
 
                 // 1. Get eligible receipts (Moved from ProcessAdvancePaymentRunAsync)
                 progress?.Report("Fetching eligible receipts for simulation...");
-                // TODO: Update GetReceiptsForAdvancePaymentAsync signature if not already done
+                
+                // Convert exclude logic to include logic for grower filtering
+                // If excludeGrowerIds is empty, it means all growers are selected (include all)
+                // If excludeGrowerIds has values, it means specific growers are excluded (include the rest)
+                List<int>? includeGrowerIds = null;
+                if (parameters.ExcludeGrowerIds?.Any() == true)
+                {
+                    // Get all growers and exclude the ones in the exclude list
+                    var allGrowers = await _growerService.GetAllGrowersAsync();
+                    includeGrowerIds = allGrowers
+                        .Where(g => !parameters.ExcludeGrowerIds.Contains(g.GrowerId))
+                        .Select(g => g.GrowerId)
+                        .ToList();
+                }
+                
                 var eligibleReceipts = await _receiptService.GetReceiptsForAdvancePaymentAsync(
                     parameters.AdvanceNumber,
                     parameters.CutoffDate,
-                    null, // includeGrowerIds removed
-                    null, // includePayGroupIds removed
-                    parameters.ExcludeGrowerIds,
+                    includeGrowerIds, // Use calculated include list
+                    null, // includePayGroupIds - not used in current implementation
+                    null, // excludeGrowerIds - now handled by includeGrowerIds
                     parameters.ExcludePayGroupIds,
                     parameters.ProductIds,
                     parameters.ProcessIds,
@@ -727,7 +741,7 @@ namespace WPFGrowerApp.DataAccess.Services
                             if (priceRecordId == 0)
                             {
                                 receiptDetail.ErrorMessage = $"No price record found (Product: {receipt.Product}, Process: {receipt.Process}, Date: {receipt.ReceiptDate.ToShortDateString()}).";
-                                currentGrowerPayment.ReceiptDetails.Add(receiptDetail);
+                                // Don't add here - it will be added in the finally block to avoid duplicate counting
                                 continue; // Skip calculation for this receipt
                             }
                             receiptDetail.PriceRecordId = priceRecordId;

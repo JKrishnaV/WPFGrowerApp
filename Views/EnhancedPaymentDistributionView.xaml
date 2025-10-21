@@ -1,0 +1,364 @@
+<UserControl x:Class="WPFGrowerApp.Views.EnhancedPaymentDistributionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:converters="clr-namespace:WPFGrowerApp.Converters"
+             Focusable="True"
+        KeyDown="Window_KeyDown">
+    
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Styles/StandardizedViewTemplate.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            
+            <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Breadcrumb -->
+            <RowDefinition Height="Auto"/> <!-- Title -->
+            <RowDefinition Height="Auto"/> <!-- Search Bar -->
+            <RowDefinition Height="Auto"/> <!-- Stats Cards -->
+            <RowDefinition Height="*"/>     <!-- Main Content -->
+            <RowDefinition Height="Auto"/> <!-- Status Bar -->
+        </Grid.RowDefinitions>
+
+        <!-- Breadcrumb Navigation -->
+        <materialDesign:ColorZone Grid.Row="0" Style="{StaticResource BreadcrumbNavigationStyle}">
+            <StackPanel Orientation="Horizontal">
+                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                        Command="{Binding NavigateToDashboardCommand}"
+                        Padding="5,0">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Home" Width="16" Height="16" 
+                                               VerticalAlignment="Center" Margin="0,0,5,0"/>
+                        <TextBlock Text="Dashboard" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+                <materialDesign:PackIcon Kind="ChevronRight" Width="16" Height="16" 
+                                        VerticalAlignment="Center" Margin="5,0"/>
+                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                        Command="{Binding NavigateToPaymentManagementCommand}"
+                        Padding="5,0">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="CreditCard" Width="16" Height="16" 
+                                               VerticalAlignment="Center" Margin="0,0,5,0"/>
+                        <TextBlock Text="Payment Management" FontSize="12"/>
+                    </StackPanel>
+                </Button>
+                <materialDesign:PackIcon Kind="ChevronRight" Width="16" Height="16" 
+                                        VerticalAlignment="Center" Margin="5,0"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <materialDesign:PackIcon Kind="Share" Width="16" Height="16" 
+                                           VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBlock Text="Enhanced Payment Distribution" FontSize="12" FontWeight="SemiBold"/>
+                </StackPanel>
+            </StackPanel>
+        </materialDesign:ColorZone>
+
+        <!-- View Title -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="16,8">
+            <materialDesign:PackIcon Kind="AccountMultiple" Width="24" Height="24" VerticalAlignment="Center" Margin="0,0,8,0"/>
+            <TextBlock Text="Enhanced Payment Distribution" Style="{DynamicResource MaterialDesignHeadline4TextBlock}" VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Search and Filter Bar -->
+        <materialDesign:Card Grid.Row="2" Style="{StaticResource StatisticsCardStyle}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <!-- Search Box -->
+                <TextBox Grid.Column="0" 
+                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                         materialDesign:HintAssist.Hint="Search growers or batches..."
+                         Style="{DynamicResource MaterialDesignOutlinedTextBox}"
+                         Margin="0,0,8,0"/>
+                
+                <!-- View Mode Toggle -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,8,0">
+                    <RadioButton Content="By Grower" IsChecked="{Binding IsByGrower}" Margin="0,0,8,0"/>
+                    <RadioButton Content="By Batch" IsChecked="{Binding IsByBatch}" Margin="0,0,8,0"/>
+                    <CheckBox Content="All Pending" IsChecked="{Binding IsAllPending}"/>
+                </StackPanel>
+                
+                <!-- Payment Method -->
+                <ComboBox Grid.Column="2" 
+                          SelectedItem="{Binding SelectedPaymentMethod}"
+                          ItemsSource="{Binding PaymentMethods}"
+                          materialDesign:HintAssist.Hint="Payment Method"
+                          Style="{DynamicResource MaterialDesignOutlinedComboBox}"
+                          Width="120" Margin="0,0,8,0"/>
+                
+                <!-- Consolidation Toggle -->
+                <CheckBox Grid.Column="3" 
+                          Content="Enable Consolidation" 
+                          IsChecked="{Binding EnableConsolidation}"
+                          Margin="0,0,8,0"/>
+                
+                <!-- Action Buttons -->
+                <StackPanel Grid.Column="4" Orientation="Horizontal">
+                    <Button Content="Refresh" 
+                            Command="{Binding RefreshCommand}"
+                            Style="{DynamicResource MaterialDesignOutlinedButton}"
+                            Margin="0,0,8,0"/>
+                    <Button Content="Clear Filters" 
+                            Command="{Binding ClearFiltersCommand}"
+                            Style="{DynamicResource MaterialDesignOutlinedButton}"
+                            Margin="0,0,8,0"/>
+                    <Button Content="Help" 
+                            Command="{Binding ShowHelpCommand}"
+                            Style="{DynamicResource MaterialDesignOutlinedButton}"/>
+                </StackPanel>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Statistics Cards -->
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- Total Batches -->
+            <materialDesign:Card Grid.Column="0" Style="{StaticResource StatisticsCardStyle}">
+                <StackPanel>
+                    <TextBlock Text="Available Batches" Style="{DynamicResource MaterialDesignBody2TextBlock}" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                    <TextBlock Text="{Binding TotalBatches}" Style="{DynamicResource MaterialDesignHeadline4TextBlock}" Foreground="{DynamicResource MaterialDesignBody}"/>
+                </StackPanel>
+            </materialDesign:Card>
+            
+            <!-- Total Growers -->
+            <materialDesign:Card Grid.Column="1" Style="{StaticResource StatisticsCardStyle}">
+                <StackPanel>
+                    <TextBlock Text="Total Growers" Style="{DynamicResource MaterialDesignBody2TextBlock}" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                    <TextBlock Text="{Binding TotalGrowers}" Style="{DynamicResource MaterialDesignHeadline4TextBlock}" Foreground="{DynamicResource MaterialDesignBody}"/>
+                </StackPanel>
+            </materialDesign:Card>
+            
+            <!-- Total Amount -->
+            <materialDesign:Card Grid.Column="2" Style="{StaticResource StatisticsCardStyle}">
+                <StackPanel>
+                    <TextBlock Text="Total Amount" Style="{DynamicResource MaterialDesignBody2TextBlock}" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                    <TextBlock Text="{Binding TotalAmountDisplay}" Style="{DynamicResource MaterialDesignHeadline4TextBlock}" Foreground="{DynamicResource MaterialDesignBody}"/>
+                </StackPanel>
+            </materialDesign:Card>
+            
+            <!-- Consolidation Opportunities -->
+            <materialDesign:Card Grid.Column="3" Style="{StaticResource StatisticsCardStyle}">
+                <StackPanel>
+                    <TextBlock Text="Consolidation Opportunities" Style="{DynamicResource MaterialDesignBody2TextBlock}" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                    <TextBlock Text="{Binding ConsolidationOpportunitiesDisplay}" Style="{DynamicResource MaterialDesignHeadline4TextBlock}" Foreground="{DynamicResource MaterialDesignBody}"/>
+                </StackPanel>
+            </materialDesign:Card>
+        </Grid>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="400"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- Batch Selection and Payment Method -->
+            <materialDesign:Card Grid.Column="0" Style="{StaticResource MainContentAreaStyle}">
+                <StackPanel>
+                    <TextBlock Text="Payment Method Selection" Style="{DynamicResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,16"/>
+                    
+                    <!-- Batch Selection -->
+                    <TextBlock Text="Available Batches" Style="{DynamicResource MaterialDesignSubtitle2TextBlock}" Margin="0,0,0,8"/>
+                    <ListBox ItemsSource="{Binding AvailableBatches}"
+                             SelectionMode="Multiple"
+                             Height="120"
+                             Margin="0,0,0,16">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <CheckBox IsChecked="{Binding IsSelected}" Margin="0,0,8,0"/>
+                                    <TextBlock Text="{Binding BatchNumber}" VerticalAlignment="Center"/>
+                                    <TextBlock Text=" - " VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding BatchDate, StringFormat='MMM dd, yyyy'}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    
+                    <!-- Selected Batches Display -->
+                    <TextBlock Text="{Binding SelectedBatchesDisplay}" 
+                               Style="{DynamicResource MaterialDesignBody2TextBlock}" 
+                               Foreground="{DynamicResource MaterialDesignBodyLight}"
+                               Margin="0,0,0,16"/>
+                    
+                    <!-- Payment Method Selection -->
+                    <TextBlock Text="Payment Method" Style="{DynamicResource MaterialDesignSubtitle2TextBlock}" Margin="0,0,0,8"/>
+                    <ComboBox SelectedItem="{Binding SelectedPaymentMethod}"
+                              ItemsSource="{Binding PaymentMethods}"
+                              materialDesign:HintAssist.Hint="Select Payment Method"
+                              Style="{DynamicResource MaterialDesignOutlinedComboBox}"
+                              Margin="0,0,0,16"/>
+                    
+                    <!-- Action Buttons -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="Select Batches" 
+                                Command="{Binding SelectBatchesForConsolidationCommand}"
+                                Style="{DynamicResource MaterialDesignOutlinedButton}"
+                                Margin="0,0,8,0"/>
+                        <Button Content="Generate Payments" 
+                                Command="{Binding GeneratePaymentsCommand}"
+                                Style="{DynamicResource MaterialDesignRaisedButton}"/>
+                    </StackPanel>
+                </StackPanel>
+            </materialDesign:Card>
+            
+            <!-- Grower Selections and Consolidation -->
+            <materialDesign:Card Grid.Column="1" Style="{StaticResource MainContentAreaStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- List Header -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,16">
+                        <TextBlock Text="Grower Payment Selections" Style="{DynamicResource MaterialDesignHeadline6TextBlock}" VerticalAlignment="Center"/>
+                        <Button Content="Preview Distribution" 
+                                Command="{Binding PreviewDistributionCommand}"
+                                Style="{DynamicResource MaterialDesignOutlinedButton}"
+                                Margin="16,0,0,0"/>
+                        <Button Content="Generate Cheques" 
+                                Command="{Binding GenerateChequesCommand}"
+                                Style="{DynamicResource MaterialDesignRaisedButton}"
+                                Margin="8,0,0,0"/>
+                        <Button Content="Export" 
+                                Command="{Binding ExportCommand}"
+                                Style="{DynamicResource MaterialDesignOutlinedButton}"
+                                Margin="8,0,0,0"/>
+                    </StackPanel>
+                    
+                    <!-- DataGrid -->
+                    <DataGrid Grid.Row="1" 
+                              ItemsSource="{Binding GrowerSelections}"
+                              SelectedItem="{Binding SelectedGrowerSelection}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              CanUserResizeColumns="True"
+                              CanUserSortColumns="True"
+                              CanUserReorderColumns="False"
+                              IsReadOnly="True"
+                              GridLinesVisibility="Horizontal"
+                              HeadersVisibility="Column"
+                              SelectionMode="Single"
+                              VirtualizingPanel.IsVirtualizing="True"
+                              VirtualizingPanel.VirtualizationMode="Recycling">
+                        
+                        <DataGrid.Columns>
+                            <!-- Grower -->
+                            <DataGridTextColumn Header="Grower" 
+                                                Binding="{Binding GrowerDisplay}" 
+                                                Width="200"
+                                                CanUserSort="True"/>
+                            
+                            <!-- Payment Type -->
+                            <DataGridTemplateColumn Header="Payment Type" Width="150">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ComboBox SelectedItem="{Binding SelectedPaymentType}"
+                                                  Style="{DynamicResource MaterialDesignOutlinedComboBox}"
+                                                  Width="120">
+                                            <ComboBoxItem Content="Regular" Tag="Regular"/>
+                                            <ComboBoxItem Content="Consolidated" Tag="Consolidated"/>
+                                        </ComboBox>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            
+                            <!-- Regular Amount -->
+                            <DataGridTextColumn Header="Regular Amount" 
+                                                Binding="{Binding RegularAmountDisplay}" 
+                                                Width="120"
+                                                CanUserSort="True"/>
+                            
+                            <!-- Consolidated Amount -->
+                            <DataGridTextColumn Header="Consolidated Amount" 
+                                                Binding="{Binding ConsolidatedAmountDisplay}" 
+                                                Width="140"
+                                                CanUserSort="True"/>
+                            
+                            <!-- Outstanding Advances -->
+                            <DataGridTextColumn Header="Outstanding Advances" 
+                                                Binding="{Binding OutstandingAdvancesDisplay}" 
+                                                Width="150"
+                                                CanUserSort="True"/>
+                            
+                            <!-- Net Amount -->
+                            <DataGridTextColumn Header="Net Amount" 
+                                                Binding="{Binding NetRegularAmountDisplay}" 
+                                                Width="120"
+                                                CanUserSort="True"/>
+                            
+                            <!-- Status -->
+                            <DataGridTextColumn Header="Status" 
+                                                Binding="{Binding StatusDisplay}" 
+                                                Width="150"
+                                                CanUserSort="True"/>
+                            
+                            <!-- Actions -->
+                            <DataGridTemplateColumn Header="Actions" Width="120">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Content="Preview" 
+                                                    Command="{Binding DataContext.PreviewConsolidatedPaymentCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                    Style="{DynamicResource MaterialDesignOutlinedButton}"
+                                                    IsEnabled="{Binding CanBeConsolidated}"
+                                                    Margin="0,0,4,0"
+                                                    Padding="8,4"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </materialDesign:Card>
+        </Grid>
+
+        <!-- Status Bar -->
+        <materialDesign:ColorZone Grid.Row="5" Style="{StaticResource StatusFooterBarStyle}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock Text="Status: " FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding StatusMessage}"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <TextBlock Text="Selected: " FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding SelectedBatches.Count}"/>
+                    <TextBlock Text=" / " Margin="5,0"/>
+                    <TextBlock Text="{Binding AvailableBatches.Count}"/>
+                    <TextBlock Text=" | " Margin="5,0"/>
+                    <TextBlock Text="Last Updated: " FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding LastUpdated}"/>
+                </StackPanel>
+            </Grid>
+        </materialDesign:ColorZone>
+    </Grid>
+</UserControl>

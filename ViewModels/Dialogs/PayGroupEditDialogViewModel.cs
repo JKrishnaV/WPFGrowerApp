@@ -51,7 +51,7 @@ namespace WPFGrowerApp.ViewModels.Dialogs
                     DefaultPriceLevel = 1, // Default to Level 1
                     IsActive = true,
                     CreatedAt = DateTime.Now,
-                    CreatedBy = "SYSTEM"
+                    CreatedBy = App.CurrentUser?.Username ?? "SYSTEM"
                 };
                 IsEditMode = false;
                 Title = "Add New Payment Group";

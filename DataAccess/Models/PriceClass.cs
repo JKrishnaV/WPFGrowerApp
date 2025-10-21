@@ -94,7 +94,7 @@ namespace WPFGrowerApp.DataAccess.Models
         // ====================================================================
         
         private DateTime _createdAt;
-        private string _createdBy = "SYSTEM";
+        private string _createdBy = App.CurrentUser?.Username ?? "SYSTEM";
         private DateTime? _modifiedAt;
         private string? _modifiedBy;
         private DateTime? _deletedAt;

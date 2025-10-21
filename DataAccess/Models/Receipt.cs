@@ -236,6 +236,7 @@ namespace WPFGrowerApp.DataAccess.Models
     private string? _editBy;
     private string? _editReason;
         private List<ContainerInfo> _containerData = new List<ContainerInfo>(); // Container details
+        private string? _originalBatchNumber; // BATCHNO from CSV file
 
         // Legacy properties with [NotMapped] attribute
         [NotMapped]
@@ -298,6 +299,8 @@ namespace WPFGrowerApp.DataAccess.Models
     public string? EditReason { get => _editReason; set => SetProperty(ref _editReason, value); }
         [NotMapped]
         public List<ContainerInfo> ContainerData { get => _containerData; set => SetProperty(ref _containerData, value); }
+        [NotMapped]
+        public string? OriginalBatchNumber { get => _originalBatchNumber; set => SetProperty(ref _originalBatchNumber, value); }
 
         // Payment Processing Properties
         [NotMapped]

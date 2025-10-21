@@ -463,7 +463,7 @@ namespace WPFGrowerApp.ViewModels
                         PaymentMethod = IsHybridMode ? "Cheque" : SelectedPaymentMethod, // Default to Cheque in hybrid mode, user can change
                         Status = "Draft",
                         CreatedAt = DateTime.Now,
-                        CreatedBy = "System",
+                        CreatedBy = App.CurrentUser?.Username ?? "SYSTEM",
                         BatchNumber = string.Join(", ", batches)
                     });
                 }
@@ -488,7 +488,7 @@ namespace WPFGrowerApp.ViewModels
                             PaymentMethod = IsHybridMode ? "Cheque" : SelectedPaymentMethod, // Default to Cheque in hybrid mode, user can change
                             Status = "Draft",
                             CreatedAt = DateTime.Now,
-                            CreatedBy = "System"
+                            CreatedBy = App.CurrentUser?.Username ?? "SYSTEM"
                         });
                     }
                 }

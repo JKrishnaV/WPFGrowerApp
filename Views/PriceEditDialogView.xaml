@@ -96,7 +96,7 @@
                         <TextBlock Text="Process Type" FontWeight="Bold" Margin="0,0,0,5"/>
                         <ComboBox ItemsSource="{Binding Processes}"
                                   SelectedItem="{Binding SelectedProcess}"
-                                  DisplayMemberPath="Description"
+                                  DisplayMemberPath="DisplayName"
                                   IsEnabled="{Binding IsReadOnly, Converter={StaticResource InverseBooleanConverter}}"
                                   materialDesign:HintAssist.Hint="Select Process"
                                   Style="{StaticResource MaterialDesignOutlinedComboBox}"/>

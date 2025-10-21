@@ -153,13 +153,13 @@ namespace WPFGrowerApp.DataAccess.Services
             var errors = new List<string>();
 
             // Validate depot
-            if (!await ValidateDepotAsync(importBatch.Depot))
+            if (!await ValidateDepotAsync(importBatch.DepotId.ToString()))
             {
-                errors.Add($"Invalid depot code: {importBatch.Depot}");
+                errors.Add($"Invalid depot code: {importBatch.DepotId}");
             }
 
             // Validate import file name
-            if (string.IsNullOrWhiteSpace(importBatch.ImpFile))
+            if (string.IsNullOrWhiteSpace(importBatch.SourceFileName))
             {
                 errors.Add("Import file name is required");
             }

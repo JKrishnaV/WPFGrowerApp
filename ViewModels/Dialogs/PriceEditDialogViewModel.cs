@@ -386,9 +386,9 @@ namespace WPFGrowerApp.ViewModels.Dialogs
 
             // Update the price object with form values
             PriceData.ProductId = SelectedProduct?.ProductId ?? 0;
-            PriceData.Product = SelectedProduct?.ProductId.ToString() ?? string.Empty;
+            PriceData.Product = SelectedProduct?.ProductCode ?? string.Empty;
             PriceData.ProcessId = SelectedProcess?.ProcessId ?? 0;
-            PriceData.Process = SelectedProcess?.ProcessId.ToString() ?? string.Empty;
+            PriceData.Process = SelectedProcess?.ProcessCode ?? string.Empty;
             PriceData.From = EffectiveDate;
 
             // Time premium

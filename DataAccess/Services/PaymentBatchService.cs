@@ -418,5 +418,30 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
+        public async Task<System.Collections.Generic.List<PaymentBatch>> GetAllBatchesAsync()
+        {
+            try
+            {
+                string sql = @"
+                    SELECT PaymentBatchId, BatchNumber, PaymentTypeId, BatchDate, CropYear, 
+                           TotalAmount, TotalGrowers, TotalReceipts, Status, Notes, 
+                           ProcessedAt, ProcessedBy, CreatedAt, CreatedBy
+                    FROM PaymentBatches
+                    ORDER BY CreatedAt DESC";
+
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    var result = await connection.QueryAsync<PaymentBatch>(sql);
+                    return result.AsList();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error retrieving all payment batches", ex);
+                return new System.Collections.Generic.List<PaymentBatch>();
+            }
+        }
+
     }
 }

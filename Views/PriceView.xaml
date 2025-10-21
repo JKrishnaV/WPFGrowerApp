@@ -119,7 +119,7 @@
                 <ComboBox Grid.Column="2"
                           ItemsSource="{Binding Processes}"
                           SelectedItem="{Binding FilterProcess}"
-                          DisplayMemberPath="Description"
+                          DisplayMemberPath="DisplayName"
                           materialDesign:HintAssist.Hint="Process"
                           Style="{StaticResource MaterialDesignOutlinedComboBox}"
                           Width="150"

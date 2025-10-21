@@ -12,7 +12,7 @@ namespace WPFGrowerApp.DataAccess.Models
         private DateTime _lockedAt;
         private string _lockedBy = string.Empty;
         private DateTime _createdAt;
-        private string _createdBy = "SYSTEM";
+        private string _createdBy = App.CurrentUser?.Username ?? "SYSTEM";
         private DateTime? _modifiedAt;
         private string _modifiedBy = string.Empty;
         private DateTime? _deletedAt;

@@ -187,6 +187,45 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// <param name="endDate">End date</param>
         /// <returns>Receipt statistics</returns>
         Task<ReceiptStatistics> GetReceiptStatisticsAsync(DateTime? startDate, DateTime? endDate);
+
+        // ======================================================================
+        // PAYMENT PROTECTION AND RE-IMPORT METHODS
+        // ======================================================================
+
+        /// <summary>
+        /// Checks if a receipt can be deleted (no payment allocations)
+        /// </summary>
+        /// <param name="receiptNumber">The receipt number to check</param>
+        /// <returns>True if receipt can be deleted, false if it has payments</returns>
+        Task<bool> CanDeleteReceiptAsync(string receiptNumber);
+
+        /// <summary>
+        /// Checks if a receipt has any payment allocations
+        /// </summary>
+        /// <param name="receiptId">The receipt ID to check</param>
+        /// <returns>True if receipt has payment allocations</returns>
+        Task<bool> HasPaymentAllocationsAsync(int receiptId);
+
+        /// <summary>
+        /// Undeletes a soft-deleted receipt (for re-import scenarios)
+        /// </summary>
+        /// <param name="receiptNumber">The receipt number to undelete</param>
+        /// <returns>True if successful</returns>
+        Task<bool> UndeleteReceiptAsync(string receiptNumber);
+
+        /// <summary>
+        /// Updates an existing receipt with new data (for re-import scenarios)
+        /// </summary>
+        /// <param name="receipt">The receipt with updated data</param>
+        /// <returns>The updated receipt</returns>
+        Task<Receipt> UpdateReceiptAsync(Receipt receipt);
+
+        /// <summary>
+        /// Get receipts with optimized search performance
+        /// </summary>
+        /// <param name="filters">Search and filter criteria</param>
+        /// <returns>Tuple containing receipts and total count</returns>
+        Task<(List<Receipt> Receipts, int TotalCount)> GetReceiptsWithOptimizedSearchAsync(ReceiptFilters filters);
     }
 
     /// <summary>

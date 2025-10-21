@@ -24,6 +24,70 @@ namespace WPFGrowerApp.DataAccess.Services
         // TEMPORARY STUB IMPLEMENTATIONS - ALL METHODS NEED REWRITING FOR MODERN SCHEMA
         // ==================================================================================
         
+        public async Task<Cheque> GetChequeByIdAsync(int chequeId)
+        {
+            try
+            {
+                using var connection = CreateConnection();
+                await connection.OpenAsync();
+                
+                var query = "SELECT * FROM Cheques WHERE ChequeId = @ChequeId";
+                using var command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@ChequeId", chequeId);
+                
+                using var reader = await command.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    // Map reader to Cheque object (simplified for stub)
+                    return new Cheque
+                    {
+                        ChequeId = Convert.ToInt32(reader["ChequeId"]),
+                        ChequeNumber = reader["ChequeNumber"].ToString(),
+                        ChequeAmount = Convert.ToDecimal(reader["ChequeAmount"]),
+                        ChequeDate = Convert.ToDateTime(reader["ChequeDate"]),
+                        GrowerId = Convert.ToInt32(reader["GrowerId"]),
+                        Status = reader["Status"].ToString()
+                    };
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error getting cheque by ID: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task<bool> VoidChequeAsync(int chequeId, string reason, string voidedBy)
+        {
+            try
+            {
+                using var connection = CreateConnection();
+                await connection.OpenAsync();
+                
+                var query = @"UPDATE Cheques 
+                             SET Status = 'Voided',
+                                 VoidedDate = @VoidedDate,
+                                 VoidedBy = @VoidedBy,
+                                 VoidedReason = @Reason
+                             WHERE ChequeId = @ChequeId";
+                             
+                using var command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@ChequeId", chequeId);
+                command.Parameters.AddWithValue("@VoidedDate", DateTime.Now);
+                command.Parameters.AddWithValue("@VoidedBy", voidedBy);
+                command.Parameters.AddWithValue("@Reason", reason);
+                
+                var rowsAffected = await command.ExecuteNonQueryAsync();
+                return rowsAffected > 0;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error voiding cheque: {ex.Message}");
+                throw;
+            }
+        }
+
         public async Task<List<Cheque>> GetAllChequesAsync()
         {
             try
@@ -192,7 +256,43 @@ namespace WPFGrowerApp.DataAccess.Services
             try
             {
                 using var connection = new SqlConnection(ConnectionString);
-                var sql = "SELECT * FROM Cheques WHERE Status = @Status ORDER BY ChequeDate DESC";
+                var sql = @"
+                    SELECT 
+                        c.ChequeId,
+                        c.ChequeSeriesId,
+                        c.ChequeNumber,
+                        c.FiscalYear,
+                        c.GrowerId,
+                        c.PaymentBatchId,
+                        c.ChequeDate,
+                        c.ChequeAmount,
+                        c.CurrencyCode,
+                        c.ExchangeRate,
+                        c.PayeeName,
+                        c.Memo,
+                        c.Status,
+                        c.ClearedDate,
+                        c.VoidedDate,
+                        c.VoidedReason,
+                        c.CreatedAt,
+                        c.CreatedBy,
+                        c.ModifiedAt,
+                        c.ModifiedBy,
+                        c.DeletedAt,
+                        c.DeletedBy,
+                        c.PrintedAt,
+                        c.PrintedBy,
+                        c.VoidedBy,
+                        c.IssuedAt,
+                        c.IssuedBy,
+                        g.FullName AS GrowerName,
+                        g.GrowerNumber,
+                        pb.BatchNumber
+                    FROM Cheques c
+                    LEFT JOIN Growers g ON c.GrowerId = g.GrowerId
+                    LEFT JOIN PaymentBatches pb ON c.PaymentBatchId = pb.PaymentBatchId
+                    WHERE c.Status = @Status 
+                    ORDER BY c.ChequeDate DESC";
                 var cheques = await connection.QueryAsync<Cheque>(sql, new { Status = status });
                 return cheques.ToList();
             }
@@ -200,6 +300,45 @@ namespace WPFGrowerApp.DataAccess.Services
             {
                 Logger.Error($"Error getting cheques by status {status}: {ex.Message}", ex);
                 return new List<Cheque>();
+            }
+        }
+
+        /// <summary>
+        /// Get advance deductions for a specific cheque by cheque number
+        /// </summary>
+        public async Task<List<AdvanceDeduction>> GetAdvanceDeductionsByChequeNumberAsync(string chequeNumber)
+        {
+            try
+            {
+                using var connection = new SqlConnection(ConnectionString);
+                var sql = @"
+                    SELECT 
+                        ad.DeductionId,
+                        ad.AdvanceChequeId,
+                        ad.ChequeId,
+                        ad.PaymentBatchId,
+                        ad.DeductionAmount,
+                        ad.DeductionDate,
+                        ad.CreatedBy,
+                        ad.CreatedAt,
+                        ac.AdvanceAmount,
+                        ac.AdvanceDate,
+                        ac.Reason,
+                        pb.BatchNumber
+                    FROM AdvanceDeductions ad
+                    INNER JOIN AdvanceCheques ac ON ad.AdvanceChequeId = ac.AdvanceChequeId
+                    INNER JOIN Cheques c ON ad.ChequeId = c.ChequeId
+                    LEFT JOIN PaymentBatches pb ON ad.PaymentBatchId = pb.PaymentBatchId
+                    WHERE c.ChequeNumber = @ChequeNumber
+                    ORDER BY ad.DeductionDate DESC";
+                
+                var deductions = await connection.QueryAsync<AdvanceDeduction>(sql, new { ChequeNumber = chequeNumber });
+                return deductions.ToList();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting advance deductions for cheque {chequeNumber}: {ex.Message}", ex);
+                return new List<AdvanceDeduction>();
             }
         }
 
@@ -332,15 +471,15 @@ namespace WPFGrowerApp.DataAccess.Services
                 var sql = @"
                     UPDATE Cheques 
                     SET Status = 'Voided', 
-                        VoidedAt = @VoidedAt, 
+                        VoidedDate = @VoidedDate, 
                         VoidedBy = @VoidedBy,
-                        VoidReason = @Reason
+                        VoidedReason = @Reason
                     WHERE ChequeId IN @ChequeIds AND Status IN ('Generated', 'Issued')";
 
                 var parameters = new
                 {
                     ChequeIds = chequeIds,
-                    VoidedAt = DateTime.UtcNow,
+                    VoidedDate = DateTime.UtcNow,
                     VoidedBy = voidedBy,
                     Reason = reason
                 };

@@ -24,10 +24,18 @@ namespace WPFGrowerApp.DataAccess.Services
                         FROM PaymentBatches pb
                         LEFT JOIN PaymentTypes pt ON pb.PaymentTypeId = pt.PaymentTypeId
                         WHERE pb.Status IN ('Approved', 'Posted')
-                        AND pb.PaymentBatchId NOT IN (
-                            SELECT DISTINCT PaymentBatchId 
-                            FROM PaymentDistributionItems 
-                            WHERE PaymentBatchId IS NOT NULL
+                        AND (
+                            pb.PaymentBatchId NOT IN (
+                                SELECT DISTINCT PaymentBatchId 
+                                FROM PaymentDistributionItems 
+                                WHERE PaymentBatchId IS NOT NULL
+                            )
+                            OR pb.PaymentBatchId IN (
+                                SELECT DISTINCT pdi.PaymentBatchId
+                                FROM PaymentDistributionItems pdi
+                                WHERE pdi.PaymentBatchId IS NOT NULL
+                                AND pdi.Status = 'Voided'
+                            )
                         )
                         ORDER BY pb.CreatedAt DESC";
                     
@@ -157,7 +165,8 @@ namespace WPFGrowerApp.DataAccess.Services
                             {
                                 if (item.PaymentMethod == "Cheque")
                                 {
-                                    await GenerateChequeAsync(item, connection, transaction);
+                                    var chequeId = await GenerateChequeAsync(item, connection, transaction);
+                                    Logger.Info($"Generated cheque {chequeId} for grower {item.GrowerId}");
                                 }
                                 else if (item.PaymentMethod == "Electronic")
                                 {
@@ -337,13 +346,14 @@ namespace WPFGrowerApp.DataAccess.Services
             await connection.ExecuteAsync(sql, items, transaction);
         }
 
-        private async Task GenerateChequeAsync(PaymentDistributionItem item, SqlConnection connection, SqlTransaction transaction)
+        private async Task<int> GenerateChequeAsync(PaymentDistributionItem item, SqlConnection connection, SqlTransaction transaction)
         {
             var sql = @"
                 INSERT INTO Cheques (
                     ChequeSeriesId, ChequeNumber, FiscalYear, GrowerId, PaymentBatchId, 
                     ChequeAmount, ChequeDate, Status, CreatedAt, CreatedBy
                 )
+                OUTPUT INSERTED.ChequeId
                 VALUES (
                     @ChequeSeriesId, @ChequeNumber, @FiscalYear, @GrowerId, @PaymentBatchId,
                     @ChequeAmount, @ChequeDate, @Status, @CreatedAt, @CreatedBy
@@ -353,7 +363,7 @@ namespace WPFGrowerApp.DataAccess.Services
             var timestamp = DateTime.Now.ToString("HHmmssfff"); // Hours, minutes, seconds, milliseconds
             var chequeNumber = $"CHQ-{DateTime.Now:yyyyMMdd}-{timestamp}-{item.GrowerId}";
             
-            await connection.ExecuteAsync(sql, new
+            var chequeId = await connection.ExecuteScalarAsync<int>(sql, new
             {
                 ChequeSeriesId = 2, // PAY series for grower payments
                 ChequeNumber = chequeNumber,
@@ -366,6 +376,132 @@ namespace WPFGrowerApp.DataAccess.Services
                 CreatedAt = DateTime.Now,
                 CreatedBy = App.CurrentUser?.Username ?? "SYSTEM"
             }, transaction);
+
+            // Create advance deductions for outstanding advances
+            await CreateAdvanceDeductionsAsync(item.GrowerId, chequeId, connection, transaction);
+
+            return chequeId;
+        }
+
+        /// <summary>
+        /// Create advance deductions for outstanding advances when generating a cheque
+        /// </summary>
+        private async Task CreateAdvanceDeductionsAsync(int growerId, int chequeId, SqlConnection connection, SqlTransaction transaction)
+        {
+            try
+            {
+                // Get all outstanding advances for the grower
+                var outstandingAdvancesSql = @"
+                    SELECT AdvanceChequeId, AdvanceAmount 
+                    FROM AdvanceCheques 
+                    WHERE GrowerId = @GrowerId 
+                    AND Status = 'Printed'
+                    AND DeductedByChequeId IS NULL";
+
+                var outstandingAdvances = await connection.QueryAsync<(int AdvanceChequeId, decimal AdvanceAmount)>(outstandingAdvancesSql, new { GrowerId = growerId }, transaction);
+
+                foreach (var advance in outstandingAdvances)
+                {
+                    // Create deduction record
+                    var deductionSql = @"
+                        INSERT INTO AdvanceDeductions (
+                            AdvanceChequeId, ChequeId, PaymentBatchId, DeductionAmount, 
+                            DeductionDate, CreatedBy, CreatedAt
+                        )
+                        VALUES (
+                            @AdvanceChequeId, @ChequeId, @PaymentBatchId, @DeductionAmount,
+                            @DeductionDate, @CreatedBy, @CreatedAt
+                        )";
+
+                    await connection.ExecuteAsync(deductionSql, new
+                    {
+                        AdvanceChequeId = advance.AdvanceChequeId,
+                        ChequeId = chequeId,
+                        PaymentBatchId = 0, // Will be updated by the calling method
+                        DeductionAmount = advance.AdvanceAmount,
+                        DeductionDate = DateTime.Now,
+                        CreatedBy = App.CurrentUser?.Username ?? "SYSTEM",
+                        CreatedAt = DateTime.Now
+                    }, transaction);
+
+                    // Update the advance cheque record
+                    var updateAdvanceSql = @"
+                        UPDATE AdvanceCheques 
+                        SET DeductedByChequeId = @ChequeId,
+                            DeductedAt = @DeductedAt,
+                            DeductedBy = @DeductedBy
+                        WHERE AdvanceChequeId = @AdvanceChequeId";
+
+                    await connection.ExecuteAsync(updateAdvanceSql, new
+                    {
+                        ChequeId = chequeId,
+                        AdvanceChequeId = advance.AdvanceChequeId,
+                        DeductedAt = DateTime.Now,
+                        DeductedBy = App.CurrentUser?.Username ?? "SYSTEM"
+                    }, transaction);
+
+                    Logger.Info($"Created advance deduction for AdvanceChequeId {advance.AdvanceChequeId}, Amount: {advance.AdvanceAmount:C}, ChequeId: {chequeId}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error creating advance deductions for grower {growerId}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get complete audit trail for a cheque including advance deductions
+        /// </summary>
+        public async Task<ChequeAuditTrail> GetChequeAuditTrailAsync(string chequeNumber)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    
+                    var sql = @"
+                        SELECT 
+                            c.ChequeId,
+                            c.ChequeNumber,
+                            c.ChequeAmount,
+                            c.ChequeDate,
+                            c.Status AS ChequeStatus,
+                            g.FullName AS GrowerName,
+                            g.GrowerNumber,
+                            
+                            -- Distribution Information
+                            pdi.Amount AS DistributionAmount,
+                            pd.DistributionNumber,
+                            pd.DistributionDate,
+                            
+                            -- Advance Deduction Information
+                            ad.DeductionId,
+                            ad.DeductionAmount,
+                            ad.DeductionDate,
+                            ac.AdvanceChequeId,
+                            ac.AdvanceAmount,
+                            ac.AdvanceDate,
+                            ac.Status AS AdvanceStatus
+                            
+                        FROM Cheques c
+                        INNER JOIN Growers g ON c.GrowerId = g.GrowerId
+                        LEFT JOIN PaymentDistributionItems pdi ON c.GrowerId = pdi.GrowerId AND c.PaymentBatchId = pdi.PaymentBatchId
+                        LEFT JOIN PaymentDistributions pd ON pdi.PaymentDistributionId = pd.PaymentDistributionId
+                        LEFT JOIN AdvanceDeductions ad ON c.ChequeId = ad.ChequeId
+                        LEFT JOIN AdvanceCheques ac ON ad.AdvanceChequeId = ac.AdvanceChequeId
+                        WHERE c.ChequeNumber = @ChequeNumber";
+
+                    var result = await connection.QueryAsync<ChequeAuditTrail>(sql, new { ChequeNumber = chequeNumber });
+                    return result.FirstOrDefault();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting cheque audit trail for {chequeNumber}: {ex.Message}", ex);
+                throw;
+            }
         }
 
         private async Task GenerateElectronicPaymentAsync(PaymentDistributionItem item, SqlConnection connection, SqlTransaction transaction)
@@ -408,13 +544,32 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     await connection.OpenAsync();
                     
-                    var sql = @"
+                    // Check if there are any active (non-voided) distribution items
+                    var activeItemsSql = @"
                         SELECT COUNT(*) 
                         FROM PaymentDistributionItems 
-                        WHERE PaymentBatchId = @PaymentBatchId";
+                        WHERE PaymentBatchId = @PaymentBatchId
+                        AND Status != 'Voided'";
                     
-                    var count = await connection.QuerySingleAsync<int>(sql, new { PaymentBatchId = paymentBatchId });
-                    return count > 0;
+                    var activeCount = await connection.QuerySingleAsync<int>(activeItemsSql, new { PaymentBatchId = paymentBatchId });
+                    
+                    // If there are no active items, allow regeneration
+                    if (activeCount == 0)
+                    {
+                        return false;
+                    }
+                    
+                    // If there are active items, check if there are any voided items that can be regenerated
+                    var voidedItemsSql = @"
+                        SELECT COUNT(*) 
+                        FROM PaymentDistributionItems 
+                        WHERE PaymentBatchId = @PaymentBatchId
+                        AND Status = 'Voided'";
+                    
+                    var voidedCount = await connection.QuerySingleAsync<int>(voidedItemsSql, new { PaymentBatchId = paymentBatchId });
+                    
+                    // Allow regeneration if there are voided items (even if there are active items)
+                    return voidedCount == 0;
                 }
             }
             catch (Exception ex)

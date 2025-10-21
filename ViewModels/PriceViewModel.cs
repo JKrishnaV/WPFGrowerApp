@@ -280,7 +280,7 @@ namespace WPFGrowerApp.ViewModels
                 foreach (var p in prices)
                 {
                     var productName = products.FirstOrDefault(prod => prod.ProductId == p.ProductId)?.Description ?? string.Empty;
-                    var processName = processes.FirstOrDefault(proc => proc.ProcessId == p.ProcessId)?.Description ?? string.Empty;
+                    var processName = processes.FirstOrDefault(proc => proc.ProcessId == p.ProcessId)?.ProcessName ?? string.Empty;
                     Prices.Add(new PriceDisplayItem
                     {
                         Price = p,

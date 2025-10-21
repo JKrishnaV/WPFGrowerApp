@@ -88,5 +88,11 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// <param name="processedBy">The user who processed the batch.</param>
         /// <returns>True if update was successful.</returns>
         Task<bool> MarkBatchAsProcessedAsync(int paymentBatchId, string processedBy);
+
+        /// <summary>
+        /// Retrieves all payment batches.
+        /// </summary>
+        /// <returns>List of all payment batches.</returns>
+        Task<System.Collections.Generic.List<PaymentBatch>> GetAllBatchesAsync();
     }
 }

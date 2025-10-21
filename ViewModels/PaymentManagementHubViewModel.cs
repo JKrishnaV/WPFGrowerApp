@@ -55,6 +55,9 @@ namespace WPFGrowerApp.ViewModels
             NavigateToFinalPaymentsCommand = new RelayCommand(NavigateToFinalPayments);
             NavigateToStatusDashboardCommand = new RelayCommand(NavigateToStatusDashboard);
             NavigateToReconciliationCommand = new RelayCommand(NavigateToReconciliation);
+            NavigateToAdvanceChequesCommand = new RelayCommand(NavigateToAdvanceCheques);
+            NavigateToEnhancedPaymentDistributionCommand = new RelayCommand(NavigateToEnhancedPaymentDistribution);
+            NavigateToEnhancedChequePreparationCommand = new RelayCommand(NavigateToEnhancedChequePreparation);
             RefreshCommand = new RelayCommand(async (p) => await RefreshDataAsync());
             ShowHelpCommand = new RelayCommand(ShowHelp);
 
@@ -144,6 +147,9 @@ namespace WPFGrowerApp.ViewModels
         public ICommand NavigateToFinalPaymentsCommand { get; }
         public ICommand NavigateToStatusDashboardCommand { get; }
         public ICommand NavigateToReconciliationCommand { get; }
+        public ICommand NavigateToAdvanceChequesCommand { get; }
+        public ICommand NavigateToEnhancedPaymentDistributionCommand { get; }
+        public ICommand NavigateToEnhancedChequePreparationCommand { get; }
         public ICommand RefreshCommand { get; }
         public ICommand ShowHelpCommand { get; }
 
@@ -364,6 +370,49 @@ namespace WPFGrowerApp.ViewModels
             finally
             {
                 IsLoading = false;
+            }
+        }
+
+        #endregion
+
+        #region Navigation Methods
+
+        private void NavigateToAdvanceCheques(object parameter)
+        {
+            try
+            {
+                StatusMessage = "Navigating to Advance Cheques...";
+                NavigationRequested?.Invoke(typeof(AdvanceChequeViewModel), "Advance Cheques");
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error navigating to Advance Cheques: {ex.Message}";
+            }
+        }
+
+        private void NavigateToEnhancedPaymentDistribution(object parameter)
+        {
+            try
+            {
+                StatusMessage = "Navigating to Enhanced Payment Distribution...";
+                NavigationRequested?.Invoke(typeof(EnhancedPaymentDistributionViewModel), "Enhanced Payment Distribution");
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error navigating to Enhanced Payment Distribution: {ex.Message}";
+            }
+        }
+
+        private void NavigateToEnhancedChequePreparation(object parameter)
+        {
+            try
+            {
+                StatusMessage = "Navigating to Enhanced Cheque Preparation...";
+                NavigationRequested?.Invoke(typeof(EnhancedChequePreparationViewModel), "Enhanced Cheque Preparation");
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error navigating to Enhanced Cheque Preparation: {ex.Message}";
             }
         }
 

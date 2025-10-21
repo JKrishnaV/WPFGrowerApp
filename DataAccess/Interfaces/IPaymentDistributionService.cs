@@ -15,5 +15,6 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         Task<bool> VoidDistributionAsync(int distributionId, string reason, string voidedBy);
         Task<bool> HasExistingDistributionsAsync(int paymentBatchId);
         Task<List<PaymentDistribution>> GetAllDistributionsAsync();
+        Task<ChequeAuditTrail> GetChequeAuditTrailAsync(string chequeNumber);
     }
 }

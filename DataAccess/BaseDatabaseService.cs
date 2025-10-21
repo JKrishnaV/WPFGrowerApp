@@ -26,7 +26,6 @@ namespace WPFGrowerApp.DataAccess
         protected SqlConnection CreateConnection()
         {
             var connection = new SqlConnection(_connectionString);
-            connection.Open();
             return connection;
         }
 
