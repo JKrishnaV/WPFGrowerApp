@@ -1,0 +1,102 @@
+<Window x:Class="WPFGrowerApp.Views.Dialogs.ExportFormatDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Export Format Selection"
+        Height="300"
+        Width="400"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+    
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <materialDesign:PackIcon Kind="FileExport" Width="32" Height="32" 
+                                   HorizontalAlignment="Center" 
+                                   Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                   Margin="0,0,0,10"/>
+            <TextBlock Text="Select Export Format" 
+                       Style="{DynamicResource MaterialDesignHeadline5TextBlock}"
+                       HorizontalAlignment="Center"/>
+            <TextBlock Text="Choose the format for exporting payment distribution data" 
+                       Style="{DynamicResource MaterialDesignBody2TextBlock}"
+                       HorizontalAlignment="Center"
+                       Foreground="{DynamicResource MaterialDesignBodyLight}"
+                       Margin="0,5,0,0"/>
+        </StackPanel>
+
+        <!-- Format Options -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,20">
+            <RadioButton x:Name="ExcelRadio" Content="Excel (.xlsx)" 
+                        IsChecked="True"
+                        Margin="0,0,0,10"
+                        Style="{DynamicResource MaterialDesignRadioButton}">
+                <RadioButton.ToolTip>
+                    <StackPanel>
+                        <TextBlock Text="Best for data analysis and calculations" FontWeight="SemiBold"/>
+                        <TextBlock Text="• Formatted tables with headers" FontSize="11"/>
+                        <TextBlock Text="• Currency formatting" FontSize="11"/>
+                        <TextBlock Text="• Auto-sized columns" FontSize="11"/>
+                    </StackPanel>
+                </RadioButton.ToolTip>
+            </RadioButton>
+
+            <RadioButton x:Name="PdfRadio" Content="PDF (.pdf)" 
+                        Margin="0,0,0,10"
+                        Style="{DynamicResource MaterialDesignRadioButton}">
+                <RadioButton.ToolTip>
+                    <StackPanel>
+                        <TextBlock Text="Best for reports and printing" FontWeight="SemiBold"/>
+                        <TextBlock Text="• Professional formatting" FontSize="11"/>
+                        <TextBlock Text="• Print-ready layout" FontSize="11"/>
+                        <TextBlock Text="• Includes summary information" FontSize="11"/>
+                    </StackPanel>
+                </RadioButton.ToolTip>
+            </RadioButton>
+
+            <RadioButton x:Name="CsvRadio" Content="CSV (.csv)" 
+                        Margin="0,0,0,10"
+                        Style="{DynamicResource MaterialDesignRadioButton}">
+                <RadioButton.ToolTip>
+                    <StackPanel>
+                        <TextBlock Text="Best for data import/export" FontWeight="SemiBold"/>
+                        <TextBlock Text="• Plain text format" FontSize="11"/>
+                        <TextBlock Text="• Compatible with most applications" FontSize="11"/>
+                        <TextBlock Text="• Easy to process programmatically" FontSize="11"/>
+                    </StackPanel>
+                </RadioButton.ToolTip>
+            </RadioButton>
+
+            <RadioButton x:Name="WordRadio" Content="Word (.docx)" 
+                        Style="{DynamicResource MaterialDesignRadioButton}">
+                <RadioButton.ToolTip>
+                    <StackPanel>
+                        <TextBlock Text="Best for documents and sharing" FontWeight="SemiBold"/>
+                        <TextBlock Text="• Professional document format" FontSize="11"/>
+                        <TextBlock Text="• Easy to edit and customize" FontSize="11"/>
+                        <TextBlock Text="• Good for reports and presentations" FontSize="11"/>
+                    </StackPanel>
+                </RadioButton.ToolTip>
+            </RadioButton>
+        </StackPanel>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Cancel" 
+                    Style="{DynamicResource MaterialDesignOutlinedButton}"
+                    Margin="0,0,10,0"
+                    Padding="20,8"
+                    Click="Cancel_Click"/>
+            <Button Content="Export" 
+                    Style="{DynamicResource MaterialDesignRaisedButton}"
+                    Padding="20,8"
+                    Click="Export_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

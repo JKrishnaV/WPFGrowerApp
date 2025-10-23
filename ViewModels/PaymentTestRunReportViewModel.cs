@@ -225,7 +225,7 @@ namespace WPFGrowerApp.ViewModels
                         graphics.DrawString("Report Generated Based On:", headerFont, PdfBrushes.Black, new PointF(xMargin, yPos));
                         yPos += headerFont.Height + 5;
                         string summaryLine1 = InputParameters != null
-                            ? $"Advance #: {InputParameters.AdvanceNumber}   Payment Date: {InputParameters.PaymentDate:d}   Cutoff Date: {InputParameters.CutoffDate:d}   Crop Year: {InputParameters.CropYear}"
+                            ? $"Advance #: {InputParameters.SequenceNumber}   Payment Date: {InputParameters.PaymentDate:d}   Cutoff Date: {InputParameters.CutoffDate:d}   Crop Year: {InputParameters.CropYear}"
                             : "Advance parameters not available.";
                         graphics.DrawString(summaryLine1, font, PdfBrushes.Black, new PointF(xMargin, yPos));
                         yPos += font.Height + 5;
@@ -314,7 +314,7 @@ namespace WPFGrowerApp.ViewModels
                          worksheet.Range[$"A{row}"].Text = "Report Generated Based On:";
                          worksheet.Range[$"A{row}"].CellStyle.Font.Bold = true; row++;
                         worksheet.Range[$"A{row}"].Text = InputParameters != null
-                            ? $"Advance #: {InputParameters.AdvanceNumber}"
+                            ? $"Advance #: {InputParameters.SequenceNumber}"
                             : "Advance parameters not available.";
                         row++;
                          worksheet.Range[$"A{row}"].Text = InputParameters != null

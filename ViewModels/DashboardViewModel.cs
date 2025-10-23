@@ -30,7 +30,7 @@ namespace WPFGrowerApp.ViewModels
         public DashboardViewModel()
         {
             _growerService = new GrowerService();
-            _receiptService = new ReceiptService();
+            _receiptService = new ReceiptService(new PaymentTypeService());
             _productService = new ProductService();
             _importBatchService = new ImportBatchService();
             

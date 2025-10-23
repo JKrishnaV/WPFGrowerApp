@@ -108,6 +108,14 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         Task<(bool CanVoid, List<string> Reasons)> ValidateCanVoidBatchAsync(int paymentBatchId);
 
         /// <summary>
+        /// Validate if a batch can be approved without breaking payment sequence integrity
+        /// Ensures earlier advance payments exist before approving later ones
+        /// </summary>
+        /// <param name="paymentBatchId">Batch ID to validate</param>
+        /// <returns>Tuple of (CanApprove, List of validation reasons/conflicts)</returns>
+        Task<(bool CanApprove, List<string> Reasons)> ValidateCanApproveBatchAsync(int paymentBatchId);
+
+        /// <summary>
         /// Void a payment batch - voids the batch, all allocations, and all cheques in a transaction
         /// Validates payment sequence integrity before voiding to prevent breaking later advance payments
         /// </summary>

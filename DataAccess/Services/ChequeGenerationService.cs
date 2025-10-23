@@ -35,7 +35,8 @@ namespace WPFGrowerApp.DataAccess.Services
             DateTime chequeDate,
             int paymentBatchId,
             int paymentTypeId,
-            string? memo = null)
+            string? memo = null,
+            int? paymentDistributionId = null)
         {
             try
             {
@@ -61,13 +62,13 @@ namespace WPFGrowerApp.DataAccess.Services
                     
                     var sql = @"
                         INSERT INTO Cheques (
-                            ChequeSeriesId, ChequeNumber, FiscalYear, GrowerId, PaymentBatchId,
+                            ChequeSeriesId, ChequeNumber, FiscalYear, GrowerId, PaymentBatchId, PaymentDistributionId,
                             ChequeDate, ChequeAmount, CurrencyCode, PayeeName, Memo,
                             Status, CreatedAt, CreatedBy
                         )
                         OUTPUT INSERTED.*
                         VALUES (
-                            @ChequeSeriesId, @ChequeNumber, @FiscalYear, @GrowerId, @PaymentBatchId,
+                            @ChequeSeriesId, @ChequeNumber, @FiscalYear, @GrowerId, @PaymentBatchId, @PaymentDistributionId,
                             @ChequeDate, @ChequeAmount, @CurrencyCode, @PayeeName, @Memo,
                             @Status, @CreatedAt, @CreatedBy
                         )";
@@ -79,6 +80,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         FiscalYear = fiscalYear,
                         GrowerId = growerId,
                         PaymentBatchId = paymentBatchId,
+                        PaymentDistributionId = paymentDistributionId,
                         ChequeDate = chequeDate,
                         ChequeAmount = amount,
                         CurrencyCode = !string.IsNullOrWhiteSpace(grower.CurrencyCode) ? grower.CurrencyCode : "CAD",
@@ -469,13 +471,13 @@ namespace WPFGrowerApp.DataAccess.Services
                             // Create new cheque with same details
                             var sql = @"
                                 INSERT INTO Cheques (
-                                    ChequeSeriesId, ChequeNumber, FiscalYear, GrowerId, PaymentBatchId,
+                                    ChequeSeriesId, ChequeNumber, FiscalYear, GrowerId, PaymentBatchId, PaymentDistributionId,
                                     ChequeDate, ChequeAmount, CurrencyCode, PayeeName, Memo,
                                     Status, CreatedAt, CreatedBy
                                 )
                                 OUTPUT INSERTED.*
                                 VALUES (
-                                    @ChequeSeriesId, @ChequeNumber, @FiscalYear, @GrowerId, @PaymentBatchId,
+                                    @ChequeSeriesId, @ChequeNumber, @FiscalYear, @GrowerId, @PaymentBatchId, @PaymentDistributionId,
                                     @ChequeDate, @ChequeAmount, @CurrencyCode, @PayeeName, @Memo,
                                     @Status, @CreatedAt, @CreatedBy
                                 )";
@@ -487,6 +489,7 @@ namespace WPFGrowerApp.DataAccess.Services
                                 FiscalYear = newChequeDate.Year,
                                 GrowerId = originalCheque.GrowerId,
                                 PaymentBatchId = originalCheque.PaymentBatchId,
+                                PaymentDistributionId = originalCheque.PaymentDistributionId,
                                 ChequeDate = newChequeDate,
                                 ChequeAmount = originalCheque.ChequeAmount,
                                 CurrencyCode = originalCheque.CurrencyCode,

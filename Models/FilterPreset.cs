@@ -15,7 +15,7 @@ namespace WPFGrowerApp.Models
         public string CreatedBy { get; set; } = string.Empty;
 
         // Basic Parameters
-        public int AdvanceNumber { get; set; } = 1;
+        public int SequenceNumber { get; set; } = 1; // Maps to PaymentTypes.SequenceNumber
         public DateTime PaymentDate { get; set; } = DateTime.Today;
         public DateTime CutoffDate { get; set; } = DateTime.Today;
         public DateTime? ReceiptDateFrom { get; set; }

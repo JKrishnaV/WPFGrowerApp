@@ -7,7 +7,7 @@
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="800" 
-             MaxWidth="900" MaxHeight="700" MinWidth="600" MinHeight="400">
+             MaxWidth="800" MaxHeight="600" MinWidth="500" MinHeight="300">
     
     <Grid>
         <Grid.RowDefinitions>
@@ -32,27 +32,29 @@
         <ScrollViewer Grid.Row="1" 
                       VerticalScrollBarVisibility="Auto" 
                       HorizontalScrollBarVisibility="Auto"
-                      Padding="16"
-                      Margin="0,8">
+                      Padding="12"
+                      Margin="0,4">
             <TextBlock x:Name="ContentTextBlock"
                        TextWrapping="Wrap"
-                       FontSize="14"
-                       LineHeight="20"
-                       Margin="0,0,0,16">
+                       FontSize="12"
+                       LineHeight="16"
+                       Margin="0,0,0,8">
                 <!-- Help content will be set from code-behind -->
                 Sample help content goes here.
             </TextBlock>
         </ScrollViewer>
         
         <!-- Footer with Close Button -->
-        <materialDesign:ColorZone Grid.Row="2" Mode="PrimaryLight" Padding="16,8">
+        <materialDesign:ColorZone Grid.Row="2" Mode="PrimaryLight" Padding="12,6">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Style="{StaticResource MaterialDesignRaisedButton}"
                         IsDefault="True"
                         Margin="0,0,8,0"
                         Command="{x:Static materialDesign:DialogHost.CloseDialogCommand}"
                         Content="Close"
-                        Width="80"/>
+                        Width="70"
+                        Height="32"
+                        FontSize="12"/>
             </StackPanel>
         </materialDesign:ColorZone>
     </Grid>

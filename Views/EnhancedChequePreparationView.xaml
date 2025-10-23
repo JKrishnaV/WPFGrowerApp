@@ -62,144 +62,140 @@
         </materialDesign:ColorZone>
 
         <!-- View Title -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="16,8">
-            <materialDesign:PackIcon Kind="FileDocument" Width="24" Height="24" VerticalAlignment="Center" Margin="0,0,8,0"/>
-            <TextBlock Text="Enhanced Cheque Preparation" Style="{DynamicResource MaterialDesignHeadline4TextBlock}" VerticalAlignment="Center"/>
-        </StackPanel>
+        <TextBlock Grid.Row="1" 
+                   Text="Enhanced Cheque Preparation" 
+                   Style="{StaticResource StandardizedViewTitleStyle}"/>
 
         <!-- Search and Filter Bar -->
-        <materialDesign:Card Grid.Row="2" Style="{StaticResource StatisticsCardStyle}">
-            <Grid>
+        <materialDesign:Card Grid.Row="2" Margin="0,0,0,10">
+            <Grid Margin="15">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                
-                <!-- Search Box -->
-                <TextBox Grid.Column="0" 
-                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                         materialDesign:HintAssist.Hint="Search cheques, growers, or amounts..."
-                         Style="{DynamicResource MaterialDesignOutlinedTextBox}"
-                         Margin="0,0,8,0"/>
-                
-                <!-- Cheque Number Filter -->
-                <TextBox Grid.Column="1" 
-                         Text="{Binding ChequeNumberFilter, UpdateSourceTrigger=PropertyChanged}"
-                         materialDesign:HintAssist.Hint="Cheque #"
-                         Style="{DynamicResource MaterialDesignOutlinedTextBox}"
-                         Width="120" Margin="0,0,8,0"/>
-                
-                <!-- Grower Number Filter -->
-                <TextBox Grid.Column="2" 
-                         Text="{Binding GrowerNumberFilter, UpdateSourceTrigger=PropertyChanged}"
-                         materialDesign:HintAssist.Hint="Grower #"
-                         Style="{DynamicResource MaterialDesignOutlinedTextBox}"
-                         Width="120" Margin="0,0,8,0"/>
-                
-                <!-- Status Filter -->
-                <ComboBox Grid.Column="3" 
-                          SelectedItem="{Binding StatusFilter}"
-                          materialDesign:HintAssist.Hint="Status"
-                          Style="{DynamicResource MaterialDesignOutlinedComboBox}"
-                          Width="120" Margin="0,0,8,0">
-                    <ComboBoxItem Content="All"/>
-                    <ComboBoxItem Content="Generated"/>
-                    <ComboBoxItem Content="Printed"/>
-                    <ComboBoxItem Content="Delivered"/>
-                    <ComboBoxItem Content="Voided"/>
-                </ComboBox>
-                
-                <!-- Type Filter -->
-                <ComboBox Grid.Column="4" 
-                          SelectedValue="{Binding SelectedTypeFilter}"
-                          SelectedValuePath="Tag"
-                          materialDesign:HintAssist.Hint="Type"
-                          Style="{DynamicResource MaterialDesignOutlinedComboBox}"
-                          Width="120" Margin="0,0,8,0">
-                    <ComboBoxItem Content="All" Tag="{x:Null}"/>
-                    <ComboBoxItem Content="Regular" Tag="{x:Static models:ChequePaymentType.Regular}"/>
-                    <ComboBoxItem Content="Advance" Tag="{x:Static models:ChequePaymentType.Advance}"/>
-                    <ComboBoxItem Content="Consolidated" Tag="{x:Static models:ChequePaymentType.Consolidated}"/>
-                </ComboBox>
-                
-                <!-- Action Buttons -->
-                <StackPanel Grid.Column="5" Orientation="Horizontal">
-                    <Button Content="Search" 
-                            Command="{Binding SearchCommand}"
-                            Style="{DynamicResource MaterialDesignOutlinedButton}"
-                            Margin="0,0,8,0"/>
-                    <Button Content="Clear Filters" 
-                            Command="{Binding ClearFiltersCommand}"
-                            Style="{DynamicResource MaterialDesignOutlinedButton}"
-                            Margin="0,0,8,0"/>
-                    <Button Content="Refresh" 
-                            Command="{Binding RefreshCommand}"
-                            Style="{DynamicResource MaterialDesignOutlinedButton}"
-                            Margin="0,0,8,0"/>
-                    <Button Content="Help" 
-                            Command="{Binding ShowHelpCommand}"
-                            Style="{DynamicResource MaterialDesignOutlinedButton}"/>
+
+                <TextBox Grid.Column="0"
+                       Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                       materialDesign:HintAssist.Hint="Search cheques, growers, or amounts..."
+                       Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                       VerticalAlignment="Center">
+                    <TextBox.InputBindings>
+                        <KeyBinding Key="Enter" Command="{Binding SearchCommand}"/>
+                    </TextBox.InputBindings>
+                </TextBox>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0">
+                    <ComboBox SelectedItem="{Binding StatusFilter}"
+                              materialDesign:HintAssist.Hint="Status"
+                              Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                              Width="120" Margin="0,0,10,0">
+                        <ComboBoxItem Content="All"/>
+                        <ComboBoxItem Content="Generated"/>
+                        <ComboBoxItem Content="Printed"/>
+                        <ComboBoxItem Content="Delivered"/>
+                        <ComboBoxItem Content="Voided"/>
+                    </ComboBox>
+                    
+                    <ComboBox SelectedValue="{Binding SelectedTypeFilter}"
+                              SelectedValuePath="Tag"
+                              materialDesign:HintAssist.Hint="Type"
+                              Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                              Width="120" Margin="0,0,10,0">
+                        <ComboBoxItem Content="All" Tag="{x:Null}"/>
+                        <ComboBoxItem Content="Regular" Tag="{x:Static models:ChequePaymentType.Regular}"/>
+                        <ComboBoxItem Content="Advance" Tag="{x:Static models:ChequePaymentType.Advance}"/>
+                        <ComboBoxItem Content="Consolidated" Tag="{x:Static models:ChequePaymentType.Consolidated}"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Button Command="{Binding RefreshCommand}"
+                            Style="{StaticResource MaterialDesignIconButton}"
+                            ToolTip="Refresh data (F5)"
+                            Width="40" Margin="0,0,5,0">
+                        <materialDesign:PackIcon Kind="Refresh" Width="20" Height="20"/>
+                    </Button>
+                    
+                    <Button Command="{Binding ClearFiltersCommand}"
+                            Style="{StaticResource MaterialDesignIconButton}"
+                            ToolTip="Clear all filters"
+                            Width="40" Margin="0,0,5,0">
+                        <materialDesign:PackIcon Kind="FilterRemove" Width="20" Height="20"/>
+                    </Button>
+                    
+                    <Button Command="{Binding ShowHelpCommand}"
+                            Style="{StaticResource MaterialDesignIconButton}"
+                            ToolTip="Show help (F1)"
+                            Width="40">
+                        <materialDesign:PackIcon Kind="HelpCircle" 
+                                               Width="20" Height="20"
+                                               Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                    </Button>
                 </StackPanel>
             </Grid>
         </materialDesign:Card>
 
-        <!-- Statistics Cards -->
-        <Grid Grid.Row="3">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-            
-            <!-- Total Cheques -->
-            <materialDesign:Card Grid.Column="0" Style="{StaticResource StatisticsCardStyle}">
-                <StackPanel>
-                    <TextBlock Text="Total Cheques" Style="{DynamicResource MaterialDesignBody2TextBlock}" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
-                    <TextBlock Text="{Binding TotalCheques}" Style="{DynamicResource MaterialDesignHeadline4TextBlock}" Foreground="{DynamicResource MaterialDesignBody}"/>
+        <!-- Cheque Statistics - User Management Style -->
+        <materialDesign:Card Grid.Row="3" Margin="0,0,0,10" Background="{DynamicResource PrimaryHueLightBrush}">
+            <Grid Margin="15">
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="FileDocument" 
+                                           Width="20" Height="20" 
+                                           VerticalAlignment="Center" 
+                                           Margin="0,0,8,0"
+                                           Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"/>
+                    <TextBlock Text="{Binding TotalCheques, StringFormat='{}{0} Total'}" 
+                              FontWeight="SemiBold"
+                              VerticalAlignment="Center"
+                              Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"
+                              Margin="0,0,20,0"/>
+                    
+                    <materialDesign:PackIcon Kind="Check" 
+                                           Width="20" Height="20" 
+                                           VerticalAlignment="Center" 
+                                           Margin="0,0,8,0"
+                                           Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"/>
+                    <TextBlock Text="{Binding RegularChequesDisplay}" 
+                              FontWeight="SemiBold"
+                              VerticalAlignment="Center"
+                              Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"
+                              Margin="0,0,20,0"/>
+                    
+                    <materialDesign:PackIcon Kind="CreditCard" 
+                                           Width="20" Height="20" 
+                                           VerticalAlignment="Center" 
+                                           Margin="0,0,8,0"
+                                           Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"/>
+                    <TextBlock Text="{Binding AdvanceChequesDisplay}" 
+                              FontWeight="SemiBold"
+                              VerticalAlignment="Center"
+                              Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"
+                              Margin="0,0,20,0"/>
+                    
+                    <materialDesign:PackIcon Kind="Merge" 
+                                           Width="20" Height="20" 
+                                           VerticalAlignment="Center" 
+                                           Margin="0,0,8,0"
+                                           Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"/>
+                    <TextBlock Text="{Binding ConsolidatedChequesDisplay}" 
+                              FontWeight="SemiBold"
+                              VerticalAlignment="Center"
+                              Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"
+                              Margin="0,0,20,0"/>
+                    
+                    <materialDesign:PackIcon Kind="CurrencyUsd" 
+                                           Width="20" Height="20" 
+                                           VerticalAlignment="Center" 
+                                           Margin="0,0,8,0"
+                                           Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"/>
+                    <TextBlock Text="{Binding TotalAmountDisplay}" 
+                              FontWeight="SemiBold"
+                              VerticalAlignment="Center"
+                              Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"/>
                 </StackPanel>
-            </materialDesign:Card>
-            
-            <!-- Regular Cheques -->
-            <materialDesign:Card Grid.Column="1" Style="{StaticResource StatisticsCardStyle}">
-                <StackPanel>
-                    <TextBlock Text="Regular Cheques" Style="{DynamicResource MaterialDesignBody2TextBlock}" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
-                    <TextBlock Text="{Binding RegularChequesDisplay}" Style="{DynamicResource MaterialDesignHeadline4TextBlock}" Foreground="{DynamicResource MaterialDesignBody}"/>
-                    <TextBlock Text="{Binding RegularAmountDisplay}" Style="{DynamicResource MaterialDesignBody2TextBlock}" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
-                </StackPanel>
-            </materialDesign:Card>
-            
-            <!-- Advance Cheques -->
-            <materialDesign:Card Grid.Column="2" Style="{StaticResource StatisticsCardStyle}">
-                <StackPanel>
-                    <TextBlock Text="Advance Cheques" Style="{DynamicResource MaterialDesignBody2TextBlock}" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
-                    <TextBlock Text="{Binding AdvanceChequesDisplay}" Style="{DynamicResource MaterialDesignHeadline4TextBlock}" Foreground="{DynamicResource MaterialDesignBody}"/>
-                    <TextBlock Text="{Binding AdvanceAmountDisplay}" Style="{DynamicResource MaterialDesignBody2TextBlock}" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
-                </StackPanel>
-            </materialDesign:Card>
-            
-            <!-- Consolidated Cheques -->
-            <materialDesign:Card Grid.Column="3" Style="{StaticResource StatisticsCardStyle}">
-                <StackPanel>
-                    <TextBlock Text="Consolidated Cheques" Style="{DynamicResource MaterialDesignBody2TextBlock}" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
-                    <TextBlock Text="{Binding ConsolidatedChequesDisplay}" Style="{DynamicResource MaterialDesignHeadline4TextBlock}" Foreground="{DynamicResource MaterialDesignBody}"/>
-                    <TextBlock Text="{Binding ConsolidatedAmountDisplay}" Style="{DynamicResource MaterialDesignBody2TextBlock}" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
-                </StackPanel>
-            </materialDesign:Card>
-            
-            <!-- Total Amount -->
-            <materialDesign:Card Grid.Column="4" Style="{StaticResource StatisticsCardStyle}">
-                <StackPanel>
-                    <TextBlock Text="Total Amount" Style="{DynamicResource MaterialDesignBody2TextBlock}" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
-                    <TextBlock Text="{Binding TotalAmountDisplay}" Style="{DynamicResource MaterialDesignHeadline4TextBlock}" Foreground="{DynamicResource MaterialDesignBody}"/>
-                </StackPanel>
-            </materialDesign:Card>
-        </Grid>
+            </Grid>
+        </materialDesign:Card>
 
         <!-- Main Content -->
         <Grid Grid.Row="4">
@@ -209,89 +205,94 @@
             </Grid.ColumnDefinitions>
             
             <!-- Action Panel -->
-            <materialDesign:Card Grid.Column="0" Style="{StaticResource MainContentAreaStyle}">
-                <StackPanel>
-                    <TextBlock Text="Cheque Actions" Style="{DynamicResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,16"/>
+            <materialDesign:Card Grid.Column="0" Style="{StaticResource MainContentAreaStyle}" Margin="0,0,5,0">
+                <StackPanel Margin="15">
+                    <TextBlock Text="Cheque Actions" 
+                               Style="{DynamicResource MaterialDesignHeadline6TextBlock}" 
+                               Margin="0,0,0,16"/>
                     
                     <!-- Selection Actions -->
-                    <TextBlock Text="Selection" Style="{DynamicResource MaterialDesignSubtitle2TextBlock}" Margin="0,0,0,8"/>
+                    <TextBlock Text="Selection" 
+                               Style="{DynamicResource MaterialDesignSubtitle2TextBlock}" 
+                               Margin="0,0,0,8"/>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                         <Button Content="Select All" 
                                 Command="{Binding SelectAllCommand}"
                                 Style="{DynamicResource MaterialDesignOutlinedButton}"
-                                Margin="0,0,8,0"/>
+                                Margin="0,0,8,0"
+                                Padding="12,6"/>
                         <Button Content="Clear Selection" 
                                 Command="{Binding ClearSelectionCommand}"
-                                Style="{DynamicResource MaterialDesignOutlinedButton}"/>
+                                Style="{DynamicResource MaterialDesignOutlinedButton}"
+                                Padding="12,6"/>
                     </StackPanel>
                     
                     <!-- Print Actions -->
-                    <TextBlock Text="Print &amp; Preview" Style="{DynamicResource MaterialDesignSubtitle2TextBlock}" Margin="0,0,0,8"/>
+                    <TextBlock Text="Print &amp; Preview" 
+                               Style="{DynamicResource MaterialDesignSubtitle2TextBlock}" 
+                               Margin="0,0,0,8"/>
                     <StackPanel Margin="0,0,0,16">
                         <Button Content="Print Selected" 
                                 Command="{Binding PrintSelectedCommand}"
                                 Style="{DynamicResource MaterialDesignRaisedButton}"
-                                Margin="0,0,0,8"/>
+                                Margin="0,0,0,8"
+                                Padding="12,6"/>
                         <Button Content="Preview Selected" 
                                 Command="{Binding PreviewSelectedCommand}"
                                 Style="{DynamicResource MaterialDesignOutlinedButton}"
-                                Margin="0,0,0,8"/>
+                                Margin="0,0,0,8"
+                                Padding="12,6"/>
                         <Button Content="Preview Single" 
                                 Command="{Binding PreviewSingleCommand}"
                                 Style="{DynamicResource MaterialDesignOutlinedButton}"
-                                Margin="0,0,0,8"/>
+                                Margin="0,0,0,8"
+                                Padding="12,6"/>
                         <Button Content="Generate PDF" 
                                 Command="{Binding GeneratePdfCommand}"
-                                Style="{DynamicResource MaterialDesignOutlinedButton}"/>
+                                Style="{DynamicResource MaterialDesignOutlinedButton}"
+                                Padding="12,6"/>
                     </StackPanel>
                     
                     <!-- Management Actions -->
-                    <TextBlock Text="Management" Style="{DynamicResource MaterialDesignSubtitle2TextBlock}" Margin="0,0,0,8"/>
+                    <TextBlock Text="Management" 
+                               Style="{DynamicResource MaterialDesignSubtitle2TextBlock}" 
+                               Margin="0,0,0,8"/>
                     <StackPanel Margin="0,0,0,16">
                         <Button Content="Void Selected" 
                                 Command="{Binding VoidSelectedCommand}"
                                 Style="{DynamicResource MaterialDesignOutlinedButton}"
-                                Margin="0,0,0,8"/>
+                                Margin="0,0,0,8"
+                                Padding="12,6"/>
                         <Button Content="Void Single" 
                                 Command="{Binding VoidSingleCommand}"
                                 Style="{DynamicResource MaterialDesignOutlinedButton}"
-                                Margin="0,0,0,8"/>
+                                Margin="0,0,0,8"
+                                Padding="12,6"/>
                         <Button Content="Stop Payment" 
                                 Command="{Binding StopPaymentCommand}"
                                 Style="{DynamicResource MaterialDesignOutlinedButton}"
-                                Margin="0,0,0,8"/>
-                        <Button Content="Stop Single" 
-                                Command="{Binding StopSingleCommand}"
-                                Style="{DynamicResource MaterialDesignOutlinedButton}"
-                                Margin="0,0,0,8"/>
+                                Margin="0,0,0,8"
+                                Padding="12,6"/>
                         <Button Content="Reprint Selected" 
                                 Command="{Binding ReprintSelectedCommand}"
-                                Style="{DynamicResource MaterialDesignOutlinedButton}"/>
-                    </StackPanel>
-                    
-                    <!-- Grouping Actions -->
-                    <TextBlock Text="Grouping" Style="{DynamicResource MaterialDesignSubtitle2TextBlock}" Margin="0,0,0,8"/>
-                    <StackPanel Margin="0,0,0,16">
-                        <Button Content="Group by Type" 
-                                Command="{Binding GroupByTypeCommand}"
                                 Style="{DynamicResource MaterialDesignOutlinedButton}"
-                                Margin="0,0,0,8"/>
-                        <Button Content="Ungroup" 
-                                Command="{Binding UngroupCommand}"
-                                Style="{DynamicResource MaterialDesignOutlinedButton}"/>
+                                Padding="12,6"/>
                     </StackPanel>
                     
                     <!-- Export Actions -->
-                    <TextBlock Text="Export" Style="{DynamicResource MaterialDesignSubtitle2TextBlock}" Margin="0,0,0,8"/>
+                    <TextBlock Text="Export" 
+                               Style="{DynamicResource MaterialDesignSubtitle2TextBlock}" 
+                               Margin="0,0,0,8"/>
                     <Button Content="Export Data" 
                             Command="{Binding ExportCommand}"
-                            Style="{DynamicResource MaterialDesignOutlinedButton}"/>
+                            Style="{DynamicResource MaterialDesignOutlinedButton}"
+                            Padding="12,6"/>
                 </StackPanel>
             </materialDesign:Card>
             
             <!-- Cheques List -->
-            <materialDesign:Card Grid.Column="1" Style="{StaticResource MainContentAreaStyle}">
-                <Grid>
+            <materialDesign:Card Grid.Column="1" Style="{StaticResource MainContentAreaStyle}" Margin="5,0,0,0">
+                <Grid Margin="15">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
@@ -299,7 +300,9 @@
                     
                     <!-- List Header -->
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,16">
-                        <TextBlock Text="Cheques Ready for Preparation" Style="{DynamicResource MaterialDesignHeadline6TextBlock}" VerticalAlignment="Center"/>
+                        <TextBlock Text="Cheques Ready for Preparation" 
+                                   Style="{DynamicResource MaterialDesignHeadline6TextBlock}" 
+                                   VerticalAlignment="Center"/>
                     </StackPanel>
                     
                     <!-- DataGrid -->
@@ -317,7 +320,11 @@
                               HeadersVisibility="Column"
                               SelectionMode="Single"
                               VirtualizingPanel.IsVirtualizing="True"
-                              VirtualizingPanel.VirtualizationMode="Recycling">
+                              VirtualizingPanel.VirtualizationMode="Recycling"
+                              materialDesign:DataGridAssist.CellPadding="8 6 8 6"
+                              materialDesign:DataGridAssist.ColumnHeaderPadding="8 8 8 8"
+                              AlternatingRowBackground="{DynamicResource MaterialDesignDataGridRowHoverBackground}"
+                              RowHeaderWidth="0">
                         
                         <DataGrid.Columns>
                             <!-- Selection -->
@@ -394,12 +401,23 @@
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal">
-                                            <Button Content="Void" 
-                                                    Command="{Binding DataContext.VoidSingleCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                    Style="{DynamicResource MaterialDesignOutlinedButton}"
+                                            <Button Command="{Binding DataContext.ViewCalculationDetailsCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                    CommandParameter="{Binding}"
+                                                    Style="{StaticResource MaterialDesignIconButton}"
+                                                    ToolTip="View Calculation Details"
+                                                    Width="30" Height="30"
+                                                    Margin="0,0,4,0">
+                                                <materialDesign:PackIcon Kind="Calculator" Width="16" Height="16"/>
+                                            </Button>
+                                            
+                                            <Button Command="{Binding DataContext.VoidSingleCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                    Style="{StaticResource MaterialDesignIconButton}"
                                                     IsEnabled="{Binding CanBeVoided}"
-                                                    Margin="0,0,4,0"
-                                                    Padding="8,4"/>
+                                                    ToolTip="Void Cheque"
+                                                    Width="30" Height="30"
+                                                    Foreground="IndianRed">
+                                                <materialDesign:PackIcon Kind="Cancel" Width="16" Height="16"/>
+                                            </Button>
                                         </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
@@ -412,7 +430,7 @@
 
         <!-- Status Bar -->
         <materialDesign:ColorZone Grid.Row="5" Style="{StaticResource StatusFooterBarStyle}">
-            <Grid>
+            <Grid Margin="15,8">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
@@ -420,6 +438,8 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="Information" Width="16" Height="16" 
+                                           VerticalAlignment="Center" Margin="0,0,5,0"/>
                     <TextBlock Text="Status: " FontWeight="SemiBold"/>
                     <TextBlock Text="{Binding StatusMessage}"/>
                 </StackPanel>
@@ -429,9 +449,7 @@
                     <TextBlock Text="{Binding FilteredCheques.Count}"/>
                     <TextBlock Text=" / " Margin="5,0"/>
                     <TextBlock Text="{Binding Cheques.Count}"/>
-                    <TextBlock Text=" | " Margin="5,0"/>
-                    <TextBlock Text="Last Updated: " FontWeight="SemiBold"/>
-                    <TextBlock Text="{Binding LastUpdated}"/>
+                    <TextBlock Text=" cheques" Margin="5,0"/>
                 </StackPanel>
             </Grid>
         </materialDesign:ColorZone>

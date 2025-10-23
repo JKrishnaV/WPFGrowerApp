@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Dapper;
 using WPFGrowerApp.Commands;
 using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
@@ -63,6 +64,7 @@ namespace WPFGrowerApp.ViewModels
         public ICommand ClearFiltersCommand { get; }
         public ICommand RefreshCommand { get; }
         public ICommand GeneratePaymentsCommand { get; }
+        public ICommand GenerateSelectedPaymentsCommand { get; }
         public ICommand PreviewDistributionCommand { get; }
         public ICommand SelectPaymentMethodCommand { get; }
         public ICommand SelectBatchesForConsolidationCommand { get; }
@@ -107,7 +109,7 @@ namespace WPFGrowerApp.ViewModels
             IsAllPending = false;
             SelectedPaymentMethod = "Cheque";
             IsHybridMode = false;
-            EnableConsolidation = false;
+            EnableConsolidation = true; // Always enabled, no UI control
             SelectedPaymentType = ChequePaymentType.Regular;
             SelectedBatchIds = new List<int>();
 
@@ -116,6 +118,7 @@ namespace WPFGrowerApp.ViewModels
             ClearFiltersCommand = new RelayCommand(async p => await ClearFiltersAsync());
             RefreshCommand = new RelayCommand(async p => await RefreshAsync());
             GeneratePaymentsCommand = new RelayCommand(async p => await GeneratePaymentsAsync(), p => CanGeneratePayments());
+            GenerateSelectedPaymentsCommand = new RelayCommand(async p => await GenerateSelectedPaymentsAsync(), p => CanGenerateSelectedPayments());
             PreviewDistributionCommand = new RelayCommand(async p => await PreviewDistributionAsync(), p => CanPreviewDistribution());
             SelectPaymentMethodCommand = new RelayCommand(async p => await SelectPaymentMethodAsync());
             SelectBatchesForConsolidationCommand = new RelayCommand(async p => await SelectBatchesForConsolidationAsync());
@@ -271,6 +274,23 @@ namespace WPFGrowerApp.ViewModels
             set => SetProperty(ref _enableConsolidation, value);
         }
 
+        private bool _selectAllGrowers = true; // Default all checked
+
+        public bool SelectAllGrowers
+        {
+            get => _selectAllGrowers;
+            set
+            {
+                if (SetProperty(ref _selectAllGrowers, value))
+                {
+                    foreach (var grower in GrowerSelections)
+                    {
+                        grower.IsSelectedForPayment = value;
+                    }
+                }
+            }
+        }
+
         public ChequePaymentType SelectedPaymentType
         {
             get => _selectedPaymentType;
@@ -376,6 +396,13 @@ namespace WPFGrowerApp.ViewModels
                     return;
                 }
 
+                // Handle consolidation if enabled
+                if (EnableConsolidation)
+                {
+                    await GenerateConsolidatedPaymentsAsync();
+                    return;
+                }
+
                 // Check for existing distributions to prevent duplicates
                 foreach (var batchId in SelectedBatchIds)
                 {
@@ -403,28 +430,20 @@ namespace WPFGrowerApp.ViewModels
                     Items = items
                 };
 
-                // Create distribution in database
-                var createdDistribution = await _paymentDistributionService.CreateDistributionAsync(distribution);
+                // Generate complete payment distribution in single transaction
+                var createdDistribution = await _paymentDistributionService.GenerateCompletePaymentDistributionAsync(distribution, App.CurrentUser?.Username ?? "SYSTEM", SelectedBatchIds);
                 
-                // Generate payments
-                if (await _paymentDistributionService.GeneratePaymentsAsync(createdDistribution.DistributionId, App.CurrentUser?.Username ?? "SYSTEM"))
-                {
-                    await _dialogService.ShowMessageBoxAsync(
-                        $"Successfully generated payments for distribution {createdDistribution.DistributionNumber}!\n\n" +
-                        $"Distribution ID: {createdDistribution.DistributionId}\n" +
-                        $"Total Amount: {createdDistribution.TotalAmount:C}\n" +
-                        $"Growers: {createdDistribution.TotalGrowers}\n" +
-                        $"Batches: {createdDistribution.TotalBatches}\n\n" +
-                        $"You can now go to Enhanced Cheque Preparation to print the cheques.",
-                        "Payments Generated Successfully");
-                    
-                    // Refresh data to show updated status
-                    await LoadDataAsync();
-                }
-                else
-                {
-                    await _dialogService.ShowMessageBoxAsync("Error generating payments. Please try again.", "Generation Failed");
-                }
+                await _dialogService.ShowMessageBoxAsync(
+                    $"Successfully generated payments for distribution {createdDistribution.DistributionNumber}!\n\n" +
+                    $"Distribution ID: {createdDistribution.DistributionId}\n" +
+                    $"Total Amount: {createdDistribution.TotalAmount:C}\n" +
+                    $"Growers: {createdDistribution.TotalGrowers}\n" +
+                    $"Batches: {createdDistribution.TotalBatches}\n\n" +
+                    $"You can now go to Enhanced Cheque Preparation to print the cheques.",
+                    "Payments Generated Successfully");
+                
+                // Refresh data to show updated status
+                await LoadDataAsync();
             }
             catch (Exception ex)
             {
@@ -565,12 +584,57 @@ namespace WPFGrowerApp.ViewModels
         {
             try
             {
-                // Implementation for exporting data
-                await _dialogService.ShowMessageBoxAsync("Export functionality will be implemented in a future update", "Export");
+                if (!GrowerSelections.Any())
+                {
+                    await _dialogService.ShowMessageBoxAsync("No payment data available to export. Please select batches first.", "No Data Available");
+                    return;
+                }
+
+                // Show export format selection dialog
+                var exportDialog = new Views.Dialogs.ExportFormatDialog();
+                exportDialog.Owner = System.Windows.Application.Current.MainWindow;
+                
+                if (exportDialog.ShowDialog() != true)
+                {
+                    return; // User cancelled
+                }
+
+                string selectedFormat = exportDialog.SelectedFormat;
+
+                // Get selected batches for export
+                var selectedBatches = AvailableBatches.Where(b => b.IsSelected).ToList();
+                if (!selectedBatches.Any())
+                {
+                    await _dialogService.ShowMessageBoxAsync("No batches selected. Please select at least one batch.", "No Batches Selected");
+                    return;
+                }
+
+                // Show progress
+                IsBusy = true;
+                await _dialogService.ShowMessageBoxAsync($"Exporting payment distribution data to {selectedFormat} format...", "Exporting");
+
+                // Create export service and export data
+                var exportService = new Services.PaymentDistributionExportService();
+                var growerSelectionsList = GrowerSelections.ToList();
+                bool success = await exportService.ExportPaymentDistributionAsync(
+                    growerSelectionsList,
+                    selectedBatches,
+                    selectedFormat,
+                    "Enhanced Payment Distribution Report"
+                );
+
+                if (success)
+                {
+                    await _dialogService.ShowMessageBoxAsync($"Payment distribution data successfully exported to {selectedFormat} format!", "Export Complete");
+                }
             }
             catch (Exception ex)
             {
-                await _dialogService.ShowMessageBoxAsync($"Error exporting data: {ex.Message}", "Error");
+                await _dialogService.ShowMessageBoxAsync($"Error exporting data: {ex.Message}", "Export Error");
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 
@@ -699,6 +763,7 @@ namespace WPFGrowerApp.ViewModels
                         selection.HasOutstandingAdvances = hasOutstandingAdvances;
                         selection.CanBeConsolidated = grower.BatchCount > 1;
                         selection.SetRecommendedPaymentType();
+                        selection.IsSelectedForPayment = true; // Default checked
                         
                         GrowerSelections.Add(selection);
                         Infrastructure.Logging.Logger.Info($"Added grower selection: {selection.GrowerName} with amount {selection.RegularAmount:C}");
@@ -844,7 +909,14 @@ namespace WPFGrowerApp.ViewModels
                     // Get the primary receipt ID for this grower across selected batches
                     var primaryReceiptId = await GetPrimaryReceiptIdAsync(growerSelection.GrowerId);
                     
-                    // Create a distribution item for each grower (single item = single cheque)
+                    // Validate that we have valid batch IDs
+                    if (!SelectedBatchIds.Any() || SelectedBatchIds.All(id => id <= 0))
+                    {
+                        throw new InvalidOperationException("No valid batches selected. Please select at least one batch before generating payments.");
+                    }
+
+                    // For consolidation, create one distribution item per grower with consolidated amount
+                    // but assign it to the first batch for database constraint compliance
                     var distributionItem = new PaymentDistributionItem
                     {
                         GrowerId = growerSelection.GrowerId,
@@ -855,8 +927,8 @@ namespace WPFGrowerApp.ViewModels
                         Status = "Draft",
                         CreatedAt = DateTime.Now,
                         CreatedBy = App.CurrentUser?.Username ?? "SYSTEM",
-                        BatchNumber = string.Join(", ", SelectedBatchIds),
-                        PaymentBatchId = SelectedBatchIds.FirstOrDefault(), // Use first selected batch as primary
+                        BatchNumber = string.Join(", ", SelectedBatchIds), // Store all batch numbers for audit trail
+                        PaymentBatchId = SelectedBatchIds.First(id => id > 0), // Use first batch for database constraint
                         ReceiptId = primaryReceiptId // Use primary receipt ID for audit trail
                     };
 
@@ -1050,23 +1122,25 @@ namespace WPFGrowerApp.ViewModels
                             command.Parameters.AddWithValue($"@BatchId{i}", batchIds[i]);
                         }
                         
-                        using var reader = await command.ExecuteReaderAsync();
                         var hasCheques = false;
                         var hasVoidedCheques = false;
                         var hasPrintedCheques = false;
                         
-                        while (await reader.ReadAsync())
+                        using (var reader = await command.ExecuteReaderAsync())
                         {
-                            hasCheques = true;
-                            var status = reader["Status"].ToString();
-                            
-                            if (status == "Voided")
+                            while (await reader.ReadAsync())
                             {
-                                hasVoidedCheques = true;
-                            }
-                            else if (status == "Printed" || status == "Generated")
-                            {
-                                hasPrintedCheques = true;
+                                hasCheques = true;
+                                var status = reader["Status"].ToString();
+                                
+                                if (status == "Voided")
+                                {
+                                    hasVoidedCheques = true;
+                                }
+                                else if (status == "Printed" || status == "Generated")
+                                {
+                                    hasPrintedCheques = true;
+                                }
                             }
                         }
                         
@@ -1109,6 +1183,280 @@ namespace WPFGrowerApp.ViewModels
             }
             
             return filteredGrowers;
+        }
+
+        #endregion
+
+        #region Consolidation Methods
+
+        private async Task GenerateConsolidatedPaymentsAsync()
+        {
+            try
+            {
+                // Get growers who have payments in multiple batches
+                var growersWithMultipleBatches = await _crossBatchPaymentService.GetGrowersInMultipleBatchesAsync(SelectedBatchIds);
+                
+                if (!growersWithMultipleBatches.Any())
+                {
+                    await _dialogService.ShowMessageBoxAsync("No growers found with payments in multiple batches. Consolidation is not needed.", "No Consolidation Opportunities");
+                    return;
+                }
+
+                // Create consolidated cheques for each grower
+                var consolidatedCheques = new List<Cheque>();
+                
+                foreach (var grower in growersWithMultipleBatches)
+                {
+                    // Get consolidated payment details for this grower
+                    var consolidatedPayment = await _crossBatchPaymentService.GetConsolidatedPaymentForGrowerAsync(grower.GrowerId, SelectedBatchIds);
+                    
+                    if (consolidatedPayment != null && consolidatedPayment.TotalAmount > 0)
+                    {
+                        // Create consolidated cheque
+                        var consolidatedCheque = await _crossBatchPaymentService.GenerateConsolidatedChequeAsync(
+                            grower.GrowerId, 
+                            SelectedBatchIds, 
+                            consolidatedPayment.TotalAmount, 
+                            App.CurrentUser?.Username ?? "SYSTEM");
+                        
+                        if (consolidatedCheque != null)
+                        {
+                            consolidatedCheques.Add(consolidatedCheque);
+                        }
+                    }
+                }
+
+                // Update batch statuses to "Finalized"
+                await _crossBatchPaymentService.UpdateBatchStatusAfterConsolidationAsync(SelectedBatchIds, "Finalized", App.CurrentUser?.Username ?? "SYSTEM");
+
+                await _dialogService.ShowMessageBoxAsync(
+                    $"Successfully generated {consolidatedCheques.Count} consolidated cheques!\n\n" +
+                    $"Total Amount: {consolidatedCheques.Sum(c => c.ChequeAmount):C}\n" +
+                    $"Batches Processed: {SelectedBatchIds.Count}\n\n" +
+                    $"You can now go to Enhanced Cheque Preparation to print the cheques.",
+                    "Consolidated Payments Generated");
+            }
+            catch (Exception ex)
+            {
+                await _dialogService.ShowMessageBoxAsync($"Error generating consolidated payments: {ex.Message}", "Error");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+
+        #endregion
+
+        #region Selected Payments Methods
+
+        /// <summary>
+        /// Generate payments for selected growers only
+        /// </summary>
+        private async Task GenerateSelectedPaymentsAsync()
+        {
+            try
+            {
+                IsBusy = true;
+
+                // Get selected growers only
+                var selectedGrowers = GrowerSelections.Where(g => g.IsSelectedForPayment).ToList();
+                
+                // Validate at least one selected
+                if (!selectedGrowers.Any())
+                {
+                    await _dialogService.ShowMessageBoxAsync("Please select at least one grower", "No Growers Selected");
+                    return;
+                }
+
+                // Create PaymentDistributionItems for selected growers only
+                var distributionItems = new List<PaymentDistributionItem>();
+                
+                foreach (var growerSelection in selectedGrowers)
+                {
+                    // Get all ReceiptIds for this grower across all selected batches
+                    var growerReceipts = await GetGrowerReceiptsAcrossBatchesAsync(growerSelection.GrowerId, SelectedBatchIds);
+                    
+                    if (!growerReceipts.Any())
+                    {
+                        Logger.Warn($"No receipts found for grower {growerSelection.GrowerId} in selected batches");
+                        continue;
+                    }
+                    
+                    // Use the first receipt as the primary ReceiptId for the main record
+                    var primaryReceipt = growerReceipts.First();
+                    
+                    var distributionItem = new PaymentDistributionItem
+                    {
+                        GrowerId = growerSelection.GrowerId,
+                        GrowerName = growerSelection.GrowerName,
+                        GrowerNumber = growerSelection.GrowerNumber,
+                        Amount = growerSelection.NetConsolidatedAmount, // Always use consolidated amount
+                        PaymentBatchId = primaryReceipt.PaymentBatchId, // Use primary batch
+                        ReceiptId = primaryReceipt.ReceiptId, // Use primary receipt
+                        PaymentMethod = SelectedPaymentMethod, // Set the payment method from UI selection
+                        Status = "Pending",
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedBy = App.CurrentUser?.Username ?? "SYSTEM"
+                    };
+                    
+                    distributionItems.Add(distributionItem);
+                    
+                    // Store all receipts for detailed audit tracking
+                    distributionItem.ReceiptContributions = growerReceipts;
+                }
+
+                // Create a new PaymentDistribution object
+                var distribution = new PaymentDistribution
+                {
+                    DistributionNumber = $"DIST-{DateTime.Now:yyyyMMdd-HHmmss}",
+                    DistributionDate = DateTime.UtcNow,
+                    DistributionType = "ByGrower",
+                    PaymentMethod = "Cheque",
+                    TotalAmount = distributionItems.Sum(d => d.Amount),
+                    TotalGrowers = distributionItems.Count,
+                    TotalBatches = SelectedBatchIds.Count,
+                    Status = "Draft",
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = App.CurrentUser?.Username ?? "SYSTEM",
+                    Items = distributionItems
+                };
+
+                // Generate the payment distribution
+                var result = await _paymentDistributionService.GenerateCompletePaymentDistributionAsync(
+                    distribution, 
+                    App.CurrentUser?.Username ?? "SYSTEM",
+                    SelectedBatchIds);
+
+                if (result != null)
+                {
+                    // Update batch processing status
+                    var processedGrowerIds = selectedGrowers.Select(g => g.GrowerId).ToList();
+                    await _paymentDistributionService.UpdateBatchProcessingStatusAsync(
+                        SelectedBatchIds, 
+                        processedGrowerIds, 
+                        App.CurrentUser?.Username ?? "SYSTEM");
+
+                    await _dialogService.ShowMessageBoxAsync(
+                        $"Successfully generated payments for {selectedGrowers.Count} selected growers!\n\n" +
+                        $"Total Amount: {selectedGrowers.Sum(g => g.NetConsolidatedAmount):C}\n" +
+                        $"Batches Processed: {SelectedBatchIds.Count}\n\n" +
+                        $"You can now go to Enhanced Cheque Preparation to print the cheques.",
+                        "Selected Payments Generated");
+
+                    // Refresh the data
+                    await RefreshAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                await _dialogService.ShowMessageBoxAsync($"Error generating selected payments: {ex.Message}", "Error");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        /// <summary>
+        /// Check if selected payments can be generated
+        /// </summary>
+        private bool CanGenerateSelectedPayments()
+        {
+            return GrowerSelections.Any(g => g.IsSelectedForPayment) && !IsBusy;
+        }
+
+        #endregion
+
+        #region Helper Methods
+
+        /// <summary>
+        /// Get all receipts for a grower across multiple batches
+        /// </summary>
+        private async Task<List<ReceiptContribution>> GetGrowerReceiptsAcrossBatchesAsync(int growerId, List<int> batchIds)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    
+                    var sql = @"
+                        SELECT 
+                            r.ReceiptId,
+                            rpa.PaymentBatchId,
+                            rpa.AmountPaid AS Amount,
+                            pb.BatchNumber,
+                            r.ReceiptDate
+                        FROM Receipts r
+                        INNER JOIN ReceiptPaymentAllocations rpa ON r.ReceiptId = rpa.ReceiptId
+                        INNER JOIN PaymentBatches pb ON rpa.PaymentBatchId = pb.PaymentBatchId
+                        WHERE r.GrowerId = @GrowerId 
+                        AND rpa.PaymentBatchId IN @BatchIds
+                        ORDER BY r.ReceiptId, rpa.PaymentBatchId";
+                    
+                    var receipts = await connection.QueryAsync<dynamic>(sql, new { GrowerId = growerId, BatchIds = batchIds });
+                    
+                    var contributions = new List<ReceiptContribution>();
+                    foreach (var receipt in receipts)
+                    {
+                        contributions.Add(new ReceiptContribution
+                        {
+                            ReceiptId = receipt.ReceiptId,
+                            PaymentBatchId = receipt.PaymentBatchId,
+                            Amount = receipt.Amount,
+                            BatchNumber = receipt.BatchNumber,
+                            ReceiptDate = receipt.ReceiptDate
+                        });
+                    }
+                    
+                    return contributions;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting receipts for grower {growerId}: {ex.Message}", ex);
+                return new List<ReceiptContribution>();
+            }
+        }
+
+        /// <summary>
+        /// Get the primary ReceiptId for a grower from a specific batch
+        /// </summary>
+        private async Task<int> GetPrimaryReceiptIdForGrowerAsync(int growerId, int batchId)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    
+                    var sql = @"
+                        SELECT TOP 1 r.ReceiptId
+                        FROM Receipts r
+                        INNER JOIN ReceiptPaymentAllocations rpa ON r.ReceiptId = rpa.ReceiptId
+                        WHERE r.GrowerId = @GrowerId 
+                        AND rpa.PaymentBatchId = @BatchId
+                        ORDER BY r.ReceiptId";
+                    
+                    var receiptId = await connection.QueryFirstOrDefaultAsync<int?>(sql, new { GrowerId = growerId, BatchId = batchId });
+                    
+                    if (receiptId.HasValue)
+                    {
+                        return receiptId.Value;
+                    }
+                    
+                    // If no receipt found, return 0 as fallback
+                    Logger.Info($"No ReceiptId found for GrowerId {growerId} in BatchId {batchId}, using 0 as fallback");
+                    return 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting primary ReceiptId for grower {growerId}: {ex.Message}", ex);
+                return 0; // Fallback value
+            }
         }
 
         #endregion

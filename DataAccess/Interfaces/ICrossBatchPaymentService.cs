@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Microsoft.Data.SqlClient;
 using System.Threading.Tasks;
 using WPFGrowerApp.DataAccess.Models;
 using WPFGrowerApp.Models;
@@ -27,7 +28,7 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// <param name="consolidatedAmount">The total consolidated amount</param>
         /// <param name="createdBy">The user creating the consolidated cheque</param>
         /// <returns>The generated consolidated cheque</returns>
-        Task<Cheque> GenerateConsolidatedChequeAsync(int growerId, List<int> batchIds, decimal consolidatedAmount, string createdBy);
+        Task<Cheque> GenerateConsolidatedChequeAsync(int growerId, List<int> batchIds, decimal consolidatedAmount, string createdBy, int distributionId);
 
         /// <summary>
         /// Gets grower payments across multiple batches
@@ -56,8 +57,10 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// Gets batch breakdown for a consolidated cheque
         /// </summary>
         /// <param name="chequeId">The consolidated cheque ID</param>
+        /// <param name="connection">Optional database connection</param>
+        /// <param name="transaction">Optional database transaction</param>
         /// <returns>List of batch breakdowns</returns>
-        Task<List<BatchBreakdown>> GetBatchBreakdownAsync(int chequeId);
+        Task<List<BatchBreakdown>> GetBatchBreakdownAsync(int chequeId, SqlConnection connection = null, SqlTransaction transaction = null);
 
         /// <summary>
         /// Updates batch status after consolidation
@@ -65,8 +68,10 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// <param name="batchIds">List of batch IDs</param>
         /// <param name="newStatus">New status for the batches</param>
         /// <param name="updatedBy">The user updating the status</param>
+        /// <param name="connection">Optional database connection</param>
+        /// <param name="transaction">Optional database transaction</param>
         /// <returns>True if successful</returns>
-        Task<bool> UpdateBatchStatusAfterConsolidationAsync(List<int> batchIds, string newStatus, string updatedBy);
+        Task<bool> UpdateBatchStatusAfterConsolidationAsync(List<int> batchIds, string newStatus, string updatedBy, SqlConnection connection = null, SqlTransaction transaction = null);
 
         /// <summary>
         /// Reverts consolidation and restores batch status

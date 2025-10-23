@@ -37,25 +37,48 @@ namespace WPFGrowerApp.DataAccess.Services
         {
             try
             {
+                // Null reference checks
+                if (request == null)
+                {
+                    return new VoidingResult(false, "Void request is null");
+                }
+
+                if (string.IsNullOrWhiteSpace(request.EntityType))
+                {
+                    return new VoidingResult(false, "Entity type is required");
+                }
+
+                if (request.EntityId <= 0)
+                {
+                    return new VoidingResult(false, "Valid entity ID is required");
+                }
+
+                if (string.IsNullOrWhiteSpace(request.VoidedBy))
+                {
+                    request.VoidedBy = Environment.UserName ?? "SYSTEM";
+                }
+
                 var result = new VoidingResult();
 
-                switch (request.EntityType.ToLower())
+                // Auto-detect cheque type if not specified or if it's a generic "cheque" type
+                if (request.EntityType.ToLower() == "cheque" || request.EntityType.ToLower() == "regular")
                 {
-                    case "regular":
-                    case "cheque":
-                        result = await VoidRegularBatchPaymentAsync(request.EntityId, request.Reason, request.VoidedBy);
-                        break;
-                    case "advance":
-                    case "advancecheque":
-                        result = await VoidAdvanceChequeAsync(request.EntityId, request.Reason, request.VoidedBy);
-                        break;
-                    case "consolidated":
-                    case "consolidatedcheque":
-                        result = await VoidConsolidatedPaymentAsync(request.EntityId, request.Reason, request.VoidedBy);
-                        break;
-                    default:
-                        result = new VoidingResult(false, $"Unknown entity type: {request.EntityType}");
-                        break;
+                    // Always use regular voiding logic - it now handles PaymentDistributionId properly
+                    result = await VoidRegularBatchPaymentAsync(request.EntityId, request.Reason, request.VoidedBy);
+                }
+                else
+                {
+                    switch (request.EntityType.ToLower())
+                    {
+                        case "advance":
+                        case "advancecheque":
+                            result = await VoidAdvanceChequeAsync(request.EntityId, request.Reason, request.VoidedBy);
+                            break;
+                        // Consolidated cheques now use regular voiding logic above
+                        default:
+                            result = new VoidingResult(false, $"Unknown entity type: {request.EntityType}");
+                            break;
+                    }
                 }
 
                 return result;
@@ -70,52 +93,94 @@ namespace WPFGrowerApp.DataAccess.Services
         {
             try
             {
-                var result = new VoidingResult();
+                using var connection = CreateConnection();
+                await connection.OpenAsync();
+                using var transaction = connection.BeginTransaction();
 
-                // Get the cheque details
-                var cheque = await _chequeService.GetChequeByIdAsync(chequeId);
-                if (cheque == null)
+                try
                 {
-                    result.AddError("Cheque not found");
-                    return result;
-                }
+                    var result = new VoidingResult();
 
-                if (!cheque.CanBeVoided)
-                {
-                    result.AddError("Cheque cannot be voided in its current status");
-                    return result;
-                }
+                    // Get the cheque details
+                    var cheque = await GetChequeByIdAsync(chequeId, connection, transaction);
+                    if (cheque == null)
+                    {
+                        result.AddError("Cheque not found");
+                        await SafeRollbackAsync(transaction);
+                        return result;
+                    }
 
-                // Check for advance deductions that need to be reversed
-                var advanceDeductions = await _advanceDeductionService.GetDeductionHistoryByChequeIdAsync(chequeId);
-                if (advanceDeductions.Any())
-                {
-                    result.AddWarning($"Cheque has {advanceDeductions.Count} advance deductions that will be reversed.");
-                }
+                    if (!cheque.CanBeVoided)
+                    {
+                        result.AddError("Cheque cannot be voided in its current status");
+                        await SafeRollbackAsync(transaction);
+                        return result;
+                    }
 
-                // Void the cheque
-                var success = await _chequeService.VoidChequeAsync(chequeId, reason, voidedBy);
-                if (success)
-                {
-                    // Reverse advance deductions if any exist
+                    // Check for advance deductions that need to be reversed
+                    var advanceDeductions = await GetAdvanceDeductionsByChequeIdAsync(chequeId, connection, transaction);
                     if (advanceDeductions.Any())
                     {
-                        foreach (var deduction in advanceDeductions)
-                        {
-                            await _advanceDeductionService.ReverseAdvanceDeductionAsync(deduction.AdvanceChequeId, reason, voidedBy);
-                        }
+                        result.AddWarning($"Cheque has {advanceDeductions.Count} advance deductions that will be reversed.");
+                    }
+
+                    // 1. Reverse advance deductions if any exist
+                    if (advanceDeductions.Any())
+                    {
+                        await ReverseAdvanceDeductionsAsync(chequeId, reason, voidedBy, connection, transaction);
                         result.DeductionsReversed = true;
                     }
 
-                    // Update corresponding payment distribution item status
-                    await UpdatePaymentDistributionItemStatusAsync(chequeId, "Voided", voidedBy);
+                    // 2. Update payment distribution items
+                    await UpdatePaymentDistributionItemsAsync(chequeId, "Voided", voidedBy, connection, transaction);
 
-                    // Revert batch status if needed
-                    if (cheque.PaymentBatchId.HasValue)
+                    // 3. Void the cheque
+                    await VoidChequeAsync(chequeId, reason, voidedBy, connection, transaction);
+
+                    // 3.5. Update PaymentDistributionReceipts for the same grower and distribution
+                    if (cheque.PaymentDistributionId.HasValue && cheque.GrowerId > 0)
                     {
-                        await RevertBatchStatusIfNeededAsync(cheque.PaymentBatchId.Value, voidedBy);
+                        await UpdatePaymentDistributionReceiptsAsync(cheque.PaymentDistributionId.Value, cheque.GrowerId, "Voided", voidedBy, connection, transaction);
                     }
 
+                    // 4. Clean up orphaned payment distributions
+                    //if (cheque.PaymentBatchId.HasValue)
+                    //{
+                    //    await CleanupOrphanedDistributionsAsync(cheque.PaymentBatchId.Value, connection, transaction);
+                    //}
+
+                    // 5. Revert batch status if needed for ALL affected batches (data-driven approach)
+                    if (cheque.PaymentDistributionId.HasValue && cheque.GrowerId > 0)
+                    {
+                        // Get all batch IDs that are actually affected by this payment distribution
+                        var affectedBatchIds = await GetAffectedBatchIdsAsync(
+                            cheque.PaymentDistributionId.Value, 
+                            cheque.GrowerId, 
+                            connection, 
+                            transaction
+                        );
+                        
+                        // Also include the primary PaymentBatchId if it's not already in the list
+                        if (cheque.PaymentBatchId.HasValue && !affectedBatchIds.Contains(cheque.PaymentBatchId.Value))
+                        {
+                            affectedBatchIds.Add(cheque.PaymentBatchId.Value);
+                        }
+                        
+                        // Revert status for all affected batches
+                        foreach (var batchId in affectedBatchIds)
+                        {
+                            await RevertBatchStatusIfNeededAsync(batchId, voidedBy, connection, transaction);
+                        }
+                        
+                        Logger.Info($"Reverted status for {affectedBatchIds.Count} affected batches: [{string.Join(", ", affectedBatchIds)}]");
+                    }
+                    else if (cheque.PaymentBatchId.HasValue)
+                    {
+                        // Fallback: if no PaymentDistributionId, just revert the primary batch
+                        await RevertBatchStatusIfNeededAsync(cheque.PaymentBatchId.Value, voidedBy, connection, transaction);
+                    }
+
+                    // Set result properties before commit
                     result.Success = true;
                     result.Message = "Regular batch payment voided successfully";
                     result.EntityType = "Regular";
@@ -123,13 +188,18 @@ namespace WPFGrowerApp.DataAccess.Services
                     result.AmountReversed = cheque.ChequeAmount;
                     result.VoidedBy = voidedBy;
                     result.VoidedAt = DateTime.Now;
-                }
-                else
-                {
-                    result.AddError("Failed to void the cheque");
-                }
 
-                return result;
+                    // Commit the transaction
+                    await SafeCommitAsync(transaction);
+
+                    return result;
+                }
+                catch
+                {
+                    // Only rollback if transaction is still active
+                    await SafeRollbackAsync(transaction);
+                    throw;
+                }
             }
             catch (Exception ex)
             {
@@ -223,22 +293,45 @@ namespace WPFGrowerApp.DataAccess.Services
                     result.AddWarning($"Consolidated payment affects {batchBreakdowns.Count} batches. Batch statuses will be restored.");
                 }
 
-                // Revert the consolidation
-                var success = await _crossBatchPaymentService.RevertConsolidationAsync(chequeId, voidedBy);
-                if (success)
+                // Use the same voiding logic as regular batch payments for PaymentDistributionItems
+                using var connection = CreateConnection();
+                await connection.OpenAsync();
+                using var transaction = connection.BeginTransaction();
+
+                try
                 {
-                    result.Success = true;
-                    result.Message = "Consolidated payment voided successfully";
-                    result.EntityType = "Consolidated";
-                    result.EntityId = chequeId;
-                    result.AmountReversed = cheque.ChequeAmount;
-                    result.VoidedBy = voidedBy;
-                    result.VoidedAt = DateTime.Now;
-                    result.BatchStatusRestored = true;
+                    // 1. Update payment distribution items using the new logic
+                    await UpdatePaymentDistributionItemsAsync(chequeId, "Voided", voidedBy, connection, transaction);
+
+                    // 2. Void the cheque
+                    await VoidChequeAsync(chequeId, reason, voidedBy, connection, transaction);
+
+                    // 3. Revert the consolidation (this handles batch statuses and other cleanup)
+                    var success = await _crossBatchPaymentService.RevertConsolidationAsync(chequeId, voidedBy);
+                    if (success)
+                    {
+                        result.Success = true;
+                        result.Message = "Consolidated payment voided successfully";
+                        result.EntityType = "Consolidated";
+                        result.EntityId = chequeId;
+                        result.AmountReversed = cheque.ChequeAmount;
+                        result.VoidedBy = voidedBy;
+                        result.VoidedAt = DateTime.Now;
+                        result.BatchStatusRestored = true;
+
+                        // Commit the transaction
+                        await SafeCommitAsync(transaction);
+                    }
+                    else
+                    {
+                        result.AddError("Failed to void the consolidated payment");
+                        await SafeRollbackAsync(transaction);
+                    }
                 }
-                else
+                catch
                 {
-                    result.AddError("Failed to void the consolidated payment");
+                    await SafeRollbackAsync(transaction);
+                    throw;
                 }
 
                 return result;
@@ -555,12 +648,26 @@ namespace WPFGrowerApp.DataAccess.Services
                     updateCommand.Parameters.AddWithValue("@PaymentDistributionItemId", distributionItemId);
                     
                     await updateCommand.ExecuteNonQueryAsync();
-                    Logger.Info($"Updated payment distribution item {distributionItemId} status to {status} for grower {growerId} in batch {paymentBatchId}");
+                    try
+                    {
+                        Logger.Info($"Updated payment distribution item {distributionItemId} status to {status} for grower {growerId} in batch {paymentBatchId}");
+                    }
+                    catch
+                    {
+                        // Logger might be null or unavailable, continue without logging
+                    }
                 }
             }
             catch (Exception ex)
             {
-                Logger.Error($"Error updating payment distribution item status for cheque {chequeId}: {ex.Message}", ex);
+                try
+                {
+                    Logger.Error($"Error updating payment distribution item status for cheque {chequeId}: {ex.Message}", ex);
+                }
+                catch
+                {
+                    // Logger might be null or unavailable, continue without logging
+                }
                 // Don't throw - this is not critical for the void operation
             }
         }
@@ -568,70 +675,552 @@ namespace WPFGrowerApp.DataAccess.Services
         /// <summary>
         /// Revert batch status if needed when voiding a cheque
         /// </summary>
-        private async Task RevertBatchStatusIfNeededAsync(int paymentBatchId, string voidedBy)
+        private async Task RevertBatchStatusIfNeededAsync(int paymentBatchId, string voidedBy, SqlConnection connection, SqlTransaction transaction)
+        {
+            try
+            {
+                var sql = @"
+                    UPDATE PaymentBatches 
+                    SET Status = 'Posted',
+                        ModifiedAt = @ModifiedAt,
+                        ModifiedBy = @ModifiedBy
+                    WHERE PaymentBatchId = @PaymentBatchId 
+                    AND Status = 'Finalized'";
+
+                using var command = new SqlCommand(sql, connection, transaction);
+                command.Parameters.AddWithValue("@PaymentBatchId", paymentBatchId);
+                command.Parameters.AddWithValue("@ModifiedAt", DateTime.Now);
+                command.Parameters.AddWithValue("@ModifiedBy", voidedBy);
+                
+                var rowsAffected = await command.ExecuteNonQueryAsync();
+                
+                if (rowsAffected > 0)
+                {
+                    Logger.Info($"Reverted batch {paymentBatchId} to Posted status");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error reverting batch {paymentBatchId} status: {ex.Message}", ex);
+                // Don't throw - this is not critical for the void operation
+            }
+        }
+
+        /// <summary>
+        /// Check if a cheque is consolidated
+        /// </summary>
+        private async Task<bool> IsConsolidatedChequeAsync(int chequeId)
         {
             try
             {
                 using var connection = CreateConnection();
                 await connection.OpenAsync();
+                
+                var sql = "SELECT IsConsolidated FROM Cheques WHERE ChequeId = @ChequeId";
+                using var command = new SqlCommand(sql, connection);
+                command.Parameters.AddWithValue("@ChequeId", chequeId);
+                
+                var result = await command.ExecuteScalarAsync();
+                return result != null && Convert.ToBoolean(result);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error checking if cheque {chequeId} is consolidated: {ex.Message}", ex);
+                return false;
+            }
+        }
 
-                // Check if batch has any non-voided cheques
-                var checkSql = @"
-                    SELECT COUNT(*) as ActiveChequeCount
-                    FROM Cheques 
-                    WHERE PaymentBatchId = @PaymentBatchId 
-                    AND Status != 'Voided'";
-
-                using var checkCommand = new SqlCommand(checkSql, connection);
-                checkCommand.Parameters.AddWithValue("@PaymentBatchId", paymentBatchId);
-                var activeChequeCount = (int)await checkCommand.ExecuteScalarAsync();
-
-                // If no active cheques remain, revert batch to Draft status
-                if (activeChequeCount == 0)
+        /// <summary>
+        /// Safely commit a transaction, handling any exceptions
+        /// </summary>
+        private async Task SafeCommitAsync(SqlTransaction transaction)
+        {
+            try
+            {
+                if (IsTransactionActive(transaction))
                 {
-                    var revertSql = @"
-                        UPDATE PaymentBatches 
-                        SET Status = 'Draft',
-                            ModifiedAt = @ModifiedAt,
-                            ModifiedBy = @ModifiedBy
-                        WHERE PaymentBatchId = @PaymentBatchId";
-
-                    using var revertCommand = new SqlCommand(revertSql, connection);
-                    revertCommand.Parameters.AddWithValue("@PaymentBatchId", paymentBatchId);
-                    revertCommand.Parameters.AddWithValue("@ModifiedAt", DateTime.Now);
-                    revertCommand.Parameters.AddWithValue("@ModifiedBy", voidedBy);
-                    
-                    await revertCommand.ExecuteNonQueryAsync();
-                    Logger.Info($"Reverted batch {paymentBatchId} to Draft status - no active cheques remaining");
-                }
-                else
-                {
-                    // If there are still active cheques, revert to Posted status
-                    var revertSql = @"
-                        UPDATE PaymentBatches 
-                        SET Status = 'Posted',
-                            ModifiedAt = @ModifiedAt,
-                            ModifiedBy = @ModifiedBy
-                        WHERE PaymentBatchId = @PaymentBatchId 
-                        AND Status = 'Finalized'";
-
-                    using var revertCommand = new SqlCommand(revertSql, connection);
-                    revertCommand.Parameters.AddWithValue("@PaymentBatchId", paymentBatchId);
-                    revertCommand.Parameters.AddWithValue("@ModifiedAt", DateTime.Now);
-                    revertCommand.Parameters.AddWithValue("@ModifiedBy", voidedBy);
-                    
-                    var rowsAffected = await revertCommand.ExecuteNonQueryAsync();
-                    if (rowsAffected > 0)
-                    {
-                        Logger.Info($"Reverted batch {paymentBatchId} to Posted status - {activeChequeCount} active cheques remaining");
-                    }
+                    transaction.Commit();
                 }
             }
             catch (Exception ex)
             {
-                Logger.Error($"Error reverting batch status for batch {paymentBatchId}: {ex.Message}", ex);
+                Logger.Error($"Error committing transaction: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Safely rollback a transaction, handling any exceptions
+        /// </summary>
+        private async Task SafeRollbackAsync(SqlTransaction transaction)
+        {
+            try
+            {
+                if (IsTransactionActive(transaction))
+                {
+                    transaction.Rollback();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error rolling back transaction: {ex.Message}", ex);
+                // Don't throw here as we're already in an error state
+            }
+        }
+
+        /// <summary>
+        /// Check if a transaction is still active and usable
+        /// </summary>
+        private bool IsTransactionActive(SqlTransaction transaction)
+        {
+            try
+            {
+                return transaction != null && 
+                       transaction.Connection != null && 
+                       transaction.Connection.State == System.Data.ConnectionState.Open;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Get cheque by ID with connection and transaction
+        /// </summary>
+        private async Task<Cheque> GetChequeByIdAsync(int chequeId, SqlConnection connection, SqlTransaction transaction)
+        {
+            try
+            {
+                var sql = @"
+                    SELECT c.*, g.FullName as GrowerName, g.GrowerNumber
+                    FROM Cheques c
+                    LEFT JOIN Growers g ON c.GrowerId = g.GrowerId
+                    WHERE c.ChequeId = @ChequeId";
+
+                using var command = new SqlCommand(sql, connection, transaction);
+                command.Parameters.AddWithValue("@ChequeId", chequeId);
+
+                using (var reader = await command.ExecuteReaderAsync())
+                {
+                    if (await reader.ReadAsync())
+                    {
+                        return MapChequeFromReader(reader);
+                    }
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    Logger.Error($"Error getting cheque by ID {chequeId}: {ex.Message}", ex);
+                }
+                catch
+                {
+                    // Logger might be null or unavailable, continue without logging
+                }
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Get advance deductions by cheque ID
+        /// </summary>
+        private async Task<List<AdvanceDeduction>> GetAdvanceDeductionsByChequeIdAsync(int chequeId, SqlConnection connection, SqlTransaction transaction)
+        {
+            try
+            {
+                var sql = @"
+                    SELECT ad.*, ac.AdvanceAmount, ac.AdvanceDate, ac.Reason
+                    FROM AdvanceDeductions ad
+                    INNER JOIN AdvanceCheques ac ON ad.AdvanceChequeId = ac.AdvanceChequeId
+                    WHERE ad.ChequeId = @ChequeId";
+
+                using var command = new SqlCommand(sql, connection, transaction);
+                command.Parameters.AddWithValue("@ChequeId", chequeId);
+
+                var deductions = new List<AdvanceDeduction>();
+                using (var reader = await command.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        deductions.Add(MapAdvanceDeductionFromReader(reader));
+                    }
+                }
+                return deductions;
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    Logger.Error($"Error getting advance deductions for cheque {chequeId}: {ex.Message}", ex);
+                }
+                catch
+                {
+                    // Logger might be null or unavailable, continue without logging
+                }
+                return new List<AdvanceDeduction>();
+            }
+        }
+
+        /// <summary>
+        /// Reverse advance deductions for a cheque
+        /// </summary>
+        private async Task ReverseAdvanceDeductionsAsync(int chequeId, string reason, string voidedBy, SqlConnection connection, SqlTransaction transaction)
+        {
+            try
+            {
+                // Get advance deductions for this cheque
+                var deductions = await GetAdvanceDeductionsByChequeIdAsync(chequeId, connection, transaction);
+
+                foreach (var deduction in deductions)
+                {
+                    // Delete the deduction record
+                    var deleteSql = "DELETE FROM AdvanceDeductions WHERE DeductionId = @DeductionId";
+                    using var deleteCommand = new SqlCommand(deleteSql, connection, transaction);
+                    deleteCommand.Parameters.AddWithValue("@DeductionId", deduction.DeductionId);
+                    await deleteCommand.ExecuteNonQueryAsync();
+
+                    // Clear deduction references without changing advance cheque status
+                    // The advance cheque status should remain unchanged (e.g., 'Printed')
+                    var resetSql = @"
+                        UPDATE AdvanceCheques 
+                        SET DeductedByChequeId = NULL,
+                            DeductedAt = NULL,
+                            DeductedBy = NULL,
+                            ModifiedAt = @ModifiedAt,
+                            ModifiedBy = @ModifiedBy
+                        WHERE AdvanceChequeId = @AdvanceChequeId";
+
+                    using var resetCommand = new SqlCommand(resetSql, connection, transaction);
+                    resetCommand.Parameters.AddWithValue("@AdvanceChequeId", deduction.AdvanceChequeId);
+                    resetCommand.Parameters.AddWithValue("@ModifiedAt", DateTime.Now);
+                    resetCommand.Parameters.AddWithValue("@ModifiedBy", voidedBy);
+                    await resetCommand.ExecuteNonQueryAsync();
+                }
+
+                try
+                {
+                    Logger.Info($"Reversed {deductions.Count} advance deductions for cheque {chequeId}");
+                }
+                catch
+                {
+                    // Logger might be null or unavailable, continue without logging
+                }
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    Logger.Error($"Error reversing advance deductions for cheque {chequeId}: {ex.Message}", ex);
+                }
+                catch
+                {
+                    // Logger might be null or unavailable, continue without logging
+                }
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Update payment distribution items status
+        /// </summary>
+        private async Task UpdatePaymentDistributionItemsAsync(int chequeId, string status, string updatedBy, SqlConnection connection, SqlTransaction transaction)
+        {
+            try
+            {
+                // First get the cheque details to find PaymentDistributionId and GrowerId
+                var chequeSql = "SELECT PaymentDistributionId, GrowerId FROM Cheques WHERE ChequeId = @ChequeId";
+                using var chequeCommand = new SqlCommand(chequeSql, connection, transaction);
+                chequeCommand.Parameters.AddWithValue("@ChequeId", chequeId);
+                
+                int? paymentDistributionId = null;
+                int growerId = 0;
+                
+                using (var chequeReader = await chequeCommand.ExecuteReaderAsync())
+                {
+                    if (await chequeReader.ReadAsync())
+                    {
+                        paymentDistributionId = chequeReader.IsDBNull(0) ? null : chequeReader.GetInt32(0);
+                        growerId = chequeReader.GetInt32(1);
+                    }
+                } // Reader is explicitly closed here
+
+                if (paymentDistributionId.HasValue && growerId > 0)
+                {
+                    // Update payment distribution items using PaymentDistributionId AND GrowerId
+                    var sql = @"
+                        UPDATE PaymentDistributionItems 
+                        SET Status = @Status,
+                            ModifiedAt = @ModifiedAt,
+                            ModifiedBy = @ModifiedBy
+                        WHERE PaymentDistributionId = @PaymentDistributionId AND GrowerId = @GrowerId";
+
+                    using var command = new SqlCommand(sql, connection, transaction);
+                    command.Parameters.AddWithValue("@Status", status);
+                    command.Parameters.AddWithValue("@ModifiedAt", DateTime.Now);
+                    command.Parameters.AddWithValue("@ModifiedBy", updatedBy);
+                    command.Parameters.AddWithValue("@PaymentDistributionId", paymentDistributionId.Value);
+                    command.Parameters.AddWithValue("@GrowerId", growerId);
+
+                    var rowsAffected = await command.ExecuteNonQueryAsync();
+                    
+                    Logger.Info($"Updated {rowsAffected} payment distribution items to {status} for PaymentDistributionId {paymentDistributionId} and GrowerId {growerId}");
+                }
+                else
+                {
+                    Logger.Info($"Could not find PaymentDistributionId or GrowerId for cheque {chequeId}");
+                  
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error updating payment distribution items for cheque {chequeId}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Update PaymentDistributionReceipts status for voiding support
+        /// </summary>
+        private async Task UpdatePaymentDistributionReceiptsAsync(int paymentDistributionId, int growerId, string status, string updatedBy, SqlConnection connection, SqlTransaction transaction)
+        {
+            try
+            {
+                // Update PaymentDistributionReceipts for the specific grower and distribution
+                var sql = @"
+                    UPDATE PaymentDistributionReceipts 
+                    SET Status = @Status,
+                        ModifiedAt = @ModifiedAt,
+                        ModifiedBy = @ModifiedBy,
+                        VoidedAt = @VoidedAt,
+                        VoidedBy = @VoidedBy
+                    WHERE PaymentDistributionItemId IN (
+                        SELECT PaymentDistributionItemId 
+                        FROM PaymentDistributionItems 
+                        WHERE PaymentDistributionId = @PaymentDistributionId 
+                        AND GrowerId = @GrowerId
+                    )";
+
+                using var command = new SqlCommand(sql, connection, transaction);
+                command.Parameters.AddWithValue("@Status", status);
+                command.Parameters.AddWithValue("@ModifiedAt", DateTime.Now);
+                command.Parameters.AddWithValue("@ModifiedBy", updatedBy);
+                command.Parameters.AddWithValue("@PaymentDistributionId", paymentDistributionId);
+                command.Parameters.AddWithValue("@GrowerId", growerId);
+
+                // Set voiding fields only if status is "Voided"
+                if (status == "Voided")
+                {
+                    command.Parameters.AddWithValue("@VoidedAt", DateTime.Now);
+                    command.Parameters.AddWithValue("@VoidedBy", updatedBy);
+                }
+                else
+                {
+                    command.Parameters.AddWithValue("@VoidedAt", DBNull.Value);
+                    command.Parameters.AddWithValue("@VoidedBy", DBNull.Value);
+                }
+
+                var rowsAffected = await command.ExecuteNonQueryAsync();
+                
+                Logger.Info($"Updated {rowsAffected} payment distribution receipts to {status} for PaymentDistributionId {paymentDistributionId} and GrowerId {growerId}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error updating payment distribution receipts for PaymentDistributionId {paymentDistributionId} and GrowerId {growerId}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get all batch IDs that are actually affected by a payment distribution for a specific grower
+        /// </summary>
+        private async Task<List<int>> GetAffectedBatchIdsAsync(int paymentDistributionId, int growerId, SqlConnection connection, SqlTransaction transaction)
+        {
+            try
+            {
+                var sql = @"
+                    SELECT DISTINCT pdr.PaymentBatchId
+                    FROM PaymentDistributionReceipts pdr
+                    INNER JOIN PaymentDistributionItems pdi ON pdr.PaymentDistributionItemId = pdi.PaymentDistributionItemId
+                    WHERE pdi.PaymentDistributionId = @PaymentDistributionId 
+                      AND pdi.GrowerId = @GrowerId";
+
+                using var command = new SqlCommand(sql, connection, transaction);
+                command.Parameters.AddWithValue("@PaymentDistributionId", paymentDistributionId);
+                command.Parameters.AddWithValue("@GrowerId", growerId);
+
+                var batchIds = new List<int>();
+                using var reader = await command.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    batchIds.Add(reader.GetInt32(0));
+                }
+
+                Logger.Info($"Found {batchIds.Count} affected batch IDs for PaymentDistributionId {paymentDistributionId} and GrowerId {growerId}: [{string.Join(", ", batchIds)}]");
+                return batchIds;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting affected batch IDs for PaymentDistributionId {paymentDistributionId} and GrowerId {growerId}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Void cheque with connection and transaction
+        /// </summary>
+        private async Task VoidChequeAsync(int chequeId, string reason, string voidedBy, SqlConnection connection, SqlTransaction transaction)
+        {
+            try
+            {
+                var sql = @"
+                    UPDATE Cheques 
+                    SET Status = 'Voided',
+                        VoidedDate = @VoidedDate,
+                        VoidedBy = @VoidedBy,
+                        VoidedReason = @Reason,
+                        ModifiedAt = @ModifiedAt,
+                        ModifiedBy = @ModifiedBy
+                    WHERE ChequeId = @ChequeId";
+
+                using var command = new SqlCommand(sql, connection, transaction);
+                command.Parameters.AddWithValue("@ChequeId", chequeId);
+                command.Parameters.AddWithValue("@VoidedDate", DateTime.Now);
+                command.Parameters.AddWithValue("@VoidedBy", voidedBy);
+                command.Parameters.AddWithValue("@Reason", reason);
+                command.Parameters.AddWithValue("@ModifiedAt", DateTime.Now);
+                command.Parameters.AddWithValue("@ModifiedBy", voidedBy);
+
+                var rowsAffected = await command.ExecuteNonQueryAsync();
+                if (rowsAffected == 0)
+                {
+                    throw new InvalidOperationException($"No cheques were voided. Cheque {chequeId} may already be processed or not found.");
+                }
+
+                Logger.Info($"Successfully voided cheque {chequeId}. Reason: {reason}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error voiding cheque {chequeId}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Clean up orphaned payment distributions
+        /// </summary>
+        private async Task CleanupOrphanedDistributionsAsync(int paymentBatchId, SqlConnection connection, SqlTransaction transaction)
+        {
+            try
+            {
+                // Check if all items in distributions for this batch are voided
+                var sql = @"
+                    SELECT pdi.PaymentDistributionId, COUNT(*) as TotalItems, 
+                           SUM(CASE WHEN pdi.Status = 'Voided' THEN 1 ELSE 0 END) as VoidedItems
+                    FROM PaymentDistributionItems pdi
+                    WHERE pdi.PaymentBatchId = @PaymentBatchId
+                    GROUP BY pdi.PaymentDistributionId
+                    HAVING COUNT(*) = SUM(CASE WHEN pdi.Status = 'Voided' THEN 1 ELSE 0 END)";
+
+                using var command = new SqlCommand(sql, connection, transaction);
+                command.Parameters.AddWithValue("@PaymentBatchId", paymentBatchId);
+
+                var orphanedDistributionIds = new List<int>();
+                using var reader = await command.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    orphanedDistributionIds.Add(reader.GetInt32(0)); // Use column index instead of name
+                }
+
+                // Clean up orphaned distributions
+                foreach (var distributionId in orphanedDistributionIds)
+                {
+                    // Delete orphaned distribution items
+                    var deleteItemsSql = "DELETE FROM PaymentDistributionItems WHERE PaymentDistributionId = @DistributionId";
+                    using var deleteItemsCommand = new SqlCommand(deleteItemsSql, connection, transaction);
+                    deleteItemsCommand.Parameters.AddWithValue("@DistributionId", distributionId);
+                    await deleteItemsCommand.ExecuteNonQueryAsync();
+
+                    // Delete orphaned distribution
+                    var deleteDistributionSql = "DELETE FROM PaymentDistributions WHERE PaymentDistributionId = @DistributionId";
+                    using var deleteDistributionCommand = new SqlCommand(deleteDistributionSql, connection, transaction);
+                    deleteDistributionCommand.Parameters.AddWithValue("@DistributionId", distributionId);
+                    await deleteDistributionCommand.ExecuteNonQueryAsync();
+                }
+
+                if (orphanedDistributionIds.Any())
+                {
+                    Logger.Info($"Cleaned up {orphanedDistributionIds.Count} orphaned payment distributions for batch {paymentBatchId}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error cleaning up orphaned distributions for batch {paymentBatchId}: {ex.Message}", ex);
                 // Don't throw - this is not critical for the void operation
             }
+        }
+
+        /// <summary>
+        /// Map cheque from SqlDataReader
+        /// </summary>
+        private Cheque MapChequeFromReader(SqlDataReader reader)
+        {
+            // Use ordinals by column name and guard nulls to avoid SqlNullValueException
+            int Ord(string name) => reader.GetOrdinal(name);
+            string? GetStr(string name) => reader.IsDBNull(Ord(name)) ? null : reader.GetString(Ord(name));
+            DateTime? GetDt(string name) => reader.IsDBNull(Ord(name)) ? (DateTime?)null : reader.GetDateTime(Ord(name));
+            int? GetIntN(string name) => reader.IsDBNull(Ord(name)) ? (int?)null : reader.GetInt32(Ord(name));
+            decimal GetDec(string name) => reader.IsDBNull(Ord(name)) ? 0m : reader.GetDecimal(Ord(name));
+
+            var cheque = new Cheque
+            {
+                ChequeId = reader.GetInt32(Ord("ChequeId")),
+                ChequeSeriesId = reader.GetInt32(Ord("ChequeSeriesId")),
+                ChequeNumber = GetStr("ChequeNumber") ?? string.Empty,
+                FiscalYear = reader.GetInt32(Ord("FiscalYear")),
+                GrowerId = reader.GetInt32(Ord("GrowerId")),
+                PaymentBatchId = GetIntN("PaymentBatchId"),
+                ChequeDate = reader.GetDateTime(Ord("ChequeDate")),
+                ChequeAmount = GetDec("ChequeAmount"),
+                CurrencyCode = GetStr("CurrencyCode") ?? "CAD",
+                ExchangeRate = reader.IsDBNull(Ord("ExchangeRate")) ? 1.0m : reader.GetDecimal(Ord("ExchangeRate")),
+                PayeeName = GetStr("PayeeName"),
+                Memo = GetStr("Memo"),
+                Status = GetStr("Status") ?? "Generated",
+                ClearedDate = GetDt("ClearedDate"),
+                VoidedDate = GetDt("VoidedDate"),
+                VoidedReason = GetStr("VoidedReason"),
+                VoidedBy = GetStr("VoidedBy"),
+                CreatedAt = reader.GetDateTime(Ord("CreatedAt")),
+                CreatedBy = GetStr("CreatedBy"),
+                // Joined columns from Growers (may be null)
+                GrowerName = GetStr("GrowerName"),
+                GrowerNumber = GetStr("GrowerNumber"),
+                PaymentDistributionId = reader.GetInt32(Ord("PaymentDistributionId"))
+            };
+
+            return cheque;
+        }
+
+        /// <summary>
+        /// Map advance deduction from SqlDataReader
+        /// </summary>
+        private AdvanceDeduction MapAdvanceDeductionFromReader(SqlDataReader reader)
+        {
+            int Ord(string name) => reader.GetOrdinal(name);
+            var paymentBatchId = reader.IsDBNull(Ord("PaymentBatchId")) ? 0 : reader.GetInt32(Ord("PaymentBatchId"));
+            return new AdvanceDeduction
+            {
+                DeductionId = reader.GetInt32(Ord("DeductionId")),
+                AdvanceChequeId = reader.GetInt32(Ord("AdvanceChequeId")),
+                PaymentBatchId = paymentBatchId,
+                DeductionAmount = reader.GetDecimal(Ord("DeductionAmount")),
+                DeductionDate = reader.GetDateTime(Ord("DeductionDate")),
+                CreatedBy = reader.IsDBNull(Ord("CreatedBy")) ? string.Empty : reader.GetString(Ord("CreatedBy")),
+                CreatedAt = reader.GetDateTime(Ord("CreatedAt"))
+            };
         }
     }
 }

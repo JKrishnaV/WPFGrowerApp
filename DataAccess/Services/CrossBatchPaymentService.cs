@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using Microsoft.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
+using Dapper;
 using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
 using WPFGrowerApp.Models;
 using WPFGrowerApp.DataAccess.Exceptions;
+using WPFGrowerApp.Infrastructure.Logging;
 
 namespace WPFGrowerApp.DataAccess.Services
 {
@@ -85,7 +87,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        public async Task<Cheque> GenerateConsolidatedChequeAsync(int growerId, List<int> batchIds, decimal consolidatedAmount, string createdBy)
+        public async Task<Cheque> GenerateConsolidatedChequeAsync(int growerId, List<int> batchIds, decimal consolidatedAmount, string createdBy,int distributionId)
         {
             try
             {
@@ -108,13 +110,41 @@ namespace WPFGrowerApp.DataAccess.Services
                         CreatedAt = DateTime.Now
                     };
 
-                    var success = await _chequeService.CreateChequesAsync(new List<Cheque> { cheque });
-                    if (!success)
-                    {
-                        throw new Exception("Failed to create consolidated cheque");
-                    }
+                    // Create the consolidated cheque directly
+                    var chequeSql = @"
+                        INSERT INTO Cheques (
+                            ChequeSeriesId, ChequeNumber, FiscalYear, GrowerId, PaymentBatchId, PaymentDistributionId
+                            ChequeDate, ChequeAmount, Status, IsConsolidated, ConsolidatedFromBatches,
+                            CreatedAt, CreatedBy
+                        )
+                        OUTPUT INSERTED.ChequeId
+                        VALUES (
+                            @ChequeSeriesId, @ChequeNumber, @FiscalYear, @GrowerId, @PaymentBatchId, @PaymentDistributionId
+                            @ChequeDate, @ChequeAmount, @Status, @IsConsolidated, @ConsolidatedFromBatches,
+                            @CreatedAt, @CreatedBy
+                        )";
+
+                    var timestamp = DateTime.Now.ToString("HHmmssfff");
+                    var chequeNumber = $"CHQ-{DateTime.Now:yyyyMMdd}-{timestamp}-{growerId}";
                     
-                    // The cheque object should now have its ID populated after creation
+                    using var chequeCommand = new SqlCommand(chequeSql, connection, transaction);
+                    chequeCommand.Parameters.AddWithValue("@ChequeSeriesId", 2); // PAY series
+                    chequeCommand.Parameters.AddWithValue("@ChequeNumber", chequeNumber);
+                    chequeCommand.Parameters.AddWithValue("@FiscalYear", DateTime.Now.Year);
+                    chequeCommand.Parameters.AddWithValue("@GrowerId", growerId);
+                    chequeCommand.Parameters.AddWithValue("@PaymentBatchId", batchIds.First()); // Use first batch as primary
+                    chequeCommand.Parameters.AddWithValue("@ChequeDate", cheque.ChequeDate);
+                    chequeCommand.Parameters.AddWithValue("@ChequeAmount", consolidatedAmount);
+                    chequeCommand.Parameters.AddWithValue("@Status", "Generated");
+                    chequeCommand.Parameters.AddWithValue("@IsConsolidated", true);
+                    chequeCommand.Parameters.AddWithValue("@ConsolidatedFromBatches", cheque.ConsolidatedFromBatches);
+                    chequeCommand.Parameters.AddWithValue("@CreatedAt", DateTime.Now);
+                    chequeCommand.Parameters.AddWithValue("@CreatedBy", createdBy);
+                    chequeCommand.Parameters.AddWithValue("@PaymentDistributionId", distributionId);
+
+                    var chequeId = Convert.ToInt32(await chequeCommand.ExecuteScalarAsync());
+                    cheque.ChequeId = chequeId;
+                    
                     var createdCheque = cheque;
 
                     // Create consolidated cheque records
@@ -132,8 +162,8 @@ namespace WPFGrowerApp.DataAccess.Services
                         await CreateConsolidatedChequeRecordAsync(consolidatedCheque, connection, transaction);
                     }
 
-                    // Update batch statuses
-                    await UpdateBatchStatusAfterConsolidationAsync(batchIds, "Consolidated", createdBy);
+                    // Update batch statuses to Finalized since they've been processed
+                    await UpdateBatchStatusAfterConsolidationAsync(batchIds, "Finalized", createdBy);
 
                     transaction.Commit();
                     return createdCheque;
@@ -323,14 +353,19 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        public async Task<List<BatchBreakdown>> GetBatchBreakdownAsync(int chequeId)
+        public async Task<List<BatchBreakdown>> GetBatchBreakdownAsync(int chequeId, SqlConnection connection = null, SqlTransaction transaction = null)
         {
             try
             {
-                using var connection = CreateConnection();
-                await connection.OpenAsync();
+                var useExternalConnection = connection != null;
+                if (!useExternalConnection)
+                {
+                    connection = CreateConnection();
+                    await connection.OpenAsync();
+                }
 
-                var query = @"
+                // First try to get from ConsolidatedCheques table
+                var consolidatedQuery = @"
                     SELECT 
                         cc.PaymentBatchId,
                         pb.BatchNumber,
@@ -342,11 +377,11 @@ namespace WPFGrowerApp.DataAccess.Services
                     WHERE cc.ChequeId = @ChequeId
                     ORDER BY pb.BatchDate";
 
-                using var command = new SqlCommand(query, connection);
-                command.Parameters.AddWithValue("@ChequeId", chequeId);
+                using var consolidatedCommand = new SqlCommand(consolidatedQuery, connection, transaction);
+                consolidatedCommand.Parameters.AddWithValue("@ChequeId", chequeId);
 
                 var breakdowns = new List<BatchBreakdown>();
-                using var reader = await command.ExecuteReaderAsync();
+                using var reader = await consolidatedCommand.ExecuteReaderAsync();
                 
                 while (await reader.ReadAsync())
                 {
@@ -360,6 +395,42 @@ namespace WPFGrowerApp.DataAccess.Services
                     });
                 }
 
+                // If no consolidated records found, try to get batch info from the cheque's ConsolidatedFromBatches field
+                if (breakdowns.Count == 0)
+                {
+                    reader.Close();
+                    
+                    var fallbackQuery = @"
+                        SELECT 
+                            pb.PaymentBatchId,
+                            pb.BatchNumber,
+                            pb.BatchDate,
+                            pb.Status,
+                            c.ChequeAmount / (LEN(c.ConsolidatedFromBatches) - LEN(REPLACE(c.ConsolidatedFromBatches, ',', '')) + 1) as Amount
+                        FROM Cheques c
+                        CROSS APPLY STRING_SPLIT(c.ConsolidatedFromBatches, ',') ss
+                        INNER JOIN PaymentBatches pb ON CAST(ss.value AS INT) = pb.PaymentBatchId
+                        WHERE c.ChequeId = @ChequeId
+                        AND c.IsConsolidated = 1
+                        ORDER BY pb.BatchDate";
+
+                    using var fallbackCommand = new SqlCommand(fallbackQuery, connection, transaction);
+                    fallbackCommand.Parameters.AddWithValue("@ChequeId", chequeId);
+                    
+                    using var fallbackReader = await fallbackCommand.ExecuteReaderAsync();
+                    while (await fallbackReader.ReadAsync())
+                    {
+                        breakdowns.Add(new BatchBreakdown
+                        {
+                            BatchId = Convert.ToInt32(fallbackReader["PaymentBatchId"]),
+                            BatchNumber = fallbackReader["BatchNumber"].ToString(),
+                            Amount = Convert.ToDecimal(fallbackReader["Amount"]),
+                            BatchDate = Convert.ToDateTime(fallbackReader["BatchDate"]),
+                            Status = fallbackReader["Status"].ToString()
+                        });
+                    }
+                }
+
                 return breakdowns;
             }
             catch (Exception ex)
@@ -368,12 +439,16 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        public async Task<bool> UpdateBatchStatusAfterConsolidationAsync(List<int> batchIds, string newStatus, string updatedBy)
+        public async Task<bool> UpdateBatchStatusAfterConsolidationAsync(List<int> batchIds, string newStatus, string updatedBy, SqlConnection connection = null, SqlTransaction transaction = null)
         {
             try
             {
-                using var connection = CreateConnection();
-                await connection.OpenAsync();
+                var useExternalConnection = connection != null;
+                if (!useExternalConnection)
+                {
+                    connection = CreateConnection();
+                    await connection.OpenAsync();
+                }
 
                 var batchIdsParam = string.Join(",", batchIds.Select((id, index) => $"@BatchId{index}"));
                 var query = $@"
@@ -383,7 +458,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         ModifiedBy = @ModifiedBy
                     WHERE PaymentBatchId IN ({batchIdsParam})";
 
-                using var command = new SqlCommand(query, connection);
+                using var command = new SqlCommand(query, connection, transaction);
                 command.Parameters.AddWithValue("@NewStatus", newStatus);
                 command.Parameters.AddWithValue("@ModifiedAt", DateTime.Now);
                 command.Parameters.AddWithValue("@ModifiedBy", updatedBy);
@@ -414,17 +489,23 @@ namespace WPFGrowerApp.DataAccess.Services
                 try
                 {
                     // Get the consolidated cheque details
-                    var batchBreakdowns = await GetBatchBreakdownAsync(consolidatedChequeId);
+                    var batchBreakdowns = await GetBatchBreakdownAsync(consolidatedChequeId, connection, transaction);
                     var batchIds = batchBreakdowns.Select(b => b.BatchId).ToList();
 
-                    // Update batch statuses back to Draft
-                    await UpdateBatchStatusAfterConsolidationAsync(batchIds, "Draft", revertedBy);
+                    // Update batch statuses back to Posted (so they show in Enhanced Payment Distribution)
+                    await UpdateBatchStatusAfterConsolidationAsync(batchIds, "Posted", revertedBy, connection, transaction);
 
                     // Delete consolidated cheque records
                     var deleteQuery = "DELETE FROM ConsolidatedCheques WHERE ChequeId = @ChequeId";
                     using var deleteCommand = new SqlCommand(deleteQuery, connection, transaction);
                     deleteCommand.Parameters.AddWithValue("@ChequeId", consolidatedChequeId);
                     await deleteCommand.ExecuteNonQueryAsync();
+
+                    // Revert advance deductions for this cheque
+                    await RevertAdvanceDeductionsAsync(consolidatedChequeId, connection, transaction);
+
+                    // Clean up PaymentDistributionItems for the voided cheque
+                    await CleanupPaymentDistributionItemsAsync(consolidatedChequeId, connection, transaction);
 
                     // Update the cheque status
                     var updateQuery = @"
@@ -528,6 +609,117 @@ namespace WPFGrowerApp.DataAccess.Services
             catch (Exception ex)
             {
                 throw new DatabaseException($"Error getting consolidation history: {ex.Message}", ex);
+            }
+        }
+
+        private async Task RevertAdvanceDeductionsAsync(int chequeId, SqlConnection connection, SqlTransaction transaction)
+        {
+            try
+            {
+                // Delete advance deductions for this cheque
+                var deleteDeductionsSql = @"
+                    DELETE FROM AdvanceDeductions 
+                    WHERE ChequeId = @ChequeId";
+                
+                using var deleteCommand = new SqlCommand(deleteDeductionsSql, connection, transaction);
+                deleteCommand.Parameters.AddWithValue("@ChequeId", chequeId);
+                await deleteCommand.ExecuteNonQueryAsync();
+
+                // Clear deduction tracking fields but keep the advance cheque status as 'Printed'
+                var resetAdvanceChequesSql = @"
+                    UPDATE AdvanceCheques 
+                    SET DeductedAt = NULL,
+                        DeductedBy = NULL,
+                        DeductedFromBatchId = NULL,
+                        DeductedByChequeId = NULL,
+                        ModifiedAt = @ModifiedAt,
+                        ModifiedBy = @ModifiedBy
+                    WHERE DeductedByChequeId = @ChequeId";
+                
+                using var resetCommand = new SqlCommand(resetAdvanceChequesSql, connection, transaction);
+                resetCommand.Parameters.AddWithValue("@ChequeId", chequeId);
+                resetCommand.Parameters.AddWithValue("@ModifiedAt", DateTime.Now);
+                resetCommand.Parameters.AddWithValue("@ModifiedBy", "SYSTEM");
+                await resetCommand.ExecuteNonQueryAsync();
+
+                Logger.Info($"Reverted advance deductions for consolidated cheque {chequeId}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error reverting advance deductions for cheque {chequeId}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        private async Task CleanupPaymentDistributionItemsAsync(int chequeId, SqlConnection connection, SqlTransaction transaction)
+        {
+            try
+            {
+                // Get the grower ID from the cheque
+                var getGrowerSql = "SELECT GrowerId FROM Cheques WHERE ChequeId = @ChequeId";
+                using var getGrowerCommand = new SqlCommand(getGrowerSql, connection, transaction);
+                getGrowerCommand.Parameters.AddWithValue("@ChequeId", chequeId);
+                var growerId = await getGrowerCommand.ExecuteScalarAsync();
+
+                if (growerId != null)
+                {
+                    // Get only payment distribution items that are specifically related to this voided cheque
+                    // This prevents accidentally deleting items from other cheques for the same grower
+                    var getItemsSql = @"
+                        SELECT DISTINCT pdi.PaymentDistributionItemId, pdi.Status, pdi.CreatedAt
+                        FROM PaymentDistributionItems pdi
+                        INNER JOIN PaymentDistributionReceipts pdr ON pdi.PaymentDistributionItemId = pdr.PaymentDistributionItemId
+                        INNER JOIN ReceiptPaymentAllocations rpa ON pdr.ReceiptId = rpa.ReceiptId
+                        INNER JOIN PaymentBatches pb ON rpa.PaymentBatchId = pb.PaymentBatchId
+                        INNER JOIN ConsolidatedCheques cc ON pb.PaymentBatchId = cc.PaymentBatchId
+                        WHERE cc.ChequeId = @ChequeId
+                          AND (pdi.Status = 'Voided' OR pdi.Status = 'Pending')
+                        ORDER BY pdi.CreatedAt DESC";
+                    
+                    using var getItemsCommand = new SqlCommand(getItemsSql, connection, transaction);
+                    getItemsCommand.Parameters.AddWithValue("@ChequeId", chequeId);
+                    
+                    var itemsToDelete = new List<int>();
+                    using var reader = await getItemsCommand.ExecuteReaderAsync();
+                    while (await reader.ReadAsync())
+                    {
+                        var itemId = Convert.ToInt32(reader["PaymentDistributionItemId"]);
+                        var status = reader["Status"].ToString();
+                        var createdAt = Convert.ToDateTime(reader["CreatedAt"]);
+                        
+                        // All items returned by the query are already filtered to be Voided or Pending
+                        // and are specifically related to this voided cheque, so add them to delete list
+                        itemsToDelete.Add(itemId);
+                        
+                        Logger.Debug($"Marking PaymentDistributionItem {itemId} (Status: {status}, Created: {createdAt:yyyy-MM-dd HH:mm}) for deletion");
+                    }
+                    reader.Close();
+
+                    // Delete the identified items
+                    if (itemsToDelete.Any())
+                    {
+                        // First delete PaymentDistributionReceipts (child records)
+                        var deleteReceiptsSql = @"
+                            DELETE FROM PaymentDistributionReceipts 
+                            WHERE PaymentDistributionItemId IN @ItemIds";
+                        
+                        await connection.ExecuteAsync(deleteReceiptsSql, new { ItemIds = itemsToDelete }, transaction);
+
+                        // Then delete PaymentDistributionItems (parent records)
+                        var deleteItemsSql = @"
+                            DELETE FROM PaymentDistributionItems 
+                            WHERE PaymentDistributionItemId IN @ItemIds";
+                        
+                        await connection.ExecuteAsync(deleteItemsSql, new { ItemIds = itemsToDelete }, transaction);
+
+                        Logger.Info($"Cleaned up {itemsToDelete.Count} PaymentDistributionItems and related PaymentDistributionReceipts specifically related to consolidated cheque {chequeId}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error cleaning up PaymentDistributionItems for cheque {chequeId}: {ex.Message}", ex);
+                throw;
             }
         }
 

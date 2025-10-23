@@ -1,0 +1,414 @@
+<Window x:Class="WPFGrowerApp.Views.Dialogs.InvoiceStyleChequeCalculationDialogView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Cheque Calculation Details" 
+        Height="700" Width="1000"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        Background="White"
+        FontFamily="Segoe UI"
+        TextElement.Foreground="#333333"
+        TextElement.FontWeight="Regular"
+        TextElement.FontSize="12"
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="Auto"
+        WindowStyle="None"
+        AllowsTransparency="True">
+
+    <Window.Resources>
+        <!-- Modern Invoice Colors -->
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#1976D2"/>
+        <SolidColorBrush x:Key="PrimaryLightBrush" Color="#E3F2FD"/>
+        <SolidColorBrush x:Key="AccentBrush" Color="#4CAF50"/>
+        <SolidColorBrush x:Key="SuccessBrush" Color="#4CAF50"/>
+        <SolidColorBrush x:Key="WarningBrush" Color="#FF9800"/>
+        <SolidColorBrush x:Key="ErrorBrush" Color="#F44336"/>
+        <SolidColorBrush x:Key="LightGrayBrush" Color="#F5F5F5"/>
+        <SolidColorBrush x:Key="BorderBrush" Color="#E0E0E0"/>
+        <SolidColorBrush x:Key="TextBrush" Color="#333333"/>
+        <SolidColorBrush x:Key="SecondaryTextBrush" Color="#666666"/>
+
+        <!-- Modern Button Styles -->
+        <Style x:Key="ModernButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="4" 
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#1565C0"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#0D47A1"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ExportButtonStyle" TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
+            <Setter Property="Background" Value="{StaticResource LightGrayBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
+                    <Setter Property="Foreground" Value="White"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Status Badge Styles -->
+        <Style x:Key="StatusBadgeStyle" TargetType="Border">
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Table Styles -->
+        <Style x:Key="ModernTableStyle" TargetType="DataGrid">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="VerticalGridLinesBrush" Value="Transparent"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="CanUserDeleteRows" Value="False"/>
+            <Setter Property="CanUserReorderColumns" Value="False"/>
+            <Setter Property="CanUserResizeColumns" Value="True"/>
+            <Setter Property="CanUserSortColumns" Value="False"/>
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="SelectionMode" Value="Single"/>
+            <Setter Property="SelectionUnit" Value="FullRow"/>
+            <Setter Property="RowHeaderWidth" Value="0"/>
+        </Style>
+
+        <!-- DataGrid Column Header Style -->
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <!-- Header Text Style -->
+        <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <!-- Card Style -->
+        <Style x:Key="CardStyle" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="Black" Opacity="0.1" ShadowDepth="2" BlurRadius="4"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border Background="White" CornerRadius="8">
+        <Border.Effect>
+            <DropShadowEffect Color="Black" Opacity="0.2" ShadowDepth="8" BlurRadius="16"/>
+        </Border.Effect>
+        
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Border Grid.Row="0" Background="{StaticResource PrimaryBrush}" CornerRadius="8,8,0,0">
+                <Grid Margin="20,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- Title -->
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Cheque Calculation Details" 
+                                   FontSize="20" 
+                                   FontWeight="SemiBold" 
+                                   Foreground="White"/>
+                        <TextBlock Text="Detailed breakdown of payment calculation" 
+                                   FontSize="12" 
+                                   Foreground="#E3F2FD" 
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                    
+                    <!-- Export Buttons -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <Button Content="PDF" 
+                                Style="{StaticResource ExportButtonStyle}"
+                                Command="{Binding ExportToPdfCommand}"
+                                ToolTip="Export to PDF"/>
+                        <Button Content="Excel" 
+                                Style="{StaticResource ExportButtonStyle}"
+                                Command="{Binding ExportToExcelCommand}"
+                                ToolTip="Export to Excel"/>
+                        <Button Content="CSV" 
+                                Style="{StaticResource ExportButtonStyle}"
+                                Command="{Binding ExportToCsvCommand}"
+                                ToolTip="Export to CSV"/>
+                        <Button Content="HTML" 
+                                Style="{StaticResource ExportButtonStyle}"
+                                Command="{Binding ExportToHtmlCommand}"
+                                ToolTip="Export to HTML"/>
+                        <Button Content="Print" 
+                                Style="{StaticResource ExportButtonStyle}"
+                                Command="{Binding PrintCommand}"
+                                ToolTip="Print Document"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Content -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Margin="20">
+                    
+                    <!-- Cheque Information Card -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Cheque Information" Style="{StaticResource SectionHeaderStyle}"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Cheque Number:" FontWeight="SemiBold" Margin="0,0,8,4"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ChequeItem.ChequeNumber}" Margin="0,0,16,4"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="2" Text="Date:" FontWeight="SemiBold" Margin="0,0,8,4"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="3" Text="{Binding ChequeItem.ChequeDate, StringFormat='{}{0:MMM dd, yyyy}'}" Margin="0,0,0,4"/>
+                                    
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Grower:" FontWeight="SemiBold" Margin="0,0,8,4"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ChequeItem.GrowerDisplay}" Margin="0,0,16,4"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="2" Text="Payee:" FontWeight="SemiBold" Margin="0,0,8,4"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding ChequeItem.PayeeName}" Margin="0,0,0,4"/>
+                                    
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Fiscal Year:" FontWeight="SemiBold" Margin="0,0,8,0"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ChequeItem.FiscalYear}" Margin="0,0,16,0"/>
+                                </Grid>
+                            </StackPanel>
+                            
+                            <!-- Status Badge -->
+                            <Border Grid.Column="1" 
+                                    CornerRadius="8" 
+                                    Padding="6,3" 
+                                    HorizontalAlignment="Center">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Status}" Value="Voided">
+                                                <Setter Property="Background" Value="{StaticResource ErrorBrush}"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Status}" Value="Stopped">
+                                                <Setter Property="Background" Value="{StaticResource WarningBrush}"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Status}" Value="Delivered">
+                                                <Setter Property="Background" Value="{StaticResource SuccessBrush}"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Status}" Value="Printed">
+                                                <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <TextBlock Text="{Binding StatusDisplay}" 
+                                           Foreground="White" 
+                                           FontWeight="SemiBold" 
+                                           FontSize="11"/>
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <!-- Payment Summary Card -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Payment Summary" Style="{StaticResource SectionHeaderStyle}"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                                    <TextBlock Text="Total Gross Payments" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}"/>
+                                    <TextBlock Text="{Binding InvoiceStyleDetails.Summary.TotalGrossPayments, StringFormat='{}{0:C}'}" 
+                                               FontSize="16" FontWeight="SemiBold" 
+                                               Foreground="{StaticResource TextBrush}"/>
+                                </StackPanel>
+                                
+                                <StackPanel Grid.Column="1" Margin="0,0,16,0">
+                                    <TextBlock Text="Total Deductions" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}"/>
+                                    <TextBlock Text="{Binding InvoiceStyleDetails.Summary.TotalDeductions, StringFormat='{}{0:C}'}" 
+                                               FontSize="16" FontWeight="SemiBold" 
+                                               Foreground="{StaticResource TextBrush}"/>
+                                </StackPanel>
+                                
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Net Cheque Amount" FontSize="11" Foreground="{StaticResource SecondaryTextBrush}"/>
+                                    <TextBlock Text="{Binding InvoiceStyleDetails.Summary.NetChequeAmount, StringFormat='{}{0:C}'}" 
+                                               FontSize="18" FontWeight="Bold" 
+                                               Foreground="{StaticResource AccentBrush}"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Detailed Breakdown Card -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Detailed Breakdown" Style="{StaticResource SectionHeaderStyle}"/>
+                            
+                            <!-- Batch Information -->
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <TextBlock Grid.Column="0" Text="Payment Batch:" FontWeight="SemiBold" Margin="0,0,8,4"/>
+                                <TextBlock Grid.Column="1" Text="{Binding ChequeItem.BatchNumber}" Margin="0,0,16,4"/>
+                                <TextBlock Grid.Column="2" Text="Payment Type:" FontWeight="SemiBold" Margin="0,0,8,4"/>
+                                <TextBlock Grid.Column="3" Text="{Binding ChequeItem.TypeDisplay}" Margin="0,0,0,4"/>
+                            </Grid>
+
+                            <!-- Receipts Table -->
+                            <DataGrid Style="{StaticResource ModernTableStyle}" 
+                                      ItemsSource="{Binding InvoiceStyleDetails.PaymentBatches[0].Receipts}"
+                                      MaxHeight="200">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Receipt#" Binding="{Binding ReceiptNumber}" Width="80"/>
+                                    <DataGridTextColumn Header="Advance Payment" Binding="{Binding AdvancePayment}" Width="120"/>
+                                    <DataGridTextColumn Header="Batch#" Binding="{Binding BatchNumber}" Width="80"/>
+                                    <DataGridTextColumn Header="Product" Binding="{Binding ProductName}" Width="80"/>
+                                    <DataGridTextColumn Header="Process" Binding="{Binding ProcessName}" Width="100"/>
+                                    <DataGridTextColumn Header="Grade" Binding="{Binding Grade}" Width="60"/>
+                                    <DataGridTextColumn Header="Weight" Binding="{Binding Weight, StringFormat='{}{0:N2} lbs'}" Width="100"/>
+                                    <DataGridTextColumn Header="Price" Binding="{Binding PricePerPound, StringFormat='{}{0:C}/lb'}" Width="100"/>
+                                    <DataGridTextColumn Header="Amount" Binding="{Binding Amount, StringFormat='{}{0:C}'}" Width="100"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            
+                            <!-- Batch Subtotal -->
+                            <Border Background="{StaticResource LightGrayBrush}" 
+                                    CornerRadius="4" 
+                                    Padding="12,8" 
+                                    Margin="0,8,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Batch Subtotal:" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Column="1" 
+                                               Text="{Binding InvoiceStyleDetails.PaymentBatches[0].BatchSubtotal, StringFormat='{}{0:C}'}" 
+                                               FontWeight="Bold" 
+                                               FontSize="14"
+                                               Foreground="{StaticResource AccentBrush}"/>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Payment History Card -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Payment History" Style="{StaticResource SectionHeaderStyle}"/>
+                            <TextBlock Text="Previous payments for this grower" 
+                                       FontSize="11" 
+                                       Foreground="{StaticResource SecondaryTextBrush}" 
+                                       Margin="0,0,0,8"/>
+                            
+                            <DataGrid Style="{StaticResource ModernTableStyle}" 
+                                      ItemsSource="{Binding InvoiceStyleDetails.History.Payments}"
+                                      MaxHeight="150">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat='{}{0:MMM dd, yyyy}'}" Width="100"/>
+                                    <DataGridTextColumn Header="Cheque#" Binding="{Binding ChequeNumber}" Width="*"/>
+                                    <DataGridTextColumn Header="Batch#" Binding="{Binding BatchNumber}" Width="*"/>
+                                    <DataGridTextColumn Header="Amount" Binding="{Binding Amount, StringFormat='{}{0:C}'}" Width="100"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Footer -->
+            <Border Grid.Row="2" Background="{StaticResource LightGrayBrush}" CornerRadius="0,0,8,8">
+                <Grid Margin="20,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- Status Message -->
+                    <TextBlock Grid.Column="0" 
+                               Text="{Binding ExportStatus}" 
+                               VerticalAlignment="Center"
+                               Foreground="{StaticResource SecondaryTextBrush}"
+                               FontSize="11"/>
+                    
+                    <!-- Close Button -->
+                    <Button Grid.Column="1" 
+                            Content="Close" 
+                            Style="{StaticResource ModernButtonStyle}"
+                            Click="CloseButton_Click"
+                            Width="80"/>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using WPFGrowerApp.Models;
 
 namespace WPFGrowerApp.DataAccess.Models
 {
@@ -8,6 +10,7 @@ namespace WPFGrowerApp.DataAccess.Models
     {
         private int _itemId;
         private int _distributionId;
+        private int? _paymentDistributionId;
         private int _growerId;
         private string _growerName;
         private string _growerNumber;
@@ -34,6 +37,12 @@ namespace WPFGrowerApp.DataAccess.Models
         {
             get => _distributionId;
             set => SetProperty(ref _distributionId, value);
+        }
+
+        public int? PaymentDistributionId
+        {
+            get => _paymentDistributionId;
+            set => SetProperty(ref _paymentDistributionId, value);
         }
 
         public int GrowerId
@@ -114,7 +123,13 @@ namespace WPFGrowerApp.DataAccess.Models
             set => SetProperty(ref _processedBy, value);
         }
 
-
+        // Receipt contributions for audit tracking
+        private List<ReceiptContribution> _receiptContributions = new();
+        public List<ReceiptContribution> ReceiptContributions
+        {
+            get => _receiptContributions;
+            set => SetProperty(ref _receiptContributions, value);
+        }
 
         public event PropertyChangedEventHandler? PropertyChanged;
 

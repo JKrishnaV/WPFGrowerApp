@@ -21,6 +21,7 @@ namespace WPFGrowerApp.DataAccess.Services
         private readonly IPaymentBatchService _paymentBatchService;
         private readonly IGrowerService _growerService; // Needed for grower details like currency, GST status
         private readonly IProcessClassificationService _processClassificationService; // For Fresh vs Non-Fresh tracking
+        private readonly IPaymentTypeService _paymentTypeService; // For sequence-based payment logic
 
         // Constants for Account Types (mirroring TT_ values from XBase++)
         // Note: Advance types are now dynamically generated from PaymentTypes table
@@ -35,7 +36,8 @@ namespace WPFGrowerApp.DataAccess.Services
             IAccountService accountService,
             IPaymentBatchService paymentBatchService,
             IGrowerService growerService,
-            IProcessClassificationService processClassificationService)
+            IProcessClassificationService processClassificationService,
+            IPaymentTypeService paymentTypeService)
         {
             _receiptService = receiptService ?? throw new ArgumentNullException(nameof(receiptService));
             _priceService = priceService ?? throw new ArgumentNullException(nameof(priceService));
@@ -43,6 +45,7 @@ namespace WPFGrowerApp.DataAccess.Services
             _paymentBatchService = paymentBatchService ?? throw new ArgumentNullException(nameof(paymentBatchService));
             _growerService = growerService ?? throw new ArgumentNullException(nameof(growerService));
             _processClassificationService = processClassificationService ?? throw new ArgumentNullException(nameof(processClassificationService));
+            _paymentTypeService = paymentTypeService ?? throw new ArgumentNullException(nameof(paymentTypeService));
         }
 
         // --- Payment Validation (NEW: Pre-flight checks) ---
@@ -92,7 +95,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         validationResult.InvalidReceipts++;
                     }
                     
-                    // Check for zero or negative calculated amount (warning)
+                    // Check for zero or negative calculated amount (will be filtered out during processing)
                     if (receiptDetail.CalculatedAdvanceAmount <= 0 && string.IsNullOrEmpty(receiptDetail.ErrorMessage))
                     {
                         validationResult.Warnings.Add(new ValidationIssue
@@ -101,8 +104,8 @@ namespace WPFGrowerApp.DataAccess.Services
                             GrowerNumber = growerPayment.GrowerNumber,
                             GrowerName = growerPayment.GrowerName,
                             IssueType = ValidationIssueType.CalculationError,
-                            Message = "Calculated amount is zero or negative",
-                            Details = $"Amount: ${receiptDetail.CalculatedAdvanceAmount:N2}"
+                            Message = "Receipt will be skipped - zero or negative calculated amount",
+                            Details = $"Amount: ${receiptDetail.CalculatedAdvanceAmount:N2} (will be filtered out during payment processing)"
                         });
                     }
                 }
@@ -128,7 +131,7 @@ namespace WPFGrowerApp.DataAccess.Services
 
         // --- Create Payment Draft (NEW: Split Workflow) ---
         public async Task<(bool Success, List<string> Errors, PaymentBatch? CreatedBatch, TestRunResult? PreviewResult, PaymentValidationResult? ValidationResult)> CreatePaymentDraftAsync(
-            int advanceNumber,
+            int sequenceNumber,
             DateTime paymentDate,
             DateTime cutoffDate,
             int cropYear,
@@ -146,13 +149,13 @@ namespace WPFGrowerApp.DataAccess.Services
             try
             {
                 progress?.Report("Calculating payment details...");
-                LogAnEvent(EVT_TYPE_START_ADVANCE_DETERMINE, $"Advance {advanceNumber} draft creation started.");
+                LogAnEvent(EVT_TYPE_START_ADVANCE_DETERMINE, $"Sequence {sequenceNumber} draft creation started.");
 
                 // 1. Perform Calculation FIRST (before any database writes)
                 progress?.Report("Calculating payment details...");
                 var parameters = new TestRunInputParameters
                 {
-                    AdvanceNumber = advanceNumber,
+                    SequenceNumber = sequenceNumber,
                     PaymentDate = paymentDate,
                     CutoffDate = cutoffDate,
                     CropYear = cropYear,
@@ -199,7 +202,7 @@ namespace WPFGrowerApp.DataAccess.Services
                 
                 (bool draftSuccess, List<string> draftErrors, PaymentBatch? finalBatch, TestRunResult? finalResult) = 
                     await CreatePaymentDraftConfirmedAsync(
-                        advanceNumber, paymentDate, cutoffDate, cropYear,
+                        sequenceNumber, paymentDate, cutoffDate, cropYear,
                         excludeGrowerIds, excludePayGroupIds, productIds, processIds,
                         previewResult, // Use the calculated result
                         progress);
@@ -209,7 +212,7 @@ namespace WPFGrowerApp.DataAccess.Services
             catch (Exception ex)
             {
                 errors.Add($"Critical error during draft creation: {ex.Message}");
-                Logger.Error($"Critical error during draft creation Advance {advanceNumber}", ex);
+                Logger.Error($"Critical error during draft creation Sequence {sequenceNumber}", ex);
                 return (false, errors, createdBatch, previewResult, validation);
             }
         }
@@ -219,7 +222,7 @@ namespace WPFGrowerApp.DataAccess.Services
         /// Creates payment draft after user confirmation - skips validation, uses existing calculation
         /// </summary>
         public async Task<(bool Success, List<string> Errors, PaymentBatch? CreatedBatch, TestRunResult? PreviewResult)> CreatePaymentDraftConfirmedAsync(
-            int advanceNumber,
+            int sequenceNumber,
             DateTime paymentDate,
             DateTime cutoffDate,
             int cropYear,
@@ -236,7 +239,7 @@ namespace WPFGrowerApp.DataAccess.Services
             try
             {
                 progress?.Report("Creating payment draft (user confirmed)...");
-                LogAnEvent(EVT_TYPE_START_ADVANCE_DETERMINE, $"Advance {advanceNumber} confirmed draft creation started.");
+                LogAnEvent(EVT_TYPE_START_ADVANCE_DETERMINE, $"Sequence {sequenceNumber} confirmed draft creation started.");
                 
                 // Filter to only VALID receipts (those without errors)
                 var validGrowers = existingCalculation.GrowerPayments
@@ -249,15 +252,15 @@ namespace WPFGrowerApp.DataAccess.Services
                     return (false, errors, null, existingCalculation);
                 }
 
-                // Calculate totals from VALID receipts only
+                // Calculate totals from VALID receipts with positive amounts only
                 decimal totalAmount = validGrowers.Sum(gp => 
                     gp.ReceiptDetails
-                        .Where(rd => string.IsNullOrEmpty(rd.ErrorMessage))
+                        .Where(rd => string.IsNullOrEmpty(rd.ErrorMessage) && rd.CalculatedAdvanceAmount > 0)
                         .Sum(rd => rd.CalculatedAdvanceAmount));
                 
                 int totalGrowersProcessed = validGrowers.Count;
                 int totalReceiptsProcessed = validGrowers.Sum(gp => 
-                    gp.ReceiptDetails.Count(rd => string.IsNullOrEmpty(rd.ErrorMessage)));
+                    gp.ReceiptDetails.Count(rd => string.IsNullOrEmpty(rd.ErrorMessage) && rd.CalculatedAdvanceAmount > 0));
 
                 // Wrap ALL database operations in a single transaction
                 using (var connection = new SqlConnection(_connectionString))
@@ -267,14 +270,20 @@ namespace WPFGrowerApp.DataAccess.Services
                     {
                         try
                         {
-                            int paymentTypeId = advanceNumber;
+                            // Get payment type by sequence number to get the correct PaymentTypeId
+                            var paymentType = await GetPaymentTypeBySequenceNumberAsync(sequenceNumber);
+                            if (paymentType == null)
+                            {
+                                errors.Add($"Payment type with sequence number {sequenceNumber} not found.");
+                                return (false, errors, null, existingCalculation);
+                            }
                             
                             // 1. Create Payment Batch (with transaction)
                             createdBatch = await _paymentBatchService.CreatePaymentBatchAsync(
-                                paymentTypeId, 
+                                paymentType.PaymentTypeId, 
                                 paymentDate, 
                                 cropYear,
-                                $"Advance {advanceNumber} Payment Draft (User Confirmed)",
+                                $"Sequence {sequenceNumber} Payment Draft (User Confirmed)",
                                 connection,
                                 transaction);
                             progress?.Report($"Created Payment Draft: {createdBatch.BatchNumber}");
@@ -296,8 +305,35 @@ namespace WPFGrowerApp.DataAccess.Services
                             
                             foreach (var growerPayment in validGrowers)
                             {
-                                // Only process receipts WITHOUT errors
-                                foreach (var receiptDetail in growerPayment.ReceiptDetails.Where(rd => string.IsNullOrEmpty(rd.ErrorMessage)))
+                                // Only process receipts WITHOUT errors AND with positive amounts
+                                var validReceiptDetails = growerPayment.ReceiptDetails
+                                    .Where(rd => string.IsNullOrEmpty(rd.ErrorMessage))
+                                    .ToList();
+
+                                // Log skipped receipts with zero amounts
+                                var skippedReceipts = validReceiptDetails
+                                    .Where(rd => rd.CalculatedAdvanceAmount <= 0)
+                                    .ToList();
+
+                                if (skippedReceipts.Any())
+                                {
+                                    var skippedCount = skippedReceipts.Count;
+                                    var skippedAmount = skippedReceipts.Sum(rd => rd.CalculatedAdvanceAmount);
+                                    progress?.Report($"⚠️ Skipping {skippedCount} receipts with zero/negative amounts (${skippedAmount:N2})");
+                                    
+                                    foreach (var skippedReceipt in skippedReceipts)
+                                    {
+                                        var reason = skippedReceipt.CalculatedAdvanceAmount == 0 
+                                            ? "Zero calculated amount" 
+                                            : "Negative calculated amount";
+                                        
+                                        Logger.Info($"Skipped Receipt {skippedReceipt.ReceiptNumber} - {reason} (${skippedReceipt.CalculatedAdvanceAmount:N2})");
+                                        progress?.Report($"  • Receipt {skippedReceipt.ReceiptNumber}: {reason} (${skippedReceipt.CalculatedAdvanceAmount:N2})");
+                                    }
+                                }
+
+                                // Process only receipts with positive amounts
+                                foreach (var receiptDetail in validReceiptDetails.Where(rd => rd.CalculatedAdvanceAmount > 0))
                                 {
                                     var receipt = await _receiptService.GetReceiptByNumberAsync(receiptDetail.ReceiptNumber);
                                     if (receipt == null)
@@ -310,7 +346,7 @@ namespace WPFGrowerApp.DataAccess.Services
                                     {
                                         ReceiptId = receipt.ReceiptId,
                                         PaymentBatchId = createdBatch.PaymentBatchId,
-                                        PaymentTypeId = paymentTypeId,
+                                        PaymentTypeId = paymentType.PaymentTypeId,
                                         PriceScheduleId = (int)receiptDetail.PriceRecordId,
                                         PricePerPound = receiptDetail.CalculatedAdvancePrice,
                                         QuantityPaid = receiptDetail.NetWeight,
@@ -334,7 +370,7 @@ namespace WPFGrowerApp.DataAccess.Services
                             if (createdBatch != null)
                             {
                                 LogAnEvent(EVT_TYPE_ADVANCE_DETERMINE_COMPLETE, 
-                                    $"Advance {advanceNumber} confirmed draft created. Batch: {createdBatch.PaymentBatchId}, " +
+                                    $"Sequence {sequenceNumber} confirmed draft created. Batch: {createdBatch.PaymentBatchId}, " +
                                     $"Allocations: {allocationCount}, Success: {overallSuccess}");
                             }
 
@@ -353,14 +389,14 @@ namespace WPFGrowerApp.DataAccess.Services
             catch (Exception ex)
             {
                 errors.Add($"Critical error: {ex.Message}");
-                Logger.Error($"Error creating confirmed draft for Advance {advanceNumber}", ex);
+                Logger.Error($"Error creating confirmed draft for Sequence {sequenceNumber}", ex);
                 return (false, errors, null, existingCalculation);
             }
         }
 
         // --- Actual Payment Run ---
         public async Task<(bool Success, List<string> Errors, PaymentBatch? CreatedBatch)> ProcessAdvancePaymentRunAsync(
-            int advanceNumber,
+            int sequenceNumber,
             DateTime paymentDate,
             DateTime cutoffDate,
             int cropYear,
@@ -378,22 +414,29 @@ namespace WPFGrowerApp.DataAccess.Services
             try
             {
                 progress?.Report("Starting payment run...");
-                LogAnEvent(EVT_TYPE_START_ADVANCE_DETERMINE, $"Advance {advanceNumber} determination started.");
+                LogAnEvent(EVT_TYPE_START_ADVANCE_DETERMINE, $"Sequence {sequenceNumber} determination started.");
 
                 // 1. Create a new Payment Batch record
-                int paymentTypeId = advanceNumber; // PaymentTypes: 1=ADV1, 2=ADV2, 3=ADV3, 4=FINAL
+                // Get payment type by sequence number to get the correct PaymentTypeId
+                var paymentType = await GetPaymentTypeBySequenceNumberAsync(sequenceNumber);
+                if (paymentType == null)
+                {
+                    errors.Add($"Payment type with sequence number {sequenceNumber} not found.");
+                    return (false, errors, null);
+                }
+                
                 createdBatch = await _paymentBatchService.CreatePaymentBatchAsync(
-                    paymentTypeId, 
+                    paymentType.PaymentTypeId, 
                     paymentDate, 
                     cropYear,
-                    $"Advance {advanceNumber} Payment Run");
+                    $"Sequence {sequenceNumber} Payment Run");
                 progress?.Report($"Created Payment Batch: {createdBatch.PaymentBatchId}");
 
                 // 2. Perform Calculation (using the refactored method)
                 progress?.Report("Calculating payment details...");
                 var parameters = new TestRunInputParameters
                 {
-                    AdvanceNumber = advanceNumber,
+                    SequenceNumber = sequenceNumber,
                     PaymentDate = paymentDate, // Use actual payment date for consistency? Or cutoff? Using paymentDate for now.
                     CutoffDate = cutoffDate,
                     CropYear = cropYear,
@@ -414,7 +457,7 @@ namespace WPFGrowerApp.DataAccess.Services
                 if (!calculationResult.GrowerPayments.Any())
                 {
                     progress?.Report("No eligible growers/receipts found after calculation.");
-                    LogAnEvent(EVT_TYPE_ADVANCE_NO_RECEIPTS, $"No eligible receipts/growers for Advance {advanceNumber}.");
+                    LogAnEvent(EVT_TYPE_ADVANCE_NO_RECEIPTS, $"No eligible receipts/growers for Sequence {sequenceNumber}.");
                     // Still considered a success if no errors occurred during calculation attempt
                     overallSuccess = !errors.Any();
                     return (overallSuccess, errors, createdBatch);
@@ -448,8 +491,35 @@ namespace WPFGrowerApp.DataAccess.Services
                         continue;
                     }
 
-                    // Process each successfully calculated receipt detail for DB updates
-                    foreach (var receiptDetail in growerPayment.ReceiptDetails.Where(rd => string.IsNullOrEmpty(rd.ErrorMessage)))
+                    // Filter out zero amount receipts and log skipped ones
+                    var validReceiptDetails = growerPayment.ReceiptDetails
+                        .Where(rd => string.IsNullOrEmpty(rd.ErrorMessage))
+                        .ToList();
+
+                    // Log skipped receipts with zero amounts
+                    var skippedReceipts = validReceiptDetails
+                        .Where(rd => rd.CalculatedAdvanceAmount <= 0)
+                        .ToList();
+
+                    if (skippedReceipts.Any())
+                    {
+                        var skippedCount = skippedReceipts.Count;
+                        var skippedAmount = skippedReceipts.Sum(rd => rd.CalculatedAdvanceAmount);
+                        progress?.Report($"⚠️ Skipping {skippedCount} receipts with zero/negative amounts for Grower {growerNumber} (${skippedAmount:N2})");
+                        
+                        foreach (var skippedReceipt in skippedReceipts)
+                        {
+                            var reason = skippedReceipt.CalculatedAdvanceAmount == 0 
+                                ? "Zero calculated amount" 
+                                : "Negative calculated amount";
+                            
+                            Logger.Info($"Skipped Receipt {skippedReceipt.ReceiptNumber} for Grower {growerNumber} - {reason} (${skippedReceipt.CalculatedAdvanceAmount:N2})");
+                            progress?.Report($"  • Receipt {skippedReceipt.ReceiptNumber}: {reason} (${skippedReceipt.CalculatedAdvanceAmount:N2})");
+                        }
+                    }
+
+                    // Process only receipts with positive amounts
+                    foreach (var receiptDetail in validReceiptDetails.Where(rd => rd.CalculatedAdvanceAmount > 0))
                     {
                         try
                         {
@@ -467,7 +537,7 @@ namespace WPFGrowerApp.DataAccess.Services
                             {
                                 ReceiptId = receipt.ReceiptId,
                                 PaymentBatchId = createdBatch.PaymentBatchId,
-                                PaymentTypeId = advanceNumber, // 1=ADV1, 2=ADV2, 3=ADV3
+                                PaymentTypeId = paymentType.PaymentTypeId, // Use the correct PaymentTypeId from sequence
                                 PriceScheduleId = (int)receiptDetail.PriceRecordId, // Price schedule used for this payment
                                 PricePerPound = receiptDetail.CalculatedAdvancePrice,
                                 QuantityPaid = receiptDetail.NetWeight,
@@ -483,7 +553,7 @@ namespace WPFGrowerApp.DataAccess.Services
                             {
                                 growerAccountEntries.Add(CreateAccountEntry(
                                     receipt, // Use the full receipt object
-                                    GetAdvanceAccountType(advanceNumber),
+                                    GetAdvanceAccountType(paymentType.SequenceNumber),
                                     receiptDetail.CalculatedAdvancePrice, // Use calculated price
                                     grower.CurrencyCode ?? "CAD",
                                     cropYear,
@@ -491,8 +561,8 @@ namespace WPFGrowerApp.DataAccess.Services
                                     paymentDate));
                             }
 
-                            // Create Account entries for premium and deduction (only on first advance)
-                            if (advanceNumber == 1)
+                            // Create Account entries for premium and deduction (only on first payment)
+                            if (paymentType.SequenceNumber == 1)
                             {
                                 if (receiptDetail.CalculatedPremiumAmount > 0)
                                 {
@@ -519,7 +589,7 @@ namespace WPFGrowerApp.DataAccess.Services
                             }
 
                             // Mark the price record advance as used
-                            await _priceService.MarkAdvancePriceAsUsedAsync(receiptDetail.PriceRecordId, advanceNumber);
+                            await _priceService.MarkAdvancePriceAsUsedAsync(receiptDetail.PriceRecordId, paymentType.SequenceNumber);
                         }
                         catch (Exception ex)
                         {
@@ -572,14 +642,14 @@ namespace WPFGrowerApp.DataAccess.Services
                 progress?.Report($"Payment run database updates complete. Success: {overallSuccess}");
                 if (createdBatch != null)
                 {
-                    LogAnEvent(EVT_TYPE_ADVANCE_DETERMINE_COMPLETE, $"Advance {advanceNumber} determination complete. Batch: {createdBatch.PaymentBatchId}, Success: {overallSuccess}, Errors: {errors.Count}");
+                    LogAnEvent(EVT_TYPE_ADVANCE_DETERMINE_COMPLETE, $"Sequence {sequenceNumber} determination complete. Batch: {createdBatch.PaymentBatchId}, Success: {overallSuccess}, Errors: {errors.Count}");
                 }
 
             }
             catch (Exception ex)
             {
                 errors.Add($"Critical error during payment run: {ex.Message}");
-                Logger.Error($"Critical error during payment run Advance {advanceNumber}", ex);
+                Logger.Error($"Critical error during payment run Sequence {sequenceNumber}", ex);
                 overallSuccess = false;
                 // Consider rollback logic if needed (e.g., delete PostBatch record?)
             }
@@ -590,7 +660,7 @@ namespace WPFGrowerApp.DataAccess.Services
 
         // --- Test Payment Run ---
         public async Task<TestRunResult> PerformAdvancePaymentTestRunAsync(
-            int advanceNumber,
+            int sequenceNumber,
             DateTime paymentDate,
             DateTime cutoffDate,
             int cropYear,
@@ -602,7 +672,7 @@ namespace WPFGrowerApp.DataAccess.Services
         {
             var parameters = new TestRunInputParameters
             {
-                AdvanceNumber = advanceNumber,
+                SequenceNumber = sequenceNumber,
                 PaymentDate = paymentDate,
                 CutoffDate = cutoffDate,
                 CropYear = cropYear,
@@ -649,7 +719,7 @@ namespace WPFGrowerApp.DataAccess.Services
                 }
                 
                 var eligibleReceipts = await _receiptService.GetReceiptsForAdvancePaymentAsync(
-                    parameters.AdvanceNumber,
+                    parameters.SequenceNumber,
                     parameters.CutoffDate,
                     includeGrowerIds, // Use calculated include list
                     null, // includePayGroupIds - not used in current implementation
@@ -734,17 +804,17 @@ namespace WPFGrowerApp.DataAccess.Services
                             decimal calculatedAdvancePrice = 0;
                             decimal premiumPrice = 0;
                             decimal marketingDeduction = 0;
-                            decimal priceRecordId = 0;
+                            decimal priceScheduleId = 0;
 
                             // Find the relevant price record ID first
-                            priceRecordId = await _priceService.FindPriceRecordIdAsync(receipt.Product ?? string.Empty, receipt.Process ?? string.Empty, receipt.ReceiptDate);
-                            if (priceRecordId == 0)
+                            priceScheduleId = await _priceService.FindPriceRecordIdAsync(receipt.Product ?? string.Empty, receipt.Process ?? string.Empty, receipt.ReceiptDate);
+                            if (priceScheduleId == 0)
                             {
                                 receiptDetail.ErrorMessage = $"No price record found (Product: {receipt.Product}, Process: {receipt.Process}, Date: {receipt.ReceiptDate.ToShortDateString()}).";
                                 // Don't add here - it will be added in the finally block to avoid duplicate counting
                                 continue; // Skip calculation for this receipt
                             }
-                            receiptDetail.PriceRecordId = priceRecordId;
+                            receiptDetail.PriceRecordId = priceScheduleId;
 
                             // Fix #5: Calculate running cumulative price using max() logic
                             // Get the running cumulative price up to current advance
@@ -753,26 +823,35 @@ namespace WPFGrowerApp.DataAccess.Services
                                 receipt.Product ?? string.Empty,
                                 receipt.Process ?? string.Empty,
                                 receipt.ReceiptDate,
-                                parameters.AdvanceNumber,
+                                parameters.SequenceNumber,
                                 (grower.CurrencyCode ?? "CAD")[0],
                                 grower.PriceLevel,
-                                receipt.Grade);
+                                receipt.Grade,
+                                priceScheduleId);
 
                             // ================================================================
-                            // GENERIC CALCULATION LOGIC - SUPPORTS UNLIMITED ADVANCES!
+                            // GENERIC CALCULATION LOGIC - SUPPORTS UNLIMITED PAYMENT TYPES!
                             // ================================================================
                             // Calculate what has already been paid from ReceiptPaymentAllocations
                             // This replaces the hardcoded if/else chains for advances 1, 2, 3
-                            // Now works for advance 1, 2, 3, 4, 5, ... unlimited!
+                            // Now works for any payment type based on sequence number!
                             
                             decimal alreadyPaid = 0;
                             
-                            if (parameters.AdvanceNumber == 1)
+                            // Get payment type to determine if this is the first payment in sequence
+                            var paymentType = await GetPaymentTypeBySequenceNumberAsync(parameters.SequenceNumber);
+                            if (paymentType == null)
                             {
-                                // First advance - nothing previously paid
+                                receiptDetail.ErrorMessage = $"Payment type with sequence number {parameters.SequenceNumber} not found.";
+                                continue;
+                            }
+                            
+                            if (paymentType.SequenceNumber == 1)
+                            {
+                                // First payment in sequence - nothing previously paid
                                 calculatedAdvancePrice = currentRunningPrice;
                                 
-                                // Premium and deduction only on first advance
+                                // Premium and deduction only on first payment
                                 premiumPrice = await _priceService.GetTimePremiumAsync(
                                     receipt.Product ?? string.Empty,
                                     receipt.Process ?? string.Empty,
@@ -784,9 +863,9 @@ namespace WPFGrowerApp.DataAccess.Services
                             }
                             else
                             {
-                                // Subsequent advances (2, 3, 4, 5, ... unlimited)
+                                // Subsequent payments (2, 3, 4, 5, ..., FINAL) - calculate incremental payment
                                 // Get cumulative price per pound already paid from ReceiptPaymentAllocations
-                                alreadyPaid = await GetAlreadyPaidCumulativePriceAsync(receipt.ReceiptId, parameters.AdvanceNumber);
+                                alreadyPaid = await GetAlreadyPaidCumulativePriceAsync(receipt.ReceiptId, parameters.SequenceNumber);
                                 
                                 // Calculate incremental payment: Current cumulative - Already paid
                                 // The currentRunningPrice already has max() protection from GetRunningAdvancePriceAsync
@@ -799,8 +878,8 @@ namespace WPFGrowerApp.DataAccess.Services
 
                             // Store calculated values in the receipt detail
                             receiptDetail.CalculatedAdvancePrice = calculatedAdvancePrice;
-                            receiptDetail.CalculatedPremiumPrice = (parameters.AdvanceNumber == 1) ? premiumPrice : 0; // Only on first advance
-                            receiptDetail.CalculatedMarketingDeduction = (parameters.AdvanceNumber == 1) ? marketingDeduction : 0; // Only on first advance
+                            receiptDetail.CalculatedPremiumPrice = (paymentType.SequenceNumber == 1) ? premiumPrice : 0; // Only on first payment
+                            receiptDetail.CalculatedMarketingDeduction = (paymentType.SequenceNumber == 1) ? marketingDeduction : 0; // Only on first payment
 
                             // Fix #6: Use RoundMoney for AwayFromZero rounding (matches legacy XBase round())
                             receiptDetail.CalculatedAdvanceAmount = RoundMoney(receipt.Net * receiptDetail.CalculatedAdvancePrice);
@@ -830,7 +909,7 @@ namespace WPFGrowerApp.DataAccess.Services
             catch (Exception ex)
             {
                 generalErrors.Add($"Critical error during calculation simulation: {ex.Message}");
-                Logger.Error($"Critical error during calculation simulation Advance {parameters.AdvanceNumber}", ex);
+                Logger.Error($"Critical error during calculation simulation Sequence {parameters.SequenceNumber}", ex);
                 // No rollback needed as it's just calculation
             }
 
@@ -923,39 +1002,57 @@ namespace WPFGrowerApp.DataAccess.Services
         /// <param name="product">Product code</param>
         /// <param name="process">Process code</param>
         /// <param name="receiptDate">Receipt date</param>
-        /// <param name="upToAdvanceNumber">Calculate cumulative price up to this advance (1, 2, 3, 4, ...)</param>
+        /// <param name="upToSequenceNumber">Calculate cumulative price up to this sequence number</param>
         /// <param name="currency">Grower currency (C/U)</param>
         /// <param name="priceLevel">Grower price level (1-3)</param>
         /// <param name="grade">Receipt grade</param>
+        /// <param name="priceScheduleId">priceScheduledId from PriceDetails</param>
         /// <returns>Running cumulative maximum price</returns>
         private async Task<decimal> GetRunningAdvancePriceAsync(
             string product,
             string process,
             DateTime receiptDate,
-            int upToAdvanceNumber,
+            int upToSequenceNumber,
             char currency,
             int priceLevel,
-            decimal grade)
+            decimal grade,
+            decimal priceScheduleId)
         {
-            decimal runningMax = 0;
-
-            for (int advNum = 1; advNum <= upToAdvanceNumber; advNum++)
+            try
             {
-                var advPrice = await _priceService.GetAdvancePriceAsync(
-                    product,
-                    process,
-                    receiptDate,
-                    advNum,
-                    currency,
-                    priceLevel,
-                    grade);
+                decimal runningMax = 0;
 
-                // Key: Use Math.Max to prevent backward pricing
-                // Mirrors legacy: nReturn := max( CurAdvPrice( n ), nReturn )
-                runningMax = Math.Max(advPrice, runningMax);
+                // Get all payment types with sequence numbers up to the specified sequence
+                var allPaymentTypes = await _paymentTypeService.GetAllPaymentTypesAsync();
+                var relevantPaymentTypes = allPaymentTypes
+                    .Where(pt => pt.SequenceNumber <= upToSequenceNumber && pt.IsActive)
+                    .OrderBy(pt => pt.SequenceNumber)
+                    .ToList();
+
+                foreach (var paymentType in relevantPaymentTypes)
+                {
+                    var advPrice = await _priceService.GetAdvancePriceAsync(
+                        product,
+                        process,
+                        receiptDate,
+                        paymentType.SequenceNumber, // Use sequence number instead of hardcoded advance number
+                        currency,
+                        priceLevel,
+                        grade,
+                        priceScheduleId);
+
+                    // Key: Use Math.Max to prevent backward pricing
+                    // Mirrors legacy: nReturn := max( CurAdvPrice( n ), nReturn )
+                    runningMax = Math.Max(advPrice, runningMax);
+                }
+
+                return runningMax;
             }
-
-            return runningMax;
+            catch (Exception ex)
+            {
+                Logger.Error($"Error calculating running advance price for sequence {upToSequenceNumber}: {ex.Message}", ex);
+                return 0;
+            }
         }
 
         /// <summary>
@@ -996,24 +1093,70 @@ namespace WPFGrowerApp.DataAccess.Services
         }
 
         /// <summary>
-        /// Gets the cumulative price per pound already paid for a receipt from previous advances.
-        /// This method queries the ReceiptPaymentAllocations table to get actual paid prices.
-        /// Used for calculating incremental payment amounts for subsequent advances.
-        /// 
-        /// SUPPORTS UNLIMITED ADVANCES: Works for any advance number (1, 2, 3, 4, 5, ...)
+        /// Gets the cumulative price per pound already paid for a receipt from previous payment sequences.
+        /// Uses SequenceNumber instead of hardcoded advance numbers for flexible payment ordering.
         /// </summary>
         /// <param name="receiptId">The receipt ID to query</param>
-        /// <param name="currentAdvanceNumber">Current advance being processed</param>
-        /// <returns>Sum of all prices per pound paid in previous advances</returns>
-        private async Task<decimal> GetAlreadyPaidCumulativePriceAsync(int receiptId, int currentAdvanceNumber)
+        /// <param name="currentSequenceNumber">Current sequence number being processed</param>
+        /// <returns>Sum of all prices per pound paid in previous payment sequences</returns>
+        private async Task<decimal> GetAlreadyPaidCumulativePriceAsync(int receiptId, int currentSequenceNumber)
         {
-            var allocations = await _receiptService.GetReceiptPaymentAllocationsAsync(receiptId);
-            
-            // Sum prices from previous advances only (not current or future)
-            // This works for ANY advance number - no hardcoded limits!
-            return allocations
-                .Where(a => a.PaymentTypeId < currentAdvanceNumber)
-                .Sum(a => a.PricePerPound);
+            try
+            {
+                var allocations = await _receiptService.GetReceiptPaymentAllocationsAsync(receiptId);
+                
+                // Get all payment types with sequence numbers less than current
+                var previousPaymentTypes = await GetPreviousPaymentSequencesAsync(currentSequenceNumber);
+                var previousPaymentTypeIds = previousPaymentTypes.Select(pt => pt.PaymentTypeId).ToList();
+                
+                // Sum prices from previous payment sequences only
+                return allocations
+                    .Where(a => previousPaymentTypeIds.Contains(a.PaymentTypeId))
+                    .Sum(a => a.PricePerPound);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting already paid cumulative price for Receipt {receiptId}, Sequence {currentSequenceNumber}: {ex.Message}", ex);
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Gets all payment types that have sequence numbers less than the specified sequence.
+        /// </summary>
+        private async Task<List<PaymentType>> GetPreviousPaymentSequencesAsync(int currentSequenceNumber)
+        {
+            try
+            {
+                var allPaymentTypes = await _paymentTypeService.GetAllPaymentTypesAsync();
+                return allPaymentTypes
+                    .Where(pt => pt.SequenceNumber < currentSequenceNumber && pt.IsActive)
+                    .OrderBy(pt => pt.SequenceNumber)
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting previous payment sequences for sequence {currentSequenceNumber}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets payment type by sequence number
+        /// </summary>
+        private async Task<PaymentType?> GetPaymentTypeBySequenceNumberAsync(int sequenceNumber)
+        {
+            try
+            {
+                var allPaymentTypes = await _paymentTypeService.GetAllPaymentTypesAsync();
+                return allPaymentTypes
+                    .FirstOrDefault(pt => pt.SequenceNumber == sequenceNumber && pt.IsActive);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting payment type by sequence number {sequenceNumber}: {ex.Message}", ex);
+                throw;
+            }
         }
 
         // Placeholder for event logging - replace with actual implementation
@@ -1119,6 +1262,7 @@ namespace WPFGrowerApp.DataAccess.Services
                             g.GrowerNumber,
                             p.ProductName,
                             pr.ProcessName,
+                            pc.ClassName AS PriceClassName,
                             pt.TypeName AS PaymentTypeName,
                             pb.BatchNumber
                         FROM ReceiptPaymentAllocations rpa
@@ -1126,6 +1270,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         INNER JOIN Growers g ON r.GrowerId = g.GrowerId
                         LEFT JOIN Products p ON r.ProductId = p.ProductId
                         LEFT JOIN Processes pr ON r.ProcessId = pr.ProcessId
+                        LEFT JOIN PriceClasses pc ON r.PriceClassId = pc.PriceClassId
                         INNER JOIN PaymentTypes pt ON rpa.PaymentTypeId = pt.PaymentTypeId
                         INNER JOIN PaymentBatches pb ON rpa.PaymentBatchId = pb.PaymentBatchId
                         WHERE rpa.PaymentBatchId = @BatchId

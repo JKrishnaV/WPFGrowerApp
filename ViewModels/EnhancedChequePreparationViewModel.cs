@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 using WPFGrowerApp.Commands;
 using WPFGrowerApp.DataAccess.Interfaces;
@@ -75,6 +76,7 @@ namespace WPFGrowerApp.ViewModels
         public ICommand StopPaymentCommand { get; }
         public ICommand StopSingleCommand { get; }
         public ICommand ReprintSelectedCommand { get; }
+        public ICommand ViewCalculationDetailsCommand { get; }
         public ICommand ShowHelpCommand { get; }
         public ICommand SearchCommand { get; }
         public ICommand ClearFiltersCommand { get; }
@@ -132,6 +134,7 @@ namespace WPFGrowerApp.ViewModels
             StopPaymentCommand = new RelayCommand(async p => await StopPaymentAsync(), p => CanStopPayment());
             StopSingleCommand = new RelayCommand(async p => await StopSingleAsync(), p => CanStopSingle());
             ReprintSelectedCommand = new RelayCommand(async p => await ReprintSelectedAsync(), p => CanReprintSelected());
+            ViewCalculationDetailsCommand = new RelayCommand(async p => await ViewCalculationDetailsAsync(p));
             ShowHelpCommand = new RelayCommand(async p => await ShowHelpAsync());
             SearchCommand = new RelayCommand(async p => await SearchAsync());
             ClearFiltersCommand = new RelayCommand(async p => await ClearFiltersAsync());
@@ -624,16 +627,30 @@ namespace WPFGrowerApp.ViewModels
                         IsBusy = true;
                         var voidedCount = 0;
                         var failedCount = 0;
-                        var voidedBy = App.CurrentUser?.Username ?? "SYSTEM";
+                        var voidedBy = App.CurrentUser?.Username ?? Environment.UserName ?? "SYSTEM";
 
                         foreach (var cheque in selectedCheques)
                         {
                             try
                             {
+                                // Validate cheque data before voiding
+                                if (cheque == null)
+                                {
+                                    failedCount++;
+                                    continue;
+                                }
+
+                                var entityId = GetEntityId(cheque);
+                                if (entityId <= 0)
+                                {
+                                    failedCount++;
+                                    continue;
+                                }
+
                                 var voidRequest = new PaymentVoidRequest
                                 {
-                                    EntityType = GetEntityType(cheque.PaymentType),
-                                    EntityId = GetEntityId(cheque),
+                                    EntityType = "cheque", // Use generic "cheque" type to trigger auto-detection
+                                    EntityId = entityId,
                                     Reason = reason,
                                     VoidedBy = voidedBy,
                                     ReverseDeductions = true,
@@ -645,18 +662,39 @@ namespace WPFGrowerApp.ViewModels
                                 if (voidResult.Success)
                                 {
                                     voidedCount++;
-                                    Logger.Info($"Successfully voided {cheque.PaymentType} cheque {cheque.ChequeNumber}");
+                                    try
+                                    {
+                                        Logger.Info($"Successfully voided {cheque.PaymentType} cheque {cheque.ChequeNumber}");
+                                    }
+                                    catch
+                                    {
+                                        // Logger might be unavailable, continue without logging
+                                    }
                                 }
                                 else
                                 {
                                     failedCount++;
-                                    Logger.Error($"Failed to void {cheque.PaymentType} cheque {cheque.ChequeNumber}: {voidResult.Message}");
+                                    try
+                                    {
+                                        Logger.Error($"Failed to void {cheque.PaymentType} cheque {cheque.ChequeNumber}: {voidResult.Message}");
+                                    }
+                                    catch
+                                    {
+                                        // Logger might be unavailable, continue without logging
+                                    }
                                 }
                             }
                             catch (Exception ex)
                             {
                                 failedCount++;
-                                Logger.Error($"Error voiding {cheque.PaymentType} cheque {cheque.ChequeNumber}: {ex.Message}", ex);
+                                try
+                                {
+                                    Logger.Error($"Error voiding {cheque.PaymentType} cheque {cheque.ChequeNumber}: {ex.Message}", ex);
+                                }
+                                catch
+                                {
+                                    // Logger might be unavailable, continue without logging
+                                }
                             }
                         }
 
@@ -724,13 +762,13 @@ namespace WPFGrowerApp.ViewModels
                     if (result)
                     {
                         IsBusy = true;
-                        var voidedBy = App.CurrentUser?.Username ?? "SYSTEM";
+                        var voidedBy = App.CurrentUser?.Username ?? Environment.UserName ?? "SYSTEM";
 
                         try
                         {
                             var voidRequest = new PaymentVoidRequest
                             {
-                                EntityType = GetEntityType(paymentType),
+                                EntityType = "cheque", // Use generic "cheque" type to trigger auto-detection
                                 EntityId = GetEntityId(chequeToVoid),
                                 Reason = reason,
                                 VoidedBy = voidedBy,
@@ -1394,6 +1432,32 @@ namespace WPFGrowerApp.ViewModels
         #endregion
 
         #region Helper Methods
+
+        /// <summary>
+        /// View calculation details for a specific cheque
+        /// </summary>
+        private async Task ViewCalculationDetailsAsync(object parameter)
+        {
+            try
+            {
+                if (parameter is ChequeItem chequeItem)
+                {
+                    var dialogViewModel = new ViewModels.Dialogs.ChequeCalculationDialogViewModel(chequeItem);
+                    var dialogView = new Views.Dialogs.InvoiceStyleChequeCalculationDialogView(dialogViewModel);
+                    dialogView.Owner = Application.Current.MainWindow;
+                    dialogView.ShowDialog();
+                }
+                else
+                {
+                    await _dialogService.ShowMessageBoxAsync("Please select a cheque to view calculation details.", "No Cheque Selected");
+                }
+            }
+            catch (Exception ex)
+            {
+                await _dialogService.ShowMessageBoxAsync($"Error showing calculation details: {ex.Message}", "Error");
+                Logger.Error($"Error in ViewCalculationDetailsAsync: {ex.Message}", ex);
+            }
+        }
 
         /// <summary>
         /// Get the entity type for the void request based on payment type

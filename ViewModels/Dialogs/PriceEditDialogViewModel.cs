@@ -699,6 +699,11 @@ namespace WPFGrowerApp.ViewModels.Dialogs
             if (e.PropertyName != nameof(HasUnsavedChanges) && e.PropertyName != nameof(ShowWarningBanner))
             {
                 CheckForUnsavedChanges();
+                // Refresh Save button state when any property changes
+                if (SaveCommand is RelayCommand relayCommand)
+                {
+                    relayCommand.RaiseCanExecuteChanged();
+                }
             }
         }
 

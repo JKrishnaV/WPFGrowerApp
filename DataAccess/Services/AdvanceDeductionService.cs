@@ -61,10 +61,10 @@ namespace WPFGrowerApp.DataAccess.Services
                         await deleteCommand.ExecuteNonQueryAsync();
                     }
 
-                    // Update the advance cheque status back to Generated (available for deduction again)
+                    // Clear deduction references without changing advance cheque status
                     var updateQuery = @"
                         UPDATE AdvanceCheques 
-                        SET Status = 'Generated',
+                        SET 
                             DeductedAt = NULL,
                             DeductedBy = NULL,
                             DeductedFromBatchId = NULL,
@@ -351,10 +351,10 @@ namespace WPFGrowerApp.DataAccess.Services
                         await deleteCommand.ExecuteNonQueryAsync();
                     }
 
-                    // Update the advance cheque status back to Generated (available for deduction again)
+                    // Clear deduction references without changing advance cheque status
                     var updateQuery = @"
                         UPDATE AdvanceCheques 
-                        SET Status = 'Generated',
+                        SET 
                             DeductedAt = NULL,
                             DeductedBy = NULL,
                             DeductedFromBatchId = NULL,

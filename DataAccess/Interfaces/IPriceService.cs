@@ -21,7 +21,7 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// <param name="growerPriceLevel">The grower's price level (1, 2, or 3).</param>
         /// <param name="grade">The receipt grade (1, 2, or 3).</param>
         /// <returns>The price per unit for the specified advance, or 0 if not found.</returns>
-        Task<decimal> GetAdvancePriceAsync(string productId, string processId, DateTime receiptDate, int advanceNumber, char growerCurrency, int growerPriceLevel, decimal grade);
+        Task<decimal> GetAdvancePriceAsync(string productId, string processId, DateTime receiptDate, int advanceNumber, char growerCurrency, int growerPriceLevel, decimal grade, decimal priceScheduleId);
 
         /// <summary>
         /// Gets the marketing deduction rate for a given product.

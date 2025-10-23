@@ -501,7 +501,23 @@ namespace WPFGrowerApp.ViewModels
 
             try
             {
-                // Confirm approval
+                IsLoading = true;
+
+                // STEP 1: VALIDATE FIRST - Check sequence integrity before showing confirmation
+                var (canApprove, validationReasons) = await _batchService.ValidateCanApproveBatchAsync(
+                    SelectedBatch.PaymentBatchId);
+
+                if (!canApprove)
+                {
+                    // Show validation error with detailed explanation
+                    var errorMessage = string.Join("\n", validationReasons);
+                    await _dialogService.ShowMessageBoxAsync(
+                        $"⚠️ Cannot Approve Batch - Payment Sequence Conflict\n\n{errorMessage}",
+                        "⚠️ Payment Sequence Validation Failed");
+                    return;
+                }
+
+                // STEP 2: CONFIRM - Validation passed, now confirm with user
                 var confirm = await _dialogService.ShowConfirmationAsync(
                     $"This will approve the batch for posting.\n\n" +
                     $"Batch: {SelectedBatch.BatchNumber}\n" +
@@ -514,9 +530,7 @@ namespace WPFGrowerApp.ViewModels
                 if (confirm != true)
                     return;
 
-                IsLoading = true;
-
-                // Approve the batch (Draft → Approved)
+                // STEP 3: APPROVE - User confirmed, proceed with approval
                 var approvedBy = App.CurrentUser?.Username ?? "SYSTEM";
                 var success = await _batchService.ApproveBatchAsync(
                     SelectedBatch.PaymentBatchId,
@@ -531,6 +545,13 @@ namespace WPFGrowerApp.ViewModels
 
                     // Refresh list
                     await LoadBatchesAsync();
+                }
+                else
+                {
+                    await _dialogService.ShowMessageBoxAsync(
+                        $"Failed to approve batch {SelectedBatch.BatchNumber}.\n\n" +
+                        $"The batch may have sequence validation issues or may not be in Draft status.",
+                        "Approval Failed");
                 }
             }
             catch (Exception ex)

@@ -55,27 +55,29 @@ namespace WPFGrowerApp.DataAccess.Interfaces
             decimal premiumPrice);
 
         /// <summary>
-        /// Retrieves eligible receipts for a specific advance payment run.
+        /// Retrieves eligible receipts for a specific payment run based on sequence number.
+        /// Uses sequence-based logic to ensure proper payment order (e.g., second advance only includes receipts that received first advance).
         /// </summary>
-        /// <param name="advanceNumber">The advance number (1, 2, or 3).</param>
+        /// <param name="sequenceNumber">The sequence number from PaymentTypes table (1, 2, 3, 99 for FINAL, etc.).</param>
         /// <param name="cutoffDate">Include receipts up to this date.</param>
-        /// <param name="includeGrowerIds">Optional: List of grower IDs to include (if empty, include all).</param> // Assuming include might also become multi-select later
-        /// <param name="includePayGroupIds">Optional: List of pay group IDs to include (if empty, include all).</param> // Assuming include might also become multi-select later
+        /// <param name="includeGrowerIds">Optional: List of grower IDs to include (if empty, include all).</param>
+        /// <param name="includePayGroupIds">Optional: List of pay group IDs to include (if empty, include all).</param>
         /// <param name="excludeGrowerIds">Optional: List of grower IDs to exclude.</param>
         /// <param name="excludePayGroupIds">Optional: List of pay group IDs to exclude.</param>
         /// <param name="productIds">Optional: List of product IDs to include (if empty, include all).</param>
         /// <param name="processIds">Optional: List of process IDs to include (if empty, include all).</param>
+        /// <param name="cropYear">Optional: Filter by crop year.</param>
         /// <returns>A list of Receipt objects eligible for the payment run.</returns>
         Task<List<Receipt>> GetReceiptsForAdvancePaymentAsync(
-            int advanceNumber,
+            int sequenceNumber,
             DateTime cutoffDate,
-            List<int>? includeGrowerIds = null, // Changed to List<int>
-            List<string>? includePayGroupIds = null, // Changed to List
-            List<int>? excludeGrowerIds = null, // Changed to List<int>
-            List<string>? excludePayGroupIds = null, // Changed to List
-            List<int>? productIds = null, // Changed to List
-            List<int>? processIds = null, // Changed to List
-            int? cropYear = null); // Added cropYear parameter
+            List<int>? includeGrowerIds = null,
+            List<string>? includePayGroupIds = null,
+            List<int>? excludeGrowerIds = null,
+            List<string>? excludePayGroupIds = null,
+            List<int>? productIds = null,
+            List<int>? processIds = null,
+            int? cropYear = null);
 
         /// <summary>
         /// Creates a payment allocation record linking a receipt to a payment batch.

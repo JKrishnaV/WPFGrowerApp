@@ -50,6 +50,7 @@ namespace WPFGrowerApp.DataAccess.Models
         
         private int _growerId;
         private int? _paymentBatchId;
+        private int? _paymentDistributionId;
         private DateTime _chequeDate;
         private decimal _chequeAmount;
 
@@ -63,6 +64,12 @@ namespace WPFGrowerApp.DataAccess.Models
         {
             get => _paymentBatchId;
             set => SetProperty(ref _paymentBatchId, value);
+        }
+
+        public int? PaymentDistributionId
+        {
+            get => _paymentDistributionId;
+            set => SetProperty(ref _paymentDistributionId, value);
         }
 
         public DateTime ChequeDate
@@ -290,6 +297,11 @@ namespace WPFGrowerApp.DataAccess.Models
             get => _advanceChequeId;
             set => SetProperty(ref _advanceChequeId, value);
         }
+
+        /// <summary>
+        /// Type of cheque for filtering purposes (Regular, Advance, All)
+        /// </summary>
+        public string ChequeType { get; set; } = "Regular";
 
         // ======================================================================
         // NAVIGATION PROPERTIES (Not mapped to database)

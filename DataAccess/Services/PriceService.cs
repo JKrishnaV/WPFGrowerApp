@@ -97,7 +97,8 @@ namespace WPFGrowerApp.DataAccess.Services
             int advanceNumber, 
             char growerCurrency, 
             int growerPriceLevel, 
-            decimal grade)
+            decimal grade,
+            decimal priceScheduleId)
         {
             if (advanceNumber < 1 || advanceNumber > 3)
             {
@@ -117,36 +118,53 @@ namespace WPFGrowerApp.DataAccess.Services
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    
+
                     // Query the modern pricing matrix
                     var sql = @"
-                        SELECT TOP 1 pd.PricePerPound
-                        FROM PriceSchedules ps
-                        INNER JOIN Products p ON ps.ProductId = p.ProductId
-                        INNER JOIN Processes pr ON ps.ProcessId = pr.ProcessId
-                        INNER JOIN PriceDetails pd ON ps.PriceScheduleId = pd.PriceScheduleId
-                        INNER JOIN PriceClasses pc ON pd.PriceClassId = pc.PriceClassId
-                        INNER JOIN PriceGrades pg ON pd.PriceGradeId = pg.PriceGradeId
-                        INNER JOIN PriceAreas pa ON pd.PriceAreaId = pa.PriceAreaId
-                        WHERE p.ProductCode = @ProductId
-                          AND pr.ProcessCode = @ProcessId
-                          AND ps.EffectiveFrom <= @ReceiptDate
-                          AND (ps.EffectiveTo IS NULL OR ps.EffectiveTo >= @ReceiptDate)
-                          AND pc.ClassCode = @ClassCode
-                          AND pg.GradeNumber = @GradeNumber
-                          AND pa.AreaCode = @AreaCode
-                          AND pd.ProcessTypeId IS NULL  -- Generic pricing (fallback)
-                        ORDER BY ps.EffectiveFrom DESC";
+                        SELECT PricePerPound
+                        FROM PriceDetails
+                        WHERE PriceScheduleId = @PriceSchudleId
+                          AND PriceClassId = @PriceClassId
+                          AND PriceGradeId = @PriceGradeId
+                          AND PriceAreaId = @PriceAreaId";
 
                     var price = await connection.ExecuteScalarAsync<decimal?>(sql, new
                     {
-                        ProductId = productId,
-                        ProcessId = processId,
-                        ReceiptDate = receiptDate,
-                        ClassCode = classCode,
-                        GradeNumber = gradeNumber,
-                        AreaCode = areaCode
+                        PriceSchudleId = priceScheduleId,
+                        PriceClassId = growerPriceLevel,
+                        PriceGradeId = grade,
+                        PriceAreaId = advanceNumber
                     });
+
+                    //// Query the modern pricing matrix
+                    //var sql = @"
+                    //    SELECT TOP 1 pd.PricePerPound
+                    //    FROM PriceSchedules ps
+                    //    INNER JOIN Products p ON ps.ProductId = p.ProductId
+                    //    INNER JOIN Processes pr ON ps.ProcessId = pr.ProcessId
+                    //    INNER JOIN PriceDetails pd ON ps.PriceScheduleId = pd.PriceScheduleId
+                    //    INNER JOIN PriceClasses pc ON pd.PriceClassId = pc.PriceClassId
+                    //    INNER JOIN PriceGrades pg ON pd.PriceGradeId = pg.PriceGradeId
+                    //    INNER JOIN PriceAreas pa ON pd.PriceAreaId = pa.PriceAreaId
+                    //    WHERE p.ProductCode = @ProductId
+                    //      AND pr.ProcessCode = @ProcessId
+                    //      AND ps.EffectiveFrom <= @ReceiptDate
+                    //      AND (ps.EffectiveTo IS NULL OR ps.EffectiveTo >= @ReceiptDate)
+                    //      AND pc.ClassCode = @ClassCode
+                    //      AND pg.GradeNumber = @GradeNumber
+                    //      AND pa.AreaCode = @AreaCode
+                    //      AND pd.ProcessTypeId IS NULL  -- Generic pricing (fallback)
+                    //    ORDER BY ps.EffectiveFrom DESC";
+
+                    //var price = await connection.ExecuteScalarAsync<decimal?>(sql, new
+                    //{
+                    //    ProductId = productId,
+                    //    ProcessId = processId,
+                    //    ReceiptDate = receiptDate,
+                    //    ClassCode = classCode,
+                    //    GradeNumber = gradeNumber,
+                    //    AreaCode = areaCode
+                    //});
 
                     if (price.HasValue)
                     {
@@ -396,7 +414,7 @@ namespace WPFGrowerApp.DataAccess.Services
             {
                 await connection.OpenAsync();
                 
-                // Query the price schedules
+                // Query the price schedules with proper lock status checking
                 var schedulesSql = @"
                     SELECT 
                         ps.PriceScheduleId AS PriceID,
@@ -414,7 +432,32 @@ namespace WPFGrowerApp.DataAccess.Services
                         ps.ModifiedAt AS QED_TIME,
                         ps.ModifiedBy AS QED_OP,
                         NULL AS QDEL_TIME,
-                        NULL AS QDEL_OP
+                        NULL AS QDEL_OP,
+                        -- Check lock status from PriceScheduleLocks table
+                        CASE WHEN EXISTS(
+                            SELECT 1 FROM PriceScheduleLocks psl 
+                            WHERE psl.PriceScheduleId = ps.PriceScheduleId 
+                              AND psl.PaymentTypeId = 1 
+                              AND psl.DeletedAt IS NULL
+                        ) THEN 1 ELSE 0 END AS Adv1Used,
+                        CASE WHEN EXISTS(
+                            SELECT 1 FROM PriceScheduleLocks psl 
+                            WHERE psl.PriceScheduleId = ps.PriceScheduleId 
+                              AND psl.PaymentTypeId = 2 
+                              AND psl.DeletedAt IS NULL
+                        ) THEN 1 ELSE 0 END AS Adv2Used,
+                        CASE WHEN EXISTS(
+                            SELECT 1 FROM PriceScheduleLocks psl 
+                            WHERE psl.PriceScheduleId = ps.PriceScheduleId 
+                              AND psl.PaymentTypeId = 3 
+                              AND psl.DeletedAt IS NULL
+                        ) THEN 1 ELSE 0 END AS Adv3Used,
+                        CASE WHEN EXISTS(
+                            SELECT 1 FROM PriceScheduleLocks psl 
+                            WHERE psl.PriceScheduleId = ps.PriceScheduleId 
+                              AND psl.PaymentTypeId = 4 
+                              AND psl.DeletedAt IS NULL
+                        ) THEN 1 ELSE 0 END AS FinUsed
                     FROM PriceSchedules ps
                     INNER JOIN Products p ON ps.ProductId = p.ProductId
                     INNER JOIN Processes pr ON ps.ProcessId = pr.ProcessId
@@ -477,7 +520,7 @@ namespace WPFGrowerApp.DataAccess.Services
             {
                 await connection.OpenAsync();
                 
-                // Get the price schedule header
+                // Get the price schedule header with proper lock status checking
                 var scheduleSql = @"
                     SELECT 
                         ps.PriceScheduleId AS PriceID,
@@ -496,10 +539,31 @@ namespace WPFGrowerApp.DataAccess.Services
                         ps.ModifiedBy AS QED_OP,
                         NULL AS QDEL_TIME,
                         NULL AS QDEL_OP,
-                        CAST(0 AS BIT) AS Adv1Used,
-                        CAST(0 AS BIT) AS Adv2Used,
-                        CAST(0 AS BIT) AS Adv3Used,
-                        CAST(0 AS BIT) AS FinUsed
+                        -- Check lock status from PriceScheduleLocks table
+                        CASE WHEN EXISTS(
+                            SELECT 1 FROM PriceScheduleLocks psl 
+                            WHERE psl.PriceScheduleId = ps.PriceScheduleId 
+                              AND psl.PaymentTypeId = 1 
+                              AND psl.DeletedAt IS NULL
+                        ) THEN 1 ELSE 0 END AS Adv1Used,
+                        CASE WHEN EXISTS(
+                            SELECT 1 FROM PriceScheduleLocks psl 
+                            WHERE psl.PriceScheduleId = ps.PriceScheduleId 
+                              AND psl.PaymentTypeId = 2 
+                              AND psl.DeletedAt IS NULL
+                        ) THEN 1 ELSE 0 END AS Adv2Used,
+                        CASE WHEN EXISTS(
+                            SELECT 1 FROM PriceScheduleLocks psl 
+                            WHERE psl.PriceScheduleId = ps.PriceScheduleId 
+                              AND psl.PaymentTypeId = 3 
+                              AND psl.DeletedAt IS NULL
+                        ) THEN 1 ELSE 0 END AS Adv3Used,
+                        CASE WHEN EXISTS(
+                            SELECT 1 FROM PriceScheduleLocks psl 
+                            WHERE psl.PriceScheduleId = ps.PriceScheduleId 
+                              AND psl.PaymentTypeId = 4 
+                              AND psl.DeletedAt IS NULL
+                        ) THEN 1 ELSE 0 END AS FinUsed
                     FROM PriceSchedules ps
                     INNER JOIN Products p ON ps.ProductId = p.ProductId
                     INNER JOIN Processes pr ON ps.ProcessId = pr.ProcessId

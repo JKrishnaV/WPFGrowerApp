@@ -45,6 +45,7 @@ namespace WPFGrowerApp
             services.AddTransient<IPostBatchService, PostBatchService>(); // Added
             services.AddTransient<IPaymentBatchService, PaymentBatchService>(); // Added for modern payment processing
             services.AddTransient<IPaymentTypeService, PaymentTypeService>(); // Added for payment types
+            services.AddTransient<IPaymentService, PaymentService>(); // Added for payment processing
             services.AddTransient<IPaymentMethodService, PaymentMethodService>(); // Added for payment methods
             services.AddTransient<IPriceClassService, PriceClassService>(); // Added for price classes
             services.AddTransient<IPaymentBatchManagementService, PaymentBatchManagementService>(); // Added for payment batch management
@@ -92,6 +93,7 @@ namespace WPFGrowerApp
             services.AddSingleton<IUISettingsService, UISettingsService>(); // Register UI Settings Service
             services.AddSingleton<IThemeService, ThemeService>(); // Register Theme Service
             services.AddSingleton<IHelpContentProvider, HelpContentProvider>(); // Register Help Content Provider
+            services.AddSingleton<FilterPresetService>(); // Register Filter Preset Service
 
             // Register ViewModels
             services.AddTransient<MainViewModel>();

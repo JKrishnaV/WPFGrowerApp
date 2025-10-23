@@ -532,78 +532,43 @@ Ctrl+N - Add new process type (when not in dialog)"
             // Enhanced Payment Distribution Help
             _helpContents["EnhancedPaymentDistributionView"] = new HelpContent(
                 title: "Enhanced Payment Distribution Help",
-                content: @"The Enhanced Payment Distribution screen allows you to manage payment distribution with advanced consolidation features. You can choose between regular batch payments and consolidated payments across multiple batches.
+                content: @"**Overview:**
+Manage payment distribution with consolidation features. Choose between regular batch payments and consolidated payments across multiple batches.
+
+**Quick Start:**
+1. Select payment batches from the left panel
+2. Review growers in the right panel
+3. Choose payment method (Regular/Consolidated) for each grower
+4. Preview distribution before generating
+5. Generate payments
 
 **Key Features:**
-
-• **Payment Method Selection**: Choose between regular batch payments and consolidated payments for each grower.
-
-• **Batch Selection**: Select multiple payment batches for consolidation opportunities.
-
-• **Grower Payment Selections**: View and manage payment selections for each grower across selected batches.
-
-• **Consolidation Preview**: Preview consolidated payments before generating cheques.
-
-• **Hybrid Payment Processing**: Mix regular and consolidated payments within the same set of batches.
-
-• **Search & Filter**: 
-  - Search by grower name or batch number
-  - Filter by view mode (By Grower, By Batch)
-  - Filter by payment method
-  - Real-time filtering as you type
-
-**Payment Types:**
-
-• **Regular Batch Payment**: Standard payment within a single batch
-• **Consolidated Payment**: Payment combining amounts from multiple batches for a single grower
-
-**Workflow Steps:**
-
-1. **Select Batches**: Choose the payment batches to work with
-2. **Review Growers**: See all growers appearing in the selected batches
-3. **Choose Payment Method**: Select regular or consolidated payment for each grower
-4. **Preview Distribution**: Review the payment distribution before generating
-5. **Generate Cheques**: Create cheques based on the selected payment methods
+• **Batch Selection**: Select multiple batches for consolidation
+• **Payment Methods**: Regular (single batch) or Consolidated (multiple batches)
+• **Search & Filter**: Find growers or batches quickly
+• **Statistics**: View totals and consolidation opportunities
+• **Export**: Export data in multiple formats
 
 **Consolidation Benefits:**
-
-• **Reduced Cheque Count**: Fewer cheques to print and manage
-• **Simplified Tracking**: Single payment per grower across multiple batches
-• **Cost Savings**: Reduced printing and processing costs
-• **Better Cash Flow**: Consolidated payments for growers
+• Fewer cheques to print and manage
+• Single payment per grower across batches
+• Reduced processing costs
+• Better cash flow management
 
 **Statistics Display:**
-
-• **Available Batches**: Number of draft batches available for processing
-• **Total Growers**: Number of growers in the selected batches
-• **Total Amount**: Sum of all payment amounts
-• **Consolidation Opportunities**: Number of growers that can be consolidated
-
-**Best Practices:**
-
-• Review consolidation opportunities before making selections
-• Consider grower preferences for payment method
-• Use consolidation for growers with multiple small payments
-• Keep regular batch payments for growers with single large payments
-• Monitor outstanding advances when making payment decisions
-
-**Advanced Features:**
-
-• **Automatic Deduction**: Outstanding advances are automatically deducted from payments
-• **Payment Method Recommendations**: System suggests optimal payment method per grower
-• **Batch Status Management**: Tracks batch status changes after consolidation
-• **Audit Trail**: Complete tracking of all payment decisions and changes",
+• Available Batches: Draft batches ready for processing
+• Total Growers: Growers in selected batches
+• Total Amount: Sum of all payments
+• Consolidation Opportunities: Growers that can be consolidated",
                 
-                quickTips: @"• Use the search box to quickly find specific growers or batches
+                quickTips: @"• Use search to find specific growers or batches
 • Check consolidation opportunities to reduce cheque count
-• Preview consolidated payments before generating cheques
-• Consider outstanding advances when selecting payment methods
-• Use the statistics cards to monitor system overview
-• Export data for reporting and analysis
-• Enable consolidation to see consolidation opportunities
-• Review payment method recommendations for each grower",
+• Preview payments before generating
+• Consider outstanding advances in payment decisions
+• Use statistics cards for system overview
+• Export data for reporting",
                 
-                keyboardShortcuts: "F1 - Show Help\nF5 - Refresh Data\nEsc - Close Dialog\nTab - Navigate between fields"
+                keyboardShortcuts: "F1 - Show Help\nF5 - Refresh Data\nEsc - Close Dialog"
             );
 
             // Enhanced Cheque Preparation Help

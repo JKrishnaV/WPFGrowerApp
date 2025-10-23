@@ -4,12 +4,16 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 using WPFGrowerApp.Commands;
 using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
 using WPFGrowerApp.Infrastructure.Logging;
 using WPFGrowerApp.Services;
+using WPFGrowerApp.Models;
+using WPFGrowerApp.ViewModels.Dialogs;
+using WPFGrowerApp.Views.Dialogs;
 
 namespace WPFGrowerApp.ViewModels
 {
@@ -22,6 +26,8 @@ namespace WPFGrowerApp.ViewModels
         private readonly WPFGrowerApp.Services.ChequePdfGenerator _pdfGenerator;
         private readonly IGrowerService _growerService;
         private readonly IDialogService _dialogService;
+        private readonly IPaymentService _paymentService;
+        private readonly IReceiptService _receiptService;
 
         // Properties
         private ObservableCollection<Cheque> _cheques;
@@ -31,6 +37,9 @@ namespace WPFGrowerApp.ViewModels
         private string _searchChequeNumber = string.Empty;
         private string _searchGrowerNumber = string.Empty;
         private string _searchStatus = "All";
+        private string _searchChequeType = "All";
+        private DateTime? _startDate;
+        private DateTime? _endDate;
         
         // Debouncing timer for search
         private Timer? _searchDebounceTimer;
@@ -114,6 +123,52 @@ namespace WPFGrowerApp.ViewModels
             "Stopped"
         };
 
+        public string SearchChequeType
+        {
+            get => _searchChequeType;
+            set 
+            {
+                if (SetProperty(ref _searchChequeType, value))
+                {
+                    // Immediate search when cheque type changes
+                    _ = SearchChequesAsync();
+                }
+            }
+        }
+
+        public ObservableCollection<string> ChequeTypeOptions { get; } = new ObservableCollection<string>
+        {
+            "All",
+            "Regular",
+            "Advance"
+        };
+
+        public DateTime? StartDate
+        {
+            get => _startDate;
+            set 
+            {
+                if (SetProperty(ref _startDate, value))
+                {
+                    // Immediate search when date changes (no debouncing needed)
+                    _ = SearchChequesAsync();
+                }
+            }
+        }
+
+        public DateTime? EndDate
+        {
+            get => _endDate;
+            set 
+            {
+                if (SetProperty(ref _endDate, value))
+                {
+                    // Immediate search when date changes (no debouncing needed)
+                    _ = SearchChequesAsync();
+                }
+            }
+        }
+
         // Commands
         public ICommand SearchCommand { get; }
         public ICommand ClearSearchCommand { get; }
@@ -121,6 +176,7 @@ namespace WPFGrowerApp.ViewModels
         public ICommand VoidChequeCommand { get; }
         public ICommand EmergencyReprintCommand { get; }
         public ICommand ApproveForDeliveryCommand { get; }
+        public ICommand ShowCalculationDetailsCommand { get; }
         public ICommand RefreshCommand { get; }
         public ICommand ShowHelpCommand { get; }
         public ICommand NavigateToDashboardCommand { get; }
@@ -130,12 +186,16 @@ namespace WPFGrowerApp.ViewModels
             IChequeService chequeService,
             WPFGrowerApp.Services.ChequePdfGenerator pdfGenerator,
             IGrowerService growerService,
-            IDialogService dialogService)
+            IDialogService dialogService,
+            IPaymentService paymentService,
+            IReceiptService receiptService)
         {
             _chequeService = chequeService ?? throw new ArgumentNullException(nameof(chequeService));
             _pdfGenerator = pdfGenerator ?? throw new ArgumentNullException(nameof(pdfGenerator));
             _growerService = growerService ?? throw new ArgumentNullException(nameof(growerService));
             _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
+            _paymentService = paymentService ?? throw new ArgumentNullException(nameof(paymentService));
+            _receiptService = receiptService ?? throw new ArgumentNullException(nameof(receiptService));
 
             _cheques = new ObservableCollection<Cheque>();
 
@@ -146,6 +206,7 @@ namespace WPFGrowerApp.ViewModels
             VoidChequeCommand = new RelayCommand(async o => await VoidChequeAsync(), o => CanVoidCheque());
             EmergencyReprintCommand = new RelayCommand(async o => await EmergencyReprintAsync(), o => SelectedCheque != null);
             ApproveForDeliveryCommand = new RelayCommand(async o => await ApproveForDeliveryAsync(), o => CanApproveForDelivery());
+            ShowCalculationDetailsCommand = new RelayCommand(async o => await ShowCalculationDetailsAsync(), o => SelectedCheque != null);
             RefreshCommand = new RelayCommand(async o => await RefreshAsync());
             ShowHelpCommand = new RelayCommand(ShowHelpExecute);
             NavigateToDashboardCommand = new RelayCommand(NavigateToDashboardExecute);
@@ -247,26 +308,11 @@ namespace WPFGrowerApp.ViewModels
 
                 List<Cheque> cheques;
 
-                // If searching by cheque number
-                if (!string.IsNullOrWhiteSpace(SearchChequeNumber))
-                {
-                    cheques = await _chequeService.SearchChequesByNumberAsync(SearchChequeNumber);
-                }
-                // If searching by grower
-                else if (!string.IsNullOrWhiteSpace(SearchGrowerNumber) && decimal.TryParse(SearchGrowerNumber, out decimal growerNumber))
-                {
-                    cheques = await _chequeService.GetChequesByGrowerNumberAsync(growerNumber);
-                }
-                // If filtering by specific status
-                else if (!string.IsNullOrWhiteSpace(SearchStatus) && SearchStatus != "All")
-                {
-                    cheques = await _chequeService.GetChequesByStatusAsync(SearchStatus);
-                }
-                // Default: show all cheques
-                else
-                {
-                    cheques = await _chequeService.GetAllChequesAsync();
-                }
+                // Get all cheques including advances first
+                cheques = await _chequeService.GetAllChequesIncludingAdvancesAsync();
+
+                // Apply filters
+                cheques = ApplyAllFilters(cheques);
 
                 UpdateChequesList(cheques);
                 StatusMessage = $"Search returned {Cheques.Count} cheques";
@@ -280,6 +326,58 @@ namespace WPFGrowerApp.ViewModels
             {
                 IsLoading = false;
             }
+        }
+
+        private List<Cheque> ApplyAllFilters(List<Cheque> cheques)
+        {
+            var filteredCheques = cheques.AsEnumerable();
+
+            // Apply cheque type filter
+            if (!string.IsNullOrWhiteSpace(SearchChequeType) && SearchChequeType != "All")
+            {
+                if (SearchChequeType == "Regular")
+                {
+                    filteredCheques = filteredCheques.Where(c => !c.IsAdvanceCheque);
+                }
+                else if (SearchChequeType == "Advance")
+                {
+                    filteredCheques = filteredCheques.Where(c => c.IsAdvanceCheque);
+                }
+            }
+
+            // Apply cheque number filter
+            if (!string.IsNullOrWhiteSpace(SearchChequeNumber))
+            {
+                filteredCheques = filteredCheques.Where(c => 
+                    c.ChequeNumber.Contains(SearchChequeNumber, StringComparison.OrdinalIgnoreCase));
+            }
+
+            // Apply grower number filter
+            if (!string.IsNullOrWhiteSpace(SearchGrowerNumber) && decimal.TryParse(SearchGrowerNumber, out decimal growerNumber))
+            {
+                filteredCheques = filteredCheques.Where(c => 
+                    c.GrowerNumber == growerNumber.ToString() || 
+                    c.GrowerId.ToString() == growerNumber.ToString());
+            }
+
+            // Apply date range filter if set
+            if (StartDate.HasValue)
+            {
+                filteredCheques = filteredCheques.Where(c => c.ChequeDate.Date >= StartDate.Value.Date);
+            }
+
+            if (EndDate.HasValue)
+            {
+                filteredCheques = filteredCheques.Where(c => c.ChequeDate.Date <= EndDate.Value.Date);
+            }
+
+            // Apply status filter if set
+            if (!string.IsNullOrWhiteSpace(SearchStatus) && SearchStatus != "All")
+            {
+                filteredCheques = filteredCheques.Where(c => c.Status == SearchStatus);
+            }
+
+            return filteredCheques.ToList();
         }
 
         private void UpdateChequesList(List<Cheque> cheques)
@@ -298,6 +396,9 @@ namespace WPFGrowerApp.ViewModels
             SearchChequeNumber = string.Empty;
             SearchGrowerNumber = string.Empty;
             SearchStatus = "All";
+            SearchChequeType = "All";
+            StartDate = null;
+            EndDate = null;
             _ = SearchChequesAsync();
         }
 
@@ -516,6 +617,141 @@ namespace WPFGrowerApp.ViewModels
             }
         }
 
+        private async Task ShowCalculationDetailsAsync()
+        {
+            if (SelectedCheque == null)
+                return;
+
+            try
+            {
+                IsLoading = true;
+                StatusMessage = "Loading cheque calculation details...";
+
+                // Convert Cheque to ChequeItem for the calculation dialog
+                var chequeItem = await ConvertChequeToChequeItemAsync(SelectedCheque);
+                
+                if (chequeItem != null)
+                {
+                    // Create the invoice-style calculation details dialog
+                    var dialogViewModel = new ChequeCalculationDialogViewModel(chequeItem, _paymentService, _receiptService, _chequeService);
+                    
+                    // Load the data before showing the dialog
+                    await dialogViewModel.LoadInvoiceStyleDetailsAsync();
+                    
+                    var dialogView = new InvoiceStyleChequeCalculationDialogView(dialogViewModel);
+
+                    // Show the dialog
+                    dialogView.Owner = Application.Current.MainWindow;
+                    dialogView.ShowDialog();
+                }
+                else
+                {
+                    await _dialogService.ShowMessageBoxAsync(
+                        "Unable to load calculation details for this cheque. The cheque may not have detailed breakdown information available.",
+                        "Calculation Details Unavailable");
+                }
+
+                StatusMessage = "Calculation details dialog closed";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error loading calculation details: {ex.Message}";
+                Logger.Error("Error loading calculation details", ex);
+                await _dialogService.ShowMessageBoxAsync(
+                    $"Error loading calculation details: {ex.Message}",
+                    "Error");
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        private async Task<ChequeItem?> ConvertChequeToChequeItemAsync(Cheque cheque)
+        {
+            try
+            {
+                // Create a basic ChequeItem from the Cheque
+                var chequeItem = new ChequeItem
+                {
+                    ChequeId = cheque.ChequeId,
+                    ChequeNumber = cheque.ChequeNumber,
+                    GrowerId = cheque.GrowerId,
+                    GrowerName = cheque.GrowerName ?? "Unknown",
+                    GrowerNumber = cheque.GrowerNumber ?? cheque.GrowerId.ToString(),
+                    Amount = cheque.ChequeAmount,
+                    ChequeDate = cheque.ChequeDate,
+                    Status = cheque.Status,
+                    PaymentType = DeterminePaymentType(cheque),
+                    IsAdvanceCheque = cheque.IsAdvanceCheque,
+                    AdvanceChequeId = cheque.AdvanceChequeId,
+                    PaymentBatchId = cheque.PaymentBatchId,
+                    BatchNumber = cheque.BatchNumber ?? "N/A",
+                    ConsolidatedFromBatches = cheque.ConsolidatedFromBatches ?? string.Empty
+                };
+
+                // Load additional details if available
+                await LoadChequeCalculationDetailsAsync(chequeItem);
+
+                return chequeItem;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error converting cheque to cheque item: {ex.Message}", ex);
+                return null;
+            }
+        }
+
+        private ChequePaymentType DeterminePaymentType(Cheque cheque)
+        {
+            // Determine payment type based on cheque properties
+            if (cheque.IsAdvanceCheque)
+                return ChequePaymentType.Advance;
+            
+            if (!string.IsNullOrEmpty(cheque.ConsolidatedFromBatches))
+                return ChequePaymentType.Consolidated;
+            
+            return ChequePaymentType.Regular;
+        }
+
+        private async Task LoadChequeCalculationDetailsAsync(ChequeItem chequeItem)
+        {
+            try
+            {
+                // Load advance deductions if this is a regular or consolidated cheque
+                if (chequeItem.PaymentType == ChequePaymentType.Regular || 
+                    chequeItem.PaymentType == ChequePaymentType.Consolidated)
+                {
+                    var advanceDeductions = await _chequeService.GetAdvanceDeductionsByChequeNumberAsync(chequeItem.ChequeNumber);
+                    chequeItem.AdvanceDeductions = advanceDeductions;
+                }
+
+                // Load batch breakdowns for consolidated cheques
+                if (chequeItem.PaymentType == ChequePaymentType.Consolidated)
+                {
+                    // For consolidated cheques, we would need to parse the ConsolidatedFromBatches JSON
+                    // and load individual batch details. For now, we'll create a basic breakdown.
+                    chequeItem.BatchBreakdowns = new List<BatchBreakdown>
+                    {
+                        new BatchBreakdown
+                        {
+                            BatchId = chequeItem.PaymentBatchId ?? 0,
+                            BatchNumber = chequeItem.BatchNumber,
+                            Amount = chequeItem.Amount,
+                            BatchDate = chequeItem.ChequeDate,
+                            Status = "Processed"
+                        }
+                    };
+                }
+
+                // TotalDeductions and NetAmount are calculated automatically by the ChequeItem properties
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error loading cheque calculation details: {ex.Message}", ex);
+            }
+        }
+
         private void ShowHelpExecute(object? parameter)
         {
             System.Windows.MessageBox.Show(
@@ -524,7 +760,8 @@ namespace WPFGrowerApp.ViewModels
                 "2. Approve cheques for delivery (updates status to 'Delivered')\n" +
                 "3. Void cheques if needed (with reprint option)\n" +
                 "4. Emergency reprint only for critical situations\n" +
-                "5. Use F5 to refresh the list",
+                "5. View calculation details to see how the cheque amount was calculated\n" +
+                "6. Use F5 to refresh the list",
                 "Cheque Review Help",
                 System.Windows.MessageBoxButton.OK,
                 System.Windows.MessageBoxImage.Information);

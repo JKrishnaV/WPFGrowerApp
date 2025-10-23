@@ -9,7 +9,9 @@ using System.Windows.Input;
 using WPFGrowerApp.Commands;
 using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
+using WPFGrowerApp.DataAccess.Services;
 using WPFGrowerApp.Infrastructure.Logging;
+using WPFGrowerApp.Models;
 
 namespace WPFGrowerApp.ViewModels
 {
@@ -21,6 +23,7 @@ namespace WPFGrowerApp.ViewModels
     {
         private readonly IChequeService _chequeService;
         private readonly WPFGrowerApp.Services.ChequePdfGenerator _pdfGenerator;
+        private readonly IUnifiedVoidingService _unifiedVoidingService;
 
         private ObservableCollection<Cheque> _cheques = new();
         private bool _isLoading;
@@ -32,11 +35,12 @@ namespace WPFGrowerApp.ViewModels
         private Cheque? _selectedCheque;
         private DateTime _lastUpdated = DateTime.Now;
 
-        public ChequePreparationViewModel(IChequeService chequeService, WPFGrowerApp.Services.ChequePdfGenerator pdfGenerator)
+        public ChequePreparationViewModel(IChequeService chequeService, WPFGrowerApp.Services.ChequePdfGenerator pdfGenerator, IUnifiedVoidingService unifiedVoidingService)
         {
             Logger.Info("ChequePreparationViewModel constructor called");
             _chequeService = chequeService;
             _pdfGenerator = pdfGenerator;
+            _unifiedVoidingService = unifiedVoidingService;
             InitializeCommands();
             Logger.Info("ChequePreparationViewModel initialized, starting LoadChequesAsync");
             _ = LoadChequesAsync();
@@ -416,10 +420,36 @@ namespace WPFGrowerApp.ViewModels
                 IsLoading = true;
                 StatusMessage = $"Voiding {selectedCheques.Count} cheques...";
 
-                var chequeIds = selectedCheques.Select(c => c.ChequeId).ToList();
-                await _chequeService.VoidChequesAsync(chequeIds, reasonDialog.Answer, Environment.UserName);
+                // Use UnifiedVoidingService for comprehensive voiding
+                var voidingResults = new List<VoidingResult>();
+                foreach (var cheque in selectedCheques)
+                {
+                    var voidingRequest = new PaymentVoidRequest
+                    {
+                        EntityType = "Regular",
+                        EntityId = cheque.ChequeId,
+                        Reason = reasonDialog.Answer,
+                        VoidedBy = Environment.UserName
+                    };
+                    
+                    var voidingResult = await _unifiedVoidingService.VoidPaymentAsync(voidingRequest);
+                    voidingResults.Add(voidingResult);
+                }
 
-                StatusMessage = $"Successfully voided {selectedCheques.Count} cheques.";
+                // Check results
+                var successfulVoids = voidingResults.Count(r => r.Success);
+                var failedVoids = voidingResults.Count(r => !r.Success);
+                
+                if (failedVoids > 0)
+                {
+                    var failedMessages = voidingResults.Where(r => !r.Success).Select(r => r.Message);
+                    StatusMessage = $"Voided {successfulVoids} cheques, {failedVoids} failed. Errors: {string.Join("; ", failedMessages)}";
+                }
+                else
+                {
+                    StatusMessage = $"Successfully voided {successfulVoids} cheques.";
+                }
+                
                 await LoadChequesAsync();
             }
             catch (Exception ex)
@@ -464,9 +494,26 @@ namespace WPFGrowerApp.ViewModels
                 IsLoading = true;
                 StatusMessage = $"Voiding cheque {cheque.ChequeNumber}...";
 
-                await _chequeService.VoidChequesAsync(new List<int> { cheque.ChequeId }, reasonDialog.Answer, Environment.UserName);
+                // Use UnifiedVoidingService for comprehensive voiding
+                var voidingRequest = new PaymentVoidRequest
+                {
+                    EntityType = "Regular",
+                    EntityId = cheque.ChequeId,
+                    Reason = reasonDialog.Answer,
+                    VoidedBy = Environment.UserName
+                };
+                
+                var voidingResult = await _unifiedVoidingService.VoidPaymentAsync(voidingRequest);
 
-                StatusMessage = $"Successfully voided cheque {cheque.ChequeNumber}.";
+                if (voidingResult.Success)
+                {
+                    StatusMessage = $"Successfully voided cheque {cheque.ChequeNumber}.";
+                }
+                else
+                {
+                    StatusMessage = $"Failed to void cheque {cheque.ChequeNumber}: {voidingResult.Message}";
+                }
+                
                 await LoadChequesAsync();
             }
             catch (Exception ex)

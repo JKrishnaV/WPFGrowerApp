@@ -380,6 +380,10 @@
                                 <DataGridTextColumn Header="Receipt #" Binding="{Binding ReceiptNumber}" Width="100"/>
                                 <DataGridTextColumn Header="Date" Binding="{Binding AllocatedAt, StringFormat='{}{0:MMM dd, yyyy}'}" Width="100"/>
                                 <DataGridTextColumn Header="Grower" Binding="{Binding GrowerName}" Width="150"/>
+                                <DataGridTextColumn Header="Product" Binding="{Binding ProductName}" Width="120"/>
+                                <DataGridTextColumn Header="Process" Binding="{Binding ProcessName}" Width="120"/>
+                                <DataGridTextColumn Header="Grade" Binding="{Binding Grade}" Width="60"/>
+                                <DataGridTextColumn Header="Price Class" Binding="{Binding PriceClassName}" Width="100"/>
                                 <DataGridTextColumn Header="Weight (lbs)" Binding="{Binding QuantityPaid, StringFormat='{}{0:N2}'}" Width="100"/>
                                 <DataGridTextColumn Header="Price/lb" Binding="{Binding PricePerPound, StringFormat='${0:N4}'}" Width="90"/>
                                 <DataGridTextColumn Header="Amount" Binding="{Binding AmountPaid, StringFormat='${0:N2}'}" Width="100">

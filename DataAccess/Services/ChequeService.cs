@@ -28,33 +28,269 @@ namespace WPFGrowerApp.DataAccess.Services
         {
             try
             {
-                using var connection = CreateConnection();
+                using var connection = new SqlConnection(ConnectionString);
                 await connection.OpenAsync();
                 
-                var query = "SELECT * FROM Cheques WHERE ChequeId = @ChequeId";
-                using var command = new SqlCommand(query, connection);
-                command.Parameters.AddWithValue("@ChequeId", chequeId);
+                // Comprehensive query to load all cheque information with related data
+                // Using only columns that actually exist in the database schema
+                var sql = @"
+                    SELECT 
+                        -- Core Cheque Properties (verified to exist)
+                        c.ChequeId, c.ChequeSeriesId, c.ChequeNumber, c.FiscalYear,
+                        c.GrowerId, c.PaymentBatchId, c.ChequeDate, c.ChequeAmount,
+                        c.CurrencyCode, c.ExchangeRate, c.PayeeName, c.Memo,
+                        c.Status, c.ClearedDate, c.VoidedDate, c.VoidedReason,
+                        c.CreatedAt, c.CreatedBy, c.ModifiedAt, c.ModifiedBy,
+                        c.DeletedAt, c.DeletedBy, c.PrintedAt, c.PrintedBy,
+                        c.VoidedBy, c.IssuedAt, c.IssuedBy,
+                        
+                        -- Unified Cheque System Properties
+                        c.IsConsolidated, c.ConsolidatedFromBatches, c.IsAdvanceCheque, c.AdvanceChequeId,
+                        
+                        -- Related Grower Information
+                        g.FullName AS GrowerName, g.GrowerNumber, g.Address AS GrowerAddress,
+                        g.PhoneNumber AS GrowerPhone, g.Email AS GrowerEmail,
+                        
+                        -- Cheque Series Information
+                        cs.SeriesCode,
+                        
+                        -- Payment Batch Information
+                        pb.BatchNumber, pb.PaymentTypeId, pb.BatchDate,
+                        pt.TypeName AS PaymentTypeName
+                        
+                    FROM Cheques c
+                    LEFT JOIN Growers g ON c.GrowerId = g.GrowerId
+                    LEFT JOIN ChequeSeries cs ON c.ChequeSeriesId = cs.ChequeSeriesId
+                    LEFT JOIN PaymentBatches pb ON c.PaymentBatchId = pb.PaymentBatchId
+                    LEFT JOIN PaymentTypes pt ON pb.PaymentTypeId = pt.PaymentTypeId
+                    WHERE c.ChequeId = @ChequeId AND c.DeletedAt IS NULL";
                 
-                using var reader = await command.ExecuteReaderAsync();
-                if (await reader.ReadAsync())
+                var cheque = await connection.QueryFirstOrDefaultAsync<Cheque>(sql, new { ChequeId = chequeId });
+                
+                if (cheque == null)
                 {
-                    // Map reader to Cheque object (simplified for stub)
-                    return new Cheque
-                    {
-                        ChequeId = Convert.ToInt32(reader["ChequeId"]),
-                        ChequeNumber = reader["ChequeNumber"].ToString(),
-                        ChequeAmount = Convert.ToDecimal(reader["ChequeAmount"]),
-                        ChequeDate = Convert.ToDateTime(reader["ChequeDate"]),
-                        GrowerId = Convert.ToInt32(reader["GrowerId"]),
-                        Status = reader["Status"].ToString()
-                    };
+                    Logger.Warn($"Cheque with ID {chequeId} not found");
+                    return null!;
                 }
-                return null;
+
+                // Load additional related data
+                await LoadChequeRelatedDataAsync(cheque, connection);
+                
+                Logger.Info($"Successfully loaded comprehensive cheque data for ChequeId {chequeId}");
+                return cheque;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error getting cheque by ID: {ex.Message}");
+                Logger.Error($"Error getting comprehensive cheque data by ID {chequeId}: {ex.Message}", ex);
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// Loads additional related data for a cheque including receipts and advance deductions
+        /// </summary>
+        private async Task LoadChequeRelatedDataAsync(Cheque cheque, SqlConnection connection)
+        {
+            try
+            {
+                // Load receipt details for this cheque
+                var receiptSql = @"
+                    SELECT 
+                        r.ReceiptId, r.ReceiptNumber, r.ReceiptDate, r.ReceiptTime,
+                        r.GrowerId, r.ProductId, r.ProcessId, r.ProcessTypeId, r.VarietyId, r.DepotId,
+                        r.GrossWeight, r.TareWeight, r.NetWeight, r.DockPercentage, r.DockWeight, r.FinalWeight,
+                        r.Grade, r.PriceClassId, r.IsVoided, r.VoidedReason, r.VoidedAt, r.VoidedBy,
+                        r.ImportBatchId, r.CreatedAt, r.CreatedBy, r.ModifiedAt, r.ModifiedBy,
+                        r.QualityCheckedAt, r.QualityCheckedBy, r.DeletedAt, r.DeletedBy,
+                        g.FullName as GrowerName, g.GrowerNumber, g.Address as GrowerAddress, 
+                        g.PhoneNumber as GrowerPhone, g.Email as GrowerEmail,
+                        p.Description as ProductName, p.Description as ProductDescription,
+                        pr.ProcessName, pr.Description as ProcessDescription,
+                        v.VarietyName,
+                        d.DepotName, d.Address as DepotAddress,
+                        pc.ClassName as PriceClassName,
+                        rpa.PricePerPound, rpa.AmountPaid as TotalAmountPaid,
+                        rpa.PaymentTypeId,
+                        pt.TypeName as PaymentTypeName
+                    FROM Receipts r
+                    INNER JOIN ReceiptPaymentAllocations rpa ON r.ReceiptId = rpa.ReceiptId
+                    INNER JOIN PaymentBatches pb ON rpa.PaymentBatchId = pb.PaymentBatchId
+                    INNER JOIN Cheques c ON pb.PaymentBatchId = c.PaymentBatchId
+                    LEFT JOIN Growers g ON r.GrowerId = g.GrowerId
+                    LEFT JOIN Products p ON r.ProductId = p.ProductId
+                    LEFT JOIN Processes pr ON r.ProcessId = pr.ProcessId
+                    LEFT JOIN Varieties v ON r.VarietyId = v.VarietyId
+                    LEFT JOIN Depots d ON r.DepotId = d.DepotId
+                    LEFT JOIN PriceClasses pc ON r.PriceClassId = pc.PriceClassId
+                    LEFT JOIN PaymentTypes pt ON pb.PaymentTypeId = pt.PaymentTypeId
+                    WHERE c.ChequeId = @ChequeId
+                      AND r.GrowerId = c.GrowerId  -- Only show receipts for the specific grower of this cheque
+                      AND r.DeletedAt IS NULL
+                    ORDER BY r.ReceiptDate DESC, r.ReceiptNumber DESC";
+
+                var receipts = await connection.QueryAsync<ReceiptDetailDto>(receiptSql, new { ChequeId = cheque.ChequeId });
+                // Note: We would need to add a ReceiptDetails property to the Cheque model to store this data
+                // For now, we'll log the receipt count for debugging
+                Logger.Info($"Loaded {receipts.Count()} receipt details for cheque {cheque.ChequeId}");
+
+                // Load advance deductions for regular cheques that have deducted from advance cheques
+                // Note: This is for regular cheques that have deducted from advance cheques, not for advance cheques themselves
+                var advanceDeductionSql = @"
+                    SELECT 
+                        ad.DeductionId, ad.AdvanceChequeId, ad.ChequeId, ad.PaymentBatchId,
+                        ad.DeductionAmount, ad.DeductionDate, ad.CreatedBy, ad.CreatedAt,
+                        ac.AdvanceAmount, ac.AdvanceDate, ac.Reason,
+                        pb.BatchNumber
+                    FROM AdvanceDeductions ad
+                    INNER JOIN AdvanceCheques ac ON ad.AdvanceChequeId = ac.AdvanceChequeId
+                    INNER JOIN Cheques c ON ad.ChequeId = c.ChequeId
+                    LEFT JOIN PaymentBatches pb ON ad.PaymentBatchId = pb.PaymentBatchId
+                    WHERE c.ChequeId = @ChequeId
+                    ORDER BY ad.DeductionDate DESC";
+
+                var advanceDeductions = await connection.QueryAsync<AdvanceDeduction>(advanceDeductionSql, new { ChequeId = cheque.ChequeId });
+                Logger.Info($"Loaded {advanceDeductions.Count()} advance deductions for cheque {cheque.ChequeId}");
+
+                // Load consolidated cheque information if this is a consolidated cheque
+                if (cheque.IsConsolidated)
+                {
+                    var consolidatedSql = @"
+                        SELECT 
+                            cc.ConsolidatedChequeId, cc.ChequeId, cc.PaymentBatchId, cc.Amount,
+                            cc.CreatedAt, cc.CreatedBy,
+                            pb.BatchNumber, pb.PaymentTypeId,
+                            pt.TypeName AS PaymentTypeName
+                        FROM ConsolidatedCheques cc
+                        INNER JOIN PaymentBatches pb ON cc.PaymentBatchId = pb.PaymentBatchId
+                        LEFT JOIN PaymentTypes pt ON pb.PaymentTypeId = pt.PaymentTypeId
+                        WHERE cc.ChequeId = @ChequeId
+                        ORDER BY cc.CreatedAt DESC";
+
+                    var consolidatedData = await connection.QueryAsync<ConsolidatedCheque>(consolidatedSql, new { ChequeId = cheque.ChequeId });
+                    // Note: We would need to add a ConsolidatedCheques property to the Cheque model to store this data
+                    Logger.Info($"Loaded {consolidatedData.Count()} consolidated cheque entries for cheque {cheque.ChequeId}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error loading related data for cheque {cheque.ChequeId}: {ex.Message}", ex);
+                // Don't throw here - we still want to return the main cheque data even if related data fails to load
+            }
+        }
+
+        /// <summary>
+        /// Gets an advance cheque by ID from the AdvanceCheques table
+        /// This is separate from regular cheques which are in the Cheques table
+        /// </summary>
+        public async Task<Cheque> GetAdvanceChequeByIdAsync(int advanceChequeId)
+        {
+            try
+            {
+                using var connection = new SqlConnection(ConnectionString);
+                await connection.OpenAsync();
+                
+                // Query to load advance cheque information with related data
+                var sql = @"
+                    SELECT 
+                        -- Advance Cheque Properties (mapped to Cheque model)
+                        ac.AdvanceChequeId as ChequeId,
+                        NULL as ChequeSeriesId,
+                        'ADV-' + CAST(ac.AdvanceChequeId as VARCHAR) as ChequeNumber,
+                        YEAR(ac.AdvanceDate) as FiscalYear,
+                        ac.GrowerId,
+                        NULL as PaymentBatchId,
+                        ac.AdvanceDate as ChequeDate,
+                        ac.AdvanceAmount as ChequeAmount,
+                        'CAD' as CurrencyCode,
+                        1.0 as ExchangeRate,
+                        g.FullName as PayeeName,
+                        ac.Reason as Memo,
+                        ac.Status,
+                        NULL as ClearedDate,
+                        ac.VoidedDate,
+                        ac.VoidedReason,
+                        ac.CreatedAt,
+                        ac.CreatedBy,
+                        ac.ModifiedAt,
+                        ac.ModifiedBy,
+                        ac.DeletedAt,
+                        ac.DeletedBy,
+                        ac.PrintedDate as PrintedAt,
+                        ac.PrintedBy,
+                        NULL as VoidedBy,
+                        NULL as IssuedAt,
+                        NULL as IssuedBy,
+                        
+                        -- Advance Cheque specific properties
+                        0 as IsConsolidated,
+                        NULL as ConsolidatedFromBatches,
+                        1 as IsAdvanceCheque,
+                        ac.AdvanceChequeId as AdvanceChequeId,
+                        
+                        -- Related Grower Information
+                        g.FullName AS GrowerName, g.GrowerNumber, g.Address AS GrowerAddress,
+                        g.PhoneNumber AS GrowerPhone, g.Email AS GrowerEmail,
+                        
+                        -- Advance cheque series (always 'ADV')
+                        'ADV' as SeriesCode,
+                        
+                        -- No batch information for advance cheques
+                        NULL as BatchNumber,
+                        NULL as PaymentTypeId,
+                        NULL as PaymentTypeName
+                        
+                    FROM AdvanceCheques ac
+                    LEFT JOIN Growers g ON ac.GrowerId = g.GrowerId
+                    WHERE ac.AdvanceChequeId = @AdvanceChequeId AND ac.DeletedAt IS NULL";
+                
+                var advanceCheque = await connection.QueryFirstOrDefaultAsync<Cheque>(sql, new { AdvanceChequeId = advanceChequeId });
+                
+                if (advanceCheque == null)
+                {
+                    Logger.Warn($"Advance cheque with ID {advanceChequeId} not found");
+                    return null!;
+                }
+
+                // Load additional related data for advance cheques
+                await LoadAdvanceChequeRelatedDataAsync(advanceCheque, connection);
+                
+                Logger.Info($"Successfully loaded comprehensive advance cheque data for AdvanceChequeId {advanceChequeId}");
+                return advanceCheque;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting comprehensive advance cheque data by ID {advanceChequeId}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Loads additional related data for advance cheques
+        /// </summary>
+        private async Task LoadAdvanceChequeRelatedDataAsync(Cheque advanceCheque, SqlConnection connection)
+        {
+            try
+            {
+                // Load advance deductions that were deducted from this advance cheque
+                var advanceDeductionSql = @"
+                    SELECT 
+                        ad.DeductionId, ad.AdvanceChequeId, ad.ChequeId, ad.PaymentBatchId,
+                        ad.DeductionAmount, ad.DeductionDate, ad.CreatedBy, ad.CreatedAt,
+                        ac.AdvanceAmount, ac.AdvanceDate, ac.Reason,
+                        pb.BatchNumber
+                    FROM AdvanceDeductions ad
+                    INNER JOIN AdvanceCheques ac ON ad.AdvanceChequeId = ac.AdvanceChequeId
+                    LEFT JOIN PaymentBatches pb ON ad.PaymentBatchId = pb.PaymentBatchId
+                    WHERE ad.AdvanceChequeId = @AdvanceChequeId
+                    ORDER BY ad.DeductionDate DESC";
+
+                var advanceDeductions = await connection.QueryAsync<AdvanceDeduction>(advanceDeductionSql, new { AdvanceChequeId = advanceCheque.ChequeId });
+                Logger.Info($"Loaded {advanceDeductions.Count()} advance deductions for advance cheque {advanceCheque.ChequeId}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error loading related data for advance cheque {advanceCheque.ChequeId}: {ex.Message}", ex);
+                // Don't throw here - we still want to return the main advance cheque data even if related data fails to load
             }
         }
 
@@ -95,37 +331,44 @@ namespace WPFGrowerApp.DataAccess.Services
                 using var connection = new SqlConnection(ConnectionString);
                 var sql = @"
                     SELECT 
-                        ChequeId,
-                        ChequeSeriesId,
-                        ChequeNumber,
-                        FiscalYear,
-                        GrowerId,
-                        PaymentBatchId,
-                        ChequeDate,
-                        ChequeAmount,
-                        CurrencyCode,
-                        ExchangeRate,
-                        PayeeName,
-                        Memo,
-                        Status,
-                        ClearedDate,
-                        VoidedDate,
-                        VoidedReason,
-                        CreatedAt,
-                        CreatedBy,
-                        ModifiedAt,
-                        ModifiedBy,
-                        DeletedAt,
-                        DeletedBy,
-                        PrintedAt,
-                        PrintedBy,
-                        VoidedBy,
-                        IssuedAt,
-                        IssuedBy
-                    FROM Cheques 
-                    WHERE DeletedAt IS NULL 
-                    AND Status IN ('Printed', 'Voided', 'Stopped')
-                    ORDER BY ChequeDate DESC";
+                        c.ChequeId,
+                        c.ChequeSeriesId,
+                        c.ChequeNumber,
+                        c.FiscalYear,
+                        c.GrowerId,
+                        c.PaymentBatchId,
+                        c.ChequeDate,
+                        c.ChequeAmount,
+                        c.CurrencyCode,
+                        c.ExchangeRate,
+                        c.PayeeName,
+                        c.Memo,
+                        c.Status,
+                        c.ClearedDate,
+                        c.VoidedDate,
+                        c.VoidedReason,
+                        c.CreatedAt,
+                        c.CreatedBy,
+                        c.ModifiedAt,
+                        c.ModifiedBy,
+                        c.DeletedAt,
+                        c.DeletedBy,
+                        c.PrintedAt,
+                        c.PrintedBy,
+                        c.VoidedBy,
+                        c.IssuedAt,
+                        c.IssuedBy,
+                        g.FullName AS GrowerName,
+                        g.GrowerNumber,
+                        cs.SeriesCode,
+                        pb.BatchNumber
+                    FROM Cheques c
+                    LEFT JOIN Growers g ON c.GrowerId = g.GrowerId
+                    LEFT JOIN ChequeSeries cs ON c.ChequeSeriesId = cs.ChequeSeriesId
+                    LEFT JOIN PaymentBatches pb ON c.PaymentBatchId = pb.PaymentBatchId
+                    WHERE c.DeletedAt IS NULL 
+                    AND c.Status IN ('Printed', 'Voided', 'Stopped')
+                    ORDER BY c.ChequeDate DESC";
                 
                 var cheques = await connection.QueryAsync<Cheque>(sql);
                 return cheques.ToList();
@@ -142,7 +385,7 @@ namespace WPFGrowerApp.DataAccess.Services
             // TODO: Rewrite to use ChequeSeriesId and ChequeNumber (int)
             Logger.Warn($"ChequeService.GetChequeBySeriesAndNumberAsync({series}, {chequeNumber}) not yet implemented for modern schema");
             await Task.CompletedTask;
-            return null;
+            return null!;
         }
 
         public async Task<List<Cheque>> GetChequesByGrowerNumberAsync(decimal growerNumber)
@@ -152,38 +395,45 @@ namespace WPFGrowerApp.DataAccess.Services
                 using var connection = new SqlConnection(ConnectionString);
                 var sql = @"
                     SELECT 
-                        ChequeId,
-                        ChequeSeriesId,
-                        ChequeNumber,
-                        FiscalYear,
-                        GrowerId,
-                        PaymentBatchId,
-                        ChequeDate,
-                        ChequeAmount,
-                        CurrencyCode,
-                        ExchangeRate,
-                        PayeeName,
-                        Memo,
-                        Status,
-                        ClearedDate,
-                        VoidedDate,
-                        VoidedReason,
-                        CreatedAt,
-                        CreatedBy,
-                        ModifiedAt,
-                        ModifiedBy,
-                        DeletedAt,
-                        DeletedBy,
-                        PrintedAt,
-                        PrintedBy,
-                        VoidedBy,
-                        IssuedAt,
-                        IssuedBy
-                    FROM Cheques 
-                    WHERE DeletedAt IS NULL 
-                    AND GrowerId = @GrowerNumber
-                    AND Status IN ('Printed', 'Voided', 'Stopped')
-                    ORDER BY ChequeDate DESC";
+                        c.ChequeId,
+                        c.ChequeSeriesId,
+                        c.ChequeNumber,
+                        c.FiscalYear,
+                        c.GrowerId,
+                        c.PaymentBatchId,
+                        c.ChequeDate,
+                        c.ChequeAmount,
+                        c.CurrencyCode,
+                        c.ExchangeRate,
+                        c.PayeeName,
+                        c.Memo,
+                        c.Status,
+                        c.ClearedDate,
+                        c.VoidedDate,
+                        c.VoidedReason,
+                        c.CreatedAt,
+                        c.CreatedBy,
+                        c.ModifiedAt,
+                        c.ModifiedBy,
+                        c.DeletedAt,
+                        c.DeletedBy,
+                        c.PrintedAt,
+                        c.PrintedBy,
+                        c.VoidedBy,
+                        c.IssuedAt,
+                        c.IssuedBy,
+                        g.FullName AS GrowerName,
+                        g.GrowerNumber,
+                        cs.SeriesCode,
+                        pb.BatchNumber
+                    FROM Cheques c
+                    LEFT JOIN Growers g ON c.GrowerId = g.GrowerId
+                    LEFT JOIN ChequeSeries cs ON c.ChequeSeriesId = cs.ChequeSeriesId
+                    LEFT JOIN PaymentBatches pb ON c.PaymentBatchId = pb.PaymentBatchId
+                    WHERE c.DeletedAt IS NULL 
+                    AND g.GrowerNumber = @GrowerNumber
+                    AND c.Status IN ('Printed', 'Voided', 'Stopped')
+                    ORDER BY c.ChequeDate DESC";
                 
                 var cheques = await connection.QueryAsync<Cheque>(sql, new { GrowerNumber = growerNumber });
                 return cheques.ToList();
@@ -197,10 +447,62 @@ namespace WPFGrowerApp.DataAccess.Services
 
         public async Task<List<Cheque>> GetChequesByDateRangeAsync(DateTime startDate, DateTime endDate)
         {
-            // TODO: Rewrite to use ChequeDate column
-            Logger.Warn($"ChequeService.GetChequesByDateRangeAsync({startDate:d}, {endDate:d}) not yet implemented for modern schema");
-            await Task.CompletedTask;
-            return new List<Cheque>();
+            try
+            {
+                using var connection = new SqlConnection(ConnectionString);
+                var sql = @"
+                    SELECT 
+                        c.ChequeId,
+                        c.ChequeSeriesId,
+                        c.ChequeNumber,
+                        c.FiscalYear,
+                        c.GrowerId,
+                        c.PaymentBatchId,
+                        c.ChequeDate,
+                        c.ChequeAmount,
+                        c.CurrencyCode,
+                        c.ExchangeRate,
+                        c.PayeeName,
+                        c.Memo,
+                        c.Status,
+                        c.ClearedDate,
+                        c.VoidedDate,
+                        c.VoidedReason,
+                        c.CreatedAt,
+                        c.CreatedBy,
+                        c.ModifiedAt,
+                        c.ModifiedBy,
+                        c.DeletedAt,
+                        c.DeletedBy,
+                        c.PrintedAt,
+                        c.PrintedBy,
+                        c.VoidedBy,
+                        c.IssuedAt,
+                        c.IssuedBy,
+                        g.FullName AS GrowerName,
+                        g.GrowerNumber,
+                        cs.SeriesCode
+                    FROM Cheques c
+                    LEFT JOIN Growers g ON c.GrowerId = g.GrowerId
+                    LEFT JOIN ChequeSeries cs ON c.ChequeSeriesId = cs.ChequeSeriesId
+                    WHERE c.DeletedAt IS NULL 
+                    AND c.ChequeDate >= @StartDate
+                    AND c.ChequeDate <= @EndDate
+                    AND c.Status IN ('Printed', 'Voided', 'Stopped')
+                    ORDER BY c.ChequeDate DESC";
+                
+                var cheques = await connection.QueryAsync<Cheque>(sql, new 
+                { 
+                    StartDate = startDate.Date,
+                    EndDate = endDate.Date.AddDays(1).AddTicks(-1) // End of day
+                });
+                return cheques.ToList();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting cheques by date range {startDate:d} to {endDate:d}: {ex.Message}", ex);
+                return new List<Cheque>();
+            }
         }
 
         public async Task<bool> SaveChequeAsync(Cheque cheque)
@@ -679,38 +981,45 @@ namespace WPFGrowerApp.DataAccess.Services
                 using var connection = new SqlConnection(ConnectionString);
                 var sql = @"
                     SELECT 
-                        ChequeId,
-                        ChequeSeriesId,
-                        ChequeNumber,
-                        FiscalYear,
-                        GrowerId,
-                        PaymentBatchId,
-                        ChequeDate,
-                        ChequeAmount,
-                        CurrencyCode,
-                        ExchangeRate,
-                        PayeeName,
-                        Memo,
-                        Status,
-                        ClearedDate,
-                        VoidedDate,
-                        VoidedReason,
-                        CreatedAt,
-                        CreatedBy,
-                        ModifiedAt,
-                        ModifiedBy,
-                        DeletedAt,
-                        DeletedBy,
-                        PrintedAt,
-                        PrintedBy,
-                        VoidedBy,
-                        IssuedAt,
-                        IssuedBy
-                    FROM Cheques 
-                    WHERE DeletedAt IS NULL 
-                    AND ChequeNumber LIKE @ChequeNumber
-                    AND Status IN ('Printed', 'Voided', 'Stopped')
-                    ORDER BY ChequeDate DESC";
+                        c.ChequeId,
+                        c.ChequeSeriesId,
+                        c.ChequeNumber,
+                        c.FiscalYear,
+                        c.GrowerId,
+                        c.PaymentBatchId,
+                        c.ChequeDate,
+                        c.ChequeAmount,
+                        c.CurrencyCode,
+                        c.ExchangeRate,
+                        c.PayeeName,
+                        c.Memo,
+                        c.Status,
+                        c.ClearedDate,
+                        c.VoidedDate,
+                        c.VoidedReason,
+                        c.CreatedAt,
+                        c.CreatedBy,
+                        c.ModifiedAt,
+                        c.ModifiedBy,
+                        c.DeletedAt,
+                        c.DeletedBy,
+                        c.PrintedAt,
+                        c.PrintedBy,
+                        c.VoidedBy,
+                        c.IssuedAt,
+                        c.IssuedBy,
+                        g.FullName AS GrowerName,
+                        g.GrowerNumber,
+                        cs.SeriesCode,
+                        pb.BatchNumber
+                    FROM Cheques c
+                    LEFT JOIN Growers g ON c.GrowerId = g.GrowerId
+                    LEFT JOIN ChequeSeries cs ON c.ChequeSeriesId = cs.ChequeSeriesId
+                    LEFT JOIN PaymentBatches pb ON c.PaymentBatchId = pb.PaymentBatchId
+                    WHERE c.DeletedAt IS NULL 
+                    AND c.ChequeNumber LIKE @ChequeNumber
+                    AND c.Status IN ('Printed', 'Voided', 'Stopped')
+                    ORDER BY c.ChequeDate DESC";
                 var cheques = await connection.QueryAsync<Cheque>(sql, new { ChequeNumber = $"%{chequeNumber}%" });
                 return cheques.ToList();
             }
@@ -721,6 +1030,169 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
+
+        /// <summary>
+        /// Get all cheques including both regular cheques and advance cheques in a unified view
+        /// </summary>
+        public async Task<List<Cheque>> GetAllChequesIncludingAdvancesAsync()
+        {
+            try
+            {
+                using var connection = new SqlConnection(ConnectionString);
+                var sql = @"
+                    -- Regular cheques
+                    SELECT 
+                        c.ChequeId, c.ChequeSeriesId, c.ChequeNumber, c.FiscalYear,
+                        c.GrowerId, c.PaymentBatchId, c.ChequeDate, c.ChequeAmount,
+                        c.CurrencyCode, c.ExchangeRate, c.PayeeName, c.Memo,
+                        c.Status, c.ClearedDate, c.VoidedDate, c.VoidedReason,
+                        c.CreatedAt, c.CreatedBy, c.ModifiedAt, c.ModifiedBy,
+                        c.DeletedAt, c.DeletedBy, c.PrintedAt, c.PrintedBy,
+                        c.VoidedBy, c.IssuedAt, c.IssuedBy,
+                        g.FullName AS GrowerName, g.GrowerNumber,
+                        cs.SeriesCode, pb.BatchNumber,
+                        'Regular' as ChequeType,
+                        c.IsAdvanceCheque, c.AdvanceChequeId
+                    FROM Cheques c
+                    LEFT JOIN Growers g ON c.GrowerId = g.GrowerId
+                    LEFT JOIN ChequeSeries cs ON c.ChequeSeriesId = cs.ChequeSeriesId
+                    LEFT JOIN PaymentBatches pb ON c.PaymentBatchId = pb.PaymentBatchId
+                    WHERE c.DeletedAt IS NULL 
+                    AND c.Status IN ('Printed', 'Voided', 'Stopped')
+                    
+                    UNION ALL
+                    
+                    -- Advance cheques (converted to Cheque format)
+                    SELECT 
+                        ac.AdvanceChequeId as ChequeId,
+                        NULL as ChequeSeriesId,
+                        'ADV-' + CAST(ac.AdvanceChequeId as VARCHAR) as ChequeNumber,
+                        YEAR(ac.AdvanceDate) as FiscalYear,
+                        ac.GrowerId,
+                        NULL as PaymentBatchId,
+                        ac.AdvanceDate as ChequeDate,
+                        ac.AdvanceAmount as ChequeAmount,
+                        'CAD' as CurrencyCode,
+                        1.0 as ExchangeRate,
+                        g.FullName as PayeeName,
+                        ac.Reason as Memo,
+                        ac.Status,
+                        NULL as ClearedDate,
+                        NULL as VoidedDate,
+                        NULL as VoidedReason,
+                        ac.CreatedAt,
+                        ac.CreatedBy,
+                        ac.ModifiedAt,
+                        ac.ModifiedBy,
+                        ac.DeletedAt,
+                        ac.DeletedBy,
+                        ac.PrintedDate as PrintedAt,
+                        ac.PrintedBy,
+                        NULL as VoidedBy,
+                        NULL as IssuedAt,
+                        NULL as IssuedBy,
+                        g.FullName AS GrowerName,
+                        g.GrowerNumber,
+                        'ADV' as SeriesCode,
+                        NULL as BatchNumber,
+                        'Advance' as ChequeType,
+                        1 as IsAdvanceCheque,
+                        ac.AdvanceChequeId as AdvanceChequeId
+                    FROM AdvanceCheques ac
+                    LEFT JOIN Growers g ON ac.GrowerId = g.GrowerId
+                    WHERE ac.DeletedAt IS NULL 
+                    AND ac.Status IN ('Printed', 'Voided', 'Stopped')
+                    
+                    ORDER BY ChequeDate DESC";
+                
+                var cheques = await connection.QueryAsync<Cheque>(sql);
+                return cheques.ToList();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting all cheques including advances: {ex.Message}", ex);
+                return new List<Cheque>();
+            }
+        }
+
+        /// <summary>
+        /// Get cheques by type (Regular, Advance, or All)
+        /// </summary>
+        public async Task<List<Cheque>> GetChequesByTypeAsync(string chequeType)
+        {
+            try
+            {
+                var allCheques = await GetAllChequesIncludingAdvancesAsync();
+                
+                if (chequeType == "All")
+                    return allCheques;
+                
+                if (chequeType == "Regular")
+                    return allCheques.Where(c => !c.IsAdvanceCheque).ToList();
+                
+                if (chequeType == "Advance")
+                    return allCheques.Where(c => c.IsAdvanceCheque).ToList();
+                
+                return allCheques;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting cheques by type {chequeType}: {ex.Message}", ex);
+                return new List<Cheque>();
+            }
+        }
+
+        /// <summary>
+        /// Get detailed receipt information for a specific cheque - only receipts for the specific grower
+        /// </summary>
+        public async Task<List<ReceiptDetailDto>> GetReceiptDetailsForChequeAsync(string chequeNumber)
+        {
+            try
+            {
+                using var connection = new SqlConnection(ConnectionString);
+                var sql = @"
+                    SELECT 
+                        r.ReceiptId, r.ReceiptNumber, r.ReceiptDate, r.ReceiptTime,
+                        r.GrowerId, r.ProductId, r.ProcessId, r.ProcessTypeId, r.VarietyId, r.DepotId,
+                        r.GrossWeight, r.TareWeight, r.NetWeight, r.DockPercentage, r.DockWeight, r.FinalWeight,
+                        r.Grade, r.PriceClassId, r.IsVoided, r.VoidedReason, r.VoidedAt, r.VoidedBy,
+                        r.ImportBatchId, r.CreatedAt, r.CreatedBy, r.ModifiedAt, r.ModifiedBy,
+                        r.QualityCheckedAt, r.QualityCheckedBy, r.DeletedAt, r.DeletedBy,
+                        g.FullName as GrowerName, g.GrowerNumber, g.Address as GrowerAddress, 
+                        g.PhoneNumber as GrowerPhone, g.Email as GrowerEmail,
+                        p.Description as ProductName, p.Description as ProductDescription,
+                        pr.ProcessName, pr.Description as ProcessDescription,
+                        v.VarietyName,
+                        d.DepotName, d.Address as DepotAddress,
+                        pc.ClassName as PriceClassName,
+                        rpa.PricePerPound, rpa.AmountPaid as TotalAmountPaid,
+                        rpa.PaymentTypeId,
+                        pt.TypeName as PaymentTypeName
+                    FROM Receipts r
+                    INNER JOIN ReceiptPaymentAllocations rpa ON r.ReceiptId = rpa.ReceiptId
+                    INNER JOIN PaymentBatches pb ON rpa.PaymentBatchId = pb.PaymentBatchId
+                    INNER JOIN Cheques c ON pb.PaymentBatchId = c.PaymentBatchId
+                    LEFT JOIN Growers g ON r.GrowerId = g.GrowerId
+                    LEFT JOIN Products p ON r.ProductId = p.ProductId
+                    LEFT JOIN Processes pr ON r.ProcessId = pr.ProcessId
+                    LEFT JOIN Varieties v ON r.VarietyId = v.VarietyId
+                    LEFT JOIN Depots d ON r.DepotId = d.DepotId
+                    LEFT JOIN PriceClasses pc ON r.PriceClassId = pc.PriceClassId
+                    LEFT JOIN PaymentTypes pt ON pb.PaymentTypeId = pt.PaymentTypeId
+                    WHERE c.ChequeNumber = @ChequeNumber
+                      AND r.GrowerId = c.GrowerId  -- CRITICAL: Only show receipts for the specific grower of this cheque
+                      AND r.DeletedAt IS NULL
+                    ORDER BY r.ReceiptDate DESC, r.ReceiptNumber DESC";
+
+                var result = await connection.QueryAsync<ReceiptDetailDto>(sql, new { ChequeNumber = chequeNumber });
+                return result.ToList();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting receipt details for cheque {chequeNumber}: {ex.Message}", ex);
+                return new List<ReceiptDetailDto>();
+            }
+        }
 
         // ==================================================================================
         // DATABASE CONNECTION (from BaseDatabaseService)

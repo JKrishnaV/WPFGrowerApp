@@ -208,13 +208,17 @@ namespace WPFGrowerApp.DataAccess.Services
                     sheet.Range[$"A{headerRow}"].Text = "Receipt #";
                     sheet.Range[$"B{headerRow}"].Text = "Date";
                     sheet.Range[$"C{headerRow}"].Text = "Grower";
-                    sheet.Range[$"D{headerRow}"].Text = "Weight (lbs)";
-                    sheet.Range[$"E{headerRow}"].Text = "Price/lb";
-                    sheet.Range[$"F{headerRow}"].Text = "Amount";
-                    sheet.Range[$"G{headerRow}"].Text = "Payment Type";
+                    sheet.Range[$"D{headerRow}"].Text = "Product";
+                    sheet.Range[$"E{headerRow}"].Text = "Process";
+                    sheet.Range[$"F{headerRow}"].Text = "Grade";
+                    sheet.Range[$"G{headerRow}"].Text = "Price Class";
+                    sheet.Range[$"H{headerRow}"].Text = "Weight (lbs)";
+                    sheet.Range[$"I{headerRow}"].Text = "Price/lb";
+                    sheet.Range[$"J{headerRow}"].Text = "Amount";
+                    sheet.Range[$"K{headerRow}"].Text = "Payment Type";
 
                     // Format header row
-                    var headerRange = sheet.Range[$"A{headerRow}:G{headerRow}"];
+                    var headerRange = sheet.Range[$"A{headerRow}:K{headerRow}"];
                     headerRange.CellStyle.Font.Bold = true;
                     headerRange.CellStyle.Color = Color.FromArgb(79, 129, 189);
                     headerRange.CellStyle.Font.Color = ExcelKnownColors.White;
@@ -231,12 +235,16 @@ namespace WPFGrowerApp.DataAccess.Services
                         sheet.Range[$"B{currentRow}"].DateTime = allocation.AllocatedAt;
                         sheet.Range[$"B{currentRow}"].NumberFormat = "MMM dd, yyyy";
                         sheet.Range[$"C{currentRow}"].Text = allocation.GrowerName ?? "";
-                        sheet.Range[$"D{currentRow}"].Number = (double)allocation.QuantityPaid;
-                        sheet.Range[$"E{currentRow}"].Number = (double)allocation.PricePerPound;
-                        sheet.Range[$"E{currentRow}"].NumberFormat = "$#,##0.0000";
-                        sheet.Range[$"F{currentRow}"].Number = (double)allocation.AmountPaid;
-                        sheet.Range[$"F{currentRow}"].NumberFormat = "$#,##0.00";
-                        sheet.Range[$"G{currentRow}"].Text = allocation.PaymentTypeName ?? "";
+                        sheet.Range[$"D{currentRow}"].Text = allocation.ProductName ?? "";
+                        sheet.Range[$"E{currentRow}"].Text = allocation.ProcessName ?? "";
+                        sheet.Range[$"F{currentRow}"].Number = allocation.Grade;
+                        sheet.Range[$"G{currentRow}"].Text = allocation.PriceClassName ?? "";
+                        sheet.Range[$"H{currentRow}"].Number = (double)allocation.QuantityPaid;
+                        sheet.Range[$"I{currentRow}"].Number = (double)allocation.PricePerPound;
+                        sheet.Range[$"I{currentRow}"].NumberFormat = "$#,##0.0000";
+                        sheet.Range[$"J{currentRow}"].Number = (double)allocation.AmountPaid;
+                        sheet.Range[$"J{currentRow}"].NumberFormat = "$#,##0.00";
+                        sheet.Range[$"K{currentRow}"].Text = allocation.PaymentTypeName ?? "";
 
                         totalAmount += allocation.AmountPaid;
                         totalWeight += allocation.QuantityPaid;
@@ -248,12 +256,12 @@ namespace WPFGrowerApp.DataAccess.Services
                     int totalsRow = currentRow + 1;
                     sheet.Range[$"A{totalsRow}"].Text = "TOTALS";
                     sheet.Range[$"A{totalsRow}"].CellStyle.Font.Bold = true;
-                    sheet.Range[$"D{totalsRow}"].Number = (double)totalWeight;
-                    sheet.Range[$"D{totalsRow}"].CellStyle.Font.Bold = true;
-                    sheet.Range[$"F{totalsRow}"].Number = (double)totalAmount;
-                    sheet.Range[$"F{totalsRow}"].NumberFormat = "$#,##0.00";
-                    sheet.Range[$"F{totalsRow}"].CellStyle.Font.Bold = true;
-                    sheet.Range[$"F{totalsRow}"].CellStyle.Color = Color.FromArgb(146, 208, 80);
+                    sheet.Range[$"H{totalsRow}"].Number = (double)totalWeight;
+                    sheet.Range[$"H{totalsRow}"].CellStyle.Font.Bold = true;
+                    sheet.Range[$"J{totalsRow}"].Number = (double)totalAmount;
+                    sheet.Range[$"J{totalsRow}"].NumberFormat = "$#,##0.00";
+                    sheet.Range[$"J{totalsRow}"].CellStyle.Font.Bold = true;
+                    sheet.Range[$"J{totalsRow}"].CellStyle.Color = Color.FromArgb(146, 208, 80);
 
                     // Auto-fit columns
                     sheet.UsedRange.AutofitColumns();
@@ -786,13 +794,17 @@ namespace WPFGrowerApp.DataAccess.Services
             sheet.Range[$"A{headerRow}"].Text = "Receipt #";
             sheet.Range[$"B{headerRow}"].Text = "Date";
             sheet.Range[$"C{headerRow}"].Text = "Grower";
-            sheet.Range[$"D{headerRow}"].Text = "Weight (lbs)";
-            sheet.Range[$"E{headerRow}"].Text = "Price/lb";
-            sheet.Range[$"F{headerRow}"].Text = "Amount";
-            sheet.Range[$"G{headerRow}"].Text = "Payment Type";
+            sheet.Range[$"D{headerRow}"].Text = "Product";
+            sheet.Range[$"E{headerRow}"].Text = "Process";
+            sheet.Range[$"F{headerRow}"].Text = "Grade";
+            sheet.Range[$"G{headerRow}"].Text = "Price Class";
+            sheet.Range[$"H{headerRow}"].Text = "Weight (lbs)";
+            sheet.Range[$"I{headerRow}"].Text = "Price/lb";
+            sheet.Range[$"J{headerRow}"].Text = "Amount";
+            sheet.Range[$"K{headerRow}"].Text = "Payment Type";
 
             // Format headers
-            var headerRange = sheet.Range[$"A{headerRow}:G{headerRow}"];
+            var headerRange = sheet.Range[$"A{headerRow}:K{headerRow}"];
             headerRange.CellStyle.Font.Bold = true;
             headerRange.CellStyle.Color = Color.FromArgb(79, 129, 189);
             headerRange.CellStyle.Font.Color = ExcelKnownColors.White;
@@ -805,12 +817,16 @@ namespace WPFGrowerApp.DataAccess.Services
                 sheet.Range[$"B{currentRow}"].DateTime = allocation.AllocatedAt;
                 sheet.Range[$"B{currentRow}"].NumberFormat = "MMM dd, yyyy";
                 sheet.Range[$"C{currentRow}"].Text = allocation.GrowerName ?? "";
-                sheet.Range[$"D{currentRow}"].Number = (double)allocation.QuantityPaid;
-                sheet.Range[$"E{currentRow}"].Number = (double)allocation.PricePerPound;
-                sheet.Range[$"E{currentRow}"].NumberFormat = "$#,##0.0000";
-                sheet.Range[$"F{currentRow}"].Number = (double)allocation.AmountPaid;
-                sheet.Range[$"F{currentRow}"].NumberFormat = "$#,##0.00";
-                sheet.Range[$"G{currentRow}"].Text = allocation.PaymentTypeName ?? "";
+                sheet.Range[$"D{currentRow}"].Text = allocation.ProductName ?? "";
+                sheet.Range[$"E{currentRow}"].Text = allocation.ProcessName ?? "";
+                sheet.Range[$"F{currentRow}"].Number = allocation.Grade;
+                sheet.Range[$"G{currentRow}"].Text = allocation.PriceClassName ?? "";
+                sheet.Range[$"H{currentRow}"].Number = (double)allocation.QuantityPaid;
+                sheet.Range[$"I{currentRow}"].Number = (double)allocation.PricePerPound;
+                sheet.Range[$"I{currentRow}"].NumberFormat = "$#,##0.0000";
+                sheet.Range[$"J{currentRow}"].Number = (double)allocation.AmountPaid;
+                sheet.Range[$"J{currentRow}"].NumberFormat = "$#,##0.00";
+                sheet.Range[$"K{currentRow}"].Text = allocation.PaymentTypeName ?? "";
                 currentRow++;
             }
 

@@ -41,6 +41,7 @@ namespace WPFGrowerApp.ViewModels
         private readonly IChequeGenerationService _chequeGenerationService;
         private readonly IChequePrintingService _chequePrintingService;
         private readonly IStatementPrintingService _statementPrintingService;
+        private readonly FilterPresetService _filterPresetService;
 
         private int _advanceNumber = 1;
         private DateTime _paymentDate = DateTime.Today;
@@ -199,7 +200,8 @@ namespace WPFGrowerApp.ViewModels
             IPaymentBatchManagementService batchManagementService,
             IChequeGenerationService chequeGenerationService,
             IChequePrintingService chequePrintingService,
-            IStatementPrintingService statementPrintingService)
+            IStatementPrintingService statementPrintingService,
+            FilterPresetService filterPresetService)
         {
             _paymentService = paymentService ?? throw new ArgumentNullException(nameof(paymentService));
             _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
@@ -211,6 +213,7 @@ namespace WPFGrowerApp.ViewModels
             _chequeGenerationService = chequeGenerationService ?? throw new ArgumentNullException(nameof(chequeGenerationService));
             _chequePrintingService = chequePrintingService ?? throw new ArgumentNullException(nameof(chequePrintingService));
             _statementPrintingService = statementPrintingService ?? throw new ArgumentNullException(nameof(statementPrintingService));
+            _filterPresetService = filterPresetService ?? throw new ArgumentNullException(nameof(filterPresetService));
 
             _growerSearchText = string.Empty;
             _productSearchText = string.Empty;
@@ -267,6 +270,7 @@ namespace WPFGrowerApp.ViewModels
             // Load initial data
             _ = LoadFiltersAsync();
             _ = UpdateOnHoldGrowersAsync(); // Initial load
+            _ = LoadFilterPresetsAsync(); // Load saved filter presets
         }
 
         // Filter logic for the Grower ListBox
@@ -838,7 +842,7 @@ namespace WPFGrowerApp.ViewModels
             // Prepare parameters object including descriptions
             var parameters = new TestRunInputParameters
             {
-                AdvanceNumber = AdvanceNumber,
+                SequenceNumber = AdvanceNumber, // Map AdvanceNumber to SequenceNumber
                 PaymentDate = PaymentDate,
                 CutoffDate = CutoffDate,
                 CropYear = CropYear,
@@ -858,7 +862,7 @@ namespace WPFGrowerApp.ViewModels
             {
                 // Call the service method with the parameters object
                 var testResult = await _paymentService.PerformAdvancePaymentTestRunAsync(
-                    parameters.AdvanceNumber,
+                    parameters.SequenceNumber,
                     parameters.PaymentDate,
                     parameters.CutoffDate,
                     parameters.CropYear,
@@ -965,7 +969,7 @@ namespace WPFGrowerApp.ViewModels
             // Prepare parameters object including descriptions
             var parameters = new TestRunInputParameters
             {
-                AdvanceNumber = AdvanceNumber,
+                SequenceNumber = AdvanceNumber, // Map AdvanceNumber to SequenceNumber
                 PaymentDate = PaymentDate,
                 CutoffDate = CutoffDate,
                 CropYear = CropYear,
@@ -985,7 +989,7 @@ namespace WPFGrowerApp.ViewModels
             {
                 // Call the service method
                 var testResult = await _paymentService.PerformAdvancePaymentTestRunAsync(
-                    parameters.AdvanceNumber, parameters.PaymentDate, parameters.CutoffDate, parameters.CropYear,
+                    parameters.SequenceNumber, parameters.PaymentDate, parameters.CutoffDate, parameters.CropYear,
                     parameters.ExcludeGrowerIds, parameters.ExcludePayGroupIds, parameters.ProductIds, parameters.ProcessIds, this);
 
                 LatestTestRunResult = testResult;
@@ -1033,7 +1037,7 @@ namespace WPFGrowerApp.ViewModels
                         // Prepare parameters for Bold Reports Viewer
                         // Use ReportParameter from BoldReports.Windows namespace
                         var reportParameters = new List<ReportParameter>();
-                        reportParameters.Add(new ReportParameter() { Name = "ParamAdvanceNumber", Values = new List<string>() { parameters.AdvanceNumber.ToString() } });
+                        reportParameters.Add(new ReportParameter() { Name = "ParamAdvanceNumber", Values = new List<string>() { parameters.SequenceNumber.ToString() } });
                         reportParameters.Add(new ReportParameter() { Name = "ParamPaymentDate", Values = new List<string>() { parameters.PaymentDate.ToString("d") } }); // Format date
                         reportParameters.Add(new ReportParameter() { Name = "ParamCutoffDate", Values = new List<string>() { parameters.CutoffDate.ToString("d") } }); // Format date
                         reportParameters.Add(new ReportParameter() { Name = "ParamCropYear", Values = new List<string>() { parameters.CropYear.ToString() } });
@@ -1104,6 +1108,30 @@ namespace WPFGrowerApp.ViewModels
             }
         }
 
+        /// <summary>
+        /// Load filter presets from JSON file
+        /// </summary>
+        private async Task LoadFilterPresetsAsync()
+        {
+            try
+            {
+                var presets = await _filterPresetService.LoadPresetsAsync();
+                
+                // Clear existing presets and add loaded ones
+                FilterPresets.Clear();
+                foreach (var preset in presets)
+                {
+                    FilterPresets.Add(preset);
+                }
+                
+                Report($"✓ Loaded {presets.Count} filter presets from file");
+            }
+            catch (Exception ex)
+            {
+                Report($"✗ Error loading filter presets: {ex.Message}");
+                Logger.Error("Error loading filter presets", ex);
+            }
+        }
 
         // Method to load ListBox data sources
         private async Task LoadFiltersAsync()
@@ -1660,7 +1688,7 @@ namespace WPFGrowerApp.ViewModels
                     CreatedAt = DateTime.Now,
 
                     // Basic Parameters
-                    AdvanceNumber = AdvanceNumber,
+                    SequenceNumber = AdvanceNumber, // Map UI AdvanceNumber to SequenceNumber
                     PaymentDate = PaymentDate,
                     CutoffDate = CutoffDate,
                     ReceiptDateFrom = ReceiptDateFrom,
@@ -1694,6 +1722,9 @@ namespace WPFGrowerApp.ViewModels
 
                 // Add to collection
                 FilterPresets.Add(preset);
+
+                // Save to JSON file
+                await _filterPresetService.AddPresetAsync(preset, FilterPresets.ToList());
 
                 Report($"✓ Saved filter preset: {presetName}");
                 StatusMessage = $"Saved preset: {presetName}";
@@ -1729,7 +1760,7 @@ namespace WPFGrowerApp.ViewModels
                     return;
 
                 // Load preset values
-                AdvanceNumber = SelectedPreset.AdvanceNumber;
+                AdvanceNumber = SelectedPreset.SequenceNumber; // Map SequenceNumber back to UI AdvanceNumber
                 PaymentDate = SelectedPreset.PaymentDate;
                 CutoffDate = SelectedPreset.CutoffDate;
                 ReceiptDateFrom = SelectedPreset.ReceiptDateFrom;
@@ -1794,6 +1825,9 @@ namespace WPFGrowerApp.ViewModels
                 FilterPresets.Remove(SelectedPreset);
                 SelectedPreset = null;
 
+                // Save changes to JSON file
+                await _filterPresetService.SavePresetsAsync(FilterPresets.ToList());
+
                 Report($"✓ Deleted filter preset: {presetName}");
                 StatusMessage = $"Deleted preset: {presetName}";
 
@@ -1822,42 +1856,49 @@ namespace WPFGrowerApp.ViewModels
         /// </summary>
         private Task LoadPresetSelectedItemsAsync(FilterPreset preset)
         {
-            // Clear current selections
-            SelectedProducts.Clear();
-            SelectedProcesses.Clear();
-            SelectedExcludeGrowers.Clear();
-            SelectedExcludePayGroups.Clear();
+            // Clear current selections in FilterItem collections
+            foreach (var item in ProductFilterItems)
+                item.IsSelected = false;
+            
+            foreach (var item in ProcessFilterItems)
+                item.IsSelected = false;
+            
+            foreach (var item in GrowerFilterItems)
+                item.IsSelected = false;
+            
+            foreach (var item in PayGroupFilterItems)
+                item.IsSelected = false;
 
-            // Load products
+            // Load products - Set IsSelected on FilterItem objects
             foreach (var productId in preset.SelectedProductIds)
             {
-                var product = _allProducts.FirstOrDefault(p => p.ProductId == productId);
-                if (product != null)
-                    SelectedProducts.Add(product);
+                var filterItem = ProductFilterItems.FirstOrDefault(p => p.Item.ProductId == productId);
+                if (filterItem != null)
+                    filterItem.IsSelected = true;
             }
 
-            // Load processes
+            // Load processes - Set IsSelected on FilterItem objects
             foreach (var processId in preset.SelectedProcessIds)
             {
-                var process = _allProcesses.FirstOrDefault(p => p.ProcessId == processId);
-                if (process != null)
-                    SelectedProcesses.Add(process);
+                var filterItem = ProcessFilterItems.FirstOrDefault(p => p.Item.ProcessId == processId);
+                if (filterItem != null)
+                    filterItem.IsSelected = true;
             }
 
-            // Load growers
+            // Load growers - Set IsSelected on FilterItem objects
             foreach (var growerId in preset.SelectedGrowerIds)
             {
-                var grower = _allGrowers.FirstOrDefault(g => (int)g.GrowerNumber == growerId);
-                if (grower != null)
-                    SelectedExcludeGrowers.Add(grower);
+                var filterItem = GrowerFilterItems.FirstOrDefault(g => (int)g.Item.GrowerNumber == growerId);
+                if (filterItem != null)
+                    filterItem.IsSelected = true;
             }
 
-            // Load pay groups
+            // Load pay groups - Set IsSelected on FilterItem objects
             foreach (var payGroupId in preset.SelectedPayGroupIds)
             {
-                var payGroup = _allPayGroups.FirstOrDefault(pg => pg.GroupCode == payGroupId);
-                if (payGroup != null)
-                    SelectedExcludePayGroups.Add(payGroup);
+                var filterItem = PayGroupFilterItems.FirstOrDefault(pg => pg.Item.GroupCode == payGroupId);
+                if (filterItem != null)
+                    filterItem.IsSelected = true;
             }
             
             return Task.CompletedTask;

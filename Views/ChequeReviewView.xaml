@@ -25,6 +25,7 @@
             </ResourceDictionary.MergedDictionaries>
             
             <converters:BoolToVisibilityConverter x:Key="BoolToVisConverter"/>
+            <converters:BooleanToTextConverter x:Key="BoolToTextConverter"/>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -102,8 +103,12 @@
                 <!-- Row 0: Search Criteria -->
                 <Grid Grid.Row="0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="200"/>
-                        <ColumnDefinition Width="200"/>
+                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="150"/>
+                        <ColumnDefinition Width="150"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
@@ -121,14 +126,34 @@
                              Style="{StaticResource MaterialDesignOutlinedTextBox}"
                              Margin="0,0,10,0"/>
 
+                    <!-- Start Date Filter -->
+                    <DatePicker Grid.Column="2"
+                                SelectedDate="{Binding StartDate, UpdateSourceTrigger=PropertyChanged}"
+                                materialDesign:HintAssist.Hint="From Date"
+                                Style="{StaticResource MaterialDesignOutlinedDatePicker}"
+                                Margin="0,0,10,0"/>
+
+                    <!-- End Date Filter -->
+                    <DatePicker Grid.Column="3"
+                                SelectedDate="{Binding EndDate, UpdateSourceTrigger=PropertyChanged}"
+                                materialDesign:HintAssist.Hint="To Date"
+                                Style="{StaticResource MaterialDesignOutlinedDatePicker}"
+                                Margin="0,0,10,0"/>
+
+                    <!-- Cheque Type Filter -->
+                    <ComboBox Grid.Column="4"
+                              ItemsSource="{Binding ChequeTypeOptions}"
+                              SelectedItem="{Binding SearchChequeType}"
+                              materialDesign:HintAssist.Hint="Cheque Type"
+                              Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                              Margin="0,0,10,0"/>
+
                     <!-- Status Filter -->
-                    <ComboBox Grid.Column="2"
+                    <ComboBox Grid.Column="5"
                               ItemsSource="{Binding StatusOptions}"
                               SelectedItem="{Binding SearchStatus}"
                               materialDesign:HintAssist.Hint="Status"
-                              Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                              Width="150"
-                              HorizontalAlignment="Left"/>
+                              Style="{StaticResource MaterialDesignOutlinedComboBox}"/>
                 </Grid>
 
                 <!-- Row 1: Actions -->
@@ -227,6 +252,32 @@
                                         Binding="{Binding SeriesCode, TargetNullValue='', FallbackValue=''}" 
                                         Width="70"/>
 
+                    <!-- Cheque Type -->
+                    <DataGridTemplateColumn Header="Type" Width="80" SortMemberPath="IsAdvanceCheque">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Border CornerRadius="8"
+                                        Padding="4,2"
+                                        HorizontalAlignment="Center">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="#4CAF50"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsAdvanceCheque}" Value="True">
+                                                    <Setter Property="Background" Value="#FF9800"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock Text="{Binding IsAdvanceCheque, Converter={StaticResource BoolToTextConverter}, ConverterParameter='Advance|Regular'}"
+                                               Foreground="White"
+                                               FontWeight="SemiBold"
+                                               FontSize="10"/>
+                                </Border>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
                     <!-- Grower Name -->
                     <DataGridTextColumn Header="Grower" 
                                         Binding="{Binding GrowerName, TargetNullValue='', FallbackValue=''}" 
@@ -291,7 +342,7 @@
                     </DataGridTemplateColumn>
 
                     <!-- Actions -->
-                    <DataGridTemplateColumn Header="Actions" Width="220">
+                    <DataGridTemplateColumn Header="Actions" Width="250">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
@@ -308,6 +359,13 @@
                                             ToolTip="View Details"
                                             Width="30" Height="30">
                                         <materialDesign:PackIcon Kind="Eye" Width="16" Height="16"/>
+                                    </Button>
+                                    <Button Style="{StaticResource MaterialDesignIconButton}"
+                                            Command="{Binding DataContext.ShowCalculationDetailsCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            ToolTip="Calculation Details"
+                                            Width="30" Height="30"
+                                            Foreground="Blue">
+                                        <materialDesign:PackIcon Kind="Calculator" Width="16" Height="16"/>
                                     </Button>
                                     <Button Style="{StaticResource MaterialDesignIconButton}"
                                             Command="{Binding DataContext.VoidChequeCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"

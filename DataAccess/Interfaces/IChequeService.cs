@@ -9,6 +9,7 @@ namespace WPFGrowerApp.DataAccess.Interfaces
     {
         Task<List<Cheque>> GetAllChequesAsync();
         Task<Cheque> GetChequeByIdAsync(int chequeId);
+        Task<Cheque> GetAdvanceChequeByIdAsync(int advanceChequeId);
         Task<Cheque> GetChequeBySeriesAndNumberAsync(string series, decimal chequeNumber);
         Task<List<Cheque>> GetChequesByGrowerNumberAsync(decimal growerNumber);
         Task<List<Cheque>> GetChequesByDateRangeAsync(DateTime startDate, DateTime endDate);
@@ -60,6 +61,13 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         // New simplified workflow methods
         Task<bool> MarkChequesAsDeliveredAsync(List<int> chequeIds, string deliveryMethod, string deliveredBy);
         Task<bool> ApproveChequesForDeliveryAsync(List<int> chequeIds, string approvedBy);
+
+        // Receipt details for cheque calculation
+        Task<List<ReceiptDetailDto>> GetReceiptDetailsForChequeAsync(string chequeNumber);
+
+        // Unified cheque review methods
+        Task<List<Cheque>> GetAllChequesIncludingAdvancesAsync();
+        Task<List<Cheque>> GetChequesByTypeAsync(string chequeType);
 
     }
 }

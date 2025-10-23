@@ -20,6 +20,7 @@ namespace WPFGrowerApp.Models
         private decimal _outstandingAdvances;
         private string _recommendedPaymentType;
         private string _reason;
+        private bool _isSelectedForPayment = true; // Default to checked
 
         public int GrowerId
         {
@@ -85,6 +86,12 @@ namespace WPFGrowerApp.Models
         {
             get => _reason;
             set => SetProperty(ref _reason, value);
+        }
+
+        public bool IsSelectedForPayment
+        {
+            get => _isSelectedForPayment;
+            set => SetProperty(ref _isSelectedForPayment, value);
         }
 
         // Computed properties

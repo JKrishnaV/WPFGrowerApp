@@ -15,6 +15,12 @@ namespace WPFGrowerApp.DataAccess.Services
 {
         public class ReceiptService : BaseDatabaseService, IReceiptService
         {
+            private readonly IPaymentTypeService _paymentTypeService;
+
+            public ReceiptService(IPaymentTypeService paymentTypeService)
+            {
+                _paymentTypeService = paymentTypeService ?? throw new ArgumentNullException(nameof(paymentTypeService));
+            }
             public async Task<decimal> GetPriceForReceiptAsync(Receipt receipt)
             {
                 // TODO: Implement price calculation logic
@@ -673,7 +679,7 @@ namespace WPFGrowerApp.DataAccess.Services
         }
 
         public async Task<List<Receipt>> GetReceiptsForAdvancePaymentAsync(
-            int advanceNumber,
+            int sequenceNumber,
             DateTime cutoffDate,
             // Updated signature to accept lists
             List<int>? includeGrowerIds = null,
@@ -684,18 +690,11 @@ namespace WPFGrowerApp.DataAccess.Services
             List<int>? processIds = null,
             int? cropYear = null) // Added cropYear parameter
         {
-             if (advanceNumber < 1 || advanceNumber > 3)
+            // Get payment type information by sequence number
+            var paymentType = await GetPaymentTypeBySequenceNumberAsync(sequenceNumber);
+            if (paymentType == null)
             {
-                throw new ArgumentOutOfRangeException(nameof(advanceNumber), "Advance number must be 1, 2, or 3.");
-            }
-
-            string postBatchCheckColumn;
-            switch (advanceNumber)
-            {
-                case 1: postBatchCheckColumn = "POST_BAT1"; break;
-                case 2: postBatchCheckColumn = "POST_BAT2"; break;
-                case 3: postBatchCheckColumn = "POST_BAT3"; break;
-                default: return new List<Receipt>(); // Should not happen
+                throw new ArgumentException($"Payment type with sequence number {sequenceNumber} not found.");
             }
 
             try
@@ -762,8 +761,34 @@ namespace WPFGrowerApp.DataAccess.Services
                 sqlBuilder.Where("r.DeletedAt IS NULL"); // Not soft deleted
                 sqlBuilder.Where("r.NetWeight > 0"); // for payment , net should be >0
                 sqlBuilder.Where("rpa.AllocationId IS NULL"); // Exclude receipts already paid for this advance (ignores voided allocations)
+                // ==================================================================================
+                // GENERIC PAYMENT SEQUENCE LOGIC - WORKS FOR ANY SEQUENCE NUMBER!
+                // ==================================================================================
+                
+                // For payment types with sequence > 1, ensure receipt has been paid in previous sequences
+                if (sequenceNumber > 1)
+                {
+                    // Get all payment types with sequence numbers less than current
+                    var previousPaymentTypes = await GetPreviousPaymentSequencesAsync(sequenceNumber);
+                    
+                    if (previousPaymentTypes.Any())
+                    {
+                        // Build subquery to ensure receipt has allocations for ALL previous payment types
+                        var previousPaymentTypeIds = string.Join(",", previousPaymentTypes.Select(pt => pt.PaymentTypeId));
+                        
+                        sqlBuilder.Where($@"
+                            EXISTS (
+                                SELECT 1 
+                                FROM ReceiptPaymentAllocations rpa_prev 
+                                WHERE rpa_prev.ReceiptId = r.ReceiptId 
+                                AND rpa_prev.PaymentTypeId IN ({previousPaymentTypeIds})
+                                AND (rpa_prev.Status IS NULL OR rpa_prev.Status != 'Voided')
+                            )");
+                    }
+                }
+
                 // Add PaymentTypeId parameter for the LEFT JOIN
-                sqlBuilder.AddParameters(new { PaymentTypeId = advanceNumber });
+                sqlBuilder.AddParameters(new { PaymentTypeId = paymentType.PaymentTypeId });
                 if (cropYear.HasValue) // Add Crop Year filter using YEAR() function
                 {
                     sqlBuilder.Where("YEAR(r.ReceiptDate) = @CropYear", new { CropYear = cropYear.Value });
@@ -798,7 +823,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Logger.Error($"Error getting receipts for advance payment {advanceNumber}: {ex.Message}", ex);
+                Logger.Error($"Error getting receipts for sequence number {sequenceNumber}: {ex.Message}", ex);
                 throw;
             }
         }
@@ -2248,6 +2273,49 @@ namespace WPFGrowerApp.DataAccess.Services
             // Grower names typically contain letters and spaces
             return searchText.Any(c => char.IsLetter(c)) && 
                    (searchText.Contains(' ') || searchText.Length > 3);
+        }
+
+        #endregion
+
+        #region Payment Sequence Helper Methods
+
+        /// <summary>
+        /// Gets payment type by sequence number
+        /// </summary>
+        private async Task<PaymentType?> GetPaymentTypeBySequenceNumberAsync(int sequenceNumber)
+        {
+            try
+            {
+                var allPaymentTypes = await _paymentTypeService.GetAllPaymentTypesAsync();
+                return allPaymentTypes
+                    .FirstOrDefault(pt => pt.SequenceNumber == sequenceNumber && pt.IsActive);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting payment type by sequence number {sequenceNumber}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets all payment types that have sequence numbers less than the specified sequence.
+        /// Used to determine which previous payments must exist before processing current payment.
+        /// </summary>
+        private async Task<List<PaymentType>> GetPreviousPaymentSequencesAsync(int currentSequenceNumber)
+        {
+            try
+            {
+                var allPaymentTypes = await _paymentTypeService.GetAllPaymentTypesAsync();
+                return allPaymentTypes
+                    .Where(pt => pt.SequenceNumber < currentSequenceNumber && pt.IsActive)
+                    .OrderBy(pt => pt.SequenceNumber)
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting previous payment sequences for sequence {currentSequenceNumber}: {ex.Message}", ex);
+                throw;
+            }
         }
 
         #endregion

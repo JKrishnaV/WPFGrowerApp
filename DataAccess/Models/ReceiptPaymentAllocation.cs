@@ -29,6 +29,14 @@ namespace WPFGrowerApp.DataAccess.Models
         public int GrowerId { get; set; }
         public string GrowerName { get; set; } = string.Empty;
         public string ReceiptNumber { get; set; } = string.Empty;
+        
+        // Product and Process information
+        public string ProductName { get; set; } = string.Empty;
+        public string ProcessName { get; set; } = string.Empty;
+        
+        // Grade and Price Class information
+        public int Grade { get; set; }
+        public string PriceClassName { get; set; } = string.Empty;
 
         // Display Properties
         public string AmountPaidDisplay => $"{AmountPaid:C2}";

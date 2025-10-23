@@ -355,11 +355,23 @@ namespace WPFGrowerApp.DataAccess.Services
 
         /// <summary>
         /// Approve a payment batch (Draft → Approved)
+        /// Validates payment sequence integrity before approval
         /// </summary>
         public async Task<bool> ApproveBatchAsync(int paymentBatchId, string approvedBy)
         {
             try
             {
+                // STEP 1: VALIDATE - Check for payment sequence integrity
+                var (canApprove, validationReasons) = await ValidateCanApproveBatchAsync(paymentBatchId);
+                
+                if (!canApprove)
+                {
+                    var errorMessage = string.Join("\n", validationReasons);
+                    Logger.Warn($"Approve batch {paymentBatchId} blocked due to validation failure:\n{errorMessage}");
+                    throw new InvalidOperationException(errorMessage);
+                }
+                
+                // STEP 2: PROCEED WITH APPROVAL - Validation passed
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
@@ -693,6 +705,176 @@ namespace WPFGrowerApp.DataAccess.Services
         }
 
         /// <summary>
+        /// Validate if a batch can be approved without breaking payment sequence integrity.
+        /// Ensures earlier advance payments exist before approving later ones.
+        /// </summary>
+        /// <param name="paymentBatchId">Batch ID to validate</param>
+        /// <returns>Tuple of (CanApprove: true if safe to approve, Reasons: list of conflicts if any)</returns>
+        public async Task<(bool CanApprove, List<string> Reasons)> ValidateCanApproveBatchAsync(int paymentBatchId)
+        {
+            var reasons = new List<string>();
+            
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    
+                    // Get the batch to check its payment type
+                    var batch = await GetPaymentBatchByIdAsync(paymentBatchId);
+                    if (batch == null)
+                    {
+                        reasons.Add("Batch not found.");
+                        return (false, reasons);
+                    }
+                    
+                    // Check if batch is already approved or in wrong status
+                    if (batch.Status != "Draft")
+                    {
+                        reasons.Add($"Batch is not in Draft status. Current status: {batch.Status}");
+                        return (false, reasons);
+                    }
+                    
+                    // Check for missing earlier advance payments on ANY receipt in this batch
+                    // This ensures payment sequence integrity - can't approve Advance 3 if Advance 1 or 2 missing
+                    // FIXED: Check that ALL required earlier advances exist, not just ANY earlier advance
+                    var sql = @"
+                        SELECT 
+                            r.ReceiptNumber,
+                            g.GrowerNumber,
+                            g.FullName AS GrowerName,
+                            rpa1.PaymentTypeId AS CurrentAdvanceNumber,
+                            pt1.TypeName AS CurrentPaymentTypeName,
+                            pt1.SequenceNumber AS CurrentSequenceNumber
+                        FROM ReceiptPaymentAllocations rpa1
+                        INNER JOIN Receipts r ON rpa1.ReceiptId = r.ReceiptId
+                        INNER JOIN Growers g ON r.GrowerId = g.GrowerId
+                        INNER JOIN PaymentTypes pt1 ON rpa1.PaymentTypeId = pt1.PaymentTypeId
+                        WHERE rpa1.PaymentBatchId = @PaymentBatchId
+                          AND EXISTS (
+                              -- Check if there are any required earlier advances that are missing
+                              SELECT 1 FROM PaymentTypes pt_required
+                              WHERE pt_required.SequenceNumber < pt1.SequenceNumber
+                                AND pt_required.SequenceNumber > 0
+                                AND NOT EXISTS (
+                                    SELECT 1 FROM ReceiptPaymentAllocations rpa_earlier
+                                    INNER JOIN PaymentBatches pb_earlier ON rpa_earlier.PaymentBatchId = pb_earlier.PaymentBatchId
+                                    WHERE rpa_earlier.ReceiptId = rpa1.ReceiptId
+                                      AND rpa_earlier.PaymentTypeId = pt_required.PaymentTypeId
+                                      AND pb_earlier.Status IN ('Approved', 'Posted', 'Finalized')
+                                      AND rpa_earlier.Status != 'Voided'
+                                )
+                          )
+                        ORDER BY r.ReceiptNumber, pt1.SequenceNumber";
+                    
+                    var missingAdvances = (await connection.QueryAsync<dynamic>(sql, 
+                        new { PaymentBatchId = paymentBatchId })).ToList();
+                    
+                    if (missingAdvances.Any())
+                    {
+                        // Group by sequence number to show clear message
+                        var sequenceGroups = missingAdvances.GroupBy(m => (int)m.CurrentSequenceNumber);
+                        
+                        reasons.Add($"Cannot approve batch {batch.BatchNumber} - Missing earlier advance payments:");
+                        reasons.Add("");
+                        reasons.Add("The following receipts are missing required earlier advance payments:");
+                        reasons.Add("");
+                        
+                        foreach (var sequenceGroup in sequenceGroups.OrderBy(g => g.Key))
+                        {
+                            var firstInGroup = sequenceGroup.First();
+                            reasons.Add($"  → Current Payment: {firstInGroup.CurrentPaymentTypeName} (Sequence {firstInGroup.CurrentSequenceNumber})");
+                            
+                            foreach (var missing in sequenceGroup.Take(5)) // Show first 5 receipts
+                            {
+                                reasons.Add($"     • Receipt {missing.ReceiptNumber} - {missing.GrowerName} (Grower {missing.GrowerNumber})");
+                            }
+                            
+                            if (sequenceGroup.Count() > 5)
+                            {
+                                reasons.Add($"     ... and {sequenceGroup.Count() - 5} more receipts");
+                            }
+                            reasons.Add("");
+                        }
+                        
+                        reasons.Add("TO FIX: You must approve earlier advance payment batches first:");
+                        
+                        // Get the specific batch numbers that need to be approved
+                        var missingBatchInfo = await GetMissingBatchNumbersAsync(paymentBatchId, connection);
+                        
+                        for (int i = 0; i < missingBatchInfo.Count; i++)
+                        {
+                            var batchInfo = missingBatchInfo[i];
+                            reasons.Add($"  {i + 1}. Approve {batchInfo.PaymentTypeName} batch: {batchInfo.BatchNumber} (Status: {batchInfo.Status})");
+                        }
+                        reasons.Add($"  {missingBatchInfo.Count + 1}. Then approve {batch.BatchNumber}");
+                        
+                        return (false, reasons);
+                    }
+                    
+                    // No missing advances found - safe to approve
+                    return (true, new List<string> { "Batch can be safely approved." });
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error validating batch approval for batch {paymentBatchId}: {ex.Message}", ex);
+                reasons.Add($"Validation error: {ex.Message}");
+                return (false, reasons);
+            }
+        }
+
+        /// <summary>
+        /// Get the specific batch numbers that need to be approved before the current batch
+        /// </summary>
+        private async Task<List<MissingBatchInfo>> GetMissingBatchNumbersAsync(int paymentBatchId, SqlConnection connection)
+        {
+            var missingBatches = new List<MissingBatchInfo>();
+            
+            try
+            {
+                var sql = @"
+                    SELECT 
+                        pb.PaymentBatchId,
+                        pb.BatchNumber,
+                        pb.Status,
+                        pt.TypeName AS PaymentTypeName,
+                        pt.SequenceNumber
+                    FROM ReceiptPaymentAllocations rpa1
+                    INNER JOIN PaymentTypes pt1 ON rpa1.PaymentTypeId = pt1.PaymentTypeId
+                    INNER JOIN ReceiptPaymentAllocations rpa2 ON rpa1.ReceiptId = rpa2.ReceiptId
+                    INNER JOIN PaymentBatches pb ON rpa2.PaymentBatchId = pb.PaymentBatchId
+                    INNER JOIN PaymentTypes pt ON rpa2.PaymentTypeId = pt.PaymentTypeId
+                    WHERE rpa1.PaymentBatchId = @PaymentBatchId
+                      AND pt.SequenceNumber < pt1.SequenceNumber
+                      AND pb.Status NOT IN ('Approved', 'Posted', 'Finalized')
+                      AND rpa2.Status != 'Voided'
+                    GROUP BY pb.PaymentBatchId, pb.BatchNumber, pb.Status, pt.TypeName, pt.SequenceNumber
+                    ORDER BY pt.SequenceNumber";
+                
+                var results = await connection.QueryAsync<dynamic>(sql, new { PaymentBatchId = paymentBatchId });
+                
+                foreach (var result in results)
+                {
+                    missingBatches.Add(new MissingBatchInfo
+                    {
+                        PaymentBatchId = (int)result.PaymentBatchId,
+                        BatchNumber = (string)result.BatchNumber,
+                        Status = (string)result.Status,
+                        PaymentTypeName = (string)result.PaymentTypeName,
+                        SequenceNumber = (int)result.SequenceNumber
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting missing batch numbers for batch {paymentBatchId}", ex);
+            }
+            
+            return missingBatches;
+        }
+
+        /// <summary>
         /// Void a payment batch - voids the batch, all allocations, and all cheques in a transaction.
         /// Validates payment sequence integrity before voiding to prevent breaking later advance payments.
         /// </summary>
@@ -1004,6 +1186,18 @@ namespace WPFGrowerApp.DataAccess.Services
                 throw;
             }
         }
+    }
+
+    /// <summary>
+    /// Information about a missing batch that needs to be approved
+    /// </summary>
+    public class MissingBatchInfo
+    {
+        public int PaymentBatchId { get; set; }
+        public string BatchNumber { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public string PaymentTypeName { get; set; } = string.Empty;
+        public int SequenceNumber { get; set; }
     }
 }
 

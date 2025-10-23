@@ -5,10 +5,11 @@ namespace WPFGrowerApp.Models
 {
     /// <summary>
     /// Holds the input parameters used for an advance payment run (actual or test).
+    /// Uses sequence number from PaymentTypes table for flexible payment ordering.
     /// </summary>
     public class TestRunInputParameters
     {
-        public int AdvanceNumber { get; set; }
+        public int SequenceNumber { get; set; }
         public DateTime PaymentDate { get; set; }
         public DateTime CutoffDate { get; set; }
         public int CropYear { get; set; }

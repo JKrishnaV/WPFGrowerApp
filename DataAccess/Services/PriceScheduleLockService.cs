@@ -292,6 +292,14 @@ namespace WPFGrowerApp.DataAccess.Services
         {
             try
             {
+                // Deduplicate locks by PriceScheduleId and PaymentTypeId combination
+                var uniqueLocks = locks
+                    .GroupBy(l => new { l.PriceScheduleId, l.PaymentTypeId })
+                    .Select(g => g.First())
+                    .ToList();
+
+                Logger.Info($"Deduplicated {locks.Count} locks to {uniqueLocks.Count} unique locks");
+
                 var sql = @"
                     INSERT INTO PriceScheduleLocks (
                         PriceScheduleId, PaymentTypeId, PaymentBatchId,
@@ -308,20 +316,28 @@ namespace WPFGrowerApp.DataAccess.Services
                 var createdBy = App.CurrentUser?.Username ?? "SYSTEM";
 
                 var rowsAffected = 0;
-                foreach (var lockEntry in locks)
+                foreach (var lockEntry in uniqueLocks)
                 {
-                    var result = await connection.ExecuteAsync(sql, new
+                    try
                     {
-                        lockEntry.PriceScheduleId,
-                        lockEntry.PaymentTypeId,
-                        lockEntry.PaymentBatchId,
-                        LockedAt = lockedAt,
-                        LockedBy = lockedBy,
-                        CreatedAt = createdAt,
-                        CreatedBy = createdBy
-                    }, transaction);
+                        var result = await connection.ExecuteAsync(sql, new
+                        {
+                            lockEntry.PriceScheduleId,
+                            lockEntry.PaymentTypeId,
+                            lockEntry.PaymentBatchId,
+                            LockedAt = lockedAt,
+                            LockedBy = lockedBy,
+                            CreatedAt = createdAt,
+                            CreatedBy = createdBy
+                        }, transaction);
 
-                    rowsAffected += result;
+                        rowsAffected += result;
+                    }
+                    catch (SqlException ex) when (ex.Number == 2627) // Unique constraint violation
+                    {
+                        // Log the duplicate but continue processing other locks
+                        Logger.Warn($"Price schedule lock already exists for schedule {lockEntry.PriceScheduleId}, type {lockEntry.PaymentTypeId}. Skipping.");
+                    }
                 }
 
                 Logger.Info($"Created {rowsAffected} price schedule locks for payment batch");

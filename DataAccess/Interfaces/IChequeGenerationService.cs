@@ -30,7 +30,8 @@ namespace WPFGrowerApp.DataAccess.Interfaces
             DateTime chequeDate,
             int paymentBatchId,
             int paymentTypeId,
-            string? memo = null);
+            string? memo = null,
+            int? paymentDistributionId = null);
 
         /// <summary>
         /// Generate cheques for all growers in a payment batch

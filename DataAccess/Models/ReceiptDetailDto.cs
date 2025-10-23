@@ -57,6 +57,8 @@ namespace WPFGrowerApp.DataAccess.Models
         public string DepotAddress { get; set; } = string.Empty;
         public string PriceClassName { get; set; } = string.Empty;
         public decimal PricePerPound { get; set; }
+        public int PaymentTypeId { get; set; }
+        public string PaymentTypeName { get; set; } = string.Empty;
 
         // Payment Allocation Summary
         public bool IsPaid { get; set; }
@@ -74,6 +76,7 @@ namespace WPFGrowerApp.DataAccess.Models
         public string StatusDisplay => IsVoided ? "Voided" : "Active";
         public string QualityStatusDisplay => QualityCheckedAt.HasValue ? "Quality Checked" : "Pending";
         public string PaymentStatusDisplay => IsPaid ? "Paid" : "Unpaid";
+        public string AdvancePaymentDisplay => GetAdvancePaymentDisplay();
         public string FullGrowerDisplay => $"{GrowerNumber} - {GrowerName}";
         public string FullProductDisplay => $"{ProductName} ({ProductDescription})";
         public string FullProcessDisplay => $"{ProcessName} ({ProcessDescription})";
@@ -96,6 +99,25 @@ namespace WPFGrowerApp.DataAccess.Models
         public bool CanQualityCheck => !IsVoided && QualityCheckedAt == null;
         public bool IsRecentlyCreated => (DateTime.Now - CreatedAt).TotalDays <= 7;
         public bool IsRecentlyModified => ModifiedAt.HasValue && (DateTime.Now - ModifiedAt.Value).TotalDays <= 7;
+
+        private string GetAdvancePaymentDisplay()
+        {
+            // Use the actual PaymentTypeName from database if available, otherwise fall back to mapping
+            if (!string.IsNullOrEmpty(PaymentTypeName))
+            {
+                return PaymentTypeName;
+            }
+            
+            // Fallback mapping for PaymentTypeId
+            return PaymentTypeId switch
+            {
+                1 => "Advance 1",
+                2 => "Advance 2", 
+                3 => "Advance 3",
+                4 => "Final Payment",
+                _ => $"Payment Type {PaymentTypeId}"
+            };
+        }
 
         public event PropertyChangedEventHandler PropertyChanged;
 

@@ -12,6 +12,12 @@ namespace WPFGrowerApp.DataAccess.Services
 {
     public class PaymentDistributionService : BaseDatabaseService, IPaymentDistributionService
     {
+        private readonly ICrossBatchPaymentService _crossBatchPaymentService;
+
+        public PaymentDistributionService(ICrossBatchPaymentService crossBatchPaymentService)
+        {
+            _crossBatchPaymentService = crossBatchPaymentService;
+        }
         public async Task<IEnumerable<PaymentBatch>> GetAvailableBatchesAsync()
         {
             try
@@ -23,7 +29,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         SELECT pb.*, pt.TypeName AS PaymentTypeName
                         FROM PaymentBatches pb
                         LEFT JOIN PaymentTypes pt ON pb.PaymentTypeId = pt.PaymentTypeId
-                        WHERE pb.Status IN ('Approved', 'Posted')
+                        WHERE pb.Status = 'Posted'
                         AND (
                             pb.PaymentBatchId NOT IN (
                                 SELECT DISTINCT PaymentBatchId 
@@ -60,16 +66,23 @@ namespace WPFGrowerApp.DataAccess.Services
                     {
                         try
                         {
-                            // Check for duplicate distributions for the same batch
-                            var batchIds = distribution.Items?.Select(i => i.PaymentBatchId).Where(id => id.HasValue).Select(id => id.Value).Distinct().ToList();
-                            if (batchIds?.Any() == true)
+                            // Check for grower-specific conflicts instead of batch-level conflicts
+                            if (distribution.Items?.Any() == true)
                             {
-                                foreach (var batchId in batchIds)
+                                foreach (var item in distribution.Items)
                                 {
-                                    var hasExisting = await HasExistingDistributionsAsync(batchId);
-                                    if (hasExisting)
+                                    if (item.PaymentBatchId.HasValue && item.GrowerId > 0)
                                     {
-                                        throw new InvalidOperationException($"Batch {batchId} already has payment distributions. Cannot create duplicate distributions.");
+                                        var hasExisting = await HasExistingDistributionsForGrowerAsync(
+                                            item.PaymentBatchId.Value, 
+                                            item.GrowerId, 
+                                            connection, 
+                                            transaction);
+                                        
+                                        if (hasExisting)
+                                        {
+                                            throw new InvalidOperationException($"Grower {item.GrowerId} already has payment distributions for batch {item.PaymentBatchId}. Cannot create duplicate distributions.");
+                                        }
                                     }
                                 }
                             }
@@ -104,6 +117,7 @@ namespace WPFGrowerApp.DataAccess.Services
                             }
 
                             // Update batch status to "Finalized" after successful distribution creation
+                            var batchIds = distribution.Items?.Select(i => i.PaymentBatchId).Where(id => id.HasValue).Select(id => id.Value).Distinct().ToList();
                             if (batchIds?.Any() == true)
                             {
                                 foreach (var batchId in batchIds)
@@ -337,6 +351,7 @@ namespace WPFGrowerApp.DataAccess.Services
             foreach (var item in items)
             {
                 item.DistributionId = distributionId;
+                item.PaymentDistributionId = distributionId;
                 item.Status = "Pending";
                 item.CreatedAt = DateTime.Now;
                 item.CreatedBy = App.CurrentUser?.Username ?? "SYSTEM";
@@ -350,12 +365,12 @@ namespace WPFGrowerApp.DataAccess.Services
         {
             var sql = @"
                 INSERT INTO Cheques (
-                    ChequeSeriesId, ChequeNumber, FiscalYear, GrowerId, PaymentBatchId, 
+                    ChequeSeriesId, ChequeNumber, FiscalYear, GrowerId, PaymentBatchId, PaymentDistributionId,
                     ChequeAmount, ChequeDate, Status, CreatedAt, CreatedBy
                 )
                 OUTPUT INSERTED.ChequeId
                 VALUES (
-                    @ChequeSeriesId, @ChequeNumber, @FiscalYear, @GrowerId, @PaymentBatchId,
+                    @ChequeSeriesId, @ChequeNumber, @FiscalYear, @GrowerId, @PaymentBatchId, @PaymentDistributionId,
                     @ChequeAmount, @ChequeDate, @Status, @CreatedAt, @CreatedBy
                 )";
 
@@ -370,6 +385,7 @@ namespace WPFGrowerApp.DataAccess.Services
                 FiscalYear = DateTime.Now.Year,
                 GrowerId = item.GrowerId,
                 PaymentBatchId = item.PaymentBatchId,
+                PaymentDistributionId = item.PaymentDistributionId,
                 ChequeAmount = item.Amount,
                 ChequeDate = DateTime.Now,
                 Status = "Generated",
@@ -378,7 +394,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }, transaction);
 
             // Create advance deductions for outstanding advances
-            await CreateAdvanceDeductionsAsync(item.GrowerId, chequeId, connection, transaction);
+            await CreateAdvanceDeductionsAsync(item.GrowerId, chequeId, item.PaymentBatchId ?? 0, connection, transaction);
 
             return chequeId;
         }
@@ -386,10 +402,16 @@ namespace WPFGrowerApp.DataAccess.Services
         /// <summary>
         /// Create advance deductions for outstanding advances when generating a cheque
         /// </summary>
-        private async Task CreateAdvanceDeductionsAsync(int growerId, int chequeId, SqlConnection connection, SqlTransaction transaction)
+        private async Task CreateAdvanceDeductionsAsync(int growerId, int chequeId, int paymentBatchId, SqlConnection connection, SqlTransaction transaction)
         {
             try
             {
+                // Validate that PaymentBatchId is valid
+                if (paymentBatchId <= 0)
+                {
+                    Logger.Info($"Invalid PaymentBatchId {paymentBatchId} for grower {growerId}. Skipping advance deductions.");
+                    return;
+                }
                 // Get all outstanding advances for the grower
                 var outstandingAdvancesSql = @"
                     SELECT AdvanceChequeId, AdvanceAmount 
@@ -417,7 +439,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     {
                         AdvanceChequeId = advance.AdvanceChequeId,
                         ChequeId = chequeId,
-                        PaymentBatchId = 0, // Will be updated by the calling method
+                        PaymentBatchId = paymentBatchId,
                         DeductionAmount = advance.AdvanceAmount,
                         DeductionDate = DateTime.Now,
                         CreatedBy = App.CurrentUser?.Username ?? "SYSTEM",
@@ -617,6 +639,413 @@ namespace WPFGrowerApp.DataAccess.Services
                 Logger.Error($"Error retrieving all distributions: {ex.Message}", ex);
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Generate complete payment distribution in a single transaction
+        /// This ensures all operations succeed or all fail together
+        /// </summary>
+        private async Task<int?> GetBatchIdByNumberAsync(string batchNumber, SqlConnection connection, SqlTransaction transaction)
+        {
+            try
+            {
+                var sql = "SELECT PaymentBatchId FROM PaymentBatches WHERE BatchNumber = @BatchNumber";
+                var result = await connection.ExecuteScalarAsync<int?>(sql, new { BatchNumber = batchNumber }, transaction);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting batch ID for batch number {batchNumber}: {ex.Message}", ex);
+                return null;
+            }
+        }
+
+        public async Task<PaymentDistribution> GenerateCompletePaymentDistributionAsync(PaymentDistribution distribution, string generatedBy, List<int> selectedBatchIds = null)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    using (var transaction = connection.BeginTransaction())
+                    {
+                        try
+                        {
+                            // STEP 1: Validate batches are available
+                            // Use the selected batch IDs passed from the ViewModel
+                            var batchIds = selectedBatchIds ?? new List<int>();
+                            
+                            // Fallback: if no batch IDs provided, extract from distribution items
+                            if (!batchIds.Any() && distribution.Items?.Any() == true)
+                            {
+                                batchIds = distribution.Items
+                                    .Select(i => i.PaymentBatchId)
+                                    .Where(id => id.HasValue)
+                                    .Select(id => id.Value)
+                                    .Distinct()
+                                    .ToList();
+                            }
+                            // Check for grower-specific conflicts instead of batch-level conflicts
+                            if (distribution.Items?.Any() == true)
+                            {
+                                foreach (var item in distribution.Items)
+                                {
+                                    if (item.PaymentBatchId.HasValue && item.GrowerId > 0)
+                                    {
+                                        var hasExisting = await HasExistingDistributionsForGrowerAsync(
+                                            item.PaymentBatchId.Value, 
+                                            item.GrowerId, 
+                                            connection, 
+                                            transaction);
+                                        
+                                        if (hasExisting)
+                                        {
+                                            throw new InvalidOperationException($"Grower {item.GrowerId} already has payment distributions for batch {item.PaymentBatchId}. Cannot create duplicate distributions.");
+                                        }
+                                    }
+                                }
+                            }
+
+                            // STEP 2: Create PaymentDistribution
+                            var distributionSql = @"
+                                INSERT INTO PaymentDistributions (
+                                    DistributionNumber, DistributionDate, DistributionType, PaymentMethod,
+                                    TotalAmount, TotalGrowers, TotalBatches, Status,
+                                    CreatedAt, CreatedBy
+                                )
+                                VALUES (
+                                    @DistributionNumber, @DistributionDate, @DistributionType, @PaymentMethod,
+                                    @TotalAmount, @TotalGrowers, @TotalBatches, @Status,
+                                    @CreatedAt, @CreatedBy
+                                );
+                                SELECT CAST(SCOPE_IDENTITY() as int)";
+
+                            // Generate distribution number
+                            distribution.DistributionNumber = $"DIST-{DateTime.Now:yyyyMMdd-HHmmss}";
+                            distribution.DistributionDate = DateTime.Today;
+                            distribution.Status = "Draft";
+                            distribution.CreatedAt = DateTime.Now;
+                            distribution.CreatedBy = App.CurrentUser?.Username ?? "SYSTEM";
+
+                            var distributionId = await connection.ExecuteScalarAsync<int>(distributionSql, distribution, transaction);
+                            distribution.DistributionId = distributionId;
+
+                            // STEP 3: Create PaymentDistributionItems
+                            foreach (var item in distribution.Items)
+                            {
+                                item.DistributionId = distributionId;
+                                item.PaymentDistributionId = distributionId;
+                                item.Status = "Pending";
+                                item.CreatedAt = DateTime.Now;
+                                item.CreatedBy = App.CurrentUser?.Username ?? "SYSTEM";
+                            }
+
+                            // Insert items and retrieve the generated IDs
+                            var insertedItems = new List<PaymentDistributionItem>();
+                            foreach (var item in distribution.Items)
+                            {
+                                var sqlWithOutput = @"
+                                    INSERT INTO PaymentDistributionItems (
+                                        PaymentDistributionId, GrowerId, PaymentBatchId, ReceiptId,
+                                        Amount, PaymentMethod, Status, CreatedAt, CreatedBy
+                                    )
+                                    OUTPUT INSERTED.PaymentDistributionItemId
+                                    VALUES (
+                                        @DistributionId, @GrowerId, @PaymentBatchId, @ReceiptId,
+                                        @Amount, @PaymentMethod, @Status, @CreatedAt, @CreatedBy
+                                    )";
+
+                                var generatedId = await connection.QuerySingleAsync<int>(sqlWithOutput, new
+                                {
+                                    DistributionId = item.DistributionId,
+                                    GrowerId = item.GrowerId,
+                                    PaymentBatchId = item.PaymentBatchId,
+                                    ReceiptId = item.ReceiptId,
+                                    Amount = item.Amount,
+                                    PaymentMethod = item.PaymentMethod,
+                                    Status = item.Status,
+                                    CreatedAt = item.CreatedAt,
+                                    CreatedBy = item.CreatedBy
+                                }, transaction);
+
+                                // Update the item with the generated ID
+                                item.ItemId = generatedId;
+                                insertedItems.Add(item);
+                            }
+
+                            // STEP 3.5: Create PaymentDistributionReceipts for detailed audit tracking
+                            foreach (var item in insertedItems)
+                            {
+                                if (item.ReceiptContributions?.Any() == true)
+                                {
+                                    var receiptSql = @"
+                                        INSERT INTO PaymentDistributionReceipts (
+                                            PaymentDistributionItemId, ReceiptId, PaymentBatchId, Amount,
+                                            BatchNumber, ReceiptDate, CreatedAt, CreatedBy
+                                        )
+                                        VALUES (
+                                            @PaymentDistributionItemId, @ReceiptId, @PaymentBatchId, @Amount,
+                                            @BatchNumber, @ReceiptDate, @CreatedAt, @CreatedBy
+                                        )";
+
+                                    foreach (var contribution in item.ReceiptContributions)
+                                    {
+                                        await connection.ExecuteAsync(receiptSql, new
+                                        {
+                                            PaymentDistributionItemId = item.ItemId,
+                                            ReceiptId = contribution.ReceiptId,
+                                            PaymentBatchId = contribution.PaymentBatchId,
+                                            Amount = contribution.Amount,
+                                            BatchNumber = contribution.BatchNumber,
+                                            ReceiptDate = contribution.ReceiptDate,
+                                            CreatedAt = DateTime.Now,
+                                            CreatedBy = App.CurrentUser?.Username ?? "SYSTEM"
+                                        }, transaction);
+                                    }
+                                }
+                            }
+
+                            // STEP 4: Generate Consolidated Cheques and Advance Deductions
+                            foreach (var item in distribution.Items)
+                            {
+                                if (item.PaymentMethod == "Cheque")
+                                {
+                                    // For consolidated payments (multiple batches), use CrossBatchPaymentService
+                                    if (selectedBatchIds.Count > 1)
+                                    {
+                                        // Generate consolidated cheque using CrossBatchPaymentService
+                                        var consolidatedCheque = await _crossBatchPaymentService.GenerateConsolidatedChequeAsync(
+                                            item.GrowerId, 
+                                            selectedBatchIds, 
+                                            item.Amount, 
+                                            generatedBy,
+                                            distributionId
+                                        );
+
+                                        if (consolidatedCheque != null)
+                                        {
+                                            // Create advance deductions for this grower using the consolidated cheque
+                                            await CreateAdvanceDeductionsAsync(item.GrowerId, consolidatedCheque.ChequeId, selectedBatchIds.First(), connection, transaction);
+                                            
+                                            Logger.Info($"Generated consolidated cheque {consolidatedCheque.ChequeId} for grower {item.GrowerId} from {selectedBatchIds.Count} batches");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // Generate regular cheque for single batch
+                                        var chequeSql = @"
+                                            INSERT INTO Cheques (
+                                                ChequeSeriesId, ChequeNumber, FiscalYear, GrowerId, PaymentBatchId, PaymentDistributionId,
+                                                ChequeAmount, ChequeDate, Status, CreatedAt, CreatedBy
+                                            )
+                                            OUTPUT INSERTED.ChequeId
+                                            VALUES (
+                                                @ChequeSeriesId, @ChequeNumber, @FiscalYear, @GrowerId, @PaymentBatchId, @PaymentDistributionId,
+                                                @ChequeAmount, @ChequeDate, @Status, @CreatedAt, @CreatedBy
+                                            )";
+
+                                        var timestamp = DateTime.Now.ToString("HHmmssfff");
+                                        var chequeNumber = $"CHQ-{DateTime.Now:yyyyMMdd}-{timestamp}-{item.GrowerId}";
+                                        
+                                        var primaryBatchId = item.PaymentBatchId;
+                                        
+                                        var chequeId = await connection.ExecuteScalarAsync<int>(chequeSql, new
+                                        {
+                                            ChequeSeriesId = 2,
+                                            ChequeNumber = chequeNumber,
+                                            FiscalYear = DateTime.Now.Year,
+                                            GrowerId = item.GrowerId,
+                                            PaymentBatchId = primaryBatchId,
+                                            PaymentDistributionId = distributionId,
+                                            ChequeAmount = item.Amount,
+                                            ChequeDate = DateTime.Now,
+                                            Status = "Generated",
+                                            CreatedAt = DateTime.Now,
+                                            CreatedBy = generatedBy
+                                        }, transaction);
+
+                                        // Create advance deductions for this grower
+                                        await CreateAdvanceDeductionsAsync(item.GrowerId, chequeId, primaryBatchId ?? 0, connection, transaction);
+                                        
+                                        Logger.Info($"Generated regular cheque {chequeId} for grower {item.GrowerId}");
+                                    }
+                                }
+                            }
+
+                            // STEP 5: Update batch statuses for ALL selected batches
+                            if (batchIds?.Any() == true)
+                            {
+                                // Build dynamic SQL with parameter placeholders
+                                var batchIdPlaceholders = string.Join(",", batchIds.Select((_, i) => $"@BatchId{i}"));
+                                var updateBatchSql = $@"
+                                    UPDATE PaymentBatches 
+                                    SET Status = 'Finalized',
+                                        ModifiedAt = GETDATE(),
+                                        ModifiedBy = @ModifiedBy
+                                    WHERE PaymentBatchId IN ({batchIdPlaceholders})";
+
+                                // Create parameters dictionary
+                                var parameters = new Dictionary<string, object> { { "ModifiedBy", generatedBy } };
+                                for (int i = 0; i < batchIds.Count; i++)
+                                {
+                                    parameters[$"BatchId{i}"] = batchIds[i];
+                                }
+
+                                await connection.ExecuteAsync(updateBatchSql, parameters, transaction);
+                            }
+
+                            // STEP 6: Update distribution status
+                            var updateDistributionSql = @"
+                                UPDATE PaymentDistributions
+                                SET Status = 'Generated',
+                                    ProcessedAt = GETDATE(),
+                                    ProcessedBy = @GeneratedBy
+                                WHERE PaymentDistributionId = @DistributionId";
+
+                            await connection.ExecuteAsync(updateDistributionSql, new 
+                            { 
+                                DistributionId = distributionId, 
+                                GeneratedBy = generatedBy 
+                            }, transaction);
+
+                            // COMMIT ALL CHANGES
+                            transaction.Commit();
+                            
+                            Logger.Info($"Successfully generated complete payment distribution {distribution.DistributionNumber} with {distribution.Items.Count} items");
+                            return distribution;
+                        }
+                        catch (Exception ex)
+                        {
+                            // ROLLBACK ALL CHANGES ON ANY ERROR
+                            transaction.Rollback();
+                            Logger.Error($"Error generating complete payment distribution: {ex.Message}", ex);
+                            throw;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error in GenerateCompletePaymentDistributionAsync: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Check if batch has existing distributions (with transaction support)
+        /// </summary>
+        private async Task<bool> HasExistingDistributionsAsync(int batchId, SqlConnection connection, SqlTransaction transaction)
+        {
+            var sql = @"
+                SELECT COUNT(*) 
+                FROM PaymentDistributionItems 
+                WHERE PaymentBatchId = @BatchId 
+                AND Status NOT IN ('Voided')";
+
+            var count = await connection.ExecuteScalarAsync<int>(sql, new { BatchId = batchId }, transaction);
+            return count > 0;
+        }
+
+        /// <summary>
+        /// Check if a specific grower has existing distributions for a batch
+        /// </summary>
+        private async Task<bool> HasExistingDistributionsForGrowerAsync(int batchId, int growerId, SqlConnection connection, SqlTransaction transaction)
+        {
+            var sql = @"
+                SELECT COUNT(*) 
+                FROM PaymentDistributionItems 
+                WHERE PaymentBatchId = @BatchId 
+                AND GrowerId = @GrowerId
+                AND Status NOT IN ('Voided')";
+
+            var count = await connection.ExecuteScalarAsync<int>(sql, new { BatchId = batchId, GrowerId = growerId }, transaction);
+            return count > 0;
+        }
+
+        /// <summary>
+        /// Update batch processing status based on which growers have been processed
+        /// </summary>
+        public async Task UpdateBatchProcessingStatusAsync(List<int> batchIds, List<int> processedGrowerIds, string processedBy)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    using (var transaction = connection.BeginTransaction())
+                    {
+                        try
+                        {
+                            foreach (var batchId in batchIds)
+                            {
+                                // Get all growers in this batch
+                                var allGrowersInBatch = await GetGrowersInBatchAsync(batchId, connection, transaction);
+                                
+                                // Check if all growers in this batch have been processed
+                                var unprocessedGrowers = allGrowersInBatch.Except(processedGrowerIds).ToList();
+                                
+                                string newStatus;
+                                if (unprocessedGrowers.Any())
+                                {
+                                    // Some growers still pending - keep as Posted
+                                    newStatus = "Posted";
+                                }
+                                else
+                                {
+                                    // All growers processed - mark as Finalized
+                                    newStatus = "Finalized";
+                                }
+                                
+                                // Update batch status
+                                var updateSql = @"
+                                    UPDATE PaymentBatches 
+                                    SET Status = @Status,
+                                        ModifiedAt = @ModifiedAt,
+                                        ModifiedBy = @ModifiedBy
+                                    WHERE PaymentBatchId = @BatchId";
+                                
+                                await connection.ExecuteAsync(updateSql, new
+                                {
+                                    Status = newStatus,
+                                    ModifiedAt = DateTime.UtcNow,
+                                    ModifiedBy = processedBy,
+                                    BatchId = batchId
+                                }, transaction);
+                                
+                                Logger.Info($"Updated batch {batchId} status to {newStatus} (processed {processedGrowerIds.Count} growers, {unprocessedGrowers.Count} remaining)");
+                            }
+                            
+                            transaction.Commit();
+                        }
+                        catch (Exception ex)
+                        {
+                            transaction.Rollback();
+                            Logger.Error($"Error updating batch processing status: {ex.Message}", ex);
+                            throw;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error in UpdateBatchProcessingStatusAsync: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Get all grower IDs in a specific batch
+        /// </summary>
+        private async Task<List<int>> GetGrowersInBatchAsync(int batchId, SqlConnection connection, SqlTransaction transaction)
+        {
+            var sql = @"
+                SELECT DISTINCT r.GrowerId
+                FROM Receipts r
+                INNER JOIN ReceiptPaymentAllocations rpa ON r.ReceiptId = rpa.ReceiptId
+                WHERE rpa.PaymentBatchId = @BatchId";
+
+            var growerIds = await connection.QueryAsync<int>(sql, new { BatchId = batchId }, transaction);
+            return growerIds.ToList();
         }
     }
 }
