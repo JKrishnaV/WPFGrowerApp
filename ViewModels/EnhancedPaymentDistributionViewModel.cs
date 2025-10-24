@@ -68,7 +68,7 @@ namespace WPFGrowerApp.ViewModels
         public ICommand PreviewDistributionCommand { get; }
         public ICommand SelectPaymentMethodCommand { get; }
         public ICommand SelectBatchesForConsolidationCommand { get; }
-        public ICommand PreviewConsolidatedPaymentCommand { get; }
+        // Note: PreviewConsolidatedPaymentCommand removed - consolidated payments replaced by payment distributions
         public ICommand PreviewRegularPaymentCommand { get; }
         public ICommand PreviewCommand { get; }
         public ICommand GenerateChequesCommand { get; }
@@ -124,7 +124,7 @@ namespace WPFGrowerApp.ViewModels
             PreviewDistributionCommand = new RelayCommand(async p => await PreviewDistributionAsync(), p => CanPreviewDistribution());
             SelectPaymentMethodCommand = new RelayCommand(async p => await SelectPaymentMethodAsync());
             SelectBatchesForConsolidationCommand = new RelayCommand(async p => await SelectBatchesForConsolidationAsync());
-            PreviewConsolidatedPaymentCommand = new RelayCommand(async p => await PreviewConsolidatedPaymentAsync(), p => CanPreviewConsolidatedPayment());
+            // Note: PreviewConsolidatedPaymentCommand removed - consolidated payments replaced by payment distributions
             PreviewRegularPaymentCommand = new RelayCommand(async p => await PreviewRegularPaymentAsync(), p => CanPreviewRegularPayment());
             PreviewCommand = new RelayCommand(async p => await PreviewPaymentAsync(), p => CanPreviewPayment());
             GenerateChequesCommand = new RelayCommand(async p => await GenerateChequesAsync(), p => CanGenerateCheques());
@@ -400,12 +400,7 @@ namespace WPFGrowerApp.ViewModels
                     return;
                 }
 
-                // Handle consolidation if enabled
-                if (EnableConsolidation)
-                {
-                    await GenerateConsolidatedPaymentsAsync();
-                    return;
-                }
+                // Note: Consolidated payment generation removed - consolidated payments replaced by payment distributions
 
                 // Check for existing distributions to prevent duplicates
                 foreach (var batchId in SelectedBatchIds)
@@ -532,71 +527,7 @@ namespace WPFGrowerApp.ViewModels
             }
         }
 
-        private async Task PreviewConsolidatedPaymentAsync()
-        {
-            try
-            {
-                if (SelectedGrowerSelection == null)
-                {
-                    await _dialogService.ShowMessageBoxAsync("Please select a grower for consolidation", "Validation Error");
-                    return;
-                }
-
-                var consolidatedPayment = await _crossBatchPaymentService.GetConsolidatedPaymentForGrowerAsync(
-                    SelectedGrowerSelection.GrowerId, SelectedBatchIds);
-
-                // Get outstanding advances for detailed breakdown
-                var outstandingAdvances = await _advanceChequeService.GetOutstandingAdvancesAsync(SelectedGrowerSelection.GrowerId);
-                
-                // Populate advance breakdowns
-                consolidatedPayment.OutstandingAdvances = outstandingAdvances.Select(adv => new AdvanceBreakdown
-                {
-                    AdvanceChequeId = adv.AdvanceChequeId,
-                    ChequeNumber = adv.ChequeNumber?.ToString() ?? $"ADV-{adv.AdvanceChequeId:D6}",
-                    Amount = adv.AdvanceAmount,
-                    AdvanceDate = adv.AdvanceDate,
-                    Status = adv.Status
-                }).ToList();
-
-                // Calculate net total (gross amount - outstanding advances)
-                var totalOutstanding = outstandingAdvances.Sum(adv => adv.AdvanceAmount);
-                consolidatedPayment.NetTotal = consolidatedPayment.TotalAmount - totalOutstanding;
-
-                var message = $"Consolidated Payment Preview for {SelectedGrowerSelection.GrowerName}:\n\n";
-                
-                // Batch information
-                message += $"Batch Count: {consolidatedPayment.BatchCount}\n";
-                foreach (var batch in consolidatedPayment.BatchBreakdowns)
-                {
-                    message += $"{batch.BatchNumber} gross: {batch.AmountDisplay}\n";
-                }
-                
-                // Outstanding advances information
-                message += $"\nOutstanding Advances Count: {consolidatedPayment.OutstandingAdvancesCount}\n";
-                foreach (var advance in consolidatedPayment.OutstandingAdvances)
-                {
-                    message += $"Outstanding Advance ({advance.ChequeNumber}): {advance.AmountDisplay}\n";
-                }
-                
-                // Net total with special handling for negative amounts
-                if (consolidatedPayment.NetTotal < 0)
-                {
-                    message += $"\n⚠️ WARNING: Outstanding advances exceed gross amount!\n";
-                    message += $"Net Total: {consolidatedPayment.NetTotalDisplay} (NEGATIVE)\n";
-                    message += $"This grower owes: {Math.Abs(consolidatedPayment.NetTotal):C}";
-                }
-                else
-                {
-                    message += $"\nNet Total: {consolidatedPayment.NetTotalDisplay}";
-                }
-
-                await _dialogService.ShowMessageBoxAsync(message, "Consolidated Payment Preview");
-            }
-            catch (Exception ex)
-            {
-                await _dialogService.ShowMessageBoxAsync($"Error previewing consolidated payment: {ex.Message}", "Error");
-            }
-        }
+        // Note: PreviewConsolidatedPaymentAsync method removed - consolidated payments replaced by payment distributions
 
         private async Task PreviewRegularPaymentAsync()
         {
@@ -682,15 +613,8 @@ namespace WPFGrowerApp.ViewModels
                     return;
                 }
 
-                // Determine which preview to show based on payment type
-                if (SelectedGrowerSelection.CanBeConsolidated && SelectedGrowerSelection.IsConsolidated)
-                {
-                    await PreviewConsolidatedPaymentAsync();
-                }
-                else
-                {
-                    await PreviewRegularPaymentAsync();
-                }
+                // Note: Consolidated payment preview removed - consolidated payments replaced by payment distributions
+                await PreviewRegularPaymentAsync();
             }
             catch (Exception ex)
             {
@@ -833,10 +757,7 @@ namespace WPFGrowerApp.ViewModels
             return HasGrowerSelections && !IsBusy;
         }
 
-        private bool CanPreviewConsolidatedPayment()
-        {
-            return SelectedGrowerSelection != null && HasSelectedBatches && !IsBusy;
-        }
+        // Note: CanPreviewConsolidatedPayment method removed - consolidated payments replaced by payment distributions
 
         private bool CanPreviewRegularPayment()
         {
@@ -1210,7 +1131,7 @@ namespace WPFGrowerApp.ViewModels
                     propertyName == nameof(SelectedBatchIds) ||
                     propertyName == nameof(IsBusy))
                 {
-                    (PreviewConsolidatedPaymentCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                    // Note: PreviewConsolidatedPaymentCommand removed - consolidated payments replaced by payment distributions
                     (PreviewRegularPaymentCommand as RelayCommand)?.RaiseCanExecuteChanged();
                     (PreviewCommand as RelayCommand)?.RaiseCanExecuteChanged();
                 }
@@ -1395,40 +1316,12 @@ namespace WPFGrowerApp.ViewModels
                     return;
                 }
 
-                // Create consolidated cheques for each grower
-                var consolidatedCheques = new List<Cheque>();
-                
-                foreach (var grower in growersWithMultipleBatches)
-                {
-                    // Get consolidated payment details for this grower
-                    var consolidatedPayment = await _crossBatchPaymentService.GetConsolidatedPaymentForGrowerAsync(grower.GrowerId, SelectedBatchIds);
-                    
-                    if (consolidatedPayment != null && consolidatedPayment.TotalAmount > 0)
-                    {
-                        // Create consolidated cheque
-                        var consolidatedCheque = await _crossBatchPaymentService.GenerateConsolidatedChequeAsync(
-                            grower.GrowerId, 
-                            SelectedBatchIds, 
-                            consolidatedPayment.TotalAmount, 
-                            App.CurrentUser?.Username ?? "SYSTEM",
-                            0);
-                        
-                        if (consolidatedCheque != null)
-                        {
-                            consolidatedCheques.Add(consolidatedCheque);
-                        }
-                    }
-                }
-
-                // Update batch statuses to "Finalized"
-                await _crossBatchPaymentService.UpdateBatchStatusAfterConsolidationAsync(SelectedBatchIds, "Finalized", App.CurrentUser?.Username ?? "SYSTEM");
-
+                // Note: Consolidated payment functionality removed - consolidated payments replaced by payment distributions
+                // This section is no longer needed as payment distributions handle cross-batch payments
                 await _dialogService.ShowMessageBoxAsync(
-                    $"Successfully generated {consolidatedCheques.Count} consolidated cheques!\n\n" +
-                    $"Total Amount: {consolidatedCheques.Sum(c => c.ChequeAmount):C}\n" +
-                    $"Batches Processed: {SelectedBatchIds.Count}\n\n" +
-                    $"You can now go to Enhanced Cheque Preparation to print the cheques.",
-                    "Consolidated Payments Generated");
+                    "Consolidated payment functionality has been replaced by payment distributions.\n\n" +
+                    "Please use the payment distribution system to handle cross-batch payments.",
+                    "Functionality Replaced");
             }
             catch (Exception ex)
             {

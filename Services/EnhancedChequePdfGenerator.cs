@@ -328,8 +328,8 @@ namespace WPFGrowerApp.Services
                     cell.Add(advanceReason);
                     break;
 
-                case ChequePaymentType.Consolidated:
-                    // Consolidated cheque specific information
+                case ChequePaymentType.Distribution:
+                    // Distribution payment specific information
                     var sourceBatches = new Paragraph()
                         .SetFont(font)
                         .SetFontSize(10)
@@ -357,12 +357,12 @@ namespace WPFGrowerApp.Services
                     cell.Add(advanceDetails);
                     break;
 
-                case ChequePaymentType.Consolidated:
-                    // Consolidated cheque specific details
+                case ChequePaymentType.Distribution:
+                    // Distribution payment specific details
                     var consolidatedDetails = new Paragraph()
                         .SetFont(font)
                         .SetFontSize(10)
-                        .Add("CONSOLIDATED PAYMENT");
+                        .Add("DISTRIBUTION PAYMENT");
                     cell.Add(consolidatedDetails);
                     break;
 
@@ -396,12 +396,12 @@ namespace WPFGrowerApp.Services
                     document.Add(advanceFooter);
                     break;
 
-                case ChequePaymentType.Consolidated:
+                case ChequePaymentType.Distribution:
                     var consolidatedFooter = new Paragraph()
                         .SetFont(font)
                         .SetFontSize(8)
                         .SetTextAlignment(TextAlignment.CENTER)
-                        .Add("This is a consolidated payment combining multiple batch payments.");
+                        .Add("This is a distribution payment combining multiple batch payments.");
                     document.Add(consolidatedFooter);
                     break;
 

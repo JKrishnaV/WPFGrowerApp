@@ -12,23 +12,9 @@ namespace WPFGrowerApp.DataAccess.Interfaces
     /// </summary>
     public interface ICrossBatchPaymentService
     {
-        /// <summary>
-        /// Gets consolidated payment details for a grower across multiple batches
-        /// </summary>
-        /// <param name="growerId">The grower ID</param>
-        /// <param name="batchIds">List of batch IDs to consolidate</param>
-        /// <returns>Consolidated payment details</returns>
-        Task<ConsolidatedPayment> GetConsolidatedPaymentForGrowerAsync(int growerId, List<int> batchIds);
+        // Note: GetConsolidatedPaymentForGrowerAsync method removed - consolidated payments replaced by payment distributions
 
-        /// <summary>
-        /// Generates a consolidated cheque for a grower
-        /// </summary>
-        /// <param name="growerId">The grower ID</param>
-        /// <param name="batchIds">List of batch IDs to consolidate</param>
-        /// <param name="consolidatedAmount">The total consolidated amount</param>
-        /// <param name="createdBy">The user creating the consolidated cheque</param>
-        /// <returns>The generated consolidated cheque</returns>
-        Task<Cheque> GenerateConsolidatedChequeAsync(int growerId, List<int> batchIds, decimal consolidatedAmount, string createdBy, int distributionId);
+        // Note: GenerateConsolidatedChequeAsync method removed - consolidated payments replaced by payment distributions
 
         /// <summary>
         /// Gets grower payments across multiple batches

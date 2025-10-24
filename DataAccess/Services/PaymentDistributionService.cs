@@ -363,15 +363,18 @@ namespace WPFGrowerApp.DataAccess.Services
 
         private async Task<int> GenerateChequeAsync(PaymentDistributionItem item, SqlConnection connection, SqlTransaction transaction)
         {
+            // Get source batches from the distribution
+            var sourceBatches = await GetSourceBatchesFromDistributionAsync(item.PaymentDistributionId ?? 0, connection, transaction);
+            
             var sql = @"
                 INSERT INTO Cheques (
                     ChequeSeriesId, ChequeNumber, FiscalYear, GrowerId, PaymentBatchId, PaymentDistributionId,
-                    ChequeAmount, ChequeDate, Status, CreatedAt, CreatedBy
+                    ChequeAmount, ChequeDate, Status, IsFromDistribution, SourceBatches, CreatedAt, CreatedBy
                 )
                 OUTPUT INSERTED.ChequeId
                 VALUES (
                     @ChequeSeriesId, @ChequeNumber, @FiscalYear, @GrowerId, @PaymentBatchId, @PaymentDistributionId,
-                    @ChequeAmount, @ChequeDate, @Status, @CreatedAt, @CreatedBy
+                    @ChequeAmount, @ChequeDate, @Status, @IsFromDistribution, @SourceBatches, @CreatedAt, @CreatedBy
                 )";
 
             // Generate unique cheque number with timestamp for uniqueness
@@ -389,6 +392,8 @@ namespace WPFGrowerApp.DataAccess.Services
                 ChequeAmount = item.Amount,
                 ChequeDate = DateTime.Now,
                 Status = "Generated",
+                IsFromDistribution = true, // Set to true for distribution cheques
+                SourceBatches = sourceBatches, // Comma-separated list of batch IDs
                 CreatedAt = DateTime.Now,
                 CreatedBy = App.CurrentUser?.Username ?? "SYSTEM"
             }, transaction);
@@ -397,6 +402,31 @@ namespace WPFGrowerApp.DataAccess.Services
             await CreateAdvanceDeductionsAsync(item.GrowerId, chequeId, item.PaymentBatchId ?? 0, connection, transaction);
 
             return chequeId;
+        }
+
+        /// <summary>
+        /// Get source batch IDs from a payment distribution
+        /// </summary>
+        private async Task<string> GetSourceBatchesFromDistributionAsync(int distributionId, SqlConnection connection, SqlTransaction transaction)
+        {
+            try
+            {
+                var sql = @"
+                    SELECT DISTINCT PaymentBatchId 
+                    FROM PaymentDistributionItems 
+                    WHERE PaymentDistributionId = @DistributionId 
+                    AND PaymentBatchId IS NOT NULL
+                    ORDER BY PaymentBatchId";
+
+                var batchIds = await connection.QueryAsync<int>(sql, new { DistributionId = distributionId }, transaction);
+                
+                return string.Join(",", batchIds);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting source batches for distribution {distributionId}: {ex.Message}", ex);
+                return string.Empty;
+            }
         }
 
         /// <summary>
@@ -810,30 +840,11 @@ namespace WPFGrowerApp.DataAccess.Services
                             {
                                 if (item.PaymentMethod == "Cheque")
                                 {
-                                    // For consolidated payments (multiple batches), use CrossBatchPaymentService
-                                    if (selectedBatchIds.Count > 1)
-                                    {
-                                        // Generate consolidated cheque using CrossBatchPaymentService
-                                        var consolidatedCheque = await _crossBatchPaymentService.GenerateConsolidatedChequeAsync(
-                                            item.GrowerId, 
-                                            selectedBatchIds, 
-                                            item.Amount, 
-                                            generatedBy,
-                                            distributionId
-                                        );
-
-                                        if (consolidatedCheque != null)
-                                        {
-                                            // Create advance deductions for this grower using the consolidated cheque
-                                            await CreateAdvanceDeductionsAsync(item.GrowerId, consolidatedCheque.ChequeId, selectedBatchIds.First(), connection, transaction);
-                                            
-                                            Logger.Info($"Generated consolidated cheque {consolidatedCheque.ChequeId} for grower {item.GrowerId} from {selectedBatchIds.Count} batches");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        // Generate regular cheque for single batch
-                                        var chequeSql = @"
+                                    // Note: Consolidated payment functionality removed - consolidated payments replaced by payment distributions
+                                    // All payments are now handled as regular payments through the payment distribution system
+                                    
+                                    // Generate regular cheque for single batch
+                                    var chequeSql = @"
                                             INSERT INTO Cheques (
                                                 ChequeSeriesId, ChequeNumber, FiscalYear, GrowerId, PaymentBatchId, PaymentDistributionId,
                                                 ChequeAmount, ChequeDate, Status, CreatedAt, CreatedBy
@@ -844,31 +855,30 @@ namespace WPFGrowerApp.DataAccess.Services
                                                 @ChequeAmount, @ChequeDate, @Status, @CreatedAt, @CreatedBy
                                             )";
 
-                                        var timestamp = DateTime.Now.ToString("HHmmssfff");
-                                        var chequeNumber = $"CHQ-{DateTime.Now:yyyyMMdd}-{timestamp}-{item.GrowerId}";
-                                        
-                                        var primaryBatchId = item.PaymentBatchId;
-                                        
-                                        var chequeId = await connection.ExecuteScalarAsync<int>(chequeSql, new
-                                        {
-                                            ChequeSeriesId = 2,
-                                            ChequeNumber = chequeNumber,
-                                            FiscalYear = DateTime.Now.Year,
-                                            GrowerId = item.GrowerId,
-                                            PaymentBatchId = primaryBatchId,
-                                            PaymentDistributionId = distributionId,
-                                            ChequeAmount = item.Amount,
-                                            ChequeDate = DateTime.Now,
-                                            Status = "Generated",
-                                            CreatedAt = DateTime.Now,
-                                            CreatedBy = generatedBy
-                                        }, transaction);
+                                    var timestamp = DateTime.Now.ToString("HHmmssfff");
+                                    var chequeNumber = $"CHQ-{DateTime.Now:yyyyMMdd}-{timestamp}-{item.GrowerId}";
+                                    
+                                    var primaryBatchId = item.PaymentBatchId;
+                                    
+                                    var chequeId = await connection.ExecuteScalarAsync<int>(chequeSql, new
+                                    {
+                                        ChequeSeriesId = 2,
+                                        ChequeNumber = chequeNumber,
+                                        FiscalYear = DateTime.Now.Year,
+                                        GrowerId = item.GrowerId,
+                                        PaymentBatchId = primaryBatchId,
+                                        PaymentDistributionId = distributionId,
+                                        ChequeAmount = item.Amount,
+                                        ChequeDate = DateTime.Now,
+                                        Status = "Generated",
+                                        CreatedAt = DateTime.Now,
+                                        CreatedBy = generatedBy
+                                    }, transaction);
 
-                                        // Create advance deductions for this grower
-                                        await CreateAdvanceDeductionsAsync(item.GrowerId, chequeId, primaryBatchId ?? 0, connection, transaction);
-                                        
-                                        Logger.Info($"Generated regular cheque {chequeId} for grower {item.GrowerId}");
-                                    }
+                                    // Create advance deductions for this grower
+                                    await CreateAdvanceDeductionsAsync(item.GrowerId, chequeId, primaryBatchId ?? 0, connection, transaction);
+                                    
+                                    Logger.Info($"Generated regular cheque {chequeId} for grower {item.GrowerId}");
                                 }
                             }
 

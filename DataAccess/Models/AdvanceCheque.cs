@@ -229,6 +229,11 @@ namespace WPFGrowerApp.DataAccess.Models
         // ======================================================================
 
         /// <summary>
+        /// The type of cheque - always "Advance" for advance cheques
+        /// </summary>
+        public string ChequeType { get; set; } = "Advance";
+
+        /// <summary>
         /// Is this advance cheque voided?
         /// </summary>
         public bool IsVoided => Status == "Voided";

@@ -20,9 +20,12 @@ namespace WPFGrowerApp.Models
         Advance = 1,
 
         /// <summary>
-        /// Consolidated payment across multiple batches
+        /// Distribution payment (replaces consolidated payments)
         /// </summary>
-        Consolidated = 2
+        Distribution = 2
+
+        // Note: Consolidated payments have been replaced by payment distributions
+        // Distribution payments are now handled as regular payments with IsFromDistribution flag
     }
 
     /// <summary>

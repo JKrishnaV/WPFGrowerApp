@@ -101,7 +101,7 @@ namespace WPFGrowerApp.Models
             {
                 ChequePaymentType.Regular => "📄",
                 ChequePaymentType.Advance => "💰",
-                ChequePaymentType.Consolidated => "🔗",
+                ChequePaymentType.Distribution => "🔗",
                 _ => "📄"
             };
         }

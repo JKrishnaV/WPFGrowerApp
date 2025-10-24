@@ -687,7 +687,8 @@ namespace WPFGrowerApp.ViewModels
                     AdvanceChequeId = cheque.AdvanceChequeId,
                     PaymentBatchId = cheque.PaymentBatchId,
                     BatchNumber = cheque.BatchNumber ?? "N/A",
-                    ConsolidatedFromBatches = cheque.ConsolidatedFromBatches ?? string.Empty
+                    ConsolidatedFromBatches = cheque.ConsolidatedFromBatches ?? string.Empty,
+                    SourceBatches = cheque.SourceBatches ?? string.Empty
                 };
 
                 // Load additional details if available
@@ -708,8 +709,8 @@ namespace WPFGrowerApp.ViewModels
             if (cheque.IsAdvanceCheque)
                 return ChequePaymentType.Advance;
             
-            if (!string.IsNullOrEmpty(cheque.ConsolidatedFromBatches))
-                return ChequePaymentType.Consolidated;
+            if (cheque.IsFromDistribution || !string.IsNullOrEmpty(cheque.SourceBatches))
+                return ChequePaymentType.Distribution;
             
             return ChequePaymentType.Regular;
         }
@@ -720,16 +721,16 @@ namespace WPFGrowerApp.ViewModels
             {
                 // Load advance deductions if this is a regular or consolidated cheque
                 if (chequeItem.PaymentType == ChequePaymentType.Regular || 
-                    chequeItem.PaymentType == ChequePaymentType.Consolidated)
+                    chequeItem.PaymentType == ChequePaymentType.Distribution)
                 {
                     var advanceDeductions = await _chequeService.GetAdvanceDeductionsByChequeNumberAsync(chequeItem.ChequeNumber);
                     chequeItem.AdvanceDeductions = advanceDeductions;
                 }
 
-                // Load batch breakdowns for consolidated cheques
-                if (chequeItem.PaymentType == ChequePaymentType.Consolidated)
+                // Load batch breakdowns for distribution cheques
+                if (chequeItem.PaymentType == ChequePaymentType.Distribution)
                 {
-                    // For consolidated cheques, we would need to parse the ConsolidatedFromBatches JSON
+                    // For distribution cheques, we would need to parse the SourceBatches
                     // and load individual batch details. For now, we'll create a basic breakdown.
                     chequeItem.BatchBreakdowns = new List<BatchBreakdown>
                     {

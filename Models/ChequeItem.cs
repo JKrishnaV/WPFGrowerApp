@@ -22,11 +22,13 @@ namespace WPFGrowerApp.Models
         private string _status;
         private ChequePaymentType _paymentType;
         private bool _isConsolidated;
+        private bool _isFromDistribution;
         private bool _isAdvanceCheque;
         private int? _advanceChequeId;
         private int? _paymentBatchId;
         private string _batchNumber;
         private string _consolidatedFromBatches;
+        private string _sourceBatches;
         private List<BatchBreakdown> _batchBreakdowns;
         private List<AdvanceDeduction> _advanceDeductions;
         private string _advanceReason;
@@ -89,10 +91,17 @@ namespace WPFGrowerApp.Models
             set => SetProperty(ref _paymentType, value);
         }
 
+        [Obsolete("Use IsFromDistribution instead. This property will be removed in a future version.")]
         public bool IsConsolidated
         {
             get => _isConsolidated;
             set => SetProperty(ref _isConsolidated, value);
+        }
+
+        public bool IsFromDistribution
+        {
+            get => _isFromDistribution;
+            set => SetProperty(ref _isFromDistribution, value);
         }
 
         public bool IsAdvanceCheque
@@ -113,16 +122,28 @@ namespace WPFGrowerApp.Models
             set => SetProperty(ref _paymentBatchId, value);
         }
 
+        /// <summary>
+        /// The type of cheque - computed based on cheque properties
+        /// </summary>
+        public string ChequeType => IsAdvanceCheque ? "Advance" : IsFromDistribution ? "Distribution" : "Regular";
+
         public string BatchNumber
         {
             get => _batchNumber;
             set => SetProperty(ref _batchNumber, value);
         }
 
+        [Obsolete("Use SourceBatches instead. This property will be removed in a future version.")]
         public string ConsolidatedFromBatches
         {
             get => _consolidatedFromBatches;
             set => SetProperty(ref _consolidatedFromBatches, value);
+        }
+
+        public string SourceBatches
+        {
+            get => _sourceBatches;
+            set => SetProperty(ref _sourceBatches, value);
         }
 
         public List<BatchBreakdown> BatchBreakdowns
@@ -199,11 +220,13 @@ namespace WPFGrowerApp.Models
             ChequeDate = cheque.ChequeDate;
             Status = cheque.Status ?? "Unknown";
             IsConsolidated = cheque.IsConsolidated;
+            IsFromDistribution = cheque.IsFromDistribution;
             IsAdvanceCheque = cheque.IsAdvanceCheque;
             AdvanceChequeId = cheque.AdvanceChequeId;
             PaymentBatchId = cheque.PaymentBatchId;
             BatchNumber = cheque.BatchNumber ?? string.Empty;
             ConsolidatedFromBatches = cheque.ConsolidatedFromBatches ?? string.Empty;
+            SourceBatches = cheque.SourceBatches ?? string.Empty;
             CanBeVoided = cheque.CanBeVoided;
             CanBePrinted = cheque.CanBePrinted;
             CanBeIssued = cheque.CanBeIssued;
@@ -211,45 +234,55 @@ namespace WPFGrowerApp.Models
             // Determine payment type
             if (IsAdvanceCheque)
                 PaymentType = ChequePaymentType.Advance;
-            else if (IsConsolidated)
-                PaymentType = ChequePaymentType.Consolidated;
+            else if (IsFromDistribution)
+                PaymentType = ChequePaymentType.Regular; // Distribution payments are treated as regular for now
             else
                 PaymentType = ChequePaymentType.Regular;
         }
 
         private string GetTypeDisplay()
         {
+            if (IsFromDistribution)
+                return "Distribution Payment";
+            
             return PaymentType switch
             {
                 ChequePaymentType.Regular => "Regular Payment",
                 ChequePaymentType.Advance => "Advance Cheque",
-                ChequePaymentType.Consolidated => "Consolidated Payment",
                 _ => "Unknown"
             };
         }
 
         private string GetTypeIcon()
         {
+            if (IsFromDistribution)
+                return "🔗";
+            
             return PaymentType switch
             {
                 ChequePaymentType.Regular => "📄",
                 ChequePaymentType.Advance => "💰",
-                ChequePaymentType.Consolidated => "🔗",
                 _ => "📄"
             };
         }
 
         private string GetSourceBatchesDisplay()
         {
-            // For consolidated cheques, use BatchBreakdowns
-            if (IsConsolidated && BatchBreakdowns != null && BatchBreakdowns.Any())
+            // For distribution cheques, use BatchBreakdowns or SourceBatches
+            if (IsFromDistribution && BatchBreakdowns != null && BatchBreakdowns.Any())
             {
                 var batchNumbers = BatchBreakdowns.Select(b => b.BatchNumber).ToList();
                 return string.Join(", ", batchNumbers);
             }
             
+            // Fallback to SourceBatches if available
+            if (IsFromDistribution && !string.IsNullOrEmpty(SourceBatches))
+            {
+                return SourceBatches;
+            }
+            
             // For regular payments, use BatchNumber if available
-            if (!IsConsolidated && !IsAdvanceCheque && !string.IsNullOrEmpty(BatchNumber))
+            if (!IsFromDistribution && !IsAdvanceCheque && !string.IsNullOrEmpty(BatchNumber))
             {
                 return BatchNumber;
             }

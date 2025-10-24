@@ -26,68 +26,9 @@ namespace WPFGrowerApp.DataAccess.Services
             _paymentBatchService = paymentBatchService;
         }
 
-        public async Task<ConsolidatedPayment> GetConsolidatedPaymentForGrowerAsync(int growerId, List<int> batchIds)
-        {
-            try
-            {
-                using var connection = new SqlConnection(_connectionString);
-                await connection.OpenAsync();
+        // Note: GetConsolidatedPaymentForGrowerAsync method removed - consolidated payments replaced by payment distributions
 
-                var batchIdsParam = string.Join(",", batchIds.Select((id, index) => $"@BatchId{index}"));
-                var query = $@"
-                    SELECT 
-                        pb.PaymentBatchId,
-                        pb.BatchNumber,
-                        pb.BatchDate,
-                        pb.Status,
-                        ISNULL(SUM(rpa.AmountPaid), 0) as TotalAmount
-                    FROM PaymentBatches pb
-                    LEFT JOIN ReceiptPaymentAllocations rpa ON pb.PaymentBatchId = rpa.PaymentBatchId
-                    LEFT JOIN Receipts r ON rpa.ReceiptId = r.ReceiptId
-                    WHERE pb.PaymentBatchId IN ({batchIdsParam})
-                    AND r.GrowerId = @GrowerId
-                    GROUP BY pb.PaymentBatchId, pb.BatchNumber, pb.BatchDate, pb.Status
-                    ORDER BY pb.BatchDate";
-
-                using var command = new SqlCommand(query, connection);
-                command.Parameters.AddWithValue("@GrowerId", growerId);
-                
-                // Add parameters for each batch ID
-                for (int i = 0; i < batchIds.Count; i++)
-                {
-                    command.Parameters.AddWithValue($"@BatchId{i}", batchIds[i]);
-                }
-
-                var consolidatedPayment = new ConsolidatedPayment
-                {
-                    GrowerId = growerId,
-                    BatchIds = batchIds
-                };
-
-                using var reader = await command.ExecuteReaderAsync();
-                while (await reader.ReadAsync())
-                {
-                    var batchBreakdown = new BatchBreakdown
-                    {
-                        BatchId = Convert.ToInt32(reader["PaymentBatchId"]),
-                        BatchNumber = reader["BatchNumber"].ToString(),
-                        Amount = Convert.ToDecimal(reader["TotalAmount"]),
-                        BatchDate = Convert.ToDateTime(reader["BatchDate"]),
-                        Status = reader["Status"].ToString()
-                    };
-
-                    consolidatedPayment.AddBatch(batchBreakdown);
-                }
-
-                return consolidatedPayment;
-            }
-            catch (Exception ex)
-            {
-                throw new DatabaseException($"Error getting consolidated payment: {ex.Message}", ex);
-            }
-        }
-
-        public async Task<Cheque> GenerateConsolidatedChequeAsync(int growerId, List<int> batchIds, decimal consolidatedAmount, string createdBy,int distributionId)
+        public async Task<Cheque> GenerateChequeAsync(int growerId, List<int> batchIds, decimal consolidatedAmount, string createdBy,int distributionId)
         {
             try
             {
@@ -97,30 +38,30 @@ namespace WPFGrowerApp.DataAccess.Services
 
                 try
                 {
-                    // Create the consolidated cheque
+                    // Create the distribution cheque
                     var cheque = new Cheque
                     {
                         GrowerId = growerId,
                         ChequeAmount = consolidatedAmount,
                         ChequeDate = DateTime.Now,
                         Status = "Draft",
-                        IsConsolidated = true,
-                        ConsolidatedFromBatches = string.Join(",", batchIds),
+                        IsFromDistribution = true,
+                        SourceBatches = string.Join(",", batchIds),
                         CreatedBy = createdBy,
                         CreatedAt = DateTime.Now
                     };
 
-                    // Create the consolidated cheque directly
+                    // Create the distribution cheque directly
                     var chequeSql = @"
                         INSERT INTO Cheques (
-                            ChequeSeriesId, ChequeNumber, FiscalYear, GrowerId, PaymentBatchId, PaymentDistributionId
-                            ChequeDate, ChequeAmount, Status, IsConsolidated, ConsolidatedFromBatches,
+                            ChequeSeriesId, ChequeNumber, FiscalYear, GrowerId, PaymentBatchId, PaymentDistributionId,
+                            ChequeDate, ChequeAmount, Status, IsFromDistribution, SourceBatches,
                             CreatedAt, CreatedBy
                         )
                         OUTPUT INSERTED.ChequeId
                         VALUES (
-                            @ChequeSeriesId, @ChequeNumber, @FiscalYear, @GrowerId, @PaymentBatchId, @PaymentDistributionId
-                            @ChequeDate, @ChequeAmount, @Status, @IsConsolidated, @ConsolidatedFromBatches,
+                            @ChequeSeriesId, @ChequeNumber, @FiscalYear, @GrowerId, @PaymentBatchId, @PaymentDistributionId,
+                            @ChequeDate, @ChequeAmount, @Status, @IsFromDistribution, @SourceBatches,
                             @CreatedAt, @CreatedBy
                         )";
 
@@ -136,8 +77,8 @@ namespace WPFGrowerApp.DataAccess.Services
                     chequeCommand.Parameters.AddWithValue("@ChequeDate", cheque.ChequeDate);
                     chequeCommand.Parameters.AddWithValue("@ChequeAmount", consolidatedAmount);
                     chequeCommand.Parameters.AddWithValue("@Status", "Generated");
-                    chequeCommand.Parameters.AddWithValue("@IsConsolidated", true);
-                    chequeCommand.Parameters.AddWithValue("@ConsolidatedFromBatches", cheque.ConsolidatedFromBatches);
+                    chequeCommand.Parameters.AddWithValue("@IsFromDistribution", true);
+                    chequeCommand.Parameters.AddWithValue("@SourceBatches", cheque.SourceBatches);
                     chequeCommand.Parameters.AddWithValue("@CreatedAt", DateTime.Now);
                     chequeCommand.Parameters.AddWithValue("@CreatedBy", createdBy);
                     chequeCommand.Parameters.AddWithValue("@PaymentDistributionId", distributionId);
@@ -150,16 +91,16 @@ namespace WPFGrowerApp.DataAccess.Services
                     // Create consolidated cheque records
                     foreach (var batchId in batchIds)
                     {
-                        var consolidatedCheque = new ConsolidatedCheque
+                        var consolidatedCheque = new Cheque
                         {
                             ChequeId = createdCheque.ChequeId,
                             PaymentBatchId = batchId,
-                            Amount = consolidatedAmount / batchIds.Count, // Distribute evenly for now
+                            ChequeAmount = consolidatedAmount / batchIds.Count, // Distribute evenly for now
                             CreatedAt = DateTime.Now,
                             CreatedBy = createdBy
                         };
 
-                        await CreateConsolidatedChequeRecordAsync(consolidatedCheque, connection, transaction);
+                        // Note: CreateConsolidatedChequeRecordAsync method removed - consolidated payments replaced by payment distributions
                     }
 
                     // Update batch statuses to Finalized since they've been processed
@@ -364,7 +305,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                 }
 
-                // First try to get from ConsolidatedCheques table
+                // First try to get from Cheques table
                 var consolidatedQuery = @"
                     SELECT 
                         cc.PaymentBatchId,
@@ -372,7 +313,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         pb.BatchDate,
                         cc.Amount,
                         pb.Status
-                    FROM ConsolidatedCheques cc
+                    FROM Cheques cc
                     INNER JOIN PaymentBatches pb ON cc.PaymentBatchId = pb.PaymentBatchId
                     WHERE cc.ChequeId = @ChequeId
                     ORDER BY pb.BatchDate";
@@ -395,7 +336,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     });
                 }
 
-                // If no consolidated records found, try to get batch info from the cheque's ConsolidatedFromBatches field
+                // If no consolidated records found, try to get batch info from the cheque's SourceBatches field
                 if (breakdowns.Count == 0)
                 {
                     reader.Close();
@@ -406,12 +347,12 @@ namespace WPFGrowerApp.DataAccess.Services
                             pb.BatchNumber,
                             pb.BatchDate,
                             pb.Status,
-                            c.ChequeAmount / (LEN(c.ConsolidatedFromBatches) - LEN(REPLACE(c.ConsolidatedFromBatches, ',', '')) + 1) as Amount
+                            c.ChequeAmount / (LEN(c.SourceBatches) - LEN(REPLACE(c.SourceBatches, ',', '')) + 1) as Amount
                         FROM Cheques c
-                        CROSS APPLY STRING_SPLIT(c.ConsolidatedFromBatches, ',') ss
+                        CROSS APPLY STRING_SPLIT(c.SourceBatches, ',') ss
                         INNER JOIN PaymentBatches pb ON CAST(ss.value AS INT) = pb.PaymentBatchId
                         WHERE c.ChequeId = @ChequeId
-                        AND c.IsConsolidated = 1
+                        AND c.IsFromDistribution = 1
                         ORDER BY pb.BatchDate";
 
                     using var fallbackCommand = new SqlCommand(fallbackQuery, connection, transaction);
@@ -496,7 +437,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     await UpdateBatchStatusAfterConsolidationAsync(batchIds, "Posted", revertedBy, connection, transaction);
 
                     // Delete consolidated cheque records
-                    var deleteQuery = "DELETE FROM ConsolidatedCheques WHERE ChequeId = @ChequeId";
+                    var deleteQuery = "DELETE FROM Cheques WHERE ChequeId = @ChequeId";
                     using var deleteCommand = new SqlCommand(deleteQuery, connection, transaction);
                     deleteCommand.Parameters.AddWithValue("@ChequeId", consolidatedChequeId);
                     await deleteCommand.ExecuteNonQueryAsync();
@@ -511,8 +452,8 @@ namespace WPFGrowerApp.DataAccess.Services
                     var updateQuery = @"
                         UPDATE Cheques 
                         SET Status = 'Voided',
-                            IsConsolidated = 0,
-                            ConsolidatedFromBatches = NULL,
+                            IsFromDistribution = 0,
+                            SourceBatches = NULL,
                             ModifiedAt = @ModifiedAt,
                             ModifiedBy = @ModifiedBy
                         WHERE ChequeId = @ChequeId";
@@ -555,10 +496,10 @@ namespace WPFGrowerApp.DataAccess.Services
                         STRING_AGG(pb.BatchNumber, ', ') as SourceBatches,
                         COUNT(cc.PaymentBatchId) as BatchCount
                     FROM Cheques c
-                    INNER JOIN ConsolidatedCheques cc ON c.ChequeId = cc.ChequeId
+                    INNER JOIN Cheques cc ON c.ChequeId = cc.ChequeId
                     INNER JOIN PaymentBatches pb ON cc.PaymentBatchId = pb.PaymentBatchId
                     WHERE c.GrowerId = @GrowerId
-                    AND c.IsConsolidated = 1";
+                    AND c.IsFromDistribution = 1";
 
                 if (startDate.HasValue)
                 {
@@ -671,7 +612,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         INNER JOIN PaymentDistributionReceipts pdr ON pdi.PaymentDistributionItemId = pdr.PaymentDistributionItemId
                         INNER JOIN ReceiptPaymentAllocations rpa ON pdr.ReceiptId = rpa.ReceiptId
                         INNER JOIN PaymentBatches pb ON rpa.PaymentBatchId = pb.PaymentBatchId
-                        INNER JOIN ConsolidatedCheques cc ON pb.PaymentBatchId = cc.PaymentBatchId
+                        INNER JOIN Cheques cc ON pb.PaymentBatchId = cc.PaymentBatchId
                         WHERE cc.ChequeId = @ChequeId
                           AND (pdi.Status = 'Voided' OR pdi.Status = 'Pending')
                         ORDER BY pdi.CreatedAt DESC";
@@ -723,20 +664,6 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        private async Task CreateConsolidatedChequeRecordAsync(ConsolidatedCheque consolidatedCheque, SqlConnection connection, SqlTransaction transaction)
-        {
-            var query = @"
-                INSERT INTO ConsolidatedCheques (ChequeId, PaymentBatchId, Amount, CreatedAt, CreatedBy)
-                VALUES (@ChequeId, @PaymentBatchId, @Amount, @CreatedAt, @CreatedBy)";
-
-            using var command = new SqlCommand(query, connection, transaction);
-            command.Parameters.AddWithValue("@ChequeId", consolidatedCheque.ChequeId);
-            command.Parameters.AddWithValue("@PaymentBatchId", consolidatedCheque.PaymentBatchId);
-            command.Parameters.AddWithValue("@Amount", consolidatedCheque.Amount);
-            command.Parameters.AddWithValue("@CreatedAt", consolidatedCheque.CreatedAt);
-            command.Parameters.AddWithValue("@CreatedBy", consolidatedCheque.CreatedBy);
-
-            await command.ExecuteNonQueryAsync();
-        }
+        // Note: CreateChequeRecordAsync method removed - consolidated payments replaced by payment distributions
     }
 }

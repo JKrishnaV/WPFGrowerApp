@@ -60,33 +60,20 @@ namespace WPFGrowerApp.DataAccess.Services
 
                 var result = new VoidingResult();
 
-                // Auto-detect cheque type if not specified or if it's a generic "cheque" type
-                if (request.EntityType.ToLower() == "cheque" || request.EntityType.ToLower() == "regular")
+                // Determine voiding method based on entity type
+                switch (request.EntityType.ToLower())
                 {
-                    // Check if this ID belongs to an advance cheque first
-                    if (await IsAdvanceChequeIdAsync(request.EntityId))
-                    {
+                    case "advance":
+                    case "advancecheque":// may be we need to remove this alias later
                         result = await VoidAdvanceChequeAsync(request.EntityId, request.Reason, request.VoidedBy);
-                    }
-                    else
-                    {
-                        // Use regular voiding logic for regular cheques
+                        break;
+                    case "cheque":
+                    case "regular":// may be we need to remove this alias later
                         result = await VoidRegularBatchPaymentAsync(request.EntityId, request.Reason, request.VoidedBy);
-                    }
-                }
-                else
-                {
-                    switch (request.EntityType.ToLower())
-                    {
-                        case "advance":
-                        case "advancecheque":
-                            result = await VoidAdvanceChequeAsync(request.EntityId, request.Reason, request.VoidedBy);
-                            break;
-                        // Consolidated cheques now use regular voiding logic above
-                        default:
-                            result = new VoidingResult(false, $"Unknown entity type: {request.EntityType}");
-                            break;
-                    }
+                        break;
+                    default:
+                        result = new VoidingResult(false, $"Unknown entity type: {request.EntityType}");
+                        break;
                 }
 
                 return result;
@@ -268,87 +255,6 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        public async Task<VoidingResult> VoidConsolidatedPaymentAsync(int chequeId, string reason, string voidedBy)
-        {
-            try
-            {
-                var result = new VoidingResult();
-
-                // Get the cheque details
-                var cheque = await _chequeService.GetChequeByIdAsync(chequeId);
-                if (cheque == null)
-                {
-                    result.AddError("Consolidated cheque not found");
-                    return result;
-                }
-
-                if (!cheque.IsConsolidated)
-                {
-                    result.AddError("Cheque is not a consolidated payment");
-                    return result;
-                }
-
-                if (!cheque.CanBeVoided)
-                {
-                    result.AddError("Consolidated cheque cannot be voided in its current status");
-                    return result;
-                }
-
-                // Get batch breakdown
-                var batchBreakdowns = await _crossBatchPaymentService.GetBatchBreakdownAsync(chequeId);
-                if (batchBreakdowns.Any())
-                {
-                    result.AddWarning($"Consolidated payment affects {batchBreakdowns.Count} batches. Batch statuses will be restored.");
-                }
-
-                // Use the same voiding logic as regular batch payments for PaymentDistributionItems
-                using var connection = CreateConnection();
-                await connection.OpenAsync();
-                using var transaction = connection.BeginTransaction();
-
-                try
-                {
-                    // 1. Update payment distribution items using the new logic
-                    await UpdatePaymentDistributionItemsAsync(chequeId, "Voided", voidedBy, connection, transaction);
-
-                    // 2. Void the cheque
-                    await VoidChequeAsync(chequeId, reason, voidedBy, connection, transaction);
-
-                    // 3. Revert the consolidation (this handles batch statuses and other cleanup)
-                    var success = await _crossBatchPaymentService.RevertConsolidationAsync(chequeId, voidedBy);
-                    if (success)
-                    {
-                        result.Success = true;
-                        result.Message = "Consolidated payment voided successfully";
-                        result.EntityType = "Consolidated";
-                        result.EntityId = chequeId;
-                        result.AmountReversed = cheque.ChequeAmount;
-                        result.VoidedBy = voidedBy;
-                        result.VoidedAt = DateTime.Now;
-                        result.BatchStatusRestored = true;
-
-                        // Commit the transaction
-                        await SafeCommitAsync(transaction);
-                    }
-                    else
-                    {
-                        result.AddError("Failed to void the consolidated payment");
-                        await SafeRollbackAsync(transaction);
-                    }
-                }
-                catch
-                {
-                    await SafeRollbackAsync(transaction);
-                    throw;
-                }
-
-                return result;
-            }
-            catch (Exception ex)
-            {
-                return new VoidingResult(false, $"Error voiding consolidated payment: {ex.Message}");
-            }
-        }
 
         public async Task<List<PaymentAuditLog>> GetVoidingHistoryAsync(string entityType, int entityId)
         {
@@ -401,10 +307,6 @@ namespace WPFGrowerApp.DataAccess.Services
                         var advanceCheque = await _advanceChequeService.GetAdvanceChequeByIdAsync(entityId);
                         return advanceCheque?.CanBeVoided ?? false;
                     
-                    case "consolidated":
-                    case "consolidatedcheque":
-                        var consolidatedCheque = await _chequeService.GetChequeByIdAsync(entityId);
-                        return consolidatedCheque?.CanBeVoided ?? false;
                     
                     default:
                         return false;
@@ -429,7 +331,6 @@ namespace WPFGrowerApp.DataAccess.Services
                         COUNT(*) as VoidCount,
                         SUM(CASE WHEN EntityType = 'Regular' THEN 1 ELSE 0 END) as RegularVoids,
                         SUM(CASE WHEN EntityType = 'Advance' THEN 1 ELSE 0 END) as AdvanceVoids,
-                        SUM(CASE WHEN EntityType = 'Consolidated' THEN 1 ELSE 0 END) as ConsolidatedVoids
                     FROM PaymentAuditLog
                     WHERE Action = 'Voided'";
 
@@ -464,8 +365,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     EndDate = endDate,
                     TotalVoids = 0,
                     RegularVoids = 0,
-                    AdvanceVoids = 0,
-                    ConsolidatedVoids = 0
+                    AdvanceVoids = 0
                 };
 
                 using var reader = await command.ExecuteReaderAsync();
@@ -483,9 +383,6 @@ namespace WPFGrowerApp.DataAccess.Services
                             break;
                         case "advance":
                             statistics.AdvanceVoids = voidCount;
-                            break;
-                        case "consolidated":
-                            statistics.ConsolidatedVoids = voidCount;
                             break;
                     }
                 }
@@ -714,29 +611,6 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        /// <summary>
-        /// Check if a cheque is consolidated
-        /// </summary>
-        private async Task<bool> IsConsolidatedChequeAsync(int chequeId)
-        {
-            try
-            {
-                using var connection = CreateConnection();
-                await connection.OpenAsync();
-                
-                var sql = "SELECT IsConsolidated FROM Cheques WHERE ChequeId = @ChequeId";
-                using var command = new SqlCommand(sql, connection);
-                command.Parameters.AddWithValue("@ChequeId", chequeId);
-                
-                var result = await command.ExecuteScalarAsync();
-                return result != null && Convert.ToBoolean(result);
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Error checking if cheque {chequeId} is consolidated: {ex.Message}", ex);
-                return false;
-            }
-        }
 
         /// <summary>
         /// Safely commit a transaction, handling any exceptions
@@ -1116,59 +990,6 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        /// <summary>
-        /// Clean up orphaned payment distributions
-        /// </summary>
-        private async Task CleanupOrphanedDistributionsAsync(int paymentBatchId, SqlConnection connection, SqlTransaction transaction)
-        {
-            try
-            {
-                // Check if all items in distributions for this batch are voided
-                var sql = @"
-                    SELECT pdi.PaymentDistributionId, COUNT(*) as TotalItems, 
-                           SUM(CASE WHEN pdi.Status = 'Voided' THEN 1 ELSE 0 END) as VoidedItems
-                    FROM PaymentDistributionItems pdi
-                    WHERE pdi.PaymentBatchId = @PaymentBatchId
-                    GROUP BY pdi.PaymentDistributionId
-                    HAVING COUNT(*) = SUM(CASE WHEN pdi.Status = 'Voided' THEN 1 ELSE 0 END)";
-
-                using var command = new SqlCommand(sql, connection, transaction);
-                command.Parameters.AddWithValue("@PaymentBatchId", paymentBatchId);
-
-                var orphanedDistributionIds = new List<int>();
-                using var reader = await command.ExecuteReaderAsync();
-                while (await reader.ReadAsync())
-                {
-                    orphanedDistributionIds.Add(reader.GetInt32(0)); // Use column index instead of name
-                }
-
-                // Clean up orphaned distributions
-                foreach (var distributionId in orphanedDistributionIds)
-                {
-                    // Delete orphaned distribution items
-                    var deleteItemsSql = "DELETE FROM PaymentDistributionItems WHERE PaymentDistributionId = @DistributionId";
-                    using var deleteItemsCommand = new SqlCommand(deleteItemsSql, connection, transaction);
-                    deleteItemsCommand.Parameters.AddWithValue("@DistributionId", distributionId);
-                    await deleteItemsCommand.ExecuteNonQueryAsync();
-
-                    // Delete orphaned distribution
-                    var deleteDistributionSql = "DELETE FROM PaymentDistributions WHERE PaymentDistributionId = @DistributionId";
-                    using var deleteDistributionCommand = new SqlCommand(deleteDistributionSql, connection, transaction);
-                    deleteDistributionCommand.Parameters.AddWithValue("@DistributionId", distributionId);
-                    await deleteDistributionCommand.ExecuteNonQueryAsync();
-                }
-
-                if (orphanedDistributionIds.Any())
-                {
-                    Logger.Info($"Cleaned up {orphanedDistributionIds.Count} orphaned payment distributions for batch {paymentBatchId}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Error cleaning up orphaned distributions for batch {paymentBatchId}: {ex.Message}", ex);
-                // Don't throw - this is not critical for the void operation
-            }
-        }
 
         /// <summary>
         /// Map cheque from SqlDataReader
@@ -1231,34 +1052,5 @@ namespace WPFGrowerApp.DataAccess.Services
             };
         }
 
-        /// <summary>
-        /// Checks if the given ID belongs to an advance cheque
-        /// </summary>
-        private async Task<bool> IsAdvanceChequeIdAsync(int entityId)
-        {
-            try
-            {
-                using var connection = CreateConnection();
-                await connection.OpenAsync();
-
-                var query = @"
-                    SELECT COUNT(*) 
-                    FROM AdvanceCheques 
-                    WHERE AdvanceChequeId = @AdvanceChequeId 
-                    AND DeletedAt IS NULL";
-
-                using var command = new SqlCommand(query, connection);
-                command.Parameters.AddWithValue("@AdvanceChequeId", entityId);
-
-                var count = Convert.ToInt32(await command.ExecuteScalarAsync());
-                return count > 0;
-            }
-            catch (Exception ex)
-            {
-                // Log the error but don't throw - return false to default to regular cheque handling
-                Logger.Error($"Error checking if ID {entityId} is an advance cheque: {ex.Message}", ex);
-                return false;
-            }
-        }
     }
 }

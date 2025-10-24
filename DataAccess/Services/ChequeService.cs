@@ -45,7 +45,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         c.VoidedBy, c.IssuedAt, c.IssuedBy,
                         
                         -- Unified Cheque System Properties
-                        c.IsConsolidated, c.ConsolidatedFromBatches, c.IsAdvanceCheque, c.AdvanceChequeId,
+                        c.IsConsolidated, c.ConsolidatedFromBatches, c.IsFromDistribution, c.SourceBatches, c.IsAdvanceCheque, c.AdvanceChequeId,
                         
                         -- Related Grower Information
                         g.FullName AS GrowerName, g.GrowerNumber, g.Address AS GrowerAddress,
@@ -151,23 +151,23 @@ namespace WPFGrowerApp.DataAccess.Services
                 var advanceDeductions = await connection.QueryAsync<AdvanceDeduction>(advanceDeductionSql, new { ChequeId = cheque.ChequeId });
                 Logger.Info($"Loaded {advanceDeductions.Count()} advance deductions for cheque {cheque.ChequeId}");
 
-                // Load consolidated cheque information if this is a consolidated cheque
-                if (cheque.IsConsolidated)
+                // Load consolidated cheque information if this is a distribution cheque
+                if (cheque.IsFromDistribution)
                 {
                     var consolidatedSql = @"
                         SELECT 
-                            cc.ConsolidatedChequeId, cc.ChequeId, cc.PaymentBatchId, cc.Amount,
+                            cc.ChequeId, cc.ChequeId, cc.PaymentBatchId, cc.Amount,
                             cc.CreatedAt, cc.CreatedBy,
                             pb.BatchNumber, pb.PaymentTypeId,
                             pt.TypeName AS PaymentTypeName
-                        FROM ConsolidatedCheques cc
+                        FROM Cheques cc
                         INNER JOIN PaymentBatches pb ON cc.PaymentBatchId = pb.PaymentBatchId
                         LEFT JOIN PaymentTypes pt ON pb.PaymentTypeId = pt.PaymentTypeId
                         WHERE cc.ChequeId = @ChequeId
                         ORDER BY cc.CreatedAt DESC";
 
-                    var consolidatedData = await connection.QueryAsync<ConsolidatedCheque>(consolidatedSql, new { ChequeId = cheque.ChequeId });
-                    // Note: We would need to add a ConsolidatedCheques property to the Cheque model to store this data
+                    var consolidatedData = await connection.QueryAsync<Cheque>(consolidatedSql, new { ChequeId = cheque.ChequeId });
+                    // Note: We would need to add a Cheques property to the Cheque model to store this data
                     Logger.Info($"Loaded {consolidatedData.Count()} consolidated cheque entries for cheque {cheque.ChequeId}");
                 }
             }
@@ -224,6 +224,8 @@ namespace WPFGrowerApp.DataAccess.Services
                         -- Advance Cheque specific properties
                         0 as IsConsolidated,
                         NULL as ConsolidatedFromBatches,
+                        0 as IsFromDistribution,
+                        NULL as SourceBatches,
                         1 as IsAdvanceCheque,
                         ac.AdvanceChequeId as AdvanceChequeId,
                         

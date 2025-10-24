@@ -121,7 +121,7 @@ namespace WPFGrowerApp.Models
                 case ChequePaymentType.Advance:
                     BuildAdvanceChequeLineItems();
                     break;
-                case ChequePaymentType.Consolidated:
+                case ChequePaymentType.Distribution:
                     BuildConsolidatedChequeLineItems();
                     break;
             }
@@ -243,7 +243,7 @@ namespace WPFGrowerApp.Models
                     summary.Add("Advance payment");
                     break;
 
-                case ChequePaymentType.Consolidated:
+                case ChequePaymentType.Distribution:
                     summary.Add($"Consolidated payment from {BatchBreakdowns.Count} batch(es)");
                     if (HasDeductions)
                         summary.Add($"with {AdvanceDeductions.Count} advance deduction(s)");
@@ -259,7 +259,7 @@ namespace WPFGrowerApp.Models
             {
                 ChequePaymentType.Regular => "Regular Payment",
                 ChequePaymentType.Advance => "Advance Payment",
-                ChequePaymentType.Consolidated => "Consolidated Payment",
+                ChequePaymentType.Distribution => "Consolidated Payment",
                 _ => "Unknown"
             };
         }

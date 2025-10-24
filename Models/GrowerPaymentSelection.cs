@@ -105,7 +105,7 @@ namespace WPFGrowerApp.Models
         public string NetRegularAmountDisplay => NetRegularAmount.ToString("C");
         public string NetConsolidatedAmountDisplay => NetConsolidatedAmount.ToString("C");
         public string GrossTotalAmountDisplay => GrossTotalAmount.ToString("C");
-        public bool IsConsolidated => SelectedPaymentType == ChequePaymentType.Consolidated;
+        public bool IsConsolidated => SelectedPaymentType == ChequePaymentType.Distribution;
         public bool IsRegular => SelectedPaymentType == ChequePaymentType.Regular;
         public bool HasExcessiveAdvances => OutstandingAdvances > ConsolidatedAmount;
         public decimal ExcessAdvanceAmount => Math.Max(0, OutstandingAdvances - ConsolidatedAmount);
@@ -147,7 +147,7 @@ namespace WPFGrowerApp.Models
         public void ApplyRecommendation()
         {
             if (RecommendedPaymentType == "Consolidated")
-                SelectedPaymentType = ChequePaymentType.Consolidated;
+                SelectedPaymentType = ChequePaymentType.Distribution;
             else
                 SelectedPaymentType = ChequePaymentType.Regular;
         }
@@ -157,7 +157,7 @@ namespace WPFGrowerApp.Models
             return SelectedPaymentType switch
             {
                 ChequePaymentType.Regular => "Regular Batch",
-                ChequePaymentType.Consolidated => "Consolidated",
+                ChequePaymentType.Distribution => "Consolidated",
                 _ => "Unknown"
             };
         }

@@ -36,19 +36,11 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         /// <returns>Voiding result</returns>
         Task<VoidingResult> VoidAdvanceChequeAsync(int advanceChequeId, string reason, string voidedBy);
 
-        /// <summary>
-        /// Voids a consolidated payment
-        /// </summary>
-        /// <param name="chequeId">The consolidated cheque ID to void</param>
-        /// <param name="reason">The reason for voiding</param>
-        /// <param name="voidedBy">The user voiding the payment</param>
-        /// <returns>Voiding result</returns>
-        Task<VoidingResult> VoidConsolidatedPaymentAsync(int chequeId, string reason, string voidedBy);
 
         /// <summary>
         /// Gets voiding history for a payment
         /// </summary>
-        /// <param name="entityType">The entity type (Regular, Advance, Consolidated)</param>
+        /// <param name="entityType">The entity type (Regular, Advance)</param>
         /// <param name="entityId">The entity ID</param>
         /// <returns>List of voiding records</returns>
         Task<List<PaymentAuditLog>> GetVoidingHistoryAsync(string entityType, int entityId);

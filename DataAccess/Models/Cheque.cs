@@ -259,12 +259,15 @@ namespace WPFGrowerApp.DataAccess.Models
         
         private bool _isConsolidated;
         private string? _consolidatedFromBatches;
+        private bool _isFromDistribution;
+        private string? _sourceBatches;
         private bool _isAdvanceCheque;
         private int? _advanceChequeId;
 
         /// <summary>
         /// Is this a consolidated cheque from multiple batches?
         /// </summary>
+        [Obsolete("Use IsFromDistribution instead. This property will be removed in a future version.")]
         public bool IsConsolidated
         {
             get => _isConsolidated;
@@ -274,10 +277,29 @@ namespace WPFGrowerApp.DataAccess.Models
         /// <summary>
         /// JSON array of batch IDs that were consolidated into this cheque
         /// </summary>
+        [Obsolete("Use SourceBatches instead. This property will be removed in a future version.")]
         public string? ConsolidatedFromBatches
         {
             get => _consolidatedFromBatches;
             set => SetProperty(ref _consolidatedFromBatches, value);
+        }
+
+        /// <summary>
+        /// Is this cheque from a payment distribution?
+        /// </summary>
+        public bool IsFromDistribution
+        {
+            get => _isFromDistribution;
+            set => SetProperty(ref _isFromDistribution, value);
+        }
+
+        /// <summary>
+        /// Comma-separated list of batch IDs that were consolidated into this cheque
+        /// </summary>
+        public string? SourceBatches
+        {
+            get => _sourceBatches;
+            set => SetProperty(ref _sourceBatches, value);
         }
 
         /// <summary>
@@ -299,9 +321,9 @@ namespace WPFGrowerApp.DataAccess.Models
         }
 
         /// <summary>
-        /// Type of cheque for filtering purposes (Regular, Advance, All)
+        /// The type of cheque - computed based on cheque properties
         /// </summary>
-        public string ChequeType { get; set; } = "Regular";
+        public string ChequeType => IsAdvanceCheque ? "Advance" : IsFromDistribution ? "Distribution" : "Regular";
 
         // ======================================================================
         // NAVIGATION PROPERTIES (Not mapped to database)
@@ -392,7 +414,7 @@ namespace WPFGrowerApp.DataAccess.Models
         /// <summary>
         /// Get the payment type for this cheque
         /// </summary>
-        public string PaymentType => IsAdvanceCheque ? "Advance" : IsConsolidated ? "Consolidated" : "Regular";
+        public string PaymentType => IsAdvanceCheque ? "Advance" : IsFromDistribution ? "Distribution" : "Regular";
 
         /// <summary>
         /// Full cheque number for display (e.g., "A-1234" or "CHQ-20251015-231733336-469")
@@ -432,8 +454,6 @@ namespace WPFGrowerApp.DataAccess.Models
         {
             if (Equals(field, value)) return false;
             field = value;
-            // Add diagnostic logging to see if SetProperty is called for any property change
-            Logger.Info($"Cheque.SetProperty: Property '{propertyName}' changed to '{value}' for ChequeId={ChequeId}");
             OnPropertyChanged(propertyName);
             return true;
         }

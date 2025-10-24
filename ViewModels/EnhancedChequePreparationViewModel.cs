@@ -1,3 +1,4 @@
+using Syncfusion.DocIO.DLS;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -419,7 +420,7 @@ namespace WPFGrowerApp.ViewModels
                         // Mark cheques as printed in database
                         var regularChequeIds = selectedCheques.Where(c => c.PaymentType == ChequePaymentType.Regular).Select(c => c.ChequeId).ToList();
                         var advanceChequeIds = selectedCheques.Where(c => c.PaymentType == ChequePaymentType.Advance).Select(c => c.AdvanceChequeId).ToList();
-                        var consolidatedChequeIds = selectedCheques.Where(c => c.PaymentType == ChequePaymentType.Consolidated).Select(c => c.ChequeId).ToList();
+                        var consolidatedChequeIds = selectedCheques.Where(c => c.PaymentType == ChequePaymentType.Distribution).Select(c => c.ChequeId).ToList();
 
                         var printedBy = App.CurrentUser?.Username ?? "SYSTEM";
 
@@ -768,13 +769,14 @@ namespace WPFGrowerApp.ViewModels
                         {
                             var voidRequest = new PaymentVoidRequest
                             {
-                                EntityType = "cheque", // Use generic "cheque" type to trigger auto-detection
+                                EntityType = chequeToVoid.ChequeType, 
                                 EntityId = GetEntityId(chequeToVoid),
                                 Reason = reason,
                                 VoidedBy = voidedBy,
                                 ReverseDeductions = true,
                                 RestoreBatchStatus = true
                             };
+                          
 
                             var voidResult = await _unifiedVoidingService.VoidPaymentAsync(voidRequest);
                             
@@ -1115,11 +1117,11 @@ namespace WPFGrowerApp.ViewModels
                     ChequeItems.Add(chequeItem);
                 }
 
-                // Add consolidated cheques
-                foreach (var cheque in consolidatedCheques.Where(c => c.IsConsolidated))
+                // Add distribution cheques
+                foreach (var cheque in consolidatedCheques.Where(c => c.IsFromDistribution))
                 {
                     var chequeItem = new ChequeItem(cheque);
-                    chequeItem.PaymentType = ChequePaymentType.Consolidated;
+                    chequeItem.PaymentType = ChequePaymentType.Distribution;
                     
                     // Load advance deductions for this cheque
                     var advanceDeductions = await _chequeService.GetAdvanceDeductionsByChequeNumberAsync(cheque.ChequeNumber);
@@ -1172,10 +1174,10 @@ namespace WPFGrowerApp.ViewModels
                 TotalAmount = itemsToCalculate.Sum(c => c.Amount);
                 RegularCheques = itemsToCalculate.Count(c => c.PaymentType == ChequePaymentType.Regular);
                 AdvanceCheques = itemsToCalculate.Count(c => c.PaymentType == ChequePaymentType.Advance);
-                ConsolidatedCheques = itemsToCalculate.Count(c => c.PaymentType == ChequePaymentType.Consolidated);
+                ConsolidatedCheques = itemsToCalculate.Count(c => c.PaymentType == ChequePaymentType.Distribution);
                 RegularAmount = itemsToCalculate.Where(c => c.PaymentType == ChequePaymentType.Regular).Sum(c => c.Amount);
                 AdvanceAmount = itemsToCalculate.Where(c => c.PaymentType == ChequePaymentType.Advance).Sum(c => c.Amount);
-                ConsolidatedAmount = itemsToCalculate.Where(c => c.PaymentType == ChequePaymentType.Consolidated).Sum(c => c.Amount);
+                ConsolidatedAmount = itemsToCalculate.Where(c => c.PaymentType == ChequePaymentType.Distribution).Sum(c => c.Amount);
                 
                 // Explicitly raise property change notifications to ensure UI updates
                 OnPropertyChanged(nameof(TotalCheques));
@@ -1271,7 +1273,7 @@ namespace WPFGrowerApp.ViewModels
                 // Group by payment type
                 var regularGroup = new ChequeGroup(ChequePaymentType.Regular, "Regular Payments");
                 var advanceGroup = new ChequeGroup(ChequePaymentType.Advance, "Advance Cheques");
-                var consolidatedGroup = new ChequeGroup(ChequePaymentType.Consolidated, "Consolidated Payments");
+                var consolidatedGroup = new ChequeGroup(ChequePaymentType.Distribution, "Consolidated Payments");
 
                 foreach (var cheque in FilteredChequeItems)
                 {
@@ -1283,7 +1285,7 @@ namespace WPFGrowerApp.ViewModels
                         case ChequePaymentType.Advance:
                             advanceGroup.AddCheque(cheque);
                             break;
-                        case ChequePaymentType.Consolidated:
+                        case ChequePaymentType.Distribution:
                             consolidatedGroup.AddCheque(cheque);
                             break;
                     }
@@ -1468,7 +1470,7 @@ namespace WPFGrowerApp.ViewModels
             {
                 ChequePaymentType.Regular => "Regular",
                 ChequePaymentType.Advance => "Advance",
-                ChequePaymentType.Consolidated => "Consolidated",
+                ChequePaymentType.Distribution => "Consolidated",
                 _ => "Regular"
             };
         }
@@ -1495,7 +1497,7 @@ namespace WPFGrowerApp.ViewModels
                 foreach (var cheque in printedCheques)
                 {
                     // Only update for regular and consolidated cheques (not advance cheques)
-                    if (cheque.PaymentType == ChequePaymentType.Regular || cheque.PaymentType == ChequePaymentType.Consolidated)
+                    if (cheque.PaymentType == ChequePaymentType.Regular || cheque.PaymentType == ChequePaymentType.Distribution)
                     {
                         await UpdatePaymentDistributionItemStatusAsync(cheque.ChequeId, "Completed", printedBy);
                     }
