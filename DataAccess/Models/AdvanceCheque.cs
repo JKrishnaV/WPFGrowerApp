@@ -24,6 +24,7 @@ namespace WPFGrowerApp.DataAccess.Models
         private string _modifiedBy;
         private DateTime? _deletedAt;
         private string _deletedBy;
+        private int? _chequeNumber;
 
         // Navigation properties
         private Grower _grower;
@@ -117,6 +118,12 @@ namespace WPFGrowerApp.DataAccess.Models
         {
             get => _deletedBy;
             set => SetProperty(ref _deletedBy, value);
+        }
+
+        public int? ChequeNumber
+        {
+            get => _chequeNumber;
+            set => SetProperty(ref _chequeNumber, value);
         }
 
         // Navigation properties

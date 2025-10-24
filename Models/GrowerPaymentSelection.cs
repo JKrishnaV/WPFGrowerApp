@@ -101,10 +101,14 @@ namespace WPFGrowerApp.Models
         public string OutstandingAdvancesDisplay => OutstandingAdvances.ToString("C");
         public decimal NetRegularAmount => RegularAmount - OutstandingAdvances;
         public decimal NetConsolidatedAmount => ConsolidatedAmount - OutstandingAdvances;
+        public decimal GrossTotalAmount => NetConsolidatedAmount + OutstandingAdvances;
         public string NetRegularAmountDisplay => NetRegularAmount.ToString("C");
         public string NetConsolidatedAmountDisplay => NetConsolidatedAmount.ToString("C");
+        public string GrossTotalAmountDisplay => GrossTotalAmount.ToString("C");
         public bool IsConsolidated => SelectedPaymentType == ChequePaymentType.Consolidated;
         public bool IsRegular => SelectedPaymentType == ChequePaymentType.Regular;
+        public bool HasExcessiveAdvances => OutstandingAdvances > ConsolidatedAmount;
+        public decimal ExcessAdvanceAmount => Math.Max(0, OutstandingAdvances - ConsolidatedAmount);
         public string PaymentTypeDisplay => GetPaymentTypeDisplay();
         public string StatusDisplay => GetStatusDisplay();
 
@@ -160,6 +164,9 @@ namespace WPFGrowerApp.Models
 
         private string GetStatusDisplay()
         {
+            if (HasExcessiveAdvances)
+                return $"⚠️ EXCESSIVE ADVANCES: {ExcessAdvanceAmount:C} over gross";
+            
             if (HasOutstandingAdvances)
                 return $"Outstanding Advances: {OutstandingAdvancesDisplay}";
             

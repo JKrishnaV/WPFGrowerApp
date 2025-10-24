@@ -63,8 +63,16 @@ namespace WPFGrowerApp.DataAccess.Services
                 // Auto-detect cheque type if not specified or if it's a generic "cheque" type
                 if (request.EntityType.ToLower() == "cheque" || request.EntityType.ToLower() == "regular")
                 {
-                    // Always use regular voiding logic - it now handles PaymentDistributionId properly
-                    result = await VoidRegularBatchPaymentAsync(request.EntityId, request.Reason, request.VoidedBy);
+                    // Check if this ID belongs to an advance cheque first
+                    if (await IsAdvanceChequeIdAsync(request.EntityId))
+                    {
+                        result = await VoidAdvanceChequeAsync(request.EntityId, request.Reason, request.VoidedBy);
+                    }
+                    else
+                    {
+                        // Use regular voiding logic for regular cheques
+                        result = await VoidRegularBatchPaymentAsync(request.EntityId, request.Reason, request.VoidedBy);
+                    }
                 }
                 else
                 {
@@ -1221,6 +1229,36 @@ namespace WPFGrowerApp.DataAccess.Services
                 CreatedBy = reader.IsDBNull(Ord("CreatedBy")) ? string.Empty : reader.GetString(Ord("CreatedBy")),
                 CreatedAt = reader.GetDateTime(Ord("CreatedAt"))
             };
+        }
+
+        /// <summary>
+        /// Checks if the given ID belongs to an advance cheque
+        /// </summary>
+        private async Task<bool> IsAdvanceChequeIdAsync(int entityId)
+        {
+            try
+            {
+                using var connection = CreateConnection();
+                await connection.OpenAsync();
+
+                var query = @"
+                    SELECT COUNT(*) 
+                    FROM AdvanceCheques 
+                    WHERE AdvanceChequeId = @AdvanceChequeId 
+                    AND DeletedAt IS NULL";
+
+                using var command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@AdvanceChequeId", entityId);
+
+                var count = Convert.ToInt32(await command.ExecuteScalarAsync());
+                return count > 0;
+            }
+            catch (Exception ex)
+            {
+                // Log the error but don't throw - return false to default to regular cheque handling
+                Logger.Error($"Error checking if ID {entityId} is an advance cheque: {ex.Message}", ex);
+                return false;
+            }
         }
     }
 }

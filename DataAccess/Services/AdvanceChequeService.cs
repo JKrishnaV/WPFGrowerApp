@@ -60,9 +60,10 @@ namespace WPFGrowerApp.DataAccess.Services
                 await connection.OpenAsync();
 
                 var query = @"
-                    SELECT ac.*, g.FullName as GrowerName, g.GrowerNumber
+                    SELECT ac.*, g.FullName as GrowerName, g.GrowerNumber, c.ChequeNumber
                     FROM AdvanceCheques ac
                     INNER JOIN Growers g ON ac.GrowerId = g.GrowerId
+                    LEFT JOIN Cheques c ON c.AdvanceChequeId = ac.AdvanceChequeId
                     WHERE ac.GrowerId = @GrowerId 
                     AND ac.Status IN ('Printed', 'Delivered')
                     AND ac.DeletedAt IS NULL
@@ -121,9 +122,10 @@ namespace WPFGrowerApp.DataAccess.Services
                 await connection.OpenAsync();
 
                 var query = @"
-                    SELECT ac.*, g.FullName as GrowerName, g.GrowerNumber
+                    SELECT ac.*, g.FullName as GrowerName, g.GrowerNumber, c.ChequeNumber
                     FROM AdvanceCheques ac
                     INNER JOIN Growers g ON ac.GrowerId = g.GrowerId
+                    LEFT JOIN Cheques c ON c.AdvanceChequeId = ac.AdvanceChequeId
                     WHERE ac.AdvanceChequeId = @AdvanceChequeId
                     AND ac.DeletedAt IS NULL";
 
@@ -152,9 +154,10 @@ namespace WPFGrowerApp.DataAccess.Services
                 await connection.OpenAsync();
 
                 var query = @"
-                    SELECT ac.*, g.FullName as GrowerName, g.GrowerNumber
+                    SELECT ac.*, g.FullName as GrowerName, g.GrowerNumber, c.ChequeNumber
                     FROM AdvanceCheques ac
                     INNER JOIN Growers g ON ac.GrowerId = g.GrowerId
+                    LEFT JOIN Cheques c ON c.AdvanceChequeId = ac.AdvanceChequeId
                     WHERE ac.DeletedAt IS NULL";
 
                 if (!string.IsNullOrEmpty(status))
@@ -223,9 +226,10 @@ namespace WPFGrowerApp.DataAccess.Services
                 await connection.OpenAsync();
 
                 var query = @"
-                    SELECT ac.*, g.FullName as GrowerName, g.GrowerNumber
+                    SELECT ac.*, g.FullName as GrowerName, g.GrowerNumber, c.ChequeNumber
                     FROM AdvanceCheques ac
                     INNER JOIN Growers g ON ac.GrowerId = g.GrowerId
+                    LEFT JOIN Cheques c ON c.AdvanceChequeId = ac.AdvanceChequeId
                     WHERE ac.GrowerId = @GrowerId
                     AND ac.DeletedAt IS NULL";
 
@@ -267,9 +271,10 @@ namespace WPFGrowerApp.DataAccess.Services
                 await connection.OpenAsync();
 
                 var query = @"
-                    SELECT ac.*, g.FullName as GrowerName, g.GrowerNumber
+                    SELECT ac.*, g.FullName as GrowerName, g.GrowerNumber, c.ChequeNumber
                     FROM AdvanceCheques ac
                     INNER JOIN Growers g ON ac.GrowerId = g.GrowerId
+                    LEFT JOIN Cheques c ON c.AdvanceChequeId = ac.AdvanceChequeId
                     WHERE ac.AdvanceDate >= @StartDate
                     AND ac.AdvanceDate <= @EndDate
                     AND ac.DeletedAt IS NULL";
@@ -414,6 +419,7 @@ namespace WPFGrowerApp.DataAccess.Services
                 ModifiedBy = reader.IsDBNull(reader.GetOrdinal("ModifiedBy")) ? null : reader["ModifiedBy"].ToString(),
                 DeletedAt = reader.IsDBNull(reader.GetOrdinal("DeletedAt")) ? null : (DateTime?)Convert.ToDateTime(reader["DeletedAt"]),
                 DeletedBy = reader.IsDBNull(reader.GetOrdinal("DeletedBy")) ? null : reader["DeletedBy"].ToString(),
+                ChequeNumber = HasColumn(reader, "ChequeNumber") && !reader.IsDBNull(reader.GetOrdinal("ChequeNumber")) ? (int?)Convert.ToInt32(reader["ChequeNumber"]) : null,
                 Grower = new Grower
                 {
                     GrowerId = Convert.ToInt32(reader["GrowerId"]),
@@ -421,6 +427,21 @@ namespace WPFGrowerApp.DataAccess.Services
                     GrowerNumber = reader["GrowerNumber"].ToString()
                 }
             };
+        }
+
+        /// <summary>
+        /// Helper method to check if a column exists in the SqlDataReader
+        /// </summary>
+        private bool HasColumn(SqlDataReader reader, string columnName)
+        {
+            for (int i = 0; i < reader.FieldCount; i++)
+            {
+                if (reader.GetName(i).Equals(columnName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private AdvanceDeduction MapAdvanceDeductionFromReader(SqlDataReader reader)

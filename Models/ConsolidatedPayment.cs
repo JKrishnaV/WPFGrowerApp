@@ -20,6 +20,8 @@ namespace WPFGrowerApp.Models
         private DateTime _consolidationDate;
         private string _status;
         private bool _canBeConsolidated;
+        private List<AdvanceBreakdown> _outstandingAdvances;
+        private decimal _netTotal;
 
         public int GrowerId
         {
@@ -75,6 +77,18 @@ namespace WPFGrowerApp.Models
             set => SetProperty(ref _canBeConsolidated, value);
         }
 
+        public List<AdvanceBreakdown> OutstandingAdvances
+        {
+            get => _outstandingAdvances;
+            set => SetProperty(ref _outstandingAdvances, value);
+        }
+
+        public decimal NetTotal
+        {
+            get => _netTotal;
+            set => SetProperty(ref _netTotal, value);
+        }
+
         // Computed properties
         public string TotalAmountDisplay => TotalAmount.ToString("C");
         public string DateDisplay => ConsolidationDate.ToString("MMM dd, yyyy");
@@ -83,11 +97,15 @@ namespace WPFGrowerApp.Models
         public string BatchCountDisplay => $"{BatchCount} batch{(BatchCount != 1 ? "es" : "")}";
         public string SourceBatchesDisplay => GetSourceBatchesDisplay();
         public string StatusDisplay => Status;
+        public int OutstandingAdvancesCount => OutstandingAdvances?.Count ?? 0;
+        public string OutstandingAdvancesCountDisplay => $"{OutstandingAdvancesCount} advance{(OutstandingAdvancesCount != 1 ? "s" : "")}";
+        public string NetTotalDisplay => NetTotal.ToString("C");
 
         public ConsolidatedPayment()
         {
             BatchIds = new List<int>();
             BatchBreakdowns = new List<BatchBreakdown>();
+            OutstandingAdvances = new List<AdvanceBreakdown>();
             ConsolidationDate = DateTime.Now;
             Status = "Draft";
             CanBeConsolidated = true;

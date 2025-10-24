@@ -424,10 +424,25 @@ namespace WPFGrowerApp.ViewModels
                 var voidingResults = new List<VoidingResult>();
                 foreach (var cheque in selectedCheques)
                 {
+                    // Determine the correct entity type based on the cheque type
+                    string entityType;
+                    int entityId;
+                    
+                    if (cheque.IsAdvanceCheque && cheque.AdvanceChequeId.HasValue)
+                    {
+                        entityType = "Advance";
+                        entityId = cheque.AdvanceChequeId.Value;
+                    }
+                    else
+                    {
+                        entityType = "Regular";
+                        entityId = cheque.ChequeId;
+                    }
+                    
                     var voidingRequest = new PaymentVoidRequest
                     {
-                        EntityType = "Regular",
-                        EntityId = cheque.ChequeId,
+                        EntityType = entityType,
+                        EntityId = entityId,
                         Reason = reasonDialog.Answer,
                         VoidedBy = Environment.UserName
                     };
@@ -495,10 +510,25 @@ namespace WPFGrowerApp.ViewModels
                 StatusMessage = $"Voiding cheque {cheque.ChequeNumber}...";
 
                 // Use UnifiedVoidingService for comprehensive voiding
+                // Determine the correct entity type based on the cheque type
+                string entityType;
+                int entityId;
+                
+                if (cheque.IsAdvanceCheque && cheque.AdvanceChequeId.HasValue)
+                {
+                    entityType = "Advance";
+                    entityId = cheque.AdvanceChequeId.Value;
+                }
+                else
+                {
+                    entityType = "Regular";
+                    entityId = cheque.ChequeId;
+                }
+                
                 var voidingRequest = new PaymentVoidRequest
                 {
-                    EntityType = "Regular",
-                    EntityId = cheque.ChequeId,
+                    EntityType = entityType,
+                    EntityId = entityId,
                     Reason = reasonDialog.Answer,
                     VoidedBy = Environment.UserName
                 };

@@ -69,6 +69,8 @@ namespace WPFGrowerApp.ViewModels
         public ICommand SelectPaymentMethodCommand { get; }
         public ICommand SelectBatchesForConsolidationCommand { get; }
         public ICommand PreviewConsolidatedPaymentCommand { get; }
+        public ICommand PreviewRegularPaymentCommand { get; }
+        public ICommand PreviewCommand { get; }
         public ICommand GenerateChequesCommand { get; }
         public ICommand ShowHelpCommand { get; }
         public ICommand ExportCommand { get; }
@@ -123,6 +125,8 @@ namespace WPFGrowerApp.ViewModels
             SelectPaymentMethodCommand = new RelayCommand(async p => await SelectPaymentMethodAsync());
             SelectBatchesForConsolidationCommand = new RelayCommand(async p => await SelectBatchesForConsolidationAsync());
             PreviewConsolidatedPaymentCommand = new RelayCommand(async p => await PreviewConsolidatedPaymentAsync(), p => CanPreviewConsolidatedPayment());
+            PreviewRegularPaymentCommand = new RelayCommand(async p => await PreviewRegularPaymentAsync(), p => CanPreviewRegularPayment());
+            PreviewCommand = new RelayCommand(async p => await PreviewPaymentAsync(), p => CanPreviewPayment());
             GenerateChequesCommand = new RelayCommand(async p => await GenerateChequesAsync(), p => CanGenerateCheques());
             ShowHelpCommand = new RelayCommand(async p => await ShowHelpAsync());
             ExportCommand = new RelayCommand(async p => await ExportAsync(), p => CanExport());
@@ -541,16 +545,193 @@ namespace WPFGrowerApp.ViewModels
                 var consolidatedPayment = await _crossBatchPaymentService.GetConsolidatedPaymentForGrowerAsync(
                     SelectedGrowerSelection.GrowerId, SelectedBatchIds);
 
+                // Get outstanding advances for detailed breakdown
+                var outstandingAdvances = await _advanceChequeService.GetOutstandingAdvancesAsync(SelectedGrowerSelection.GrowerId);
+                
+                // Populate advance breakdowns
+                consolidatedPayment.OutstandingAdvances = outstandingAdvances.Select(adv => new AdvanceBreakdown
+                {
+                    AdvanceChequeId = adv.AdvanceChequeId,
+                    ChequeNumber = adv.ChequeNumber?.ToString() ?? $"ADV-{adv.AdvanceChequeId:D6}",
+                    Amount = adv.AdvanceAmount,
+                    AdvanceDate = adv.AdvanceDate,
+                    Status = adv.Status
+                }).ToList();
+
+                // Calculate net total (gross amount - outstanding advances)
+                var totalOutstanding = outstandingAdvances.Sum(adv => adv.AdvanceAmount);
+                consolidatedPayment.NetTotal = consolidatedPayment.TotalAmount - totalOutstanding;
+
                 var message = $"Consolidated Payment Preview for {SelectedGrowerSelection.GrowerName}:\n\n";
-                message += $"Total Amount: {consolidatedPayment.TotalAmount:C}\n";
-                message += $"Source Batches: {consolidatedPayment.SourceBatchesDisplay}\n";
-                message += $"Batch Count: {consolidatedPayment.BatchCount}";
+                
+                // Batch information
+                message += $"Batch Count: {consolidatedPayment.BatchCount}\n";
+                foreach (var batch in consolidatedPayment.BatchBreakdowns)
+                {
+                    message += $"{batch.BatchNumber} gross: {batch.AmountDisplay}\n";
+                }
+                
+                // Outstanding advances information
+                message += $"\nOutstanding Advances Count: {consolidatedPayment.OutstandingAdvancesCount}\n";
+                foreach (var advance in consolidatedPayment.OutstandingAdvances)
+                {
+                    message += $"Outstanding Advance ({advance.ChequeNumber}): {advance.AmountDisplay}\n";
+                }
+                
+                // Net total with special handling for negative amounts
+                if (consolidatedPayment.NetTotal < 0)
+                {
+                    message += $"\n⚠️ WARNING: Outstanding advances exceed gross amount!\n";
+                    message += $"Net Total: {consolidatedPayment.NetTotalDisplay} (NEGATIVE)\n";
+                    message += $"This grower owes: {Math.Abs(consolidatedPayment.NetTotal):C}";
+                }
+                else
+                {
+                    message += $"\nNet Total: {consolidatedPayment.NetTotalDisplay}";
+                }
 
                 await _dialogService.ShowMessageBoxAsync(message, "Consolidated Payment Preview");
             }
             catch (Exception ex)
             {
                 await _dialogService.ShowMessageBoxAsync($"Error previewing consolidated payment: {ex.Message}", "Error");
+            }
+        }
+
+        private async Task PreviewRegularPaymentAsync()
+        {
+            try
+            {
+                if (SelectedGrowerSelection == null)
+                {
+                    await _dialogService.ShowMessageBoxAsync("Please select a grower for preview", "Validation Error");
+                    return;
+                }
+
+                // Get outstanding advances for detailed breakdown
+                var outstandingAdvances = await _advanceChequeService.GetOutstandingAdvancesAsync(SelectedGrowerSelection.GrowerId);
+                
+                // Create advance breakdowns
+                var advanceBreakdowns = outstandingAdvances.Select(adv => new AdvanceBreakdown
+                {
+                    AdvanceChequeId = adv.AdvanceChequeId,
+                    ChequeNumber = adv.ChequeNumber?.ToString() ?? $"ADV-{adv.AdvanceChequeId:D6}",
+                    Amount = adv.AdvanceAmount,
+                    AdvanceDate = adv.AdvanceDate,
+                    Status = adv.Status
+                }).ToList();
+
+                // Calculate net total (gross amount - outstanding advances)
+                var totalOutstanding = outstandingAdvances.Sum(adv => adv.AdvanceAmount);
+                var netTotal = SelectedGrowerSelection.GrossTotalAmount - totalOutstanding;
+
+                var message = $"Regular Payment Preview for {SelectedGrowerSelection.GrowerName}:\n\n";
+                
+                // Show all selected batches with their individual amounts
+                var selectedBatches = AvailableBatches.Where(b => b.IsSelected).ToList();
+                if (selectedBatches.Any())
+                {
+                    // Get actual amounts for each batch
+                    var batchAmounts = await GetBatchAmountsForGrowerAsync(SelectedGrowerSelection.GrowerId, selectedBatches.Select(b => b.PaymentBatchId).ToList());
+                    
+                    foreach (var batch in selectedBatches)
+                    {
+                        var batchAmount = batchAmounts.ContainsKey(batch.PaymentBatchId) ? batchAmounts[batch.PaymentBatchId] : 0;
+                        message += $"Batch: {batch.BatchNumber} gross: {batchAmount:C}\n";
+                    }
+                }
+                else
+                {
+                    message += $"Gross Amount: {SelectedGrowerSelection.GrossTotalAmountDisplay}\n";
+                }
+                
+                // Outstanding advances information
+                message += $"\nOutstanding Advances Count: {advanceBreakdowns.Count}\n";
+                foreach (var advance in advanceBreakdowns)
+                {
+                    message += $"Outstanding Advance ({advance.ChequeNumber}): {advance.AmountDisplay}\n";
+                }
+                
+                // Net total with special handling for negative amounts
+                if (netTotal < 0)
+                {
+                    message += $"\n⚠️ WARNING: Outstanding advances exceed gross amount!\n";
+                    message += $"Net Total: {netTotal:C} (NEGATIVE)\n";
+                    message += $"This grower owes: {Math.Abs(netTotal):C}";
+                }
+                else
+                {
+                    message += $"\nNet Total: {netTotal:C}";
+                }
+
+                await _dialogService.ShowMessageBoxAsync(message, "Regular Payment Preview");
+            }
+            catch (Exception ex)
+            {
+                await _dialogService.ShowMessageBoxAsync($"Error previewing regular payment: {ex.Message}", "Error");
+            }
+        }
+
+        private async Task PreviewPaymentAsync()
+        {
+            try
+            {
+                if (SelectedGrowerSelection == null)
+                {
+                    await _dialogService.ShowMessageBoxAsync("Please select a grower for preview", "Validation Error");
+                    return;
+                }
+
+                // Determine which preview to show based on payment type
+                if (SelectedGrowerSelection.CanBeConsolidated && SelectedGrowerSelection.IsConsolidated)
+                {
+                    await PreviewConsolidatedPaymentAsync();
+                }
+                else
+                {
+                    await PreviewRegularPaymentAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                await _dialogService.ShowMessageBoxAsync($"Error previewing payment: {ex.Message}", "Error");
+            }
+        }
+
+        private async Task<Dictionary<int, decimal>> GetBatchAmountsForGrowerAsync(int growerId, List<int> batchIds)
+        {
+            try
+            {
+                using var connection = new SqlConnection(_connectionString);
+                await connection.OpenAsync();
+
+                var batchAmounts = new Dictionary<int, decimal>();
+
+                foreach (var batchId in batchIds)
+                {
+                    var query = @"
+                        SELECT ISNULL(SUM(rpa.AmountPaid), 0) as TotalAmount
+                        FROM ReceiptPaymentAllocations rpa
+                        INNER JOIN Receipts r ON rpa.ReceiptId = r.ReceiptId
+                        WHERE r.GrowerId = @GrowerId 
+                        AND rpa.PaymentBatchId = @BatchId
+                        AND r.IsVoided = 0";
+
+                    using var command = new SqlCommand(query, connection);
+                    command.Parameters.AddWithValue("@GrowerId", growerId);
+                    command.Parameters.AddWithValue("@BatchId", batchId);
+
+                    var result = await command.ExecuteScalarAsync();
+                    var amount = Convert.ToDecimal(result);
+                    batchAmounts[batchId] = amount;
+                }
+
+                return batchAmounts;
+            }
+            catch (Exception ex)
+            {
+                Infrastructure.Logging.Logger.Error($"Error getting batch amounts for grower {growerId}: {ex.Message}", ex);
+                return new Dictionary<int, decimal>();
             }
         }
 
@@ -655,6 +836,16 @@ namespace WPFGrowerApp.ViewModels
         private bool CanPreviewConsolidatedPayment()
         {
             return SelectedGrowerSelection != null && HasSelectedBatches && !IsBusy;
+        }
+
+        private bool CanPreviewRegularPayment()
+        {
+            return SelectedGrowerSelection != null && !IsBusy;
+        }
+
+        private bool CanPreviewPayment()
+        {
+            return SelectedGrowerSelection != null && !IsBusy;
         }
 
         private bool CanGenerateCheques()
@@ -1020,6 +1211,8 @@ namespace WPFGrowerApp.ViewModels
                     propertyName == nameof(IsBusy))
                 {
                     (PreviewConsolidatedPaymentCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                    (PreviewRegularPaymentCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                    (PreviewCommand as RelayCommand)?.RaiseCanExecuteChanged();
                 }
 
                 if (propertyName == nameof(GrowerSelections) || 
@@ -1217,7 +1410,8 @@ namespace WPFGrowerApp.ViewModels
                             grower.GrowerId, 
                             SelectedBatchIds, 
                             consolidatedPayment.TotalAmount, 
-                            App.CurrentUser?.Username ?? "SYSTEM");
+                            App.CurrentUser?.Username ?? "SYSTEM",
+                            0);
                         
                         if (consolidatedCheque != null)
                         {
@@ -1268,6 +1462,31 @@ namespace WPFGrowerApp.ViewModels
                 {
                     await _dialogService.ShowMessageBoxAsync("Please select at least one grower", "No Growers Selected");
                     return;
+                }
+
+                // Check for excessive advances
+                var excessiveAdvanceGrowers = selectedGrowers.Where(g => g.HasExcessiveAdvances).ToList();
+                if (excessiveAdvanceGrowers.Any())
+                {
+                    var growerNames = string.Join(", ", excessiveAdvanceGrowers.Select(g => g.GrowerName));
+                    var excessAmounts = string.Join(", ", excessiveAdvanceGrowers.Select(g => g.ExcessAdvanceAmount.ToString("C")));
+                    
+                    var proceedWithExcessiveAdvances = await _dialogService.ShowConfirmationAsync(
+                        $"⚠️ EXCESSIVE ADVANCES DETECTED!\n\n" +
+                        $"The following growers have outstanding advances that exceed their gross amounts:\n\n" +
+                        $"{growerNames}\n\n" +
+                        $"Excess amounts: {excessAmounts}\n\n" +
+                        $"This means these growers owe money instead of receiving payments.\n\n" +
+                        $"Do you want to proceed anyway? This will create negative payment records.",
+                        "Excessive Advances Warning");
+                    
+                    if (proceedWithExcessiveAdvances != true)
+                    {
+                        await _dialogService.ShowMessageBoxAsync(
+                            "Payment generation cancelled. Please resolve excessive advances before proceeding.",
+                            "Payment Generation Cancelled");
+                        return;
+                    }
                 }
 
                 // Create PaymentDistributionItems for selected growers only

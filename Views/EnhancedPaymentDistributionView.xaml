@@ -277,6 +277,18 @@
                               AlternatingRowBackground="{DynamicResource MaterialDesignDataGridRowHoverBackground}"
                               RowHeaderWidth="0">
                         
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow" BasedOn="{StaticResource MaterialDesignDataGridRow}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasExcessiveAdvances}" Value="True">
+                                        <Setter Property="Background" Value="#FFF3E0"/>
+                                        <Setter Property="BorderBrush" Value="#FF9800"/>
+                                        <Setter Property="BorderThickness" Value="0,0,0,2"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
+                        
                         <DataGrid.Columns>
                             <!-- Selection Checkbox -->
                             <DataGridTemplateColumn Header="" Width="40">
@@ -301,7 +313,12 @@
                                                 Binding="{Binding GrowerDisplay}" 
                                                 Width="200"
                                                 CanUserSort="True"/>
-                            
+                             <!-- Gross/Total Amount -->
+                            <DataGridTextColumn Header="Gross Amount" 
+                                                Binding="{Binding GrossTotalAmountDisplay}" 
+                                                Width="140"
+                                                CanUserSort="True"/>
+
                             <!-- Net Amount (Always Consolidated) -->
                             <DataGridTextColumn Header="Net Amount" 
                                                 Binding="{Binding NetConsolidatedAmountDisplay}" 
@@ -313,7 +330,7 @@
                                                 Binding="{Binding OutstandingAdvancesDisplay}" 
                                                 Width="100"
                                                 CanUserSort="True"/>
-                            
+                                                                                 
                             <!-- Status -->
                             <DataGridTextColumn Header="Status" 
                                                 Binding="{Binding StatusDisplay}" 
@@ -321,15 +338,18 @@
                                                 CanUserSort="True"/>
                             
                             <!-- Actions -->
-                            <DataGridTemplateColumn Header="Actions" Width="80">
+                            <DataGridTemplateColumn Header="Actions" Width="60">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Button Content="Preview" 
-                                                Command="{Binding DataContext.PreviewConsolidatedPaymentCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                Style="{DynamicResource MaterialDesignOutlinedButton}"
-                                                IsEnabled="{Binding CanBeConsolidated}"
-                                                Padding="6,3"
-                                                FontSize="11"/>
+                                        <Button Command="{Binding DataContext.PreviewCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                Style="{DynamicResource MaterialDesignIconButton}"
+                                                IsEnabled="{Binding IsSelectedForPayment}"
+                                                Padding="4"
+                                                ToolTip="Preview Payment Details">
+                                            <materialDesign:PackIcon Kind="Eye" 
+                                                                     Width="16" 
+                                                                     Height="16"/>
+                                        </Button>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
