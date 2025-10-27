@@ -24,15 +24,20 @@ namespace WPFGrowerApp.DataAccess.Services
 
         public async Task<User> AuthenticateAsync(string username, string password)
         {
-            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+            using (var operation = Logger.BeginTimedOperation("UserAuthentication"))
             {
-                return null; // Cannot authenticate with empty credentials
-            }
+                Logger.Debug($"Starting authentication for user: {username}");
+                
+                if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+                {
+                    Logger.LogSecurityEvent("Authentication Attempt", username, "Empty credentials provided", false);
+                    return null; // Cannot authenticate with empty credentials
+                }
 
-            User user = null;
-            try
-            {
-                using (var connection = new SqlConnection(_connectionString))
+                User user = null;
+                try
+                {
+                    using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
                     var sql = @"
@@ -47,14 +52,13 @@ namespace WPFGrowerApp.DataAccess.Services
 
                     if (user == null)
                     {
-                        Logger.Warn($"Authentication failed: User '{username}' not found.");
+                        Logger.LogSecurityEvent("Authentication Failed", username, "User not found", false);
                         return null; // User not found
                     }
 
                     if (!user.IsActive)
                     {
-                         Logger.Warn($"Authentication failed: User '{username}' is inactive.");
-                         // Optionally update FailedLoginAttempts here if desired
+                         Logger.LogSecurityEvent("Authentication Failed", username, "Account inactive", false);
                          return null; // Account inactive
                     }
 
@@ -89,7 +93,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     // Verify password
                     if (!PasswordHasher.VerifyPassword(password, user.PasswordHash, user.PasswordSalt))
                     {
-                        Logger.Warn($"Authentication failed: Invalid password for user '{username}'.");
+                        Logger.LogSecurityEvent("Authentication Failed", username, "Invalid password", false);
                         // Handle failed login attempt (increment counter, potentially lock account)
                         await HandleFailedLoginAttemptAsync(connection, user);
                         return null; // Invalid password
@@ -97,15 +101,18 @@ namespace WPFGrowerApp.DataAccess.Services
 
                     // Authentication successful - reset failed attempts and update last login
                     await HandleSuccessfulLoginAsync(connection, user);
-                    Logger.Info($"Authentication successful for user '{username}'.");
+                    Logger.LogSecurityEvent("Authentication Success", username, $"User ID: {user.UserId}", true);
+                    Logger.Info($"Authentication successful for user '{username}' (ID: {user.UserId})");
                     return user; 
                 }
             }
-            catch (Exception ex)
-            {
-                Logger.Error($"Error during authentication for user '{username}': {ex.Message}", ex);
-                // Depending on policy, might want to handle specific DB exceptions differently
-                return null; // Return null on error to prevent login
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogSecurityEvent("Authentication Error", username, $"Exception: {ex.Message}", false);
+                    Logger.Error($"Error during authentication for user '{username}'", ex);
+                    return null; // Return null on error to prevent login
+                }
             }
         }
 

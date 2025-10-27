@@ -38,9 +38,13 @@ namespace WPFGrowerApp.DataAccess.Services
 
         public async Task<List<Receipt>> GetReceiptsAsync(DateTime? startDate = null, DateTime? endDate = null)
         {
-            try
+            using (var operation = Logger.BeginTimedOperation("GetReceiptsAsync"))
             {
-                using (var connection = new SqlConnection(_connectionString))
+                Logger.Debug($"Starting GetReceiptsAsync. StartDate: {startDate}, EndDate: {endDate}");
+                
+                try
+                {
+                    using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
                     
@@ -96,13 +100,15 @@ namespace WPFGrowerApp.DataAccess.Services
                         // Grade is already mapped
                     }
                     
+                    Logger.Info($"Successfully retrieved {receipts.Count} receipts");
                     return receipts;
                 }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error in GetReceiptsAsync: {ex.Message}");
-                throw;
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Failed to retrieve receipts. StartDate: {startDate}, EndDate: {endDate}", ex);
+                    throw;
+                }
             }
         }
 
@@ -154,16 +160,20 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in GetReceiptByNumberAsync: {ex.Message}");
+                Logger.Error($"Failed to retrieve receipt by number: {receiptNumber}", ex);
                 throw;
             }
         }
 
         public async Task<Receipt> SaveReceiptAsync(Receipt receipt)
         {
-            try
+            using (var operation = Logger.BeginTimedOperation("SaveReceiptAsync"))
             {
-                if (receipt == null) throw new ArgumentNullException(nameof(receipt));
+                Logger.Debug($"Starting SaveReceiptAsync. ReceiptNumber: {receipt?.ReceiptNumber}, GrowerId: {receipt?.GrowerId}");
+                
+                try
+                {
+                    if (receipt == null) throw new ArgumentNullException(nameof(receipt));
 
                 // Generate receipt number if not set
                 if (string.IsNullOrEmpty(receipt.ReceiptNumber))
@@ -309,19 +319,20 @@ namespace WPFGrowerApp.DataAccess.Services
                         await SaveContainerTransactionsAsync(connection, receiptId, receipt.ContainerData, currentUser);
                     }
                     
+                    Logger.Info($"Receipt {receipt.ReceiptNumber} completed successfully");
                     return receipt;
                 }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error in SaveReceiptAsync: {ex.Message}");
-                // Enhanced logging with receipt details for troubleshooting
-                var containerCount = receipt.ContainerData?.Count ?? 0;
-                var receiptInfo = $"Receipt#{receipt.ReceiptNumber ?? "NULL"}, Date={receipt.ReceiptDate:yyyy-MM-dd}, " +
-                                 $"GrowerId={receipt.GrowerId}, ProductId={receipt.ProductId}, ProcessId={receipt.ProcessId}, " +
-                                 $"Grade={receipt.Grade}, Containers={containerCount}";
-                Logger.Error($"Error saving receipt [{receiptInfo}]: {ex.Message}", ex);
-                throw;
+                }
+                catch (Exception ex)
+                {
+                    // Enhanced logging with receipt details for troubleshooting
+                    var containerCount = receipt.ContainerData?.Count ?? 0;
+                    var receiptInfo = $"Receipt#{receipt.ReceiptNumber ?? "NULL"}, Date={receipt.ReceiptDate:yyyy-MM-dd}, " +
+                                     $"GrowerId={receipt.GrowerId}, ProductId={receipt.ProductId}, ProcessId={receipt.ProcessId}, " +
+                                     $"Grade={receipt.Grade}, Containers={containerCount}";
+                    Logger.Error($"Failed to save receipt [{receiptInfo}]", ex);
+                    throw;
+                }
             }
         }
 
@@ -365,8 +376,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in DeleteReceiptAsync: {ex.Message}");
-                Logger.Error($"Error deleting receipt {receiptNumber}: {ex.Message}", ex);
+                Logger.Error($"Failed to delete receipt: {receiptNumber}", ex);
                 throw;
             }
         }
