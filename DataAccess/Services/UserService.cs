@@ -104,8 +104,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     Logger.LogSecurityEvent("Authentication Success", username, $"User ID: {user.UserId}", true);
                     Logger.Info($"Authentication successful for user '{username}' (ID: {user.UserId})");
                     return user; 
-                }
-            }
+                    }
                 }
                 catch (Exception ex)
                 {
