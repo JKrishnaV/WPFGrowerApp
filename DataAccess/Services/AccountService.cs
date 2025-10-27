@@ -14,6 +14,7 @@ namespace WPFGrowerApp.DataAccess.Services
     {
         public async Task<List<Account>> GetAllAccountsAsync()
         {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 using (var connection = new SqlConnection(_connectionString))
@@ -49,11 +50,18 @@ namespace WPFGrowerApp.DataAccess.Services
                         FROM ACCOUNT 
                         ORDER BY DATE DESC";
 
-                    return (await connection.QueryAsync<Account>(sql)).ToList();
+                    var result = (await connection.QueryAsync<Account>(sql)).ToList();
+                    
+                    stopwatch.Stop();
+                    Logger.LogDatabaseOperation("GetAllAccounts", "SELECT", stopwatch.ElapsedMilliseconds, result.Count);
+                    
+                    return result;
                 }
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogDatabaseOperation("GetAllAccounts", "SELECT", stopwatch.ElapsedMilliseconds, additionalInfo: $"Error: {ex.Message}");
                 Logger.Error($"Error in GetAllAccountsAsync: {ex.Message}", ex);
                 throw;
             }
@@ -61,6 +69,7 @@ namespace WPFGrowerApp.DataAccess.Services
 
         public async Task<Account> GetAccountByNumberAsync(decimal number)
         {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 using (var connection = new SqlConnection(_connectionString))
@@ -97,11 +106,18 @@ namespace WPFGrowerApp.DataAccess.Services
                         WHERE NUMBER = @Number";
 
                     var parameters = new { Number = number };
-                    return await connection.QueryFirstOrDefaultAsync<Account>(sql, parameters);
+                    var result = await connection.QueryFirstOrDefaultAsync<Account>(sql, parameters);
+                    
+                    stopwatch.Stop();
+                    Logger.LogDatabaseOperation("GetAccountByNumber", "SELECT", stopwatch.ElapsedMilliseconds, result != null ? 1 : 0, $"Account: {number}");
+                    
+                    return result;
                 }
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogDatabaseOperation("GetAccountByNumber", "SELECT", stopwatch.ElapsedMilliseconds, additionalInfo: $"Error: {ex.Message}");
                 Logger.Error($"Error in GetAccountByNumberAsync: {ex.Message}", ex);
                 throw;
             }
@@ -109,6 +125,9 @@ namespace WPFGrowerApp.DataAccess.Services
 
         public async Task<bool> SaveAccountAsync(Account account)
         {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var user = App.CurrentUser?.Username ?? "SYSTEM";
+            
             try
             {
                 using (var connection = new SqlConnection(_connectionString))
@@ -198,11 +217,23 @@ namespace WPFGrowerApp.DataAccess.Services
                     };
 
                     int rowsAffected = await connection.ExecuteAsync(sql, parameters);
-                    return rowsAffected > 0;
+                    var success = rowsAffected > 0;
+                    
+                    stopwatch.Stop();
+                    
+                    if (success)
+                    {
+                        Logger.LogDatabaseOperation("SaveAccount", "MERGE", stopwatch.ElapsedMilliseconds, rowsAffected);
+                        Logger.LogUserAction("SaveAccount", "Account", account.Number, $"Duration: {stopwatch.ElapsedMilliseconds}ms");
+                    }
+                    
+                    return success;
                 }
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogUserAction("SaveAccount", "Account", account.Number, $"Failed: {ex.Message}");
                 Logger.Error($"Error in SaveAccountAsync: {ex.Message}", ex);
                 return false;
             }
@@ -210,6 +241,7 @@ namespace WPFGrowerApp.DataAccess.Services
 
         public async Task<List<Account>> GetAccountsByYearAsync(decimal year)
         {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 using (var connection = new SqlConnection(_connectionString))
@@ -247,13 +279,20 @@ namespace WPFGrowerApp.DataAccess.Services
                         ORDER BY DATE DESC";
 
                     var parameters = new { Year = year };
-                    return (await connection.QueryAsync<Account>(sql, parameters)).ToList();
+                    var result = (await connection.QueryAsync<Account>(sql, parameters)).ToList();
+                    
+                    stopwatch.Stop();
+                    Logger.LogDatabaseOperation("GetAccountsByYear", "SELECT", stopwatch.ElapsedMilliseconds, result.Count, $"Year: {year}");
+                    
+                    return result;
                 }
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogDatabaseOperation("GetAccountsByYear", "SELECT", stopwatch.ElapsedMilliseconds, additionalInfo: $"Error: {ex.Message}");
                 Logger.Error($"Error in GetAccountsByYearAsync: {ex.Message}", ex);
-                 throw;
+                throw;
             }
         }
 
@@ -263,6 +302,9 @@ namespace WPFGrowerApp.DataAccess.Services
             {
                 return true; // Nothing to insert
             }
+
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var user = App.CurrentUser?.Username ?? "SYSTEM";
 
             // TODO: Need to implement logic to get the next ACCT_UNIQ value.
             // This might involve querying the max value or using a sequence.
@@ -305,12 +347,24 @@ namespace WPFGrowerApp.DataAccess.Services
 
                         int rowsAffected = await connection.ExecuteAsync(sql, paymentEntries, transaction: transaction);
                         transaction.Commit();
-                        return rowsAffected == paymentEntries.Count;
+                        var success = rowsAffected == paymentEntries.Count;
+                        
+                        stopwatch.Stop();
+                        
+                        if (success)
+                        {
+                            Logger.LogDatabaseOperation("CreatePaymentAccountEntries", "BULK_INSERT", stopwatch.ElapsedMilliseconds, rowsAffected, $"User: {user}");
+                            Logger.LogUserAction("CreatePaymentEntries", "Account", paymentEntries.Count, $"Duration: {stopwatch.ElapsedMilliseconds}ms");
+                        }
+                        
+                        return success;
                     }
                 }
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogDatabaseOperation("CreatePaymentAccountEntries", "BULK_INSERT", stopwatch.ElapsedMilliseconds, additionalInfo: $"Error: {ex.Message}");
                 Logger.Error($"Error in CreatePaymentAccountEntriesAsync: {ex.Message}", ex);
                 return false; // Indicate failure
             }
@@ -321,6 +375,7 @@ namespace WPFGrowerApp.DataAccess.Services
             // This query needs to replicate the logic from CHEQRUN.PRG for selecting payable entries
             // It selects entries that haven't been assigned a final cheque (SERIES/CHEQUE are null/empty)
             // and match the specified criteria.
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 using (var connection = new SqlConnection(_connectionString))
@@ -357,11 +412,19 @@ namespace WPFGrowerApp.DataAccess.Services
                     // Add other cheque type filters if necessary
 
                     var results = await connection.QueryAsync<Account>(selector.RawSql, selector.Parameters);
-                    return results.ToList();
+                    var result = results.ToList();
+                    
+                    stopwatch.Stop();
+                    Logger.LogDatabaseOperation("GetPayableAccountEntries", "SELECT", stopwatch.ElapsedMilliseconds, result.Count, 
+                        $"Grower: {growerNumber}, Currency: {currency}, Year: {cropYear}, Type: {chequeType}");
+                    
+                    return result;
                 }
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogDatabaseOperation("GetPayableAccountEntries", "SELECT", stopwatch.ElapsedMilliseconds, additionalInfo: $"Error: {ex.Message}");
                 Logger.Error($"Error in GetPayableAccountEntriesAsync for Grower {growerNumber}: {ex.Message}", ex);
                 throw;
             }
@@ -371,6 +434,9 @@ namespace WPFGrowerApp.DataAccess.Services
         {
             // This replicates the logic of updating Account records with the final cheque details
             // after temporary assignment (T_SER, T_CHEQ).
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var user = App.CurrentUser?.Username ?? "SYSTEM";
+            
              try
             {
                 using (var connection = new SqlConnection(_connectionString))
@@ -411,11 +477,25 @@ namespace WPFGrowerApp.DataAccess.Services
 
                     int rowsAffected = await connection.ExecuteAsync(updater.RawSql, updater.Parameters);
                     // We might expect multiple rows to be updated if one cheque covers multiple account entries
-                    return rowsAffected > 0; // Return true if at least one row was updated
+                    var success = rowsAffected > 0;
+                    
+                    stopwatch.Stop();
+                    
+                    if (success)
+                    {
+                        Logger.LogDatabaseOperation("UpdateAccountEntriesWithChequeInfo", "UPDATE", stopwatch.ElapsedMilliseconds, rowsAffected, 
+                            $"Grower: {growerNumber}, Cheque: {chequeSeries}-{chequeNumber}");
+                        Logger.LogUserAction("UpdateAccountEntriesWithChequeInfo", "Account", growerNumber, 
+                            $"Cheque: {chequeSeries}-{chequeNumber}, Rows: {rowsAffected}, Duration: {stopwatch.ElapsedMilliseconds}ms");
+                    }
+                    
+                    return success; // Return true if at least one row was updated
                 }
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogUserAction("UpdateAccountEntriesWithChequeInfo", "Account", growerNumber, $"Failed: {ex.Message}");
                 Logger.Error($"Error in UpdateAccountEntriesWithChequeInfoAsync for Grower {growerNumber}, Cheque {chequeSeries}-{chequeNumber}: {ex.Message}", ex);
                 throw; // Or return false
             }
@@ -424,6 +504,9 @@ namespace WPFGrowerApp.DataAccess.Services
          public async Task<bool> RevertTemporaryChequeInfoAsync(string currency, string tempChequeSeries, decimal tempChequeNumberStart)
         {
             // This clears the T_SER and T_CHEQ fields if a cheque run is cancelled.
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var user = App.CurrentUser?.Username ?? "SYSTEM";
+            
             try
             {
                 using (var connection = new SqlConnection(_connectionString))
@@ -439,11 +522,22 @@ namespace WPFGrowerApp.DataAccess.Services
 
                     int rowsAffected = await connection.ExecuteAsync(sql, new { Currency = currency, TempChequeSeries = tempChequeSeries, TempChequeNumberStart = tempChequeNumberStart });
                     // Log how many rows were reverted if needed
-                    return true; // Assume success even if 0 rows affected (maybe no temp cheques were assigned)
+                    var success = true; // Assume success even if 0 rows affected (maybe no temp cheques were assigned)
+                    
+                    stopwatch.Stop();
+                    
+                    Logger.LogDatabaseOperation("RevertTemporaryChequeInfo", "UPDATE", stopwatch.ElapsedMilliseconds, rowsAffected, 
+                        $"Series: {tempChequeSeries}, Start: {tempChequeNumberStart}");
+                    Logger.LogUserAction("RevertTemporaryChequeInfo", "Account", tempChequeSeries, 
+                        $"Rows: {rowsAffected}, Duration: {stopwatch.ElapsedMilliseconds}ms");
+                    
+                    return success;
                 }
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogUserAction("RevertTemporaryChequeInfo", "Account", tempChequeSeries, $"Failed: {ex.Message}");
                 Logger.Error($"Error in RevertTemporaryChequeInfoAsync for Series {tempChequeSeries}: {ex.Message}", ex);
                 throw; // Or return false
             }

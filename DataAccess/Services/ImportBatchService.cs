@@ -15,8 +15,11 @@ namespace WPFGrowerApp.DataAccess.Services
 
         public async Task<ImportBatch> CreateImportBatchAsync(int depotId, string impFile, string? originalBatchNumber = null, bool isFromMultiBatchFile = false, int? batchGroupId = null)
         {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
+                Logger.LogUserAction("CreateImportBatch", "ImportBatch", depotId, $"File: {impFile}, OriginalBatch: {originalBatchNumber}, MultiBatch: {isFromMultiBatchFile}");
+                
                 var importBatch = new ImportBatch
                 {
                     BatchNumber = !string.IsNullOrEmpty(originalBatchNumber) ? originalBatchNumber : await GetNextImportBatchNumberAsync(),
@@ -69,12 +72,18 @@ namespace WPFGrowerApp.DataAccess.Services
                     // Set the ImportBatchId on the object
                     importBatch.ImportBatchId = importBatchId;
                     
+                    stopwatch.Stop();
+                    Logger.LogDatabaseOperation("CreateImportBatch", "INSERT", stopwatch.ElapsedMilliseconds, 1, 
+                        $"BatchId: {importBatchId}, BatchNumber: {importBatch.BatchNumber}, DepotId: {depotId}");
+                    
                     // Return with ImportBatchId
                     return importBatch;
                 }
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogDatabaseOperation("CreateImportBatch", "INSERT", stopwatch.ElapsedMilliseconds, additionalInfo: $"Error: {ex.Message}");
                 Logger.Error($"Error in CreateImportBatchAsync: {ex.Message}", ex);
                 throw;
             }
@@ -186,6 +195,7 @@ namespace WPFGrowerApp.DataAccess.Services
 
         public async Task<ImportBatch> GetImportBatchAsync(string batchNumber)
         {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 using (var connection = new SqlConnection(_connectionString))
@@ -193,11 +203,19 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = "SELECT * FROM ImportBatches WHERE BatchNumber = @BatchNumber AND DeletedAt IS NULL";
                     var parameters = new { BatchNumber = batchNumber };
-                    return await connection.QueryFirstOrDefaultAsync<ImportBatch>(sql, parameters);
+                    var result = await connection.QueryFirstOrDefaultAsync<ImportBatch>(sql, parameters);
+                    
+                    stopwatch.Stop();
+                    Logger.LogDatabaseOperation("GetImportBatch", "SELECT", stopwatch.ElapsedMilliseconds, result != null ? 1 : 0, 
+                        $"BatchNumber: {batchNumber}");
+                    
+                    return result;
                 }
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogDatabaseOperation("GetImportBatch", "SELECT", stopwatch.ElapsedMilliseconds, additionalInfo: $"Error: {ex.Message}");
                 Logger.Error($"Error in GetImportBatchAsync: {ex.Message}", ex);
                 throw;
             }
@@ -294,8 +312,12 @@ namespace WPFGrowerApp.DataAccess.Services
 
         public async Task<bool> UpdateImportBatchAsync(ImportBatch importBatch)
         {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
+                Logger.LogUserAction("UpdateImportBatch", "ImportBatch", importBatch.BatchNumber, 
+                    $"TotalReceipts: {importBatch.TotalReceipts}, Status: Posted");
+                
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
@@ -310,11 +332,18 @@ namespace WPFGrowerApp.DataAccess.Services
                         importBatch.BatchNumber,
                         importBatch.TotalReceipts
                     });
+                    
+                    stopwatch.Stop();
+                    Logger.LogDatabaseOperation("UpdateImportBatch", "UPDATE", stopwatch.ElapsedMilliseconds, result, 
+                        $"BatchNumber: {importBatch.BatchNumber}, TotalReceipts: {importBatch.TotalReceipts}");
+                    
                     return result > 0;
                 }
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogDatabaseOperation("UpdateImportBatch", "UPDATE", stopwatch.ElapsedMilliseconds, additionalInfo: $"Error: {ex.Message}");
                 Logger.Error($"Error in UpdateImportBatchAsync: {ex.Message}", ex);
                 throw;
             }

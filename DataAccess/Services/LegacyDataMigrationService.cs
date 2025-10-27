@@ -30,8 +30,11 @@ namespace WPFGrowerApp.DataAccess.Services
         /// </summary>
         public async Task<int> MigrateContainersAsync()
         {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
+                Logger.LogUserAction("MigrateContainers", "Migration", "Containers", "Legacy to modern container migration");
+                
                 using var legacyConnection = new SqlConnection(_legacyConnectionString);
                 using var modernConnection = new SqlConnection(_modernConnectionString);
 
@@ -82,10 +85,21 @@ namespace WPFGrowerApp.DataAccess.Services
                 }
 
                 Logger.Info($"Container migration completed: {migratedCount} containers migrated");
+                
+                stopwatch.Stop();
+                Logger.LogDatabaseOperation("MigrateContainers", "MIGRATION", stopwatch.ElapsedMilliseconds, migratedCount, 
+                    $"Legacy to modern container migration completed");
+                Logger.LogPerformanceWithThreshold("MigrateContainers", stopwatch.ElapsedMilliseconds, 
+                    $"Migrated: {migratedCount} containers");
+                
                 return migratedCount;
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogDatabaseOperation("MigrateContainers", "MIGRATION", stopwatch.ElapsedMilliseconds, additionalInfo: $"Error: {ex.Message}");
+                Logger.LogPerformanceWithThreshold("MigrateContainers", stopwatch.ElapsedMilliseconds, 
+                    $"Error: {ex.Message}");
                 Logger.Error($"Error migrating containers: {ex.Message}", ex);
                 throw;
             }

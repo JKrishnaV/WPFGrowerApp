@@ -14,6 +14,7 @@ namespace WPFGrowerApp.DataAccess.Services
     {
         public async Task<List<Audit>> GetAllAuditsAsync()
         {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 using (var connection = new SqlConnection(_connectionString))
@@ -35,11 +36,19 @@ namespace WPFGrowerApp.DataAccess.Services
                         FROM AUDIT 
                         ORDER BY DAY_UNIQ DESC";
 
-                    return (await connection.QueryAsync<Audit>(sql)).ToList();
+                    var result = (await connection.QueryAsync<Audit>(sql)).ToList();
+                    
+                    stopwatch.Stop();
+                    Logger.LogDatabaseOperation("GetAllAudits", "SELECT", stopwatch.ElapsedMilliseconds, result.Count, 
+                        "All audit records");
+                    
+                    return result;
                 }
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogDatabaseOperation("GetAllAudits", "SELECT", stopwatch.ElapsedMilliseconds, additionalInfo: $"Error: {ex.Message}");
                 Logger.Error($"Error in GetAllAuditsAsync: {ex.Message}", ex);
                 throw;
             }

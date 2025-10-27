@@ -26,6 +26,7 @@ namespace WPFGrowerApp.DataAccess.Services
         
         public async Task<Cheque> GetChequeByIdAsync(int chequeId)
         {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 using var connection = new SqlConnection(ConnectionString);
@@ -78,10 +79,17 @@ namespace WPFGrowerApp.DataAccess.Services
                 await LoadChequeRelatedDataAsync(cheque, connection);
                 
                 Logger.Info($"Successfully loaded comprehensive cheque data for ChequeId {chequeId}");
+                
+                stopwatch.Stop();
+                Logger.LogDatabaseOperation("GetChequeById", "SELECT", stopwatch.ElapsedMilliseconds, 1, 
+                    $"ChequeId: {chequeId}, Status: {cheque?.Status}");
+                
                 return cheque;
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogDatabaseOperation("GetChequeById", "SELECT", stopwatch.ElapsedMilliseconds, additionalInfo: $"Error: {ex.Message}");
                 Logger.Error($"Error getting comprehensive cheque data by ID {chequeId}: {ex.Message}", ex);
                 throw;
             }
@@ -299,8 +307,11 @@ namespace WPFGrowerApp.DataAccess.Services
 
         public async Task<bool> VoidChequeAsync(int chequeId, string reason, string voidedBy)
         {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
+                Logger.LogUserAction("VoidCheque", "Cheque", chequeId, $"Reason: {reason}, VoidedBy: {voidedBy}");
+                
                 using var connection = CreateConnection();
                 await connection.OpenAsync();
                 
@@ -318,10 +329,17 @@ namespace WPFGrowerApp.DataAccess.Services
                 command.Parameters.AddWithValue("@Reason", reason);
                 
                 var rowsAffected = await command.ExecuteNonQueryAsync();
+                
+                stopwatch.Stop();
+                Logger.LogDatabaseOperation("VoidCheque", "UPDATE", stopwatch.ElapsedMilliseconds, rowsAffected, 
+                    $"ChequeId: {chequeId}, Reason: {reason}, VoidedBy: {voidedBy}");
+                
                 return rowsAffected > 0;
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogDatabaseOperation("VoidCheque", "UPDATE", stopwatch.ElapsedMilliseconds, additionalInfo: $"Error: {ex.Message}");
                 Logger.Error($"Error voiding cheque: {ex.Message}", ex);
                 throw;
             }
@@ -329,6 +347,7 @@ namespace WPFGrowerApp.DataAccess.Services
 
         public async Task<List<Cheque>> GetAllChequesAsync()
         {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 using var connection = new SqlConnection(ConnectionString);
@@ -374,10 +393,17 @@ namespace WPFGrowerApp.DataAccess.Services
                     ORDER BY c.ChequeDate DESC";
                 
                 var cheques = await connection.QueryAsync<Cheque>(sql);
+                
+                stopwatch.Stop();
+                Logger.LogDatabaseOperation("GetAllCheques", "SELECT", stopwatch.ElapsedMilliseconds, cheques.Count(), 
+                    $"Status filter: Printed, Voided, Stopped");
+                
                 return cheques.ToList();
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogDatabaseOperation("GetAllCheques", "SELECT", stopwatch.ElapsedMilliseconds, additionalInfo: $"Error: {ex.Message}");
                 Logger.Error($"Error getting all cheques: {ex.Message}", ex);
                 return new List<Cheque>();
             }

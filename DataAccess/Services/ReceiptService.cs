@@ -37,13 +37,10 @@ namespace WPFGrowerApp.DataAccess.Services
 
         public async Task<List<Receipt>> GetReceiptsAsync(DateTime? startDate = null, DateTime? endDate = null)
         {
-            using (var operation = Logger.BeginTimedOperation("GetReceiptsAsync"))
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            try
             {
-                Logger.Debug($"Starting GetReceiptsAsync. StartDate: {startDate}, EndDate: {endDate}");
-                
-                try
-                {
-                    using (var connection = new SqlConnection(_connectionString))
+                using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
                     
@@ -99,20 +96,25 @@ namespace WPFGrowerApp.DataAccess.Services
                         // Grade is already mapped
                     }
                     
-                    Logger.Info($"Successfully retrieved {receipts.Count} receipts");
+                    stopwatch.Stop();
+                    Logger.LogDatabaseOperation("GetReceipts", "SELECT", stopwatch.ElapsedMilliseconds, receipts.Count, 
+                        $"StartDate: {startDate}, EndDate: {endDate}");
+                    
                     return receipts;
                 }
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error($"Failed to retrieve receipts. StartDate: {startDate}, EndDate: {endDate}", ex);
-                    throw;
-                }
+            }
+            catch (Exception ex)
+            {
+                stopwatch.Stop();
+                Logger.LogDatabaseOperation("GetReceipts", "SELECT", stopwatch.ElapsedMilliseconds, additionalInfo: $"Error: {ex.Message}");
+                Logger.Error($"Failed to retrieve receipts. StartDate: {startDate}, EndDate: {endDate}", ex);
+                throw;
             }
         }
 
         public async Task<Receipt> GetReceiptByNumberAsync(decimal receiptNumber)
         {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 using (var connection = new SqlConnection(_connectionString))
@@ -154,11 +156,17 @@ namespace WPFGrowerApp.DataAccess.Services
                         // Grade is already mapped
                     }
                     
+                    stopwatch.Stop();
+                    Logger.LogDatabaseOperation("GetReceiptByNumber", "SELECT", stopwatch.ElapsedMilliseconds, receipt != null ? 1 : 0, 
+                        $"ReceiptNumber: {receiptNumber}");
+                    
                     return receipt;
                 }
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogDatabaseOperation("GetReceiptByNumber", "SELECT", stopwatch.ElapsedMilliseconds, additionalInfo: $"Error: {ex.Message}");
                 Logger.Error($"Failed to retrieve receipt by number: {receiptNumber}", ex);
                 throw;
             }
@@ -382,14 +390,14 @@ namespace WPFGrowerApp.DataAccess.Services
 
         public async Task<bool> VoidReceiptAsync(string receiptNumber, string reason)
         {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var user = App.CurrentUser?.Username ?? "SYSTEM";
+            
             try
             {
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
-                    
-                    // Get current user
-                    string currentUser = App.CurrentUser?.Username ?? "SYSTEM"; // TODO: Get from current session/user context
                     
                     // Void receipt in modern Receipts table
                     var sql = @"
@@ -406,21 +414,29 @@ namespace WPFGrowerApp.DataAccess.Services
                     var parameters = new { 
                         ReceiptNumber = receiptNumber, 
                         VoidedReason = reason,
-                        VoidedBy = currentUser,
-                        ModifiedBy = currentUser
+                        VoidedBy = user,
+                        ModifiedBy = user
                     };
                     var result = await connection.ExecuteAsync(sql, parameters);
+                    var success = result > 0;
                     
-                    if (result > 0)
+                    stopwatch.Stop();
+                    
+                    if (success)
                     {
-                        Logger.Info($"Receipt {receiptNumber} voided by {currentUser}. Reason: {reason}");
+                        Logger.LogDatabaseOperation("VoidReceipt", "UPDATE", stopwatch.ElapsedMilliseconds, result, 
+                            $"ReceiptNumber: {receiptNumber}, Reason: {reason}");
+                        Logger.LogUserAction("VoidReceipt", "Receipt", receiptNumber, 
+                            $"Reason: {reason}, Duration: {stopwatch.ElapsedMilliseconds}ms");
                     }
                     
-                    return result > 0;
+                    return success;
                 }
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogUserAction("VoidReceipt", "Receipt", receiptNumber, $"Failed: {ex.Message}");
                 Logger.Error($"Error in VoidReceiptAsync: {ex.Message}", ex);
                 throw;
             }
@@ -428,6 +444,7 @@ namespace WPFGrowerApp.DataAccess.Services
 
     public async Task<List<Receipt>> GetReceiptsByGrowerAsync(string growerNumber, DateTime? startDate = null, DateTime? endDate = null)
         {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 using (var connection = new SqlConnection(_connectionString))
@@ -484,11 +501,17 @@ namespace WPFGrowerApp.DataAccess.Services
                         receipt.ReceiptDate = receipt.ReceiptDate;
                     }
                     
+                    stopwatch.Stop();
+                    Logger.LogDatabaseOperation("GetReceiptsByGrower", "SELECT", stopwatch.ElapsedMilliseconds, receipts.Count, 
+                        $"GrowerNumber: {growerNumber}, StartDate: {startDate}, EndDate: {endDate}");
+                    
                     return receipts;
                 }
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogDatabaseOperation("GetReceiptsByGrower", "SELECT", stopwatch.ElapsedMilliseconds, additionalInfo: $"Error: {ex.Message}");
                 Logger.Error($"Error in GetReceiptsByGrowerAsync: {ex.Message}", ex);
                 throw;
             }
@@ -496,6 +519,7 @@ namespace WPFGrowerApp.DataAccess.Services
 
         public async Task<List<Receipt>> GetReceiptsByImportBatchAsync(decimal impBatch)
         {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 using (var connection = new SqlConnection(_connectionString))
@@ -534,11 +558,17 @@ namespace WPFGrowerApp.DataAccess.Services
                         receipt.ReceiptDate = receipt.ReceiptDate;
                     }
                     
+                    stopwatch.Stop();
+                    Logger.LogDatabaseOperation("GetReceiptsByImportBatch", "SELECT", stopwatch.ElapsedMilliseconds, receipts.Count, 
+                        $"ImportBatch: {impBatch}");
+                    
                     return receipts;
                 }
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogDatabaseOperation("GetReceiptsByImportBatch", "SELECT", stopwatch.ElapsedMilliseconds, additionalInfo: $"Error: {ex.Message}");
                 Logger.Error($"Error in GetReceiptsByImportBatchAsync: {ex.Message}", ex);
                 throw;
             }
@@ -546,6 +576,7 @@ namespace WPFGrowerApp.DataAccess.Services
 
         public async Task<decimal> GetNextReceiptNumberAsync()
         {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 using (var connection = new SqlConnection(_connectionString))
@@ -553,11 +584,19 @@ namespace WPFGrowerApp.DataAccess.Services
                     await connection.OpenAsync();
                     var sql = "SELECT MAX(RECPT) + 1 FROM Daily";
                     var result = await connection.ExecuteScalarAsync<decimal?>(sql);
-                    return result ?? 1;
+                    var nextNumber = result ?? 1;
+                    
+                    stopwatch.Stop();
+                    Logger.LogDatabaseOperation("GetNextReceiptNumber", "SELECT", stopwatch.ElapsedMilliseconds, 1, 
+                        $"NextNumber: {nextNumber}");
+                    
+                    return nextNumber;
                 }
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogDatabaseOperation("GetNextReceiptNumber", "SELECT", stopwatch.ElapsedMilliseconds, additionalInfo: $"Error: {ex.Message}");
                 Logger.Error($"Error in GetNextReceiptNumberAsync: {ex.Message}", ex);
                 throw;
             }
@@ -566,6 +605,7 @@ namespace WPFGrowerApp.DataAccess.Services
 
         public async Task<decimal> CalculateNetWeightAsync(Receipt receipt)
         {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 using (var connection = new SqlConnection(_connectionString))
@@ -581,11 +621,19 @@ namespace WPFGrowerApp.DataAccess.Services
                         )";
 
                     var totalTare = await connection.ExecuteScalarAsync<decimal?>(sql, new { receipt.ReceiptNumber }) ?? 0;
-                    return receipt.Gross - totalTare;
+                    var netWeight = receipt.Gross - totalTare;
+                    
+                    stopwatch.Stop();
+                    Logger.LogDatabaseOperation("CalculateNetWeight", "SELECT", stopwatch.ElapsedMilliseconds, 1, 
+                        $"ReceiptNumber: {receipt.ReceiptNumber}, Gross: {receipt.Gross}, Tare: {totalTare}, Net: {netWeight}");
+                    
+                    return netWeight;
                 }
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogDatabaseOperation("CalculateNetWeight", "SELECT", stopwatch.ElapsedMilliseconds, additionalInfo: $"Error: {ex.Message}");
                 Logger.Error($"Error in CalculateNetWeightAsync: {ex.Message}", ex);
                 throw;
             }

@@ -140,6 +140,7 @@ namespace WPFGrowerApp.DataAccess.Services
             List<int>? processIds = null,
             IProgress<string>? progress = null)
         {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             var errors = new List<string>();
             PaymentBatch? createdBatch = null;
             TestRunResult? previewResult = null;
@@ -147,6 +148,8 @@ namespace WPFGrowerApp.DataAccess.Services
 
             try
             {
+                Logger.LogUserAction("CreatePaymentDraft", "PaymentSequence", sequenceNumber, $"PaymentDate: {paymentDate:yyyy-MM-dd}, CutoffDate: {cutoffDate:yyyy-MM-dd}, CropYear: {cropYear}");
+                
                 progress?.Report("Calculating payment details...");
                 LogAnEvent(EVT_TYPE_START_ADVANCE_DETERMINE, $"Sequence {sequenceNumber} draft creation started.");
 
@@ -168,6 +171,9 @@ namespace WPFGrowerApp.DataAccess.Services
                 if (!previewResult.GrowerPayments.Any())
                 {
                     errors.Add("No eligible growers found for payment calculation.");
+                    stopwatch.Stop();
+                    Logger.LogPerformanceWithThreshold("CreatePaymentDraft", stopwatch.ElapsedMilliseconds, 
+                        $"No eligible growers found. Sequence: {sequenceNumber}");
                     return (false, errors, null, previewResult, null);
                 }
 
@@ -191,6 +197,9 @@ namespace WPFGrowerApp.DataAccess.Services
                     }
                     
                     // Return with validation flag - UI will show confirmation dialog
+                    stopwatch.Stop();
+                    Logger.LogPerformanceWithThreshold("CreatePaymentDraft", stopwatch.ElapsedMilliseconds, 
+                        $"Validation issues found. Errors: {validation.Errors.Count}, Warnings: {validation.Warnings.Count}. Sequence: {sequenceNumber}");
                     Logger.Info($"Payment validation found {validation.Errors.Count} errors, {validation.Warnings.Count} warnings. Awaiting user confirmation.");
                     return (false, errors, null, previewResult, validation);
                 }
@@ -206,10 +215,17 @@ namespace WPFGrowerApp.DataAccess.Services
                         previewResult, // Use the calculated result
                         progress);
 
+                stopwatch.Stop();
+                Logger.LogPerformanceWithThreshold("CreatePaymentDraft", stopwatch.ElapsedMilliseconds, 
+                    $"Success: {draftSuccess}, Growers: {previewResult.GrowerPayments.Count}, Sequence: {sequenceNumber}");
+                
                 return (draftSuccess, draftErrors, finalBatch, finalResult, null); // No validation issues
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogPerformanceWithThreshold("CreatePaymentDraft", stopwatch.ElapsedMilliseconds, 
+                    $"Error: {ex.Message}, Sequence: {sequenceNumber}");
                 errors.Add($"Critical error during draft creation: {ex.Message}");
                 Logger.Error($"Critical error during draft creation Sequence {sequenceNumber}", ex);
                 return (false, errors, createdBatch, previewResult, validation);
@@ -232,11 +248,14 @@ namespace WPFGrowerApp.DataAccess.Services
             TestRunResult existingCalculation,
             IProgress<string>? progress = null)
         {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             var errors = new List<string>();
             PaymentBatch? createdBatch = null;
 
             try
             {
+                Logger.LogUserAction("CreatePaymentDraftConfirmed", "PaymentSequence", sequenceNumber, $"PaymentDate: {paymentDate:yyyy-MM-dd}, CutoffDate: {cutoffDate:yyyy-MM-dd}, CropYear: {cropYear}");
+                
                 progress?.Report("Creating payment draft (user confirmed)...");
                 LogAnEvent(EVT_TYPE_START_ADVANCE_DETERMINE, $"Sequence {sequenceNumber} confirmed draft creation started.");
                 
@@ -248,6 +267,9 @@ namespace WPFGrowerApp.DataAccess.Services
                 if (!validGrowers.Any())
                 {
                     errors.Add("No valid receipts found after filtering errors.");
+                    stopwatch.Stop();
+                    Logger.LogPerformanceWithThreshold("CreatePaymentDraftConfirmed", stopwatch.ElapsedMilliseconds, 
+                        $"No valid receipts found. Sequence: {sequenceNumber}");
                     return (false, errors, null, existingCalculation);
                 }
 
@@ -274,6 +296,9 @@ namespace WPFGrowerApp.DataAccess.Services
                             if (paymentType == null)
                             {
                                 errors.Add($"Payment type with sequence number {sequenceNumber} not found.");
+                                stopwatch.Stop();
+                                Logger.LogPerformanceWithThreshold("CreatePaymentDraftConfirmed", stopwatch.ElapsedMilliseconds, 
+                                    $"Payment type not found. Sequence: {sequenceNumber}");
                                 return (false, errors, null, existingCalculation);
                             }
                             
@@ -373,11 +398,21 @@ namespace WPFGrowerApp.DataAccess.Services
                                     $"Allocations: {allocationCount}, Success: {overallSuccess}");
                             }
 
+                            stopwatch.Stop();
+                            Logger.LogPerformanceWithThreshold("CreatePaymentDraftConfirmed", stopwatch.ElapsedMilliseconds, 
+                                $"Success: {overallSuccess}, BatchId: {createdBatch?.PaymentBatchId}, Allocations: {allocationCount}, Sequence: {sequenceNumber}");
+                            Logger.LogDatabaseOperation("CreatePaymentDraftConfirmed", "TRANSACTION", stopwatch.ElapsedMilliseconds, allocationCount, 
+                                $"BatchId: {createdBatch?.PaymentBatchId}, TotalAmount: {totalAmount:N2}, Growers: {totalGrowersProcessed}");
+
                             return (overallSuccess, errors, createdBatch, existingCalculation);
                         }
                         catch (Exception transactionEx)
                         {
                             transaction.Rollback();
+                            stopwatch.Stop();
+                            Logger.LogPerformanceWithThreshold("CreatePaymentDraftConfirmed", stopwatch.ElapsedMilliseconds, 
+                                $"Transaction rolled back: {transactionEx.Message}, Sequence: {sequenceNumber}");
+                            Logger.LogDatabaseOperation("CreatePaymentDraftConfirmed", "ROLLBACK", stopwatch.ElapsedMilliseconds, additionalInfo: $"Error: {transactionEx.Message}");
                             errors.Add($"Transaction rolled back: {transactionEx.Message}");
                             Logger.Error("Payment draft creation failed, all changes rolled back", transactionEx);
                             return (false, errors, null, existingCalculation);
@@ -387,6 +422,9 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogPerformanceWithThreshold("CreatePaymentDraftConfirmed", stopwatch.ElapsedMilliseconds, 
+                    $"Critical error: {ex.Message}, Sequence: {sequenceNumber}");
                 errors.Add($"Critical error: {ex.Message}");
                 Logger.Error($"Error creating confirmed draft for Sequence {sequenceNumber}", ex);
                 return (false, errors, null, existingCalculation);
@@ -406,12 +444,15 @@ namespace WPFGrowerApp.DataAccess.Services
             List<int>? processIds = null,
             IProgress<string>? progress = null)
         {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             var errors = new List<string>();
             PaymentBatch? createdBatch = null;
             bool overallSuccess = false;
 
             try
             {
+                Logger.LogUserAction("ProcessAdvancePaymentRun", "PaymentSequence", sequenceNumber, $"PaymentDate: {paymentDate:yyyy-MM-dd}, CutoffDate: {cutoffDate:yyyy-MM-dd}, CropYear: {cropYear}");
+                
                 progress?.Report("Starting payment run...");
                 LogAnEvent(EVT_TYPE_START_ADVANCE_DETERMINE, $"Sequence {sequenceNumber} determination started.");
 
@@ -421,6 +462,9 @@ namespace WPFGrowerApp.DataAccess.Services
                 if (paymentType == null)
                 {
                     errors.Add($"Payment type with sequence number {sequenceNumber} not found.");
+                    stopwatch.Stop();
+                    Logger.LogPerformanceWithThreshold("ProcessAdvancePaymentRun", stopwatch.ElapsedMilliseconds, 
+                        $"Payment type not found. Sequence: {sequenceNumber}");
                     return (false, errors, null);
                 }
                 
@@ -644,9 +688,17 @@ namespace WPFGrowerApp.DataAccess.Services
                     LogAnEvent(EVT_TYPE_ADVANCE_DETERMINE_COMPLETE, $"Sequence {sequenceNumber} determination complete. Batch: {createdBatch.PaymentBatchId}, Success: {overallSuccess}, Errors: {errors.Count}");
                 }
 
+                stopwatch.Stop();
+                Logger.LogPerformanceWithThreshold("ProcessAdvancePaymentRun", stopwatch.ElapsedMilliseconds, 
+                    $"Success: {overallSuccess}, BatchId: {createdBatch?.PaymentBatchId}, Growers: {calculationResult.GrowerPayments.Count}, Sequence: {sequenceNumber}");
+                Logger.LogDatabaseOperation("ProcessAdvancePaymentRun", "TRANSACTION", stopwatch.ElapsedMilliseconds, calculationResult.GrowerPayments.Count, 
+                    $"BatchId: {createdBatch?.PaymentBatchId}, TotalAmount: {calculationResult.GrowerPayments.Sum(gp => gp.TotalCalculatedPayment):N2}");
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogPerformanceWithThreshold("ProcessAdvancePaymentRun", stopwatch.ElapsedMilliseconds, 
+                    $"Critical error: {ex.Message}, Sequence: {sequenceNumber}");
                 errors.Add($"Critical error during payment run: {ex.Message}");
                 Logger.Error($"Critical error during payment run Sequence {sequenceNumber}", ex);
                 overallSuccess = false;

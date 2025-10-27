@@ -14,6 +14,7 @@ namespace WPFGrowerApp.DataAccess.Services
     {
         public async Task<List<BankRec>> GetAllBankRecsAsync()
         {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 using (var connection = new SqlConnection(_connectionString))
@@ -37,11 +38,19 @@ namespace WPFGrowerApp.DataAccess.Services
                         FROM BANK_REC 
                         ORDER BY ACCT_DATE DESC";
 
-                    return (await connection.QueryAsync<BankRec>(sql)).ToList();
+                    var result = (await connection.QueryAsync<BankRec>(sql)).ToList();
+                    
+                    stopwatch.Stop();
+                    Logger.LogDatabaseOperation("GetAllBankRecs", "SELECT", stopwatch.ElapsedMilliseconds, result.Count, 
+                        "All bank reconciliation records");
+                    
+                    return result;
                 }
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
+                Logger.LogDatabaseOperation("GetAllBankRecs", "SELECT", stopwatch.ElapsedMilliseconds, additionalInfo: $"Error: {ex.Message}");
                 Logger.Error($"Error in GetAllBankRecsAsync: {ex.Message}", ex);
                 throw;
             }
