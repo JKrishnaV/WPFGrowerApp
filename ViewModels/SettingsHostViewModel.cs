@@ -8,6 +8,8 @@ using WPFGrowerApp.Models;
 using MaterialDesignThemes.Wpf; // Added for PackIconKind
 using WPFGrowerApp.Infrastructure.Logging;
 using WPFGrowerApp.Services;
+using WPFGrowerApp.Views;
+using System.Windows;
 
 namespace WPFGrowerApp.ViewModels
 {
@@ -15,114 +17,75 @@ namespace WPFGrowerApp.ViewModels
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly IDialogService _dialogService;
-        private ViewModelBase _currentSettingViewModel;
-        private SettingsNavigationItem _selectedSetting;
 
-        public ObservableCollection<SettingsNavigationItem> SettingsOptions { get; }
+        // Direct navigation commands for dashboard-style cards
+        public ICommand NavigateToChangePasswordCommand { get; }
+        public ICommand NavigateToUserManagementCommand { get; }
+        public ICommand NavigateToProductsCommand { get; }
+        public ICommand NavigateToProcessTypesCommand { get; }
+        public ICommand NavigateToPricingCommand { get; }
+        public ICommand NavigateToDepotsCommand { get; }
+        public ICommand NavigateToPaymentGroupsCommand { get; }
+        public ICommand NavigateToContainerTypesCommand { get; }
+        public ICommand NavigateToAppearanceCommand { get; }
+
+        // Navigation event for main window navigation
+        public static event Action<Type, string> NavigationRequested;
 
         public SettingsHostViewModel(IServiceProvider serviceProvider, IDialogService dialogService)
         {
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
             _dialogService = dialogService ?? throw new ArgumentNullException(nameof(dialogService));
 
-            Logger.Info("Initializing SettingsHostViewModel");
+            Logger.Info("Initializing SettingsHostViewModel with dashboard-style navigation");
 
-            SettingsOptions = new ObservableCollection<SettingsNavigationItem>();
+            // Initialize direct navigation commands
+            NavigateToChangePasswordCommand = new RelayCommand(_ => NavigateToSetting<ChangePasswordViewModel>());
+            NavigateToUserManagementCommand = new RelayCommand(_ => NavigateToSetting<UserManagementViewModel>());
+            NavigateToProductsCommand = new RelayCommand(_ => NavigateToSetting<ProductViewModel>());
+            NavigateToProcessTypesCommand = new RelayCommand(_ => NavigateToSetting<ProcessViewModel>());
+            NavigateToPricingCommand = new RelayCommand(_ => NavigateToSetting<PriceViewModel>());
+            NavigateToDepotsCommand = new RelayCommand(_ => NavigateToSetting<DepotViewModel>());
+            NavigateToPaymentGroupsCommand = new RelayCommand(_ => NavigateToSetting<PaymentGroupViewModel>());
+            NavigateToContainerTypesCommand = new RelayCommand(_ => NavigateToSetting<ContainerViewModel>());
+            NavigateToAppearanceCommand = new RelayCommand(_ => NavigateToSetting<AppearanceSettingsViewModel>());
 
-            // Always add Change Password option
-            SettingsOptions.Add(new SettingsNavigationItem("Change Password", typeof(ChangePasswordViewModel), PackIconKind.Key));
-
-            // Only add User Management if user is admin
-            if (App.CurrentUser?.IsAdmin == true)
-            {
-                SettingsOptions.Add(new SettingsNavigationItem("Manage Users", typeof(UserManagementViewModel), PackIconKind.AccountMultiple));
-            }
-
-            // Add other options
-            SettingsOptions.Add(new SettingsNavigationItem("Products", typeof(ProductViewModel), PackIconKind.PackageVariant));
-            SettingsOptions.Add(new SettingsNavigationItem("Process Types", typeof(ProcessViewModel), PackIconKind.Cog));
-            SettingsOptions.Add(new SettingsNavigationItem("Pricing", typeof(PriceViewModel), PackIconKind.Cash));
-            SettingsOptions.Add(new SettingsNavigationItem("Depots", typeof(DepotViewModel), PackIconKind.Store));
-            SettingsOptions.Add(new SettingsNavigationItem("Payment Groups", typeof(PaymentGroupViewModel), PackIconKind.AccountGroup)); // Added Payment Groups
-            SettingsOptions.Add(new SettingsNavigationItem("Container Types", typeof(ContainerViewModel), PackIconKind.Package)); // Added Container Types
-            SettingsOptions.Add(new SettingsNavigationItem("Appearance", typeof(AppearanceSettingsViewModel), PackIconKind.Palette)); // Added Appearance Settings
-
-            Logger.Info($"Created {SettingsOptions.Count} navigation items");
-
-            // Select the first item by default
-            SelectedSetting = SettingsOptions.FirstOrDefault();
-            if (SelectedSetting != null)
-            {
-                Logger.Info($"Selected default setting: {SelectedSetting.DisplayName}");
-            }
+            Logger.Info("SettingsHostViewModel initialized with dashboard-style navigation commands");
         }
 
-        public ViewModelBase CurrentSettingViewModel
+        private async void NavigateToSetting<T>() where T : ViewModelBase
         {
-            get => _currentSettingViewModel;
-            private set
-            {
-                if (SetProperty(ref _currentSettingViewModel, value))
-                {
-                    Logger.Info($"CurrentSettingViewModel changed to: {value?.GetType().Name ?? "null"}");
-                }
-            }
-        }
-
-        public SettingsNavigationItem SelectedSetting
-        {
-            get => _selectedSetting;
-            set
-            {
-                if (value != null)
-                {
-                    Logger.Info($"Attempting to navigate to: {value.DisplayName}");
-                }
-                if (SetProperty(ref _selectedSetting, value) && value != null)
-                {
-                    NavigateToSetting(value.ViewModelType);
-                }
-            }
-        }
-
-        private async void NavigateToSetting(Type viewModelType)
-        {
-            if (viewModelType == null)
-            {
-                Logger.Warn("NavigateToSetting called with null viewModelType");
-                return;
-            }
-
             try
             {
-                Logger.Info($"Attempting to resolve ViewModel of type: {viewModelType.Name}");
-                Logger.Info($"Is {viewModelType.Name} a ViewModelBase? {typeof(ViewModelBase).IsAssignableFrom(viewModelType)}");
+                Logger.Info($"Attempting to navigate to setting: {typeof(T).Name}");
                 
-                var resolvedViewModel = _serviceProvider.GetRequiredService(viewModelType) as ViewModelBase;
+                // Use the NavigationRequested event to navigate in the main window
+                NavigationRequested?.Invoke(typeof(T), GetSettingTitle<T>());
                 
-                if (resolvedViewModel == null)
-                {
-                    Logger.Error($"Failed to resolve ViewModel of type {viewModelType.Name} as ViewModelBase");
-                    Logger.Error($"Resolved object type: {_serviceProvider.GetRequiredService(viewModelType)?.GetType().Name ?? "null"}");
-                    await _dialogService.ShowMessageBoxAsync("Failed to load the selected feature. Check logs for details.", "Error");
-                    return;
-                }
-
-                Logger.Info($"Successfully resolved ViewModel: {resolvedViewModel.GetType().Name}");
-                CurrentSettingViewModel = resolvedViewModel;
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                Logger.Error($"Unauthorized access to {viewModelType.Name}", ex);
-                await _dialogService.ShowMessageBoxAsync("You do not have permission to access this feature.", "Access Denied");
-                // Reset selection to previous item
-                SelectedSetting = SettingsOptions.FirstOrDefault(x => x.ViewModelType != viewModelType);
+                Logger.Info($"Successfully requested navigation to: {typeof(T).Name}");
             }
             catch (Exception ex)
             {
-                Logger.Error($"Error navigating to setting ViewModel {viewModelType.Name}", ex);
-                await _dialogService.ShowMessageBoxAsync("An error occurred while loading the selected feature.", "Error");
+                Logger.Error($"Error navigating to setting {typeof(T).Name}", ex);
+                await _dialogService.ShowMessageBoxAsync($"An error occurred while loading {typeof(T).Name}.", "Error");
             }
+        }
+
+        private string GetSettingTitle<T>() where T : ViewModelBase
+        {
+            return typeof(T).Name switch
+            {
+                nameof(ChangePasswordViewModel) => "Change Password",
+                nameof(UserManagementViewModel) => "User Management",
+                nameof(ProductViewModel) => "Products",
+                nameof(ProcessViewModel) => "Process Types",
+                nameof(PriceViewModel) => "Pricing",
+                nameof(DepotViewModel) => "Depots",
+                nameof(PaymentGroupViewModel) => "Payment Groups",
+                nameof(ContainerViewModel) => "Container Types",
+                nameof(AppearanceSettingsViewModel) => "Appearance",
+                _ => typeof(T).Name.Replace("ViewModel", "")
+            };
         }
     }
 }
