@@ -8,6 +8,7 @@ using WPFGrowerApp.Models;
 using WPFGrowerApp.Services;
 using WPFGrowerApp.Commands;
 using MaterialDesignThemes.Wpf;
+using WPFGrowerApp.Infrastructure.Logging;
 
 namespace WPFGrowerApp.ViewModels
 {
@@ -29,7 +30,7 @@ namespace WPFGrowerApp.ViewModels
             CloseCommand = new RelayCommand(CloseDialog);
             
             // Debug: Log the count to verify data is being passed
-            System.Diagnostics.Debug.WriteLine($"SkippedReceiptDetailsDialogViewModel: {_skippedReceiptDetails.Count} receipts loaded");
+            Logger.Info($"SkippedReceiptDetailsDialogViewModel: {_skippedReceiptDetails.Count} receipts loaded");
         }
 
         public string Title

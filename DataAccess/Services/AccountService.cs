@@ -1,13 +1,12 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Data.SqlClient;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
 using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
-using WPFGrowerApp.Infrastructure.Logging; // Add logger if needed
+using WPFGrowerApp.Infrastructure.Logging;
 
 namespace WPFGrowerApp.DataAccess.Services
 {
@@ -55,7 +54,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in GetAllAccountsAsync: {ex.Message}");
+                Logger.Error($"Error in GetAllAccountsAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -103,7 +102,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in GetAccountByNumberAsync: {ex.Message}");
+                Logger.Error($"Error in GetAccountByNumberAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -204,7 +203,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in SaveAccountAsync: {ex.Message}");
+                Logger.Error($"Error in SaveAccountAsync: {ex.Message}", ex);
                 return false;
             }
         }
@@ -253,7 +252,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in GetAccountsByYearAsync: {ex.Message}");
+                Logger.Error($"Error in GetAccountsByYearAsync: {ex.Message}", ex);
                  throw;
             }
         }
@@ -312,9 +311,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                // Consider logging the error and potentially the entries that failed
-                Debug.WriteLine($"Error in CreatePaymentAccountEntriesAsync: {ex.Message}");
-                // Log specific entry details if helpful for debugging
+                Logger.Error($"Error in CreatePaymentAccountEntriesAsync: {ex.Message}", ex);
                 return false; // Indicate failure
             }
         }
@@ -365,7 +362,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in GetPayableAccountEntriesAsync for Grower {growerNumber}: {ex.Message}");
+                Logger.Error($"Error in GetPayableAccountEntriesAsync for Grower {growerNumber}: {ex.Message}", ex);
                 throw;
             }
         }
@@ -419,7 +416,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in UpdateAccountEntriesWithChequeInfoAsync for Grower {growerNumber}, Cheque {chequeSeries}-{chequeNumber}: {ex.Message}");
+                Logger.Error($"Error in UpdateAccountEntriesWithChequeInfoAsync for Grower {growerNumber}, Cheque {chequeSeries}-{chequeNumber}: {ex.Message}", ex);
                 throw; // Or return false
             }
         }
@@ -447,7 +444,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in RevertTemporaryChequeInfoAsync for Series {tempChequeSeries}: {ex.Message}");
+                Logger.Error($"Error in RevertTemporaryChequeInfoAsync for Series {tempChequeSeries}: {ex.Message}", ex);
                 throw; // Or return false
             }
         }

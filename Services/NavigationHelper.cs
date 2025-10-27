@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using WPFGrowerApp.ViewModels;
+using WPFGrowerApp.Infrastructure.Logging;
 
 namespace WPFGrowerApp.Services
 {
@@ -26,7 +27,7 @@ namespace WPFGrowerApp.Services
             catch (Exception ex)
             {
                 // Log error if needed
-                System.Diagnostics.Debug.WriteLine($"Navigation error: {ex.Message}");
+                Logger.Error($"Navigation error: {ex.Message}", ex);
             }
         }
 
@@ -42,7 +43,7 @@ namespace WPFGrowerApp.Services
             catch (Exception ex)
             {
                 // Log error if needed
-                System.Diagnostics.Debug.WriteLine($"Navigation error: {ex.Message}");
+                Logger.Error($"Navigation error: {ex.Message}", ex);
             }
         }
 
@@ -58,7 +59,7 @@ namespace WPFGrowerApp.Services
             catch (Exception ex)
             {
                 // Log error if needed
-                System.Diagnostics.Debug.WriteLine($"Navigation error: {ex.Message}");
+                Logger.Error($"Navigation error: {ex.Message}", ex);
             }
         }
 
@@ -74,7 +75,7 @@ namespace WPFGrowerApp.Services
             catch (Exception ex)
             {
                 // Log error if needed
-                System.Diagnostics.Debug.WriteLine($"Navigation error: {ex.Message}");
+                Logger.Error($"Navigation error: {ex.Message}", ex);
             }
         }
 
@@ -90,7 +91,7 @@ namespace WPFGrowerApp.Services
             catch (Exception ex)
             {
                 // Log error if needed
-                System.Diagnostics.Debug.WriteLine($"Navigation error: {ex.Message}");
+                Logger.Error($"Navigation error: {ex.Message}", ex);
             }
         }
 
@@ -106,7 +107,7 @@ namespace WPFGrowerApp.Services
             catch (Exception ex)
             {
                 // Log error if needed
-                System.Diagnostics.Debug.WriteLine($"Navigation error: {ex.Message}");
+                Logger.Error($"Navigation error: {ex.Message}", ex);
             }
         }
 
@@ -122,7 +123,7 @@ namespace WPFGrowerApp.Services
             catch (Exception ex)
             {
                 // Log error if needed
-                System.Diagnostics.Debug.WriteLine($"Navigation error: {ex.Message}");
+                Logger.Error($"Navigation error: {ex.Message}", ex);
             }
         }
 
@@ -138,7 +139,7 @@ namespace WPFGrowerApp.Services
             catch (Exception ex)
             {
                 // Log error if needed
-                System.Diagnostics.Debug.WriteLine($"Navigation error: {ex.Message}");
+                Logger.Error($"Navigation error: {ex.Message}", ex);
             }
         }
     }

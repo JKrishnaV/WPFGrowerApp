@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Data.SqlClient;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
 using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
+using WPFGrowerApp.Infrastructure.Logging;
 
 namespace WPFGrowerApp.DataAccess.Services
 {
@@ -40,7 +40,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in GetAllAuditsAsync: {ex.Message}");
+                Logger.Error($"Error in GetAllAuditsAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -74,7 +74,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in GetAuditByDayUniqAsync: {ex.Message}");
+                Logger.Error($"Error in GetAuditByDayUniqAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -109,7 +109,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in GetAuditsByAccountUniqAsync: {ex.Message}");
+                Logger.Error($"Error in GetAuditsByAccountUniqAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -156,7 +156,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in SaveAuditAsync: {ex.Message}");
+                Logger.Error($"Error in SaveAuditAsync: {ex.Message}", ex);
                 return false;
             }
         }

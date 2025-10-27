@@ -8,7 +8,7 @@ using System.Collections.ObjectModel; // For ObservableCollection if needed for 
 using System.Threading.Tasks; // Added for Task
 using Microsoft.Win32; // For SaveFileDialog
 using System.Windows.Controls; // For PrintDialog
-using System.Diagnostics; // For Debug.WriteLine
+using WPFGrowerApp.Infrastructure.Logging; // For Logger
 using Syncfusion.Pdf; // For PDF document
 using Syncfusion.Pdf.Graphics; // For drawing text/shapes
 using Syncfusion.Pdf.Grid; // For PDF grid
@@ -113,7 +113,7 @@ namespace WPFGrowerApp.ViewModels
             catch (Exception ex)
             {
                 // Log error and provide default data to prevent chart crashes
-                System.Diagnostics.Debug.WriteLine($"Error preparing chart data: {ex.Message}");
+                Logger.Error($"Error preparing chart data: {ex.Message}", ex);
                 
                 TopGrowerPayments = new List<ChartDataPoint> { new ChartDataPoint { Category = "Error", Value = 0 } };
                 PaymentsByProduct = new List<ChartDataPoint> { new ChartDataPoint { Category = "Error", Value = 0 } };
@@ -158,7 +158,7 @@ namespace WPFGrowerApp.ViewModels
                 if (saveFileDialog.ShowDialog() == true)
                 {
                     string filePath = saveFileDialog.FileName;
-                    Debug.WriteLine($"Exporting report to {format} at: {filePath}");
+                    Logger.Info($"Exporting report to {format} at: {filePath}");
 
                     if (format.Equals("PDF", StringComparison.OrdinalIgnoreCase))
                     {
@@ -177,14 +177,14 @@ namespace WPFGrowerApp.ViewModels
                         await GenerateExcelReport(filePath);
                     }
                     
-                    Debug.WriteLine($"Export to {format} complete.");
+                    Logger.Info($"Export to {format} complete.");
                     // Consider showing success message via dialogService
                     // await dialogService.ShowMessageBoxAsync($"Report successfully exported to {filePath}", "Export Complete");
                 }
             }
             catch (Exception ex)
             {
-                 Debug.WriteLine($"Error during {format} export: {ex.Message}");
+                 Logger.Error($"Error during {format} export: {ex.Message}", ex);
                  // Consider showing error message via dialogService
                  // await dialogService.ShowMessageBoxAsync($"An error occurred during export: {ex.Message}", "Export Error");
             }
@@ -279,7 +279,7 @@ namespace WPFGrowerApp.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Error generating PDF report: {ex.Message}");
+                    Logger.Error($"Error generating PDF report: {ex.Message}", ex);
                     pdfStream.Dispose(); // Dispose stream on error
                     // Rethrow or handle appropriately (e.g., show message via dispatcher)
                     throw; 
@@ -374,7 +374,7 @@ namespace WPFGrowerApp.ViewModels
                  }
                  catch (Exception ex)
                  {
-                     Debug.WriteLine($"Error generating Excel report: {ex.Message}");
+                     Logger.Error($"Error generating Excel report: {ex.Message}", ex);
                      // Rethrow or handle appropriately
                      throw;
                  }
@@ -429,7 +429,7 @@ namespace WPFGrowerApp.ViewModels
                 PrintDialog printDialog = new PrintDialog();
                 if (printDialog.ShowDialog() == true)
                 {
-                    Debug.WriteLine($"Placeholder: Would print report...");
+                    Logger.Info($"Placeholder: Would print report...");
                     
                     // TODO: Implement actual print logic
                     // This might involve:
@@ -440,14 +440,14 @@ namespace WPFGrowerApp.ViewModels
                     
                     await Task.Delay(500); // Simulate print work
                     
-                    Debug.WriteLine($"Placeholder: Printing complete.");
+                    Logger.Info($"Placeholder: Printing complete.");
                      // Consider showing success message via dialogService
                     // await dialogService.ShowMessageBoxAsync("Report sent to printer.", "Print Complete");
                 }
              }
              catch (Exception ex)
              {
-                 Debug.WriteLine($"Error during printing: {ex.Message}");
+                 Logger.Error($"Error during printing: {ex.Message}", ex);
                  // Consider showing error message via dialogService
                  // await dialogService.ShowMessageBoxAsync($"An error occurred during printing: {ex.Message}", "Print Error");
              }

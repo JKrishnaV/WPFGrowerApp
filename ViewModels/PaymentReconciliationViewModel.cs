@@ -8,6 +8,7 @@ using System.Windows.Input;
 using WPFGrowerApp.Commands;
 using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
+using WPFGrowerApp.Infrastructure.Logging;
 
 namespace WPFGrowerApp.ViewModels
 {
@@ -167,7 +168,7 @@ namespace WPFGrowerApp.ViewModels
             catch (Exception ex)
             {
                 // Handle error silently or log it
-                System.Diagnostics.Debug.WriteLine($"Error navigating to Dashboard: {ex.Message}");
+                Logger.Error($"Error navigating to Dashboard: {ex.Message}", ex);
             }
         }
 
@@ -186,7 +187,7 @@ namespace WPFGrowerApp.ViewModels
             catch (Exception ex)
             {
                 // Handle error silently or log it
-                System.Diagnostics.Debug.WriteLine($"Error navigating to Payment Management: {ex.Message}");
+                Logger.Error($"Error navigating to Payment Management: {ex.Message}", ex);
             }
         }
 

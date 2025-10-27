@@ -9,6 +9,7 @@ using System.Windows.Input;
 using WPFGrowerApp.Commands;
 using WPFGrowerApp.DataAccess.Models;
 using WPFGrowerApp.Models;
+using WPFGrowerApp.Infrastructure.Logging;
 
 namespace WPFGrowerApp.ViewModels
 {
@@ -112,7 +113,7 @@ namespace WPFGrowerApp.ViewModels
             catch (Exception ex)
             {
                 // Handle error
-                System.Diagnostics.Debug.WriteLine($"Error applying deductions: {ex.Message}");
+                Logger.Error($"Error applying deductions: {ex.Message}", ex);
             }
         }
 

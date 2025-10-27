@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MaterialDesignThemes.Wpf;
 using WPFGrowerApp.ViewModels.Dialogs;
 using WPFGrowerApp.Views.Dialogs;
+using WPFGrowerApp.Infrastructure.Logging;
 
 namespace WPFGrowerApp.ViewModels
 {
@@ -139,23 +140,23 @@ namespace WPFGrowerApp.ViewModels
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine("ContainerViewModel: Starting initialization");
+                Logger.Info("ContainerViewModel: Starting initialization");
                 IsLoading = true;
                 StatusMessage = "Loading containers...";
                 await LoadContainersAsync();
-                System.Diagnostics.Debug.WriteLine($"ContainerViewModel: Loaded {Containers.Count} containers, {FilteredContainers.Count} filtered");
+                Logger.Info($"ContainerViewModel: Loaded {Containers.Count} containers, {FilteredContainers.Count} filtered");
                 StatusMessage = "Ready";
                 LastUpdated = DateTime.Now.ToString("MMM dd, yyyy HH:mm:ss");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error initializing ContainerViewModel: {ex.Message}");
+                Logger.Error($"Error initializing ContainerViewModel: {ex.Message}", ex);
                 StatusMessage = "Error loading containers";
             }
             finally
             {
                 IsLoading = false;
-                System.Diagnostics.Debug.WriteLine("ContainerViewModel: Initialization completed");
+                Logger.Info("ContainerViewModel: Initialization completed");
             }
         }
 
@@ -163,9 +164,9 @@ namespace WPFGrowerApp.ViewModels
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine("ContainerViewModel: Starting to load containers from service");
+                Logger.Info("ContainerViewModel: Starting to load containers from service");
                 var containers = await _containerService.GetAllAsync();
-                System.Diagnostics.Debug.WriteLine($"ContainerViewModel: Retrieved {containers.Count()} containers from service");
+                Logger.Info($"ContainerViewModel: Retrieved {containers.Count()} containers from service");
                 
                 Containers.Clear();
                 
@@ -174,15 +175,15 @@ namespace WPFGrowerApp.ViewModels
                     Containers.Add(container);
                 }
 
-                System.Diagnostics.Debug.WriteLine($"ContainerViewModel: Added {Containers.Count} containers to collection");
+                Logger.Info($"ContainerViewModel: Added {Containers.Count} containers to collection");
 
                 // Update filtered containers
                 FilterContainers();
-                System.Diagnostics.Debug.WriteLine($"ContainerViewModel: Filtered containers count: {FilteredContainers.Count}");
+                Logger.Info($"ContainerViewModel: Filtered containers count: {FilteredContainers.Count}");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error loading containers: {ex.Message}");
+                Logger.Error($"Error loading containers: {ex.Message}", ex);
                 throw;
             }
         }
@@ -280,7 +281,7 @@ namespace WPFGrowerApp.ViewModels
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"Error adding container: {ex.Message}");
+                        Logger.Error($"Error adding container: {ex.Message}", ex);
                         await _dialogService.ShowMessageBoxAsync($"Error adding container: {ex.Message}", "Error");
                         StatusMessage = "Error adding container";
                     }
@@ -292,7 +293,7 @@ namespace WPFGrowerApp.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error adding container: {ex.Message}");
+                Logger.Error($"Error adding container: {ex.Message}", ex);
                 await _dialogService.ShowMessageBoxAsync("Error", $"Failed to add container: {ex.Message}");
                 StatusMessage = "Error adding container";
             }
@@ -315,7 +316,7 @@ namespace WPFGrowerApp.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error viewing container: {ex.Message}");
+                Logger.Error($"Error viewing container: {ex.Message}", ex);
                 await _dialogService.ShowMessageBoxAsync("Error", $"Failed to view container: {ex.Message}");
                 StatusMessage = "Error viewing container";
             }
@@ -347,20 +348,20 @@ namespace WPFGrowerApp.ViewModels
                         
                         if (success)
                         {
-                            System.Diagnostics.Debug.WriteLine($"EditContainerAsync: Successfully updated container {dialogViewModel.ContainerData.ContainerId}");
+                            Logger.Info($"EditContainerAsync: Successfully updated container {dialogViewModel.ContainerData.ContainerId}");
                             await _dialogService.ShowMessageBoxAsync("Container updated successfully.", "Success");
                             await LoadContainersAsync();
                         }
                         else
                         {
-                            System.Diagnostics.Debug.WriteLine($"EditContainerAsync: Failed to update container {dialogViewModel.ContainerData.ContainerId}");
+                            Logger.Warn($"EditContainerAsync: Failed to update container {dialogViewModel.ContainerData.ContainerId}");
                             await _dialogService.ShowMessageBoxAsync("Failed to update the container.", "Error");
                             StatusMessage = "Failed to update container";
                         }
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"Error updating container {dialogViewModel.ContainerData.ContainerId}: {ex.Message}");
+                        Logger.Error($"Error updating container {dialogViewModel.ContainerData.ContainerId}: {ex.Message}", ex);
                         await _dialogService.ShowMessageBoxAsync($"Error updating container: {ex.Message}", "Error");
                         StatusMessage = "Error updating container";
                     }
@@ -372,7 +373,7 @@ namespace WPFGrowerApp.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error editing container: {ex.Message}");
+                Logger.Error($"Error editing container: {ex.Message}", ex);
                 await _dialogService.ShowMessageBoxAsync("Error", $"Failed to edit container: {ex.Message}");
                 StatusMessage = "Error editing container";
             }
@@ -426,7 +427,7 @@ namespace WPFGrowerApp.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Error deleting container: {ex.Message}");
+                    Logger.Error($"Error deleting container: {ex.Message}", ex);
                     await _dialogService.ShowMessageBoxAsync($"Error deleting container: {ex.Message}", "Error");
                     StatusMessage = "Error deleting container";
                 }
@@ -437,7 +438,7 @@ namespace WPFGrowerApp.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error deleting container: {ex.Message}");
+                Logger.Error($"Error deleting container: {ex.Message}", ex);
                 await _dialogService.ShowMessageBoxAsync($"Error deleting container: {ex.Message}", "Error");
                 StatusMessage = "Error deleting container";
             }
@@ -451,12 +452,12 @@ namespace WPFGrowerApp.ViewModels
                 if (mainWindow != null)
                 {
                     // Navigate to dashboard - implementation depends on MainWindow structure
-                    System.Diagnostics.Debug.WriteLine("Navigate to Dashboard requested");
+                    Logger.Info("Navigate to Dashboard requested");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error navigating to dashboard: {ex.Message}");
+                Logger.Error($"Error navigating to dashboard: {ex.Message}", ex);
                 StatusMessage = "Error navigating to dashboard";
             }
         }
@@ -469,12 +470,12 @@ namespace WPFGrowerApp.ViewModels
                 if (mainWindow != null)
                 {
                     // Navigate to settings - implementation depends on MainWindow structure
-                    System.Diagnostics.Debug.WriteLine("Navigate to Settings requested");
+                    Logger.Info("Navigate to Settings requested");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error navigating to settings: {ex.Message}");
+                Logger.Error($"Error navigating to settings: {ex.Message}", ex);
                 StatusMessage = "Error navigating to settings";
             }
         }
@@ -497,7 +498,7 @@ namespace WPFGrowerApp.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error showing help: {ex.Message}");
+                Logger.Error($"Error showing help: {ex.Message}", ex);
                 StatusMessage = "Error showing help";
             }
         }

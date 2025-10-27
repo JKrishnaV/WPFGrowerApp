@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input; // Added for MouseButtonEventArgs
 using System.Windows.Media; // Added for VisualTreeHelper
 using WPFGrowerApp.ViewModels;
+using WPFGrowerApp.Infrastructure.Logging;
 using BoldReports.UI.Xaml; // For ReportViewer
 // Note: Correct namespace for ReportExportEventArgs needs verification based on installed BoldReports version.
 // using BoldReports.Windows; // Or other BoldReports namespace?
@@ -34,7 +35,7 @@ namespace WPFGrowerApp.Views
             {
                 // Log or handle the case where DataContext is not the expected ViewModel
                 // or sender is not the ReportViewer (shouldn't normally happen for this event)
-                System.Diagnostics.Debug.WriteLine("ReportViewer_Loaded: DataContext is not GrowerReportViewModel or sender is not ReportViewer.");
+                Logger.Warn("ReportViewer_Loaded: DataContext is not GrowerReportViewModel or sender is not ReportViewer.");
             }
          }
 

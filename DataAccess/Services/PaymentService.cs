@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
 using WPFGrowerApp.Infrastructure.Logging; // Assuming Logger is available
-using System.Diagnostics; // Added for Debug.WriteLine if needed
 using WPFGrowerApp.Models; // Added for TestRunResult etc.
 
 namespace WPFGrowerApp.DataAccess.Services

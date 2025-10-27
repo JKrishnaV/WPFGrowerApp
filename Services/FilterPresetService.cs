@@ -4,6 +4,7 @@ using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using WPFGrowerApp.Models;
+using WPFGrowerApp.Infrastructure.Logging;
 
 namespace WPFGrowerApp.Services
 {
@@ -58,7 +59,7 @@ namespace WPFGrowerApp.Services
             catch (Exception ex)
             {
                 // Log error and return empty list
-                System.Diagnostics.Debug.WriteLine($"Error loading filter presets: {ex.Message}");
+                Logger.Error($"Error loading filter presets: {ex.Message}", ex);
                 return new List<FilterPreset>();
             }
         }
@@ -77,7 +78,7 @@ namespace WPFGrowerApp.Services
             catch (Exception ex)
             {
                 // Log error
-                System.Diagnostics.Debug.WriteLine($"Error saving filter presets: {ex.Message}");
+                Logger.Error($"Error saving filter presets: {ex.Message}", ex);
                 throw new InvalidOperationException($"Failed to save filter presets: {ex.Message}", ex);
             }
         }

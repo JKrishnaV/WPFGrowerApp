@@ -10,6 +10,7 @@ using System.Collections.ObjectModel;
 using WPFGrowerApp.Services;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using WPFGrowerApp.Infrastructure.Logging;
 
 namespace WPFGrowerApp.ViewModels.Dialogs
 {
@@ -444,10 +445,10 @@ namespace WPFGrowerApp.ViewModels.Dialogs
                 SelectedRole?.RoleId != _originalUser.RoleId;
                 
             // Debug logging
-            System.Diagnostics.Debug.WriteLine($"HasUnsavedChanges: {HasUnsavedChanges}");
+            Logger.Debug($"HasUnsavedChanges: {HasUnsavedChanges}");
             if (HasUnsavedChanges)
             {
-                System.Diagnostics.Debug.WriteLine($"Changes detected: Username={Username != _originalUser.Username}, " +
+                Logger.Debug($"Changes detected: Username={Username != _originalUser.Username}, " +
                     $"FullName={FullName != _originalUser.FullName}, Email={Email != _originalUser.Email}, " +
                     $"IsActive={IsActive != _originalUser.IsActive}, Role={SelectedRole?.RoleId != _originalUser.RoleId}");
             }

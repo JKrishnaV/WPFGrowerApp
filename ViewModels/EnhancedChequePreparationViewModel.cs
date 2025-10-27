@@ -1543,7 +1543,7 @@ namespace WPFGrowerApp.ViewModels
             catch (Exception ex)
             {
                 // Log error but don't fail the print operation
-                System.Diagnostics.Debug.WriteLine($"Error updating payment distribution items: {ex.Message}");
+                Logger.Error($"Error updating payment distribution items: {ex.Message}", ex);
             }
         }
 
@@ -1591,12 +1591,12 @@ namespace WPFGrowerApp.ViewModels
                     updateCommand.Parameters.AddWithValue("@PaymentDistributionItemId", distributionItemId);
                     
                     await updateCommand.ExecuteNonQueryAsync();
-                    System.Diagnostics.Debug.WriteLine($"Updated payment distribution item {distributionItemId} status to {status} for grower {growerId} in batch {paymentBatchId}");
+                    Logger.Info($"Updated payment distribution item {distributionItemId} status to {status} for grower {growerId} in batch {paymentBatchId}");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error updating payment distribution item status for cheque {chequeId}: {ex.Message}");
+                Logger.Error($"Error updating payment distribution item status for cheque {chequeId}: {ex.Message}", ex);
                 // Don't throw - this is not critical for the print operation
             }
         }

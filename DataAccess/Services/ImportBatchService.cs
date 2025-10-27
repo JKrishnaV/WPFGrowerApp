@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.Data.SqlClient;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using Dapper;
 using WPFGrowerApp.DataAccess.Interfaces;
@@ -76,7 +75,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in CreateImportBatchAsync: {ex.Message}");
+                Logger.Error($"Error in CreateImportBatchAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -158,7 +157,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in CreateMultipleImportBatchesAsync: {ex.Message}");
+                Logger.Error($"Error in CreateMultipleImportBatchesAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -180,7 +179,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in GetNextBatchGroupIdAsync: {ex.Message}");
+                Logger.Error($"Error in GetNextBatchGroupIdAsync: {ex.Message}", ex);
                 return 1; // Default fallback
             }
         }
@@ -199,7 +198,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in GetImportBatchAsync: {ex.Message}");
+                Logger.Error($"Error in GetImportBatchAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -288,7 +287,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in GetImportBatchesAsync: {ex.Message}");
+                Logger.Error($"Error in GetImportBatchesAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -316,7 +315,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in UpdateImportBatchAsync: {ex.Message}");
+                Logger.Error($"Error in UpdateImportBatchAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -341,7 +340,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in GetNextImportBatchNumberAsync: {ex.Message}");
+                Logger.Error($"Error in GetNextImportBatchNumberAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -375,7 +374,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in ValidateImportBatchAsync: {ex.Message}");
+                Logger.Error($"Error in ValidateImportBatchAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -403,7 +402,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in CloseImportBatchAsync: {ex.Message}");
+                Logger.Error($"Error in CloseImportBatchAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -430,7 +429,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in ReopenImportBatchAsync: {ex.Message}");
+                Logger.Error($"Error in ReopenImportBatchAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -459,7 +458,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in GetRecentImportsCountAsync: {ex.Message}");
+                Logger.Error($"Error in GetRecentImportsCountAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -481,7 +480,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in GetBatchesByGroupIdAsync: {ex.Message}");
+                Logger.Error($"Error in GetBatchesByGroupIdAsync: {ex.Message}", ex);
                 throw;
             }
         }

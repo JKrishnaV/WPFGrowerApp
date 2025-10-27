@@ -3,9 +3,9 @@ using Microsoft.Data.SqlClient;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using WPFGrowerApp.Infrastructure.Logging;
 
 namespace WPFGrowerApp.DataAccess.Services
 {
@@ -77,16 +77,16 @@ namespace WPFGrowerApp.DataAccess.Services
                             });
 
                         migratedCount++;
-                        Debug.WriteLine($"Migrated container: {container.ContainerCode} - {container.ContainerName}");
+                        Logger.Info($"Migrated container: {container.ContainerCode} - {container.ContainerName}");
                     }
                 }
 
-                Debug.WriteLine($"Container migration completed: {migratedCount} containers migrated");
+                Logger.Info($"Container migration completed: {migratedCount} containers migrated");
                 return migratedCount;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error migrating containers: {ex.Message}");
+                Logger.Error($"Error migrating containers: {ex.Message}", ex);
                 throw;
             }
         }
@@ -136,7 +136,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error getting container from legacy receipt {legacyReceiptNumber}: {ex.Message}");
+                Logger.Error($"Error getting container from legacy receipt {legacyReceiptNumber}: {ex.Message}", ex);
                 return null;
             }
         }
@@ -201,12 +201,12 @@ namespace WPFGrowerApp.DataAccess.Services
                 }
 
                 // Default to Class 1 (Premium), Area 1 if not found
-                Debug.WriteLine($"No price found for Product={product}, Process={process}, Grade={grade}. Using defaults.");
+                Logger.Warn($"No price found for Product={product}, Process={process}, Grade={grade}. Using defaults.");
                 return (PriceClassId: 1, PriceAreaId: 1);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error determining price class/area: {ex.Message}");
+                Logger.Error($"Error determining price class/area: {ex.Message}", ex);
                 return (PriceClassId: 1, PriceAreaId: 1);
             }
         }
@@ -263,7 +263,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error parsing price column name '{columnName}': {ex.Message}");
+                Logger.Error($"Error parsing price column name '{columnName}': {ex.Message}", ex);
                 return (PriceClassId: 1, PriceAreaId: 1);
             }
         }
@@ -322,16 +322,16 @@ namespace WPFGrowerApp.DataAccess.Services
                             });
 
                         migratedCount++;
-                        Debug.WriteLine($"Migrated process: {process.ProcessCode} - {process.ProcessName}");
+                        Logger.Info($"Migrated process: {process.ProcessCode} - {process.ProcessName}");
                     }
                 }
 
-                Debug.WriteLine($"Process migration completed: {migratedCount} processes migrated");
+                Logger.Info($"Process migration completed: {migratedCount} processes migrated");
                 return migratedCount;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error migrating processes: {ex.Message}");
+                Logger.Error($"Error migrating processes: {ex.Message}", ex);
                 throw;
             }
         }

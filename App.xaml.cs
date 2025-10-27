@@ -252,7 +252,7 @@ namespace WPFGrowerApp
 
         private async void SetUserPasswordAndExit(string username, string password)
         {
-            Console.WriteLine($"Attempting to set password for user: {username}");
+            Logger.Info($"Attempting to set password for user: {username}");
             bool success = false;
             try
             {
@@ -260,23 +260,19 @@ namespace WPFGrowerApp
                 success = await userService.SetPasswordAsync(username, password);
                 if (success)
                 {
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"Password for user '{username}' set successfully.");
+                    Logger.Info($"Password for user '{username}' set successfully.");
                 }
                 else
                 {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"Failed to set password for user '{username}'. User might not exist.");
+                    Logger.Warn($"Failed to set password for user '{username}'. User might not exist.");
                 }
             }
             catch (Exception ex)
             {
-                 Console.ForegroundColor = ConsoleColor.Red;
-                 Console.WriteLine($"An error occurred: {ex.Message}");
+                Logger.Error($"An error occurred while setting password for user '{username}': {ex.Message}", ex);
             }
             finally
             {
-                 Console.ResetColor();
                  Application.Current.Shutdown(); 
             }
         }

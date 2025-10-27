@@ -1,11 +1,12 @@
-using Microsoft.Extensions.DependencyInjection; // For IServiceProvider
+using Microsoft.Extensions.DependencyInjection; 
 using System;
 using System.Threading.Tasks;
-using System.Windows; // Added for Application.Current
+using System.Windows; 
 using System.Windows.Input;
 using WPFGrowerApp.Commands;
-using WPFGrowerApp.Services; // Added for IDialogService
-using WPFGrowerApp.Views; // Still needed for GrowerSearchView in DialogService implementation (can be removed if DialogService is refactored)
+using WPFGrowerApp.Services; 
+using WPFGrowerApp.Views;
+using WPFGrowerApp.Infrastructure.Logging;
 
 namespace WPFGrowerApp.ViewModels
 {
@@ -342,7 +343,7 @@ namespace WPFGrowerApp.ViewModels
             catch (Exception ex)
             {
                 // Log the error or handle it appropriately
-                System.Diagnostics.Debug.WriteLine($"Error navigating to {viewName}: {ex.Message}");
+                Logger.Error($"Error navigating to {viewName}: {ex.Message}", ex);
             }
         }
 
@@ -366,7 +367,7 @@ namespace WPFGrowerApp.ViewModels
             catch (Exception ex)
             {
                 // Log the error or handle it appropriately
-                System.Diagnostics.Debug.WriteLine($"Error navigating to {viewName}: {ex.Message}");
+                Logger.Error($"Error navigating to {viewName}: {ex.Message}", ex);
             }
         }
 

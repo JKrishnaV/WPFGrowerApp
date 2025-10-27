@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MaterialDesignThemes.Wpf;
 using WPFGrowerApp.ViewModels.Dialogs;
 using WPFGrowerApp.Views.Dialogs;
+using WPFGrowerApp.Infrastructure.Logging;
 
 namespace WPFGrowerApp.ViewModels
 {
@@ -137,23 +138,23 @@ namespace WPFGrowerApp.ViewModels
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine("PaymentGroupViewModel: Starting initialization");
+                Logger.Info("PaymentGroupViewModel: Starting initialization");
                 IsLoading = true;
                 StatusMessage = "Loading payment groups...";
                 await LoadPayGroupsAsync();
-                System.Diagnostics.Debug.WriteLine($"PaymentGroupViewModel: Loaded {PayGroups.Count} payment groups, {FilteredPayGroups.Count} filtered");
+                Logger.Info($"PaymentGroupViewModel: Loaded {PayGroups.Count} payment groups, {FilteredPayGroups.Count} filtered");
                 StatusMessage = "Ready";
                 LastUpdated = DateTime.Now.ToString("MMM dd, yyyy HH:mm:ss");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error initializing PaymentGroupViewModel: {ex.Message}");
+                Logger.Error($"Error initializing PaymentGroupViewModel: {ex.Message}", ex);
                 StatusMessage = "Error loading payment groups";
             }
             finally
             {
                 IsLoading = false;
-                System.Diagnostics.Debug.WriteLine("PaymentGroupViewModel: Initialization completed");
+                Logger.Info("PaymentGroupViewModel: Initialization completed");
             }
         }
 
@@ -161,9 +162,9 @@ namespace WPFGrowerApp.ViewModels
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine("PaymentGroupViewModel: Starting to load payment groups from service");
+                Logger.Info("PaymentGroupViewModel: Starting to load payment groups from service");
                 var payGroups = await _payGroupService.GetAllPayGroupsAsync();
-                System.Diagnostics.Debug.WriteLine($"PaymentGroupViewModel: Retrieved {payGroups.Count()} payment groups from service");
+                Logger.Info($"PaymentGroupViewModel: Retrieved {payGroups.Count()} payment groups from service");
                 
                 PayGroups.Clear();
                 
@@ -172,15 +173,15 @@ namespace WPFGrowerApp.ViewModels
                     PayGroups.Add(payGroup);
                 }
 
-                System.Diagnostics.Debug.WriteLine($"PaymentGroupViewModel: Added {PayGroups.Count} payment groups to collection");
+                Logger.Info($"PaymentGroupViewModel: Added {PayGroups.Count} payment groups to collection");
 
                 // Update filtered pay groups
                 FilterPayGroups();
-                System.Diagnostics.Debug.WriteLine($"PaymentGroupViewModel: Filtered payment groups count: {FilteredPayGroups.Count}");
+                Logger.Info($"PaymentGroupViewModel: Filtered payment groups count: {FilteredPayGroups.Count}");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error loading payment groups: {ex.Message}");
+                Logger.Error($"Error loading payment groups: {ex.Message}", ex);
                 throw;
             }
         }
@@ -276,7 +277,7 @@ namespace WPFGrowerApp.ViewModels
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"Error adding payment group: {ex.Message}");
+                        Logger.Error($"Error adding payment group: {ex.Message}", ex);
                         await _dialogService.ShowMessageBoxAsync($"Error adding payment group: {ex.Message}", "Error");
                         StatusMessage = "Error adding payment group";
                     }
@@ -288,7 +289,7 @@ namespace WPFGrowerApp.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error adding payment group: {ex.Message}");
+                Logger.Error($"Error adding payment group: {ex.Message}", ex);
                 await _dialogService.ShowMessageBoxAsync("Error", $"Failed to add payment group: {ex.Message}");
                 StatusMessage = "Error adding payment group";
             }
@@ -311,7 +312,7 @@ namespace WPFGrowerApp.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error viewing payment group: {ex.Message}");
+                Logger.Error($"Error viewing payment group: {ex.Message}", ex);
                 await _dialogService.ShowMessageBoxAsync("Error", $"Failed to view payment group: {ex.Message}");
                 StatusMessage = "Error viewing payment group";
             }
@@ -343,20 +344,20 @@ namespace WPFGrowerApp.ViewModels
                         
                         if (success)
                         {
-                            System.Diagnostics.Debug.WriteLine($"EditPayGroupAsync: Successfully updated payment group {dialogViewModel.PayGroupData.PaymentGroupId}");
+                            Logger.Info($"EditPayGroupAsync: Successfully updated payment group {dialogViewModel.PayGroupData.PaymentGroupId}");
                             await _dialogService.ShowMessageBoxAsync("Payment group updated successfully.", "Success");
                             await LoadPayGroupsAsync();
                         }
                         else
                         {
-                            System.Diagnostics.Debug.WriteLine($"EditPayGroupAsync: Failed to update payment group {dialogViewModel.PayGroupData.PaymentGroupId}. UpdatePayGroupAsync returned false - no rows were affected by the update operation.");
+                            Logger.Warn($"EditPayGroupAsync: Failed to update payment group {dialogViewModel.PayGroupData.PaymentGroupId}. UpdatePayGroupAsync returned false - no rows were affected by the update operation.");
                             await _dialogService.ShowMessageBoxAsync("Failed to update the payment group.", "Error");
                             StatusMessage = "Failed to update payment group";
                         }
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"Error updating payment group {dialogViewModel.PayGroupData.PaymentGroupId}: {ex.Message}");
+                        Logger.Error($"Error updating payment group {dialogViewModel.PayGroupData.PaymentGroupId}: {ex.Message}", ex);
                         await _dialogService.ShowMessageBoxAsync($"Error updating payment group: {ex.Message}", "Error");
                         StatusMessage = "Error updating payment group";
                     }
@@ -368,7 +369,7 @@ namespace WPFGrowerApp.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error editing payment group: {ex.Message}");
+                Logger.Error($"Error editing payment group: {ex.Message}", ex);
                 await _dialogService.ShowMessageBoxAsync("Error", $"Failed to edit payment group: {ex.Message}");
                 StatusMessage = "Error editing payment group";
             }
@@ -408,7 +409,7 @@ namespace WPFGrowerApp.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error deleting payment group: {ex.Message}");
+                Logger.Error($"Error deleting payment group: {ex.Message}", ex);
                 await _dialogService.ShowMessageBoxAsync($"Error deleting payment group: {ex.Message}", "Error");
                 StatusMessage = "Error deleting payment group";
             }
@@ -426,12 +427,12 @@ namespace WPFGrowerApp.ViewModels
                 if (mainWindow != null)
                 {
                     // Navigate to dashboard - implementation depends on MainWindow structure
-                    System.Diagnostics.Debug.WriteLine("Navigate to Dashboard requested");
+                    Logger.Info("Navigate to Dashboard requested");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error navigating to dashboard: {ex.Message}");
+                Logger.Error($"Error navigating to dashboard: {ex.Message}", ex);
                 StatusMessage = "Error navigating to dashboard";
             }
         }
@@ -444,12 +445,12 @@ namespace WPFGrowerApp.ViewModels
                 if (mainWindow != null)
                 {
                     // Navigate to settings - implementation depends on MainWindow structure
-                    System.Diagnostics.Debug.WriteLine("Navigate to Settings requested");
+                    Logger.Info("Navigate to Settings requested");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error navigating to settings: {ex.Message}");
+                Logger.Error($"Error navigating to settings: {ex.Message}", ex);
                 StatusMessage = "Error navigating to settings";
             }
         }
@@ -469,7 +470,7 @@ namespace WPFGrowerApp.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error navigating to payment management: {ex.Message}");
+                Logger.Error($"Error navigating to payment management: {ex.Message}", ex);
                 StatusMessage = "Error navigating to payment management";
             }
         }
@@ -491,7 +492,7 @@ namespace WPFGrowerApp.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error showing help: {ex.Message}");
+                Logger.Error($"Error showing help: {ex.Message}", ex);
                 StatusMessage = "Error showing help";
             }
         }

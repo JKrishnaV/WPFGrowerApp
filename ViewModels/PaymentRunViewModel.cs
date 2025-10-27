@@ -2328,7 +2328,7 @@ namespace WPFGrowerApp.ViewModels
                 }
 
                 // Debug: Log the count to verify data is being passed
-                System.Diagnostics.Debug.WriteLine($"PaymentRunViewModel: {SkippedReceiptDetails.Count} receipts to show in dialog");
+                Logger.Info($"PaymentRunViewModel: {SkippedReceiptDetails.Count} receipts to show in dialog");
 
                 // Create and show the scrollable dialog
                 var dialogViewModel = new SkippedReceiptDetailsDialogViewModel(

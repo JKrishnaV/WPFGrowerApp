@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Data.SqlClient;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
 using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
+using WPFGrowerApp.Infrastructure.Logging;
 
 namespace WPFGrowerApp.DataAccess.Services
 {
@@ -42,7 +42,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in GetAllBankRecsAsync: {ex.Message}");
+                Logger.Error($"Error in GetAllBankRecsAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -78,7 +78,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in GetBankRecByDateAsync: {ex.Message}");
+                Logger.Error($"Error in GetBankRecByDateAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -115,7 +115,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in GetBankRecsByDateRangeAsync: {ex.Message}");
+                Logger.Error($"Error in GetBankRecsByDateRangeAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -167,7 +167,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in SaveBankRecAsync: {ex.Message}");
+                Logger.Error($"Error in SaveBankRecAsync: {ex.Message}", ex);
                 return false;
             }
         }

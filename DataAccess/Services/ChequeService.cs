@@ -322,7 +322,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error voiding cheque: {ex.Message}");
+                Logger.Error($"Error voiding cheque: {ex.Message}", ex);
                 throw;
             }
         }

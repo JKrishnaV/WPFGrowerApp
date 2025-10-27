@@ -1,15 +1,14 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Data.SqlClient;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using Dapper;
 using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
 using System.Linq;
-using WPFGrowerApp.Infrastructure.Logging; // Added for Logger
-using WPFGrowerApp.DataAccess.Exceptions; // Added for MissingReferenceDataException
-using WPFGrowerApp.Models; // Added for ValidationResult
+using WPFGrowerApp.Infrastructure.Logging;
+using WPFGrowerApp.DataAccess.Exceptions;
+using WPFGrowerApp.Models;
 
 namespace WPFGrowerApp.DataAccess.Services
 {
@@ -422,8 +421,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in VoidReceiptAsync: {ex.Message}");
-                Logger.Error($"Error voiding receipt {receiptNumber}: {ex.Message}", ex);
+                Logger.Error($"Error in VoidReceiptAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -491,7 +489,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in GetReceiptsByGrowerAsync: {ex.Message}");
+                Logger.Error($"Error in GetReceiptsByGrowerAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -541,7 +539,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in GetReceiptsByImportBatchAsync: {ex.Message}");
+                Logger.Error($"Error in GetReceiptsByImportBatchAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -560,7 +558,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in GetNextReceiptNumberAsync: {ex.Message}");
+                Logger.Error($"Error in GetNextReceiptNumberAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -588,7 +586,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in CalculateNetWeightAsync: {ex.Message}");
+                Logger.Error($"Error in CalculateNetWeightAsync: {ex.Message}", ex);
                 throw;
             }
         }
@@ -1222,8 +1220,7 @@ namespace WPFGrowerApp.DataAccess.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in GetReceiptDetailsForGrowerAsync: {ex.Message}");
-                Logger.Error($"Error getting receipt details for grower {growerId}: {ex.Message}", ex);
+                Logger.Error($"Error in GetReceiptDetailsForGrowerAsync: {ex.Message}", ex);
                 throw;
             }
         }
