@@ -158,6 +158,8 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         public int GrowerId { get; set; }
         public string GrowerName { get; set; } = string.Empty;
         public decimal PaymentAmount { get; set; }
+        public decimal? OriginalAmount { get; set; }
+        public decimal? DeductionAmount { get; set; }
         public string? Memo { get; set; }
         public bool IsOnHold { get; set; }
     }

@@ -1,9 +1,9 @@
-<Window x:Class="WPFGrowerApp.Views.Dialogs.InvoiceStyleChequeCalculationDialogView"
+<Window x:Class="WPFGrowerApp.Views.Dialogs.ChequeCalculationDialogView"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         Title="Cheque Calculation Details" 
-        Height="700" Width="1000"
+        Height="800" Width="1100"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize"
         Background="White"
@@ -136,36 +136,102 @@
         </Style>
     </Window.Resources>
 
-    <Border Background="White" CornerRadius="8">
+    <Border Background="White">
         <Border.Effect>
             <DropShadowEffect Color="Black" Opacity="0.2" ShadowDepth="8" BlurRadius="16"/>
         </Border.Effect>
         
-        <Grid>
+        <Grid ClipToBounds="False">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Header -->
-            <Border Grid.Row="0" Background="{StaticResource PrimaryBrush}" CornerRadius="8,8,0,0">
-                <Grid Margin="20,16">
+            <!-- Window Title Bar -->
+            <Border Grid.Row="0" Background="{StaticResource PrimaryBrush}" Height="40">
+                <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     
                     <!-- Title -->
-                    <StackPanel Grid.Column="0">
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+                        <materialDesign:PackIcon Kind="Calculator" 
+                                                Width="20" Height="20" 
+                                                Foreground="White" 
+                                                VerticalAlignment="Center" 
+                                                Margin="0,0,8,0"/>
                         <TextBlock Text="Cheque Calculation Details" 
-                                   FontSize="20" 
+                                   FontSize="14" 
                                    FontWeight="SemiBold" 
-                                   Foreground="White"/>
+                                   Foreground="White"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <!-- Window Controls -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Background="Transparent">
+                        <Button Content="_" 
+                                Width="40" 
+                                Height="30"
+                                Background="Transparent"
+                                Foreground="White"
+                                BorderThickness="0"
+                                Click="MinimizeButton_Click"
+                                ToolTip="Minimize"
+                                Style="{StaticResource {x:Type Button}}"
+                                Padding="8,0"/>
+                        <Button Content="❐" 
+                                Width="40" 
+                                Height="30"
+                                Background="Transparent"
+                                Foreground="White"
+                                BorderThickness="0"
+                                Click="MaximizeButton_Click"
+                                ToolTip="Maximize/Restore"
+                                Style="{StaticResource {x:Type Button}}"
+                                Padding="8,0"/>
+                        <Button Content="✕" 
+                                Width="40" 
+                                Height="30"
+                                Background="Transparent"
+                                Foreground="White"
+                                BorderThickness="0"
+                                Click="CloseButton_Click"
+                                ToolTip="Close"
+                                Padding="8,0">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#E81123"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Header Toolbar -->
+            <Border Grid.Row="1" Background="{StaticResource PrimaryBrush}" Height="60">
+                <Grid Margin="20,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- Subtitle -->
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
                         <TextBlock Text="Detailed breakdown of payment calculation" 
                                    FontSize="12" 
-                                   Foreground="#E3F2FD" 
-                                   Margin="0,4,0,0"/>
+                                   Foreground="#E3F2FD"/>
                     </StackPanel>
                     
                     <!-- Export Buttons -->
@@ -195,7 +261,7 @@
             </Border>
 
             <!-- Content -->
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Margin="20">
                     
                     <!-- Cheque Information Card -->
@@ -240,7 +306,9 @@
                             <Border Grid.Column="1" 
                                     CornerRadius="8" 
                                     Padding="6,3" 
-                                    HorizontalAlignment="Center">
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Top"
+                                    Margin="8,0,0,0">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
@@ -328,15 +396,15 @@
                                       ItemsSource="{Binding InvoiceStyleDetails.PaymentBatches[0].Receipts}"
                                       MaxHeight="200">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Receipt#" Binding="{Binding ReceiptNumber}" Width="80"/>
-                                    <DataGridTextColumn Header="Advance Payment" Binding="{Binding AdvancePayment}" Width="120"/>
-                                    <DataGridTextColumn Header="Batch#" Binding="{Binding BatchNumber}" Width="80"/>
-                                    <DataGridTextColumn Header="Product" Binding="{Binding ProductName}" Width="80"/>
-                                    <DataGridTextColumn Header="Process" Binding="{Binding ProcessName}" Width="100"/>
-                                    <DataGridTextColumn Header="Grade" Binding="{Binding Grade}" Width="60"/>
-                                    <DataGridTextColumn Header="Weight" Binding="{Binding Weight, StringFormat='{}{0:N2} lbs'}" Width="100"/>
-                                    <DataGridTextColumn Header="Price" Binding="{Binding PricePerPound, StringFormat='{}{0:C}/lb'}" Width="100"/>
-                                    <DataGridTextColumn Header="Amount" Binding="{Binding Amount, StringFormat='{}{0:C}'}" Width="100"/>
+                                    <DataGridTextColumn Header="Receipt#" Binding="{Binding ReceiptNumber}" Width="Auto"/>
+                                    <DataGridTextColumn Header="Advance Payment" Binding="{Binding AdvancePayment}" Width="Auto"/>
+                                    <DataGridTextColumn Header="Batch#" Binding="{Binding BatchNumber}" Width="Auto"/>
+                                    <DataGridTextColumn Header="Product" Binding="{Binding ProductName}" Width="Auto"/>
+                                    <DataGridTextColumn Header="Process" Binding="{Binding ProcessName}" Width="Auto"/>
+                                    <DataGridTextColumn Header="Grade" Binding="{Binding Grade}" Width="Auto"/>
+                                    <DataGridTextColumn Header="Weight" Binding="{Binding Weight, StringFormat='{}{0:N2} lbs'}" Width="Auto"/>
+                                    <DataGridTextColumn Header="Price" Binding="{Binding PricePerPound, StringFormat='{}{0:C}/lb'}" Width="Auto"/>
+                                    <DataGridTextColumn Header="Amount" Binding="{Binding Amount, StringFormat='{}{0:C}'}" Width="Auto"/>
                                 </DataGrid.Columns>
                             </DataGrid>
                             
@@ -361,6 +429,46 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Deductions Breakdown Card -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Deductions Breakdown" Style="{StaticResource SectionHeaderStyle}"/>
+                            <TextBlock Text="Advance payments deducted from this cheque" 
+                                       FontSize="11" 
+                                       Foreground="{StaticResource SecondaryTextBrush}" 
+                                       Margin="0,0,0,8"/>
+                            
+                            <DataGrid Style="{StaticResource ModernTableStyle}" 
+                                      ItemsSource="{Binding InvoiceStyleDetails.Deductions}"
+                                      MaxHeight="150">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="150"/>
+                                    <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*"/>
+                                    <DataGridTextColumn Header="Deducted Amount" Binding="{Binding Amount, StringFormat='{}{0:C}'}" Width="130"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            
+                            <!-- Deductions Subtotal -->
+                            <Border Background="{StaticResource LightGrayBrush}" 
+                                    CornerRadius="4" 
+                                    Padding="12,8" 
+                                    Margin="0,8,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Total Deductions:" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Column="1" 
+                                               Text="{Binding InvoiceStyleDetails.Summary.TotalDeductions, StringFormat='{}{0:C}'}" 
+                                               FontWeight="Bold" 
+                                               FontSize="14"
+                                               Foreground="{StaticResource ErrorBrush}"/>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
                     <!-- Payment History Card -->
                     <Border Style="{StaticResource CardStyle}">
                         <StackPanel>
@@ -374,7 +482,7 @@
                                       ItemsSource="{Binding InvoiceStyleDetails.History.Payments}"
                                       MaxHeight="150">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat='{}{0:MMM dd, yyyy}'}" Width="100"/>
+                                    <DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat='{}{0:MMM dd, yyyy}'}" Width="150"/>
                                     <DataGridTextColumn Header="Cheque#" Binding="{Binding ChequeNumber}" Width="*"/>
                                     <DataGridTextColumn Header="Batch#" Binding="{Binding BatchNumber}" Width="*"/>
                                     <DataGridTextColumn Header="Amount" Binding="{Binding Amount, StringFormat='{}{0:C}'}" Width="100"/>
@@ -387,7 +495,7 @@
             </ScrollViewer>
 
             <!-- Footer -->
-            <Border Grid.Row="2" Background="{StaticResource LightGrayBrush}" CornerRadius="0,0,8,8">
+            <Border Grid.Row="3" Background="{StaticResource LightGrayBrush}" CornerRadius="0,0,8,8">
                 <Grid Margin="20,12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>

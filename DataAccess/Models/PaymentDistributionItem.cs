@@ -26,6 +26,7 @@ namespace WPFGrowerApp.DataAccess.Models
         private string _processedBy;
         private int? _chequeId;
         private int? _electronicPaymentId;
+        private decimal _advanceDeductionAmount;
 
         public int ItemId
         {
@@ -121,6 +122,12 @@ namespace WPFGrowerApp.DataAccess.Models
         {
             get => _processedBy;
             set => SetProperty(ref _processedBy, value);
+        }
+
+        public decimal AdvanceDeductionAmount
+        {
+            get => _advanceDeductionAmount;
+            set => SetProperty(ref _advanceDeductionAmount, value);
         }
 
         // Receipt contributions for audit tracking

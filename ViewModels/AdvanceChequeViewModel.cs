@@ -21,7 +21,7 @@ namespace WPFGrowerApp.ViewModels
     /// </summary>
     public class AdvanceChequeViewModel : ViewModelBase
     {
-        private readonly IAdvanceChequeService _advanceChequeService;
+        private readonly IUnifiedAdvanceService _unifiedAdvanceService;
         private readonly IGrowerService _growerService;
         private readonly IDialogService _dialogService;
         private readonly IHelpContentProvider _helpContentProvider;
@@ -73,12 +73,12 @@ namespace WPFGrowerApp.ViewModels
         public ICommand NavigateToPaymentManagementCommand { get; }
 
         public AdvanceChequeViewModel(
-            IAdvanceChequeService advanceChequeService,
+            IUnifiedAdvanceService unifiedAdvanceService,
             IGrowerService growerService,
             IDialogService dialogService,
             IHelpContentProvider helpContentProvider)
         {
-            _advanceChequeService = advanceChequeService;
+            _unifiedAdvanceService = unifiedAdvanceService;
             _growerService = growerService;
             _dialogService = dialogService;
             _helpContentProvider = helpContentProvider;
@@ -264,7 +264,7 @@ namespace WPFGrowerApp.ViewModels
                     return; // User cancelled the operation
                 }
 
-                var advanceCheque = await _advanceChequeService.CreateAdvanceChequeAsync(
+                var advanceCheque = await _unifiedAdvanceService.CreateAdvanceChequeAsync(
                     SelectedGrower.GrowerId,
                     AdvanceAmount,
                     Reason,
@@ -297,8 +297,8 @@ namespace WPFGrowerApp.ViewModels
                     return;
                 }
 
-                var outstandingAdvances = await _advanceChequeService.GetOutstandingAdvancesAsync(SelectedGrower.GrowerId);
-                var totalOutstanding = await _advanceChequeService.CalculateTotalOutstandingAdvancesAsync(SelectedGrower.GrowerId);
+                var outstandingAdvances = await _unifiedAdvanceService.GetOutstandingAdvancesAsync(SelectedGrower.GrowerId);
+                var totalOutstanding = await _unifiedAdvanceService.CalculateTotalOutstandingAdvancesAsync(SelectedGrower.GrowerId);
 
                 var message = $"Outstanding advances for {SelectedGrower.FullName}:\n\n";
                 
@@ -339,7 +339,7 @@ namespace WPFGrowerApp.ViewModels
                     return;
                 }
 
-                await _advanceChequeService.CancelAdvanceChequeAsync(
+                await _unifiedAdvanceService.CancelAdvanceChequeAsync(
                     SelectedAdvanceCheque.AdvanceChequeId,
                     reason,
                     "Current User" // TODO: Get from authentication context
@@ -480,7 +480,7 @@ namespace WPFGrowerApp.ViewModels
                 }
 
                 // Load all advance cheques into the main collection
-                var allAdvanceCheques = await _advanceChequeService.GetAllAdvanceChequesAsync();
+                var allAdvanceCheques = await _unifiedAdvanceService.GetAllAdvanceChequesAsync();
                 AdvanceCheques.Clear();
                 foreach (var cheque in allAdvanceCheques)
                 {
@@ -730,7 +730,7 @@ namespace WPFGrowerApp.ViewModels
                 try
                 {
                     // Only apply filters if the service is available (not during construction)
-                    if (_advanceChequeService != null)
+                    if (_unifiedAdvanceService != null)
                     {
                         _ = ApplyFiltersAsync();
                     }
@@ -813,7 +813,7 @@ namespace WPFGrowerApp.ViewModels
             try
             {
                 IsLoading = true;
-                await _advanceChequeService.PrintAdvanceChequeAsync(SelectedAdvanceCheque.AdvanceChequeId, Environment.UserName);
+                await _unifiedAdvanceService.PrintAdvanceChequeAsync(SelectedAdvanceCheque.AdvanceChequeId, Environment.UserName);
                 await RefreshAsync();
                 await _dialogService.ShowMessageBoxAsync("Advance cheque printed successfully.", "Print Success");
             }
@@ -837,7 +837,7 @@ namespace WPFGrowerApp.ViewModels
             try
             {
                 IsLoading = true;
-                await _advanceChequeService.DeliverAdvanceChequeAsync(SelectedAdvanceCheque.AdvanceChequeId, Environment.UserName, "Pickup");
+                await _unifiedAdvanceService.DeliverAdvanceChequeAsync(SelectedAdvanceCheque.AdvanceChequeId, Environment.UserName, "Pickup");
                 await RefreshAsync();
                 await _dialogService.ShowMessageBoxAsync("Advance cheque delivered successfully.", "Delivery Success");
             }
@@ -866,7 +866,7 @@ namespace WPFGrowerApp.ViewModels
             try
             {
                 IsLoading = true;
-                await _advanceChequeService.VoidAdvanceChequeAsync(SelectedAdvanceCheque.AdvanceChequeId, Environment.UserName, "Voided by user");
+                await _unifiedAdvanceService.VoidAdvanceChequeAsync(SelectedAdvanceCheque.AdvanceChequeId, Environment.UserName, "Voided by user");
                 await RefreshAsync();
                 await _dialogService.ShowMessageBoxAsync("Advance cheque voided successfully.", "Void Success");
             }

@@ -59,6 +59,7 @@ namespace WPFGrowerApp.DataAccess.Models
         public decimal PricePerPound { get; set; }
         public int PaymentTypeId { get; set; }
         public string PaymentTypeName { get; set; } = string.Empty;
+        public string BatchName { get; set; } = string.Empty;
 
         // Payment Allocation Summary
         public bool IsPaid { get; set; }

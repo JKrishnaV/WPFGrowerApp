@@ -38,6 +38,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         -- Core Cheque Properties (verified to exist)
                         c.ChequeId, c.ChequeSeriesId, c.ChequeNumber, c.FiscalYear,
                         c.GrowerId, c.PaymentBatchId, c.ChequeDate, c.ChequeAmount,
+                        c.OriginalAmount, c.DeductionAmount, c.NetAmount, c.SkipPrint,
                         c.CurrencyCode, c.ExchangeRate, c.PayeeName, c.Memo,
                         c.Status, c.ClearedDate, c.VoidedDate, c.VoidedReason,
                         c.CreatedAt, c.CreatedBy, c.ModifiedAt, c.ModifiedBy,
@@ -570,6 +571,10 @@ namespace WPFGrowerApp.DataAccess.Services
                         c.PaymentBatchId,
                         c.ChequeDate,
                         c.ChequeAmount,
+                        c.OriginalAmount,
+                        c.DeductionAmount,
+                        c.NetAmount,
+                        c.SkipPrint,
                         c.CurrencyCode,
                         c.ExchangeRate,
                         c.PayeeName,
@@ -625,7 +630,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         ad.DeductionDate,
                         ad.CreatedBy,
                         ad.CreatedAt,
-                        ac.AdvanceAmount,
+                        ac.AdvanceAmount AS OriginalAdvanceAmount,
                         ac.AdvanceDate,
                         ac.Reason,
                         pb.BatchNumber
@@ -1162,7 +1167,7 @@ namespace WPFGrowerApp.DataAccess.Services
                         r.QualityCheckedAt, r.QualityCheckedBy, r.DeletedAt, r.DeletedBy,
                         g.FullName as GrowerName, g.GrowerNumber, g.Address as GrowerAddress, 
                         g.PhoneNumber as GrowerPhone, g.Email as GrowerEmail,
-                        p.Description as ProductName, p.Description as ProductDescription,
+                        p.ProductName as ProductName, p.Description as ProductDescription,
                         pr.ProcessName, pr.Description as ProcessDescription,
                         v.VarietyName,
                         d.DepotName, d.Address as DepotAddress,
@@ -1193,6 +1198,45 @@ namespace WPFGrowerApp.DataAccess.Services
             {
                 Logger.Error($"Error getting receipt details for cheque {chequeNumber}: {ex.Message}", ex);
                 return new List<ReceiptDetailDto>();
+            }
+        }
+
+        /// <summary>
+        /// Get payment history for a grower, excluding the current cheque
+        /// </summary>
+        public async Task<List<dynamic>> GetPaymentHistoryForGrowerAsync(int growerId, string currentChequeNumber)
+        {
+            try
+            {
+                using var connection = new SqlConnection(ConnectionString);
+                var sql = @"
+                    SELECT TOP 10
+                        c.ChequeNumber,
+                        pb.BatchNumber,
+                        c.ChequeDate AS Date,
+                        ISNULL(c.ChequeAmount, 0) AS Amount,
+                        c.Status
+                    FROM Cheques c
+                    LEFT JOIN PaymentBatches pb ON c.PaymentBatchId = pb.PaymentBatchId
+                    WHERE c.GrowerId = @GrowerId
+                      AND c.ChequeNumber != @CurrentChequeNumber
+                      AND c.DeletedAt IS NULL
+                      AND c.Status = 'Printed'
+                    ORDER BY c.ChequeDate DESC, c.ChequeNumber DESC";
+
+                var cheques = await connection.QueryAsync(sql, new 
+                { 
+                    GrowerId = growerId, 
+                    CurrentChequeNumber = currentChequeNumber 
+                });
+
+                Logger.Info($"Found {cheques.Count()} previous cheques for grower {growerId}");
+                return cheques.ToList();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error getting payment history for grower {growerId}: {ex.Message}", ex);
+                return new List<dynamic>();
             }
         }
 

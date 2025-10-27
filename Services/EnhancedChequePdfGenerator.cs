@@ -28,11 +28,11 @@ namespace WPFGrowerApp.Services
     public class EnhancedChequePdfGenerator
     {
         private readonly string _connectionString;
-        private readonly IAdvanceChequeService _advanceChequeService;
+        private readonly IUnifiedAdvanceService _unifiedAdvanceService;
         private readonly ICrossBatchPaymentService _crossBatchPaymentService;
 
         public EnhancedChequePdfGenerator(
-            IAdvanceChequeService advanceChequeService,
+            IUnifiedAdvanceService unifiedAdvanceService,
             ICrossBatchPaymentService crossBatchPaymentService)
         {
             _connectionString = ConfigurationManager.ConnectionStrings["DefaultConnection"]?.ConnectionString;
@@ -42,7 +42,7 @@ namespace WPFGrowerApp.Services
                 throw new ConfigurationErrorsException("Connection string 'DefaultConnection' is missing or empty in App.config.");
             }
             
-            _advanceChequeService = advanceChequeService;
+            _unifiedAdvanceService = unifiedAdvanceService;
             _crossBatchPaymentService = crossBatchPaymentService;
         }
 

@@ -17,19 +17,16 @@ namespace WPFGrowerApp.DataAccess.Services
     public class UnifiedVoidingService : BaseDatabaseService, IUnifiedVoidingService
     {
         private readonly IChequeService _chequeService;
-        private readonly IAdvanceChequeService _advanceChequeService;
-        private readonly IAdvanceDeductionService _advanceDeductionService;
+        private readonly IUnifiedAdvanceService _unifiedAdvanceService;
         private readonly ICrossBatchPaymentService _crossBatchPaymentService;
 
         public UnifiedVoidingService(
             IChequeService chequeService,
-            IAdvanceChequeService advanceChequeService,
-            IAdvanceDeductionService advanceDeductionService,
+            IUnifiedAdvanceService unifiedAdvanceService,
             ICrossBatchPaymentService crossBatchPaymentService)
         {
             _chequeService = chequeService;
-            _advanceChequeService = advanceChequeService;
-            _advanceDeductionService = advanceDeductionService;
+            _unifiedAdvanceService = unifiedAdvanceService;
             _crossBatchPaymentService = crossBatchPaymentService;
         }
 
@@ -209,7 +206,7 @@ namespace WPFGrowerApp.DataAccess.Services
                 var result = new VoidingResult();
 
                 // Get the advance cheque details
-                var advanceCheque = await _advanceChequeService.GetAdvanceChequeByIdAsync(advanceChequeId);
+                var advanceCheque = await _unifiedAdvanceService.GetAdvanceChequeByIdAsync(advanceChequeId);
                 if (advanceCheque == null)
                 {
                     result.AddError("Advance cheque not found");
@@ -223,14 +220,14 @@ namespace WPFGrowerApp.DataAccess.Services
                 }
 
                 // Check if advance has been deducted
-                var deductions = await _advanceChequeService.GetDeductionHistoryAsync(advanceChequeId);
+                var deductions = await _unifiedAdvanceService.GetDeductionHistoryAsync(advanceChequeId);
                 if (deductions.Any())
                 {
                     result.AddWarning("Advance has been deducted from payments. Deductions will be reversed.");
                 }
 
                 // Cancel the advance cheque
-                var success = await _advanceChequeService.CancelAdvanceChequeAsync(advanceChequeId, reason, voidedBy);
+                var success = await _unifiedAdvanceService.CancelAdvanceChequeAsync(advanceChequeId, reason, voidedBy);
                 if (success)
                 {
                     result.Success = true;
@@ -304,7 +301,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     
                     case "advance":
                     case "advancecheque":
-                        var advanceCheque = await _advanceChequeService.GetAdvanceChequeByIdAsync(entityId);
+                        var advanceCheque = await _unifiedAdvanceService.GetAdvanceChequeByIdAsync(entityId);
                         return advanceCheque?.CanBeVoided ?? false;
                     
                     
@@ -713,24 +710,7 @@ namespace WPFGrowerApp.DataAccess.Services
         {
             try
             {
-                var sql = @"
-                    SELECT ad.*, ac.AdvanceAmount, ac.AdvanceDate, ac.Reason
-                    FROM AdvanceDeductions ad
-                    INNER JOIN AdvanceCheques ac ON ad.AdvanceChequeId = ac.AdvanceChequeId
-                    WHERE ad.ChequeId = @ChequeId";
-
-                using var command = new SqlCommand(sql, connection, transaction);
-                command.Parameters.AddWithValue("@ChequeId", chequeId);
-
-                var deductions = new List<AdvanceDeduction>();
-                using (var reader = await command.ExecuteReaderAsync())
-                {
-                    while (await reader.ReadAsync())
-                    {
-                        deductions.Add(MapAdvanceDeductionFromReader(reader));
-                    }
-                }
-                return deductions;
+                return await _unifiedAdvanceService.GetDeductionsByChequeIdAsync(chequeId);
             }
             catch (Exception ex)
             {
@@ -758,28 +738,76 @@ namespace WPFGrowerApp.DataAccess.Services
 
                 foreach (var deduction in deductions)
                 {
-                    // Delete the deduction record
-                    var deleteSql = "DELETE FROM AdvanceDeductions WHERE DeductionId = @DeductionId";
-                    using var deleteCommand = new SqlCommand(deleteSql, connection, transaction);
-                    deleteCommand.Parameters.AddWithValue("@DeductionId", deduction.DeductionId);
-                    await deleteCommand.ExecuteNonQueryAsync();
-
-                    // Clear deduction references without changing advance cheque status
-                    // The advance cheque status should remain unchanged (e.g., 'Printed')
-                    var resetSql = @"
-                        UPDATE AdvanceCheques 
-                        SET DeductedByChequeId = NULL,
-                            DeductedAt = NULL,
-                            DeductedBy = NULL,
+                    // Soft-void the deduction record (do NOT delete)
+                    var voidSql = @"
+                        UPDATE AdvanceDeductions 
+                        SET Status = 'Voided',
+                            IsVoided = 1,
+                            VoidedAt = @VoidedAt,
+                            VoidedBy = @VoidedBy,
+                            VoidReason = @VoidReason,
                             ModifiedAt = @ModifiedAt,
                             ModifiedBy = @ModifiedBy
-                        WHERE AdvanceChequeId = @AdvanceChequeId";
+                        WHERE DeductionId = @DeductionId";
 
-                    using var resetCommand = new SqlCommand(resetSql, connection, transaction);
-                    resetCommand.Parameters.AddWithValue("@AdvanceChequeId", deduction.AdvanceChequeId);
-                    resetCommand.Parameters.AddWithValue("@ModifiedAt", DateTime.Now);
-                    resetCommand.Parameters.AddWithValue("@ModifiedBy", voidedBy);
-                    await resetCommand.ExecuteNonQueryAsync();
+                    using var voidCommand = new SqlCommand(voidSql, connection, transaction);
+                    voidCommand.Parameters.AddWithValue("@DeductionId", deduction.DeductionId);
+                    voidCommand.Parameters.AddWithValue("@VoidedAt", DateTime.Now);
+                    voidCommand.Parameters.AddWithValue("@VoidedBy", voidedBy);
+                    voidCommand.Parameters.AddWithValue("@VoidReason", reason ?? "Cheque voided");
+                    voidCommand.Parameters.AddWithValue("@ModifiedAt", DateTime.Now);
+                    voidCommand.Parameters.AddWithValue("@ModifiedBy", voidedBy);
+                    await voidCommand.ExecuteNonQueryAsync();
+
+                    // Restore the advance amount in parent AdvanceCheques table
+                    // Use a more robust approach that handles missing columns gracefully
+                    var restoreSql = @"
+                        UPDATE AdvanceCheques 
+                        SET ModifiedAt = @ModifiedAt,
+                            ModifiedBy = @ModifiedBy
+                        WHERE AdvanceChequeId = @AdvanceChequeId";
+                    
+                    // Try to update with new columns if they exist
+                    try
+                    {
+                        var enhancedRestoreSql = @"
+                            UPDATE AdvanceCheques 
+                            SET CurrentAdvanceAmount = CurrentAdvanceAmount + @DeductionAmount,
+                                TotalDeductedAmount = TotalDeductedAmount - @DeductionAmount,
+                                DeductionCount = DeductionCount - 1,
+                                IsFullyDeducted = CASE 
+                                    WHEN (CurrentAdvanceAmount + @DeductionAmount) >= OriginalAdvanceAmount THEN 0
+                                    WHEN (CurrentAdvanceAmount + @DeductionAmount) > 0 THEN 0
+                                    ELSE 1
+                                END,
+                                Status = CASE 
+                                    WHEN (CurrentAdvanceAmount + @DeductionAmount) >= OriginalAdvanceAmount THEN 'Printed'
+                                    WHEN (TotalDeductedAmount - @DeductionAmount) > 0 THEN 'PartiallyDeducted'
+                                    ELSE Status
+                                END,
+                                ModifiedAt = @ModifiedAt,
+                                ModifiedBy = @ModifiedBy
+                            WHERE AdvanceChequeId = @AdvanceChequeId";
+                        
+                        using var enhancedRestoreCommand = new SqlCommand(enhancedRestoreSql, connection, transaction);
+                        enhancedRestoreCommand.Parameters.AddWithValue("@AdvanceChequeId", deduction.AdvanceChequeId);
+                        enhancedRestoreCommand.Parameters.AddWithValue("@DeductionAmount", deduction.DeductionAmount);
+                        enhancedRestoreCommand.Parameters.AddWithValue("@ModifiedAt", DateTime.Now);
+                        enhancedRestoreCommand.Parameters.AddWithValue("@ModifiedBy", voidedBy);
+                        await enhancedRestoreCommand.ExecuteNonQueryAsync();
+                    }
+                    catch (SqlException ex) when (ex.Number == 207) // Invalid column name
+                    {
+                        // Fall back to basic update if new columns don't exist yet
+                        Logger.Warn($"New AdvanceCheques columns not found, using basic update. Run ADD_MISSING_ADVANCE_CHEQUES_COLUMNS.sql to add them. Error: {ex.Message}");
+                        
+                        using var basicRestoreCommand = new SqlCommand(restoreSql, connection, transaction);
+                        basicRestoreCommand.Parameters.AddWithValue("@AdvanceChequeId", deduction.AdvanceChequeId);
+                        basicRestoreCommand.Parameters.AddWithValue("@DeductionAmount", deduction.DeductionAmount);
+                        basicRestoreCommand.Parameters.AddWithValue("@ModifiedAt", DateTime.Now);
+                        basicRestoreCommand.Parameters.AddWithValue("@ModifiedBy", voidedBy);
+                        await basicRestoreCommand.ExecuteNonQueryAsync();
+                    }
                 }
 
                 try
@@ -1040,15 +1068,40 @@ namespace WPFGrowerApp.DataAccess.Services
         {
             int Ord(string name) => reader.GetOrdinal(name);
             var paymentBatchId = reader.IsDBNull(Ord("PaymentBatchId")) ? 0 : reader.GetInt32(Ord("PaymentBatchId"));
+            var chequeId = reader.IsDBNull(Ord("ChequeId")) ? (int?)null : reader.GetInt32(Ord("ChequeId"));
+            
             return new AdvanceDeduction
             {
                 DeductionId = reader.GetInt32(Ord("DeductionId")),
                 AdvanceChequeId = reader.GetInt32(Ord("AdvanceChequeId")),
+                ChequeId = chequeId,
                 PaymentBatchId = paymentBatchId,
                 DeductionAmount = reader.GetDecimal(Ord("DeductionAmount")),
                 DeductionDate = reader.GetDateTime(Ord("DeductionDate")),
+                TransactionType = reader.IsDBNull(Ord("TransactionType")) ? "Deduction" : reader.GetString(Ord("TransactionType")),
+                Status = reader.IsDBNull(Ord("Status")) ? "Active" : reader.GetString(Ord("Status")),
+                IsVoided = reader.IsDBNull(Ord("IsVoided")) ? false : reader.GetBoolean(Ord("IsVoided")),
+                VoidedAt = reader.IsDBNull(Ord("VoidedAt")) ? (DateTime?)null : reader.GetDateTime(Ord("VoidedAt")),
+                VoidedBy = reader.IsDBNull(Ord("VoidedBy")) ? string.Empty : reader.GetString(Ord("VoidedBy")),
+                VoidReason = reader.IsDBNull(Ord("VoidReason")) ? string.Empty : reader.GetString(Ord("VoidReason")),
                 CreatedBy = reader.IsDBNull(Ord("CreatedBy")) ? string.Empty : reader.GetString(Ord("CreatedBy")),
-                CreatedAt = reader.GetDateTime(Ord("CreatedAt"))
+                CreatedAt = reader.GetDateTime(Ord("CreatedAt")),
+                ModifiedBy = reader.IsDBNull(Ord("ModifiedBy")) ? string.Empty : reader.GetString(Ord("ModifiedBy")),
+                ModifiedAt = reader.IsDBNull(Ord("ModifiedAt")) ? (DateTime?)null : reader.GetDateTime(Ord("ModifiedAt")),
+                DeletedAt = reader.IsDBNull(Ord("DeletedAt")) ? (DateTime?)null : reader.GetDateTime(Ord("DeletedAt")),
+                DeletedBy = reader.IsDBNull(Ord("DeletedBy")) ? string.Empty : reader.GetString(Ord("DeletedBy")),
+                DeletedReason = reader.IsDBNull(Ord("DeletedReason")) ? string.Empty : reader.GetString(Ord("DeletedReason")),
+                FiscalYear = reader.IsDBNull(Ord("FiscalYear")) ? DateTime.Now.Year : reader.GetInt32(Ord("FiscalYear")),
+                AccountingPeriod = reader.IsDBNull(Ord("AccountingPeriod")) ? string.Empty : reader.GetString(Ord("AccountingPeriod")),
+                GLAccountCode = reader.IsDBNull(Ord("GLAccountCode")) ? string.Empty : reader.GetString(Ord("GLAccountCode")),
+                CostCenter = reader.IsDBNull(Ord("CostCenter")) ? string.Empty : reader.GetString(Ord("CostCenter")),
+                GrowerId = reader.IsDBNull(Ord("GrowerId")) ? 0 : reader.GetInt32(Ord("GrowerId")),
+                GrowerNumber = reader.IsDBNull(Ord("GrowerNumber")) ? string.Empty : reader.GetString(Ord("GrowerNumber")),
+                OriginalAdvanceAmount = reader.IsDBNull(Ord("OriginalAdvanceAmount")) ? (decimal?)null : reader.GetDecimal(Ord("OriginalAdvanceAmount")),
+                RemainingAdvanceAmount = reader.IsDBNull(Ord("RemainingAdvanceAmount")) ? (decimal?)null : reader.GetDecimal(Ord("RemainingAdvanceAmount")),
+                BatchSequence = reader.IsDBNull(Ord("BatchSequence")) ? (int?)null : reader.GetInt32(Ord("BatchSequence")),
+                ProcessingOrder = reader.IsDBNull(Ord("ProcessingOrder")) ? (int?)null : reader.GetInt32(Ord("ProcessingOrder")),
+                SystemVersion = reader.IsDBNull(Ord("SystemVersion")) ? string.Empty : reader.GetString(Ord("SystemVersion"))
             };
         }
 

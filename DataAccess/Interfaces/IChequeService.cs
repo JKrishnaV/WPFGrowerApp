@@ -65,6 +65,9 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         // Receipt details for cheque calculation
         Task<List<ReceiptDetailDto>> GetReceiptDetailsForChequeAsync(string chequeNumber);
 
+        // Payment history for grower
+        Task<List<dynamic>> GetPaymentHistoryForGrowerAsync(int growerId, string currentChequeNumber);
+
         // Unified cheque review methods
         Task<List<Cheque>> GetAllChequesIncludingAdvancesAsync();
         Task<List<Cheque>> GetChequesByTypeAsync(string chequeType);

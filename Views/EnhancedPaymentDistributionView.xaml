@@ -14,6 +14,8 @@
             
             <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
             <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+            <converters:BoolToBrushConverter x:Key="BoolToBrushConverter"/>
+            <converters:ZeroToVisibilityConverter x:Key="ZeroToVisibilityConverter"/>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -26,6 +28,30 @@
             <RowDefinition Height="*"/>     <!-- Main Content -->
             <RowDefinition Height="Auto"/> <!-- Status Bar -->
         </Grid.RowDefinitions>
+        
+        <!-- Loading Overlay -->
+        <Grid Grid.RowSpan="6" 
+              Background="#80000000" 
+              Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"
+              Panel.ZIndex="1000">
+            <Border HorizontalAlignment="Center" 
+                    VerticalAlignment="Center"
+                    Background="{DynamicResource MaterialDesignPaper}"
+                    CornerRadius="8"
+                    Padding="24">
+                <StackPanel>
+                <ProgressBar IsIndeterminate="True" 
+                             Width="40" 
+                             Height="40"
+                             Margin="0,0,0,16"
+                             Style="{DynamicResource MaterialDesignCircularProgressBar}"/>
+                <TextBlock Text="Loading payment data..." 
+                          Style="{DynamicResource MaterialDesignBody1TextBlock}"
+                          HorizontalAlignment="Center"
+                          Foreground="{DynamicResource MaterialDesignBody}"/>
+                </StackPanel>
+            </Border>
+        </Grid>
 
         <!-- Breadcrumb Navigation -->
         <materialDesign:ColorZone Grid.Row="0" Style="{StaticResource BreadcrumbNavigationStyle}">
@@ -189,10 +215,23 @@
                     <TextBlock Text="Available Batches" 
                                Style="{DynamicResource MaterialDesignSubtitle2TextBlock}" 
                                Margin="0,0,0,8"/>
+                    
+                    <!-- Select All Checkbox -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <CheckBox IsChecked="{Binding SelectAllBatches}" 
+                                  Margin="0,0,8,0"
+                                  VerticalAlignment="Center"/>
+                        <TextBlock Text="Select All" 
+                                   Style="{DynamicResource MaterialDesignBody2TextBlock}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    
                     <ListBox ItemsSource="{Binding AvailableBatches}"
                              SelectionMode="Multiple"
-                             Height="200"
+                             Height="350"
                              Margin="0,0,0,12"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             ScrollViewer.CanContentScroll="True"
                              materialDesign:ListBoxItemAssist.ShowSelection="True">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
@@ -213,13 +252,6 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
-                    
-                    <!-- Selected Batches Display -->
-                    <TextBlock Text="{Binding SelectedBatchesDisplay}" 
-                               Style="{DynamicResource MaterialDesignBody2TextBlock}" 
-                               Foreground="{DynamicResource MaterialDesignBodyLight}"
-                               Margin="0,0,0,16"
-                               TextWrapping="Wrap"/>
                     
                     
                 </StackPanel>
@@ -244,11 +276,60 @@
                                 Style="{DynamicResource MaterialDesignOutlinedButton}"
                                 Margin="16,0,0,0"
                                 Padding="12,6"/>
-                        <Button Content="Export" 
-                                Command="{Binding ExportCommand}"
-                                Style="{DynamicResource MaterialDesignOutlinedButton}"
-                                Margin="8,0,0,0"
-                                Padding="12,6"/>
+                        
+                        <!-- Export Menu Button -->
+                        <StackPanel Orientation="Horizontal" Margin="8,0,0,0">
+                            <ToggleButton x:Name="ExportMenuToggle"
+                                         Style="{DynamicResource MaterialDesignOutlinedButton}"
+                                         Padding="12,6">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Export"/>
+                                    <materialDesign:PackIcon Kind="ChevronDown" Width="26" Height="16" 
+                                                             Margin="8,0,0,0"/>
+                                </StackPanel>
+                            </ToggleButton>
+                            
+                            <Popup IsOpen="{Binding IsChecked, ElementName=ExportMenuToggle}"
+                                   PlacementTarget="{Binding ElementName=ExportMenuToggle}"
+                                   Placement="Bottom"
+                                   StaysOpen="False"
+                                   AllowsTransparency="True">
+                                <materialDesign:Card Padding="0">
+                                    <Border BorderBrush="{DynamicResource MaterialDesignDivider}"
+                                            BorderThickness="1"
+                                            Background="{DynamicResource MaterialDesignPaper}">
+                                        <StackPanel>
+                                            <Button Command="{Binding ExportToExcelCommand}"
+                                                    Style="{DynamicResource MaterialDesignFlatButton}"
+                                                    HorizontalContentAlignment="Left"
+                                                    Padding="2,2"
+                                                    MinWidth="100"
+                                                    Click="ClosePopup">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <materialDesign:PackIcon Kind="FileExcel" Width="20" Height="20" Margin="0,0,2,0"/>
+                                                    <TextBlock Text="Excel (.xlsx)" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+                                            
+                                            <Separator/>
+                                            
+                                            <Button Command="{Binding ExportToPdfCommand}"
+                                                    Style="{DynamicResource MaterialDesignFlatButton}"
+                                                    HorizontalContentAlignment="Left"
+                                                    Padding="2,2"
+                                                    MinWidth="100"
+                                                    Click="ClosePopup">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <materialDesign:PackIcon Kind="FilePdfBox" Width="20" Height="20" Margin="0,0,2,0"/>
+                                                    <TextBlock Text="PDF (.pdf)" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+                                        </StackPanel>
+                                    </Border>
+                                </materialDesign:Card>
+                            </Popup>
+                        </StackPanel>
+                        
                         <Button Content="Generate Selected Payments" 
                                 Command="{Binding GenerateSelectedPaymentsCommand}"
                                 Style="{DynamicResource MaterialDesignRaisedButton}"
@@ -272,6 +353,8 @@
                               SelectionMode="Single"
                               VirtualizingPanel.IsVirtualizing="True"
                               VirtualizingPanel.VirtualizationMode="Recycling"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                              ScrollViewer.CanContentScroll="True"
                               materialDesign:DataGridAssist.CellPadding="8 6 8 6"
                               materialDesign:DataGridAssist.ColumnHeaderPadding="8 8 8 8"
                               AlternatingRowBackground="{DynamicResource MaterialDesignDataGridRowHoverBackground}"
@@ -321,35 +404,66 @@
 
                             <!-- Net Amount (Always Consolidated) -->
                             <DataGridTextColumn Header="Net Amount" 
-                                                Binding="{Binding NetConsolidatedAmountDisplay}" 
+                                                Binding="{Binding NetConsolidatedAmountDisplay, UpdateSourceTrigger=PropertyChanged}" 
                                                 Width="120"
                                                 CanUserSort="True"/>
                             
                             <!-- Outstanding Advances -->
-                            <DataGridTextColumn Header="Advances" 
+                            <DataGridTextColumn Header="Outstanding" 
                                                 Binding="{Binding OutstandingAdvancesDisplay}" 
                                                 Width="100"
+                                                CanUserSort="True"/>
+                            
+                            <!-- Deduct From This Transaction -->
+                            <DataGridTemplateColumn Header="Deduct From This Transaction" Width="180">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding DeductFromThisTransaction, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
+                                                 IsEnabled="{Binding HasOutstandingAdvances}"
+                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                                 Margin="2"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            
+                            <!-- Remaining Deductions -->
+                            <DataGridTextColumn Header="Remaining Deductions" 
+                                                Binding="{Binding RemainingDeductionsDisplay, UpdateSourceTrigger=PropertyChanged}" 
+                                                Width="140"
                                                 CanUserSort="True"/>
                                                                                  
                             <!-- Status -->
                             <DataGridTextColumn Header="Status" 
-                                                Binding="{Binding StatusDisplay}" 
+                                                Binding="{Binding StatusDisplay, UpdateSourceTrigger=PropertyChanged}" 
                                                 Width="120"
                                                 CanUserSort="True"/>
                             
                             <!-- Actions -->
-                            <DataGridTemplateColumn Header="Actions" Width="60">
+                            <DataGridTemplateColumn Header="Actions" Width="120">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Button Command="{Binding DataContext.PreviewCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                Style="{DynamicResource MaterialDesignIconButton}"
-                                                IsEnabled="{Binding IsSelectedForPayment}"
-                                                Padding="4"
-                                                ToolTip="Preview Payment Details">
-                                            <materialDesign:PackIcon Kind="Eye" 
-                                                                     Width="16" 
-                                                                     Height="16"/>
-                                        </Button>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Command="{Binding DataContext.PreviewCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                    Style="{DynamicResource MaterialDesignIconButton}"
+                                                    IsEnabled="{Binding IsSelectedForPayment}"
+                                                    Padding="4"
+                                                    ToolTip="Preview Payment Details"
+                                                    Margin="0,0,4,0">
+                                                <materialDesign:PackIcon Kind="Eye" 
+                                                                         Width="16" 
+                                                                         Height="16"/>
+                                            </Button>
+                                            <Button Command="{Binding DataContext.ShowGrowerPaymentDetailsCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                    CommandParameter="{Binding}"
+                                                    Style="{DynamicResource MaterialDesignIconButton}"
+                                                    Padding="4"
+                                                    ToolTip="Show Payment Details"
+                                                    Margin="0,0,4,0">
+                                                <materialDesign:PackIcon Kind="Calculator" 
+                                                                         Width="16" 
+                                                                         Height="16"/>
+                                            </Button>
+                                        </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
@@ -358,6 +472,7 @@
                 </Grid>
             </materialDesign:Card>
         </Grid>
+
 
         <!-- Status Bar -->
         <materialDesign:ColorZone Grid.Row="5" Style="{StaticResource StatusFooterBarStyle}">

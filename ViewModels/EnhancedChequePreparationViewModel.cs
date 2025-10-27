@@ -25,13 +25,15 @@ namespace WPFGrowerApp.ViewModels
     public class EnhancedChequePreparationViewModel : ViewModelBase, IDisposable
     {
         private readonly IChequeService _chequeService;
-        private readonly IAdvanceChequeService _advanceChequeService;
+        private readonly IUnifiedAdvanceService _unifiedAdvanceService;
         private readonly ICrossBatchPaymentService _crossBatchPaymentService;
         private readonly IUnifiedVoidingService _unifiedVoidingService;
         private readonly WPFGrowerApp.Services.ChequePdfGenerator _pdfGenerator;
         private readonly WPFGrowerApp.Services.EnhancedChequePdfGenerator _enhancedPdfGenerator;
         private readonly IDialogService _dialogService;
         private readonly IHelpContentProvider _helpContentProvider;
+        private readonly IPaymentService _paymentService;
+        private readonly IReceiptService _receiptService;
 
         // Auto-search functionality
         private CancellationTokenSource? _searchCancellationTokenSource;
@@ -91,22 +93,26 @@ namespace WPFGrowerApp.ViewModels
 
         public EnhancedChequePreparationViewModel(
             IChequeService chequeService,
-            IAdvanceChequeService advanceChequeService,
+            IUnifiedAdvanceService unifiedAdvanceService,
             ICrossBatchPaymentService crossBatchPaymentService,
             IUnifiedVoidingService unifiedVoidingService,
             WPFGrowerApp.Services.ChequePdfGenerator pdfGenerator,
             WPFGrowerApp.Services.EnhancedChequePdfGenerator enhancedPdfGenerator,
             IDialogService dialogService,
-            IHelpContentProvider helpContentProvider)
+            IHelpContentProvider helpContentProvider,
+            IPaymentService paymentService,
+            IReceiptService receiptService)
         {
             _chequeService = chequeService;
-            _advanceChequeService = advanceChequeService;
+            _unifiedAdvanceService = unifiedAdvanceService;
             _crossBatchPaymentService = crossBatchPaymentService;
             _unifiedVoidingService = unifiedVoidingService;
             _pdfGenerator = pdfGenerator;
             _enhancedPdfGenerator = enhancedPdfGenerator;
             _dialogService = dialogService;
             _helpContentProvider = helpContentProvider;
+            _paymentService = paymentService;
+            _receiptService = receiptService;
 
             // Initialize collections
             ChequeItems = new ObservableCollection<ChequeItem>();
@@ -117,10 +123,10 @@ namespace WPFGrowerApp.ViewModels
             SearchText = string.Empty;
             ChequeNumberFilter = string.Empty;
             GrowerNumberFilter = string.Empty;
-            StatusFilter = "All";
+            StatusFilter = "Generated"; // This view only shows Generated status cheques
             SelectedTypeFilter = null; // null represents "All"
             StartDate = DateTime.Now.AddMonths(-1);
-            EndDate = DateTime.Now.AddYears(1); // Include future dates for advance cheques
+            EndDate = DateTime.Now; // More reasonable default - 1 month ahead instead of 1 year
 
             // Initialize commands
             SelectAllCommand = new RelayCommand(async p => await SelectAllAsync());
@@ -273,6 +279,7 @@ namespace WPFGrowerApp.ViewModels
             {
                 if (SetProperty(ref _startDate, value))
                 {
+                    Logger.Info($"StartDate changed to: {_startDate:yyyy-MM-dd} (Original value: {value:yyyy-MM-dd})");
                     TriggerAutoSearch();
                 }
             }
@@ -285,6 +292,7 @@ namespace WPFGrowerApp.ViewModels
             {
                 if (SetProperty(ref _endDate, value))
                 {
+                    Logger.Info($"EndDate changed to: {_endDate:yyyy-MM-dd} (Original value: {value:yyyy-MM-dd})");
                     TriggerAutoSearch();
                 }
             }
@@ -435,7 +443,7 @@ namespace WPFGrowerApp.ViewModels
                         {
                             foreach (var advanceId in advanceChequeIds.Where(id => id.HasValue))
                             {
-                                await _advanceChequeService.PrintAdvanceChequeAsync(advanceId.Value, printedBy);
+                                await _unifiedAdvanceService.PrintAdvanceChequeAsync(advanceId.Value, printedBy);
                             }
                         }
 
@@ -911,10 +919,10 @@ namespace WPFGrowerApp.ViewModels
                 SearchText = string.Empty;
                 ChequeNumberFilter = string.Empty;
                 GrowerNumberFilter = string.Empty;
-                StatusFilter = "All";
+                StatusFilter = "Generated"; // This view only shows Generated status cheques
                 SelectedTypeFilter = null; // null represents "All"
                 StartDate = DateTime.Now.AddMonths(-1);
-                EndDate = DateTime.Now.AddYears(1); // Include future dates for advance cheques
+                EndDate = DateTime.Now.AddMonths(1); // More reasonable default - 1 month ahead instead of 1 year
                 await ApplyFiltersAsync();
             }
             catch (Exception ex)
@@ -1071,7 +1079,7 @@ namespace WPFGrowerApp.ViewModels
                 var regularCheques = await _chequeService.GetChequesByStatusAsync("Generated");
                 
                 // Load advance cheques
-                var advanceCheques = await _advanceChequeService.GetAllAdvanceChequesAsync("Generated");
+                var advanceCheques = await _unifiedAdvanceService.GetAllAdvanceChequesAsync("Generated");
                 
                 // Load consolidated cheques
                 var consolidatedCheques = await _chequeService.GetChequesByStatusAsync("Generated");
@@ -1244,8 +1252,28 @@ namespace WPFGrowerApp.ViewModels
                     filtered = filtered.Where(c => c.PaymentType == SelectedTypeFilter.Value);
                 }
 
-                // Apply date filter
-                filtered = filtered.Where(c => c.ChequeDate >= StartDate && c.ChequeDate <= EndDate);
+                // Apply date filter - use date only comparison to avoid time issues
+                var beforeDateFilter = filtered.Count();
+                filtered = filtered.Where(c => 
+                {
+                    var chequeDate = c.ChequeDate.Date;
+                    var startDate = StartDate.Date;
+                    var endDate = EndDate.Date;
+                    var isInRange = chequeDate >= startDate && chequeDate <= endDate;
+                    
+                    Logger.Debug($"Date Check: {c.ChequeNumber} - ChequeDate={chequeDate:yyyy-MM-dd}, StartDate={startDate:yyyy-MM-dd}, EndDate={endDate:yyyy-MM-dd}, InRange={isInRange}");
+                    
+                    return isInRange;
+                });
+                var afterDateFilter = filtered.Count();
+                
+                // Debug logging
+                Logger.Info($"Date Filter Debug: StartDate={StartDate:yyyy-MM-dd}, EndDate={EndDate:yyyy-MM-dd}");
+                Logger.Info($"Date Filter Debug: Before={beforeDateFilter}, After={afterDateFilter}");
+                foreach (var cheque in ChequeItems.Take(5))
+                {
+                    Logger.Debug($"Cheque Debug: {cheque.ChequeNumber} - Date={cheque.ChequeDate:yyyy-MM-dd}, Status={cheque.Status}");
+                }
 
                 // Update filtered collection
                 FilteredChequeItems.Clear();
@@ -1345,7 +1373,7 @@ namespace WPFGrowerApp.ViewModels
                 propertyName == nameof(StartDate) || 
                 propertyName == nameof(EndDate))
             {
-                _ = ApplyFiltersAsync();
+                TriggerAutoSearch();
             }
         }
 
@@ -1444,8 +1472,17 @@ namespace WPFGrowerApp.ViewModels
             {
                 if (parameter is ChequeItem chequeItem)
                 {
-                    var dialogViewModel = new ViewModels.Dialogs.ChequeCalculationDialogViewModel(chequeItem);
-                    var dialogView = new Views.Dialogs.InvoiceStyleChequeCalculationDialogView(dialogViewModel);
+                    // Create the invoice-style calculation details dialog with services
+                    var dialogViewModel = new ViewModels.Dialogs.ChequeCalculationDialogViewModel(
+                        chequeItem, 
+                        _paymentService, 
+                        _receiptService, 
+                        _chequeService);
+                    
+                    // Load the data before showing the dialog
+                    await dialogViewModel.LoadInvoiceStyleDetailsAsync();
+                    
+                    var dialogView = new Views.Dialogs.ChequeCalculationDialogView(dialogViewModel);
                     dialogView.Owner = Application.Current.MainWindow;
                     dialogView.ShowDialog();
                 }

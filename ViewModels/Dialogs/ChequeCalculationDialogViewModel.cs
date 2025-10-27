@@ -259,12 +259,12 @@ namespace WPFGrowerApp.ViewModels.Dialogs
                     Status = ChequeItem.Status
                 };
 
-                // Load summary - will be updated after loading deductions
+                // Load summary - will be updated after loading deductions and receipts
                 InvoiceStyleDetails.Summary = new Models.PaymentSummary
                 {
-                    TotalGrossPayments = ChequeItem.Amount,
-                    TotalDeductions = 0, // Will be calculated after loading deductions
-                    NetChequeAmount = ChequeItem.NetAmount
+                    TotalGrossPayments = 0, // Will be calculated from receipts
+                    TotalDeductions = 0, // Will be calculated from deductions
+                    NetChequeAmount = 0 // Will be calculated as Gross - Deductions
                 };
 
                 // Load payment batches with actual receipt data from database
@@ -308,30 +308,36 @@ namespace WPFGrowerApp.ViewModels.Dialogs
                     });
                 }
 
-                // Load advance deductions from database
-                if (_chequeService != null)
+                // Load advance deductions from database if not already loaded
+                if (_chequeService != null && (ChequeItem.AdvanceDeductions == null || !ChequeItem.AdvanceDeductions.Any()))
                 {
                     Logger.Info($"Loading advance deductions for cheque: {ChequeItem.ChequeNumber}");
                     var advanceDeductions = await _chequeService.GetAdvanceDeductionsByChequeNumberAsync(ChequeItem.ChequeNumber);
                     ChequeItem.AdvanceDeductions = advanceDeductions;
                     Logger.Info($"Found {advanceDeductions.Count} advance deductions for cheque {ChequeItem.ChequeNumber}");
                 }
+                else if (ChequeItem.AdvanceDeductions != null && ChequeItem.AdvanceDeductions.Any())
+                {
+                    Logger.Info($"Using existing advance deductions from ChequeItem ({ChequeItem.AdvanceDeductions.Count} deductions)");
+                }
 
-                // Load deductions
+                // Load deductions - show ONLY the deductions for this specific cheque
                 InvoiceStyleDetails.Deductions = new List<DeductionDetail>();
                 if (ChequeItem.AdvanceDeductions != null && ChequeItem.AdvanceDeductions.Any())
                 {
                     foreach (var deduction in ChequeItem.AdvanceDeductions)
                     {
+                        var totalAdvanceAmount = deduction.OriginalAdvanceAmount?.ToString("C") ?? "N/A";
                         InvoiceStyleDetails.Deductions.Add(new DeductionDetail
                         {
                             Type = "Advance Deduction",
-                            Description = $"Advance payment deduction - Cheque ID: {deduction.AdvanceChequeId}",
+                            Description = $"Advance Cheque ID: {deduction.AdvanceChequeId}, Total Advance: {totalAdvanceAmount}, Deducted: {deduction.DeductionAmount:C}",
                             Amount = deduction.DeductionAmount
                         });
                     }
                     
                     Logger.Info($"Added {InvoiceStyleDetails.Deductions.Count} deduction details to invoice style details");
+                    Logger.Info($"Total deduction amount for this cheque: {InvoiceStyleDetails.Deductions.Sum(d => d.Amount):C}");
                 }
                 else
                 {
@@ -346,12 +352,34 @@ namespace WPFGrowerApp.ViewModels.Dialogs
                     Logger.Info($"Updated summary with total deductions: {totalDeductions:C}");
                 }
 
-                // Load payment history
-                InvoiceStyleDetails.History = new PaymentHistory
+                // Calculate gross amount from receipts and update summary
+                if (InvoiceStyleDetails.PaymentBatches.Any() && InvoiceStyleDetails.PaymentBatches[0].Receipts.Any())
                 {
-                    Payments = new List<PaymentHistoryItem>(),
-                    SeasonTotal = ChequeItem.NetAmount
-                };
+                    var totalGrossPayments = InvoiceStyleDetails.PaymentBatches.Sum(b => b.Receipts.Sum(r => r.Amount));
+                    InvoiceStyleDetails.Summary.TotalGrossPayments = totalGrossPayments;
+                    Logger.Info($"Updated summary with total gross payments from receipts: {totalGrossPayments:C}");
+                    
+                    // Calculate Net Cheque Amount = Gross - Deductions
+                    var calculatedNet = totalGrossPayments - InvoiceStyleDetails.Summary.TotalDeductions;
+                    InvoiceStyleDetails.Summary.NetChequeAmount = calculatedNet;
+                    Logger.Info($"Calculated Net Cheque Amount: Gross ({totalGrossPayments:C}) - Deductions ({InvoiceStyleDetails.Summary.TotalDeductions:C}) = {calculatedNet:C}");
+                    
+                    // Verify the calculation matches the expected cheque amount
+                    Logger.Info($"Expected net from ChequeItem: {ChequeItem.Amount:C}");
+                    if (Math.Abs(calculatedNet - ChequeItem.Amount) > 0.01m)
+                    {
+                        Logger.Warn($"Calculated net ({calculatedNet:C}) does not match ChequeItem.Amount ({ChequeItem.Amount:C}). Using calculated value.");
+                    }
+                }
+                else
+                {
+                    // If no receipts loaded, use ChequeItem.Amount as net
+                    InvoiceStyleDetails.Summary.NetChequeAmount = ChequeItem.Amount;
+                    Logger.Info($"No receipts loaded, using ChequeItem.Amount as Net: {ChequeItem.Amount:C}");
+                }
+
+                // Load payment history for this grower
+                await LoadPaymentHistoryAsync();
             }
             catch (Exception ex)
             {
@@ -451,6 +479,55 @@ namespace WPFGrowerApp.ViewModels.Dialogs
                 Logger.Error($"Error loading actual receipt data for cheque {ChequeItem.ChequeNumber}: {ex.Message}", ex);
                 batch.Receipts = new List<ReceiptLineItem>();
                 batch.BatchSubtotal = 0;
+            }
+        }
+
+        private async Task LoadPaymentHistoryAsync()
+        {
+            try
+            {
+                if (_chequeService == null)
+                {
+                    Logger.Warn("ChequeService not available for loading payment history");
+                    InvoiceStyleDetails.History = new PaymentHistory
+                    {
+                        Payments = new List<PaymentHistoryItem>(),
+                        SeasonTotal = ChequeItem.NetAmount
+                    };
+                    return;
+                }
+
+                Logger.Info($"Loading payment history for grower {ChequeItem.GrowerId}, excluding cheque {ChequeItem.ChequeNumber}");
+                
+                // Get previous cheques for this grower
+                var previousCheques = await _chequeService.GetPaymentHistoryForGrowerAsync(
+                    ChequeItem.GrowerId, 
+                    ChequeItem.ChequeNumber);
+
+                var historyItems = previousCheques.Select(c => new PaymentHistoryItem
+                {
+                    ChequeNumber = c.ChequeNumber ?? "N/A",
+                    BatchNumber = c.BatchNumber ?? "N/A",
+                    Date = c.Date,
+                    Amount = c.Amount ?? 0m
+                }).ToList();
+
+                Logger.Info($"Found {historyItems.Count} previous cheques for grower");
+
+                InvoiceStyleDetails.History = new PaymentHistory
+                {
+                    Payments = historyItems,
+                    SeasonTotal = ChequeItem.NetAmount
+                };
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error loading payment history: {ex.Message}", ex);
+                InvoiceStyleDetails.History = new PaymentHistory
+                {
+                    Payments = new List<PaymentHistoryItem>(),
+                    SeasonTotal = ChequeItem.NetAmount
+                };
             }
         }
 

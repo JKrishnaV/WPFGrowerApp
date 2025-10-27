@@ -1,0 +1,145 @@
+<Window x:Class="WPFGrowerApp.Views.GrowerDeductionDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        mc:Ignorable="d"
+        Title="Grower Deductions" 
+        Height="500" 
+        Width="700"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}">
+    
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Styles/StandardizedViewTemplate.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="Grower Deductions" 
+                       Style="{DynamicResource MaterialDesignHeadline4TextBlock}"
+                       Margin="0,0,0,10"/>
+            <TextBlock Text="{Binding GrowerName}" 
+                       Style="{DynamicResource MaterialDesignSubtitle1TextBlock}"
+                       FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding GrowerNumber}" 
+                       Style="{DynamicResource MaterialDesignBody1TextBlock}"
+                       Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+        </StackPanel>
+
+        <!-- Summary Information -->
+        <materialDesign:Card Grid.Row="1" Margin="0,0,0,20">
+            <Grid Margin="15">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Gross Amount" Style="{DynamicResource MaterialDesignCaptionTextBlock}" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                    <TextBlock Text="{Binding GrossAmountDisplay}" FontSize="16" FontWeight="Bold"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="1">
+                    <TextBlock Text="Outstanding Advances" Style="{DynamicResource MaterialDesignCaptionTextBlock}" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                    <TextBlock Text="{Binding TotalOutstandingAdvancesDisplay}" FontSize="16" FontWeight="Bold"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="Deduct From This Transaction" Style="{DynamicResource MaterialDesignCaptionTextBlock}" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                    <TextBox Text="{Binding DeductFromThisTransaction, UpdateSourceTrigger=PropertyChanged}"
+                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                             Margin="0,5,0,0"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="3">
+                    <TextBlock Text="Net Payment Amount" Style="{DynamicResource MaterialDesignCaptionTextBlock}" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                    <TextBlock Text="{Binding NetPaymentAmountDisplay}" FontSize="16" FontWeight="Bold"/>
+                </StackPanel>
+            </Grid>
+        </materialDesign:Card>
+
+        <!-- Outstanding Advances List -->
+        <materialDesign:Card Grid.Row="2" Margin="0,0,0,20">
+            <StackPanel Margin="15">
+                <TextBlock Text="Outstanding Advances" 
+                           Style="{DynamicResource MaterialDesignSubtitle1TextBlock}" 
+                           Margin="0,0,0,15"/>
+                
+                <DataGrid ItemsSource="{Binding OutstandingAdvances}"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          CanUserReorderColumns="False"
+                          CanUserResizeColumns="True"
+                          CanUserSortColumns="True"
+                          GridLinesVisibility="Horizontal"
+                          HeadersVisibility="Column"
+                          SelectionMode="Single"
+                          MaxHeight="200">
+                    
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Cheque Number" 
+                                            Binding="{Binding ChequeNumber}" 
+                                            Width="120" 
+                                            IsReadOnly="True"/>
+                        
+                        <DataGridTextColumn Header="Advance Date" 
+                                            Binding="{Binding AdvanceDate, StringFormat='MMM dd, yyyy'}" 
+                                            Width="100" 
+                                            IsReadOnly="True"/>
+                        
+                        <DataGridTextColumn Header="Original Amount" 
+                                            Binding="{Binding OriginalAdvanceAmount, StringFormat=C}" 
+                                            Width="120" 
+                                            IsReadOnly="True"/>
+                        
+                        <DataGridTextColumn Header="Remaining Amount" 
+                                            Binding="{Binding CurrentAdvanceAmount, StringFormat=C}" 
+                                            Width="120" 
+                                            IsReadOnly="True"/>
+                        
+                        <DataGridTextColumn Header="Status" 
+                                            Binding="{Binding Status}" 
+                                            Width="100" 
+                                            IsReadOnly="True"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </StackPanel>
+        </materialDesign:Card>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="3" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Right">
+            <Button Content="Apply" 
+                    Command="{Binding ApplyCommand}"
+                    Style="{StaticResource MaterialDesignRaisedButton}"
+                    Background="#4CAF50"
+                    Foreground="White"
+                    Margin="0,0,10,0"
+                    Padding="15,5"/>
+            <Button Content="Cancel" 
+                    Command="{Binding CancelCommand}"
+                    IsCancel="True"
+                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                    Padding="15,5"/>
+        </StackPanel>
+    </Grid>
+</Window>

@@ -21,6 +21,9 @@ namespace WPFGrowerApp.Models
         private string _recommendedPaymentType;
         private string _reason;
         private bool _isSelectedForPayment = true; // Default to checked
+        private decimal _advanceDeductionAmount;
+        private decimal _deductFromThisTransaction;
+        private decimal _remainingDeductions;
 
         public int GrowerId
         {
@@ -55,7 +58,16 @@ namespace WPFGrowerApp.Models
         public decimal ConsolidatedAmount
         {
             get => _consolidatedAmount;
-            set => SetProperty(ref _consolidatedAmount, value);
+            set 
+            {
+                if (SetProperty(ref _consolidatedAmount, value))
+                {
+                    // Trigger property change notification for calculated properties
+                    OnPropertyChanged(nameof(NetPaymentAmount));
+                    OnPropertyChanged(nameof(NetConsolidatedAmountDisplay));
+                    OnPropertyChanged(nameof(StatusDisplay));
+                }
+            }
         }
 
         public bool CanBeConsolidated
@@ -73,7 +85,24 @@ namespace WPFGrowerApp.Models
         public decimal OutstandingAdvances
         {
             get => _outstandingAdvances;
-            set => SetProperty(ref _outstandingAdvances, value);
+            set 
+            {
+                if (SetProperty(ref _outstandingAdvances, value))
+                {
+                    // Initialize deduction amounts when outstanding advances are set
+                    if (value > 0)
+                    {
+                        // Default to deducting the full amount if it's less than or equal to gross amount
+                        DeductFromThisTransaction = Math.Min(value, ConsolidatedAmount);
+                        RemainingDeductions = value - DeductFromThisTransaction;
+                    }
+                    else
+                    {
+                        DeductFromThisTransaction = 0;
+                        RemainingDeductions = 0;
+                    }
+                }
+            }
         }
 
         public string RecommendedPaymentType
@@ -94,16 +123,78 @@ namespace WPFGrowerApp.Models
             set => SetProperty(ref _isSelectedForPayment, value);
         }
 
+        public decimal AdvanceDeductionAmount
+        {
+            get => _advanceDeductionAmount;
+            set => SetProperty(ref _advanceDeductionAmount, value);
+        }
+
+        public decimal NetPaymentAmount
+        {
+            get => ConsolidatedAmount - DeductFromThisTransaction;
+        }
+
+        public decimal DeductFromThisTransaction
+        {
+            get => _deductFromThisTransaction;
+            set 
+            {
+                if (SetProperty(ref _deductFromThisTransaction, value))
+                {
+                    // Validate the deduction amount - cannot be negative and cannot exceed gross amount
+                    if (value < 0)
+                        _deductFromThisTransaction = 0;
+                    else
+                    {
+                        // Cap at the minimum of OutstandingAdvances and ConsolidatedAmount
+                        // This prevents deducting more than the gross payment amount
+                        var maxAllowed = Math.Min(OutstandingAdvances, ConsolidatedAmount);
+                        if (value > maxAllowed)
+                            _deductFromThisTransaction = maxAllowed;
+                    }
+                    
+                    // Update remaining deductions (how much is left after this transaction)
+                    RemainingDeductions = OutstandingAdvances - _deductFromThisTransaction;
+                    
+                    // Trigger property change notifications
+                    OnPropertyChanged(nameof(NetPaymentAmount));
+                    OnPropertyChanged(nameof(NetConsolidatedAmountDisplay));
+                    OnPropertyChanged(nameof(StatusDisplay));
+                }
+            }
+        }
+
+        public decimal RemainingDeductions
+        {
+            get => _remainingDeductions;
+            set 
+            {
+                if (SetProperty(ref _remainingDeductions, value))
+                {
+                    // Trigger property change notification for display property
+                    OnPropertyChanged(nameof(RemainingDeductionsDisplay));
+                }
+            }
+        }
+
         // Computed properties
         public string GrowerDisplay => $"{GrowerNumber} - {GrowerName}";
         public string RegularAmountDisplay => RegularAmount.ToString("C");
         public string ConsolidatedAmountDisplay => ConsolidatedAmount.ToString("C");
         public string OutstandingAdvancesDisplay => OutstandingAdvances.ToString("C");
+        public string DeductFromThisTransactionDisplay => DeductFromThisTransaction.ToString("C");
+        public string RemainingDeductionsDisplay => RemainingDeductions.ToString("C");
         public decimal NetRegularAmount => RegularAmount - OutstandingAdvances;
         public decimal NetConsolidatedAmount => ConsolidatedAmount - OutstandingAdvances;
+        
+        // Properties for proper advance deduction logic (cap deduction at payment amount)
+        public decimal ActualDeductionAmount => Math.Min(ConsolidatedAmount, OutstandingAdvances);
+        public decimal ActualNetAmount => ConsolidatedAmount - ActualDeductionAmount;
+        public decimal RemainingAdvanceAmount => Math.Max(0, OutstandingAdvances - ConsolidatedAmount);
+        public decimal TotalAmount => NetConsolidatedAmount + OutstandingAdvances;
         public decimal GrossTotalAmount => NetConsolidatedAmount + OutstandingAdvances;
         public string NetRegularAmountDisplay => NetRegularAmount.ToString("C");
-        public string NetConsolidatedAmountDisplay => NetConsolidatedAmount.ToString("C");
+        public string NetConsolidatedAmountDisplay => NetPaymentAmount.ToString("C");
         public string GrossTotalAmountDisplay => GrossTotalAmount.ToString("C");
         public bool IsConsolidated => SelectedPaymentType == ChequePaymentType.Distribution;
         public bool IsRegular => SelectedPaymentType == ChequePaymentType.Regular;
@@ -116,6 +207,8 @@ namespace WPFGrowerApp.Models
         {
             SelectedPaymentType = ChequePaymentType.Regular;
             RecommendedPaymentType = "Regular";
+            DeductFromThisTransaction = 0;
+            RemainingDeductions = 0;
         }
 
         public GrowerPaymentSelection(int growerId, string growerName, string growerNumber) : this()
@@ -164,11 +257,22 @@ namespace WPFGrowerApp.Models
 
         private string GetStatusDisplay()
         {
-            if (HasExcessiveAdvances)
-                return $"⚠️ EXCESSIVE ADVANCES: {ExcessAdvanceAmount:C} over gross";
-            
             if (HasOutstandingAdvances)
-                return $"Outstanding Advances: {OutstandingAdvancesDisplay}";
+            {
+                if (DeductFromThisTransaction > ConsolidatedAmount)
+                {
+                    var excess = DeductFromThisTransaction - ConsolidatedAmount;
+                    return $"▲ EXCESSIVE DEDUCTION: {excess:C} over gross";
+                }
+                else if (RemainingDeductions > 0)
+                {
+                    return $"Outstanding Advances: {OutstandingAdvances:C} (Deducting {DeductFromThisTransaction:C}, {RemainingDeductions:C} remaining)";
+                }
+                else
+                {
+                    return $"All advances deducted: {OutstandingAdvances:C}";
+                }
+            }
             
             if (CanBeConsolidated)
                 return "Can be consolidated";

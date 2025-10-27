@@ -13,10 +13,14 @@ namespace WPFGrowerApp.DataAccess.Services
     public class PaymentDistributionService : BaseDatabaseService, IPaymentDistributionService
     {
         private readonly ICrossBatchPaymentService _crossBatchPaymentService;
+        private readonly IUnifiedAdvanceService _unifiedAdvanceService;
 
-        public PaymentDistributionService(ICrossBatchPaymentService crossBatchPaymentService)
+        public PaymentDistributionService(
+            ICrossBatchPaymentService crossBatchPaymentService,
+            IUnifiedAdvanceService unifiedAdvanceService)
         {
             _crossBatchPaymentService = crossBatchPaymentService;
+            _unifiedAdvanceService = unifiedAdvanceService;
         }
         public async Task<IEnumerable<PaymentBatch>> GetAvailableBatchesAsync()
         {
@@ -398,8 +402,10 @@ namespace WPFGrowerApp.DataAccess.Services
                 CreatedBy = App.CurrentUser?.Username ?? "SYSTEM"
             }, transaction);
 
-            // Create advance deductions for outstanding advances
-            await CreateAdvanceDeductionsAsync(item.GrowerId, chequeId, item.PaymentBatchId ?? 0, connection, transaction);
+            // Apply advance deductions using UnifiedAdvanceService
+            // Note: The UnifiedAdvanceService creates its own transaction, so we need to handle this carefully
+            // We'll skip automatic deduction here and let it be handled separately if needed
+            // The deduction logic is now managed through the Enhanced Payment Distribution UI
 
             return chequeId;
         }
@@ -426,79 +432,6 @@ namespace WPFGrowerApp.DataAccess.Services
             {
                 Logger.Error($"Error getting source batches for distribution {distributionId}: {ex.Message}", ex);
                 return string.Empty;
-            }
-        }
-
-        /// <summary>
-        /// Create advance deductions for outstanding advances when generating a cheque
-        /// </summary>
-        private async Task CreateAdvanceDeductionsAsync(int growerId, int chequeId, int paymentBatchId, SqlConnection connection, SqlTransaction transaction)
-        {
-            try
-            {
-                // Validate that PaymentBatchId is valid
-                if (paymentBatchId <= 0)
-                {
-                    Logger.Info($"Invalid PaymentBatchId {paymentBatchId} for grower {growerId}. Skipping advance deductions.");
-                    return;
-                }
-                // Get all outstanding advances for the grower
-                var outstandingAdvancesSql = @"
-                    SELECT AdvanceChequeId, AdvanceAmount 
-                    FROM AdvanceCheques 
-                    WHERE GrowerId = @GrowerId 
-                    AND Status = 'Printed'
-                    AND DeductedByChequeId IS NULL";
-
-                var outstandingAdvances = await connection.QueryAsync<(int AdvanceChequeId, decimal AdvanceAmount)>(outstandingAdvancesSql, new { GrowerId = growerId }, transaction);
-
-                foreach (var advance in outstandingAdvances)
-                {
-                    // Create deduction record
-                    var deductionSql = @"
-                        INSERT INTO AdvanceDeductions (
-                            AdvanceChequeId, ChequeId, PaymentBatchId, DeductionAmount, 
-                            DeductionDate, CreatedBy, CreatedAt
-                        )
-                        VALUES (
-                            @AdvanceChequeId, @ChequeId, @PaymentBatchId, @DeductionAmount,
-                            @DeductionDate, @CreatedBy, @CreatedAt
-                        )";
-
-                    await connection.ExecuteAsync(deductionSql, new
-                    {
-                        AdvanceChequeId = advance.AdvanceChequeId,
-                        ChequeId = chequeId,
-                        PaymentBatchId = paymentBatchId,
-                        DeductionAmount = advance.AdvanceAmount,
-                        DeductionDate = DateTime.Now,
-                        CreatedBy = App.CurrentUser?.Username ?? "SYSTEM",
-                        CreatedAt = DateTime.Now
-                    }, transaction);
-
-                    // Update the advance cheque record
-                    var updateAdvanceSql = @"
-                        UPDATE AdvanceCheques 
-                        SET DeductedByChequeId = @ChequeId,
-                            DeductedAt = @DeductedAt,
-                            DeductedBy = @DeductedBy
-                        WHERE AdvanceChequeId = @AdvanceChequeId";
-
-                    await connection.ExecuteAsync(updateAdvanceSql, new
-                    {
-                        ChequeId = chequeId,
-                        AdvanceChequeId = advance.AdvanceChequeId,
-                        DeductedAt = DateTime.Now,
-                        DeductedBy = App.CurrentUser?.Username ?? "SYSTEM"
-                    }, transaction);
-
-                    Logger.Info($"Created advance deduction for AdvanceChequeId {advance.AdvanceChequeId}, Amount: {advance.AdvanceAmount:C}, ChequeId: {chequeId}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Error creating advance deductions for grower {growerId}: {ex.Message}", ex);
-                throw;
             }
         }
 
@@ -844,15 +777,21 @@ namespace WPFGrowerApp.DataAccess.Services
                                     // All payments are now handled as regular payments through the payment distribution system
                                     
                                     // Generate regular cheque for single batch
+                                    // Calculate deduction and net amounts
+                                    var deductionAmount = item.AdvanceDeductionAmount;
+                                    var netAmount = item.Amount - deductionAmount;
+                                    
                                     var chequeSql = @"
                                             INSERT INTO Cheques (
                                                 ChequeSeriesId, ChequeNumber, FiscalYear, GrowerId, PaymentBatchId, PaymentDistributionId,
-                                                ChequeAmount, ChequeDate, Status, CreatedAt, CreatedBy
+                                                ChequeAmount, ChequeDate, Status, CreatedAt, CreatedBy,
+                                                OriginalAmount, DeductionAmount, NetAmount
                                             )
                                             OUTPUT INSERTED.ChequeId
                                             VALUES (
                                                 @ChequeSeriesId, @ChequeNumber, @FiscalYear, @GrowerId, @PaymentBatchId, @PaymentDistributionId,
-                                                @ChequeAmount, @ChequeDate, @Status, @CreatedAt, @CreatedBy
+                                                @ChequeAmount, @ChequeDate, @Status, @CreatedAt, @CreatedBy,
+                                                @OriginalAmount, @DeductionAmount, @NetAmount
                                             )";
 
                                     var timestamp = DateTime.Now.ToString("HHmmssfff");
@@ -868,40 +807,114 @@ namespace WPFGrowerApp.DataAccess.Services
                                         GrowerId = item.GrowerId,
                                         PaymentBatchId = primaryBatchId,
                                         PaymentDistributionId = distributionId,
-                                        ChequeAmount = item.Amount,
+                                        ChequeAmount = netAmount, // Net amount after deductions
                                         ChequeDate = DateTime.Now,
                                         Status = "Generated",
                                         CreatedAt = DateTime.Now,
-                                        CreatedBy = generatedBy
+                                        CreatedBy = generatedBy,
+                                        OriginalAmount = item.Amount,
+                                        DeductionAmount = deductionAmount,
+                                        NetAmount = netAmount
                                     }, transaction);
 
-                                    // Create advance deductions for this grower
-                                    await CreateAdvanceDeductionsAsync(item.GrowerId, chequeId, primaryBatchId ?? 0, connection, transaction);
+                                    // Apply advance deductions if specified in the distribution item
+                                    if (item.AdvanceDeductionAmount > 0)
+                                    {
+                                        try
+                                        {
+                                            // Apply deductions using UnifiedAdvanceService within the same transaction
+                                            var deductionResult = await _unifiedAdvanceService.ApplyAdvanceDeductionsAsync(
+                                                item.GrowerId,
+                                                primaryBatchId ?? 0,
+                                                item.AdvanceDeductionAmount,
+                                                App.CurrentUser?.Username ?? "SYSTEM",
+                                                connection,
+                                                transaction);
+                                            
+                                            if (!deductionResult.IsSuccessful)
+                                            {
+                                                Logger.Warn($"Failed to apply deductions for grower {item.GrowerId}: {string.Join(", ", deductionResult.Errors)}");
+                                                throw new Exception($"Failed to apply deductions: {string.Join(", ", deductionResult.Errors)}");
+                                            }
+                                            
+                                            // Update deduction records to link them to the cheque
+                                            if (deductionResult.Deductions.Any())
+                                            {
+                                                var updateDeductionSql = @"
+                                                    UPDATE AdvanceDeductions 
+                                                    SET ChequeId = @ChequeId
+                                                    WHERE DeductionId IN @DeductionIds";
+                                                
+                                                await connection.ExecuteAsync(updateDeductionSql, new
+                                                {
+                                                    ChequeId = chequeId,
+                                                    DeductionIds = deductionResult.Deductions.Select(d => d.DeductionId).ToList()
+                                                }, transaction);
+                                            }
+                                            
+                                            Logger.Info($"Applied {deductionResult.DeductionCount} advance deductions totaling {deductionResult.TotalDeductedAmount:C} for grower {item.GrowerId}");
+                                        }
+                                        catch (Exception dedEx)
+                                        {
+                                            Logger.Error($"Error applying advance deductions for grower {item.GrowerId}: {dedEx.Message}", dedEx);
+                                            throw; // Re-throw to trigger transaction rollback
+                                        }
+                                    }
                                     
                                     Logger.Info($"Generated regular cheque {chequeId} for grower {item.GrowerId}");
                                 }
                             }
 
-                            // STEP 5: Update batch statuses for ALL selected batches
+                            // STEP 5: Update batch statuses only if ALL growers in the batch have been processed
                             if (batchIds?.Any() == true)
                             {
-                                // Build dynamic SQL with parameter placeholders
-                                var batchIdPlaceholders = string.Join(",", batchIds.Select((_, i) => $"@BatchId{i}"));
-                                var updateBatchSql = $@"
+                                foreach (var batchId in batchIds)
+                                {
+                                    // Get all growers in this batch
+                                    var allGrowersInBatch = await GetGrowersInBatchAsync(batchId, connection, transaction);
+                                    
+                                    // Get growers that were processed in this distribution
+                                    var processedGrowersForBatch = distribution.Items
+                                        .Where(i => i.PaymentBatchId == batchId)
+                                        .Select(i => i.GrowerId)
+                                        .Distinct()
+                                        .ToList();
+                                    
+                                    // Check if all growers in the batch have been processed
+                                    var allGrowersProcessed = allGrowersInBatch.All(growerId => processedGrowersForBatch.Contains(growerId));
+                                    
+                                    string newStatus;
+                                    if (allGrowersProcessed)
+                                    {
+                                        // All growers processed - mark as Finalized
+                                        newStatus = "Finalized";
+                                    }
+                                    else
+                                    {
+                                        // Some growers still pending - keep as Posted
+                                        var unprocessedCount = allGrowersInBatch.Count - processedGrowersForBatch.Count;
+                                        Logger.Info($"Batch {batchId} still has {unprocessedCount} unprocessed growers - keeping as Posted");
+                                        newStatus = "Posted";
+                                        continue; // Skip status update for this batch
+                                    }
+                                    
+                                    // Update batch status
+                                    var updateBatchSql = @"
                                     UPDATE PaymentBatches 
-                                    SET Status = 'Finalized',
+                                        SET Status = @Status,
                                         ModifiedAt = GETDATE(),
                                         ModifiedBy = @ModifiedBy
-                                    WHERE PaymentBatchId IN ({batchIdPlaceholders})";
-
-                                // Create parameters dictionary
-                                var parameters = new Dictionary<string, object> { { "ModifiedBy", generatedBy } };
-                                for (int i = 0; i < batchIds.Count; i++)
-                                {
-                                    parameters[$"BatchId{i}"] = batchIds[i];
+                                        WHERE PaymentBatchId = @BatchId";
+                                    
+                                    await connection.ExecuteAsync(updateBatchSql, new
+                                    {
+                                        Status = newStatus,
+                                        ModifiedBy = generatedBy,
+                                        BatchId = batchId
+                                    }, transaction);
+                                    
+                                    Logger.Info($"Updated batch {batchId} status to {newStatus} (all {allGrowersInBatch.Count} growers processed)");
                                 }
-
-                                await connection.ExecuteAsync(updateBatchSql, parameters, transaction);
                             }
 
                             // STEP 6: Update distribution status
@@ -1057,5 +1070,7 @@ namespace WPFGrowerApp.DataAccess.Services
             var growerIds = await connection.QueryAsync<int>(sql, new { BatchId = batchId }, transaction);
             return growerIds.ToList();
         }
+
+
     }
 }

@@ -65,8 +65,7 @@ namespace WPFGrowerApp
             services.AddTransient<IPaymentBatchExportService, PaymentBatchExportService>(); // Phase 3 - Export Service
             
             // Phase 3 - Unified Cheque Payment System Services
-            services.AddTransient<IAdvanceChequeService, AdvanceChequeService>(); // Added for advance cheques
-            services.AddTransient<IAdvanceDeductionService, AdvanceDeductionService>(); // Added for advance deductions
+            services.AddTransient<IUnifiedAdvanceService, UnifiedAdvanceService>(); // Added for unified advance management
             services.AddTransient<ICrossBatchPaymentService, CrossBatchPaymentService>(); // Added for cross-batch payments
             services.AddTransient<IUnifiedVoidingService, UnifiedVoidingService>(); // Added for unified voiding
             

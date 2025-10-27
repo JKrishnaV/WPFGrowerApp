@@ -85,6 +85,39 @@ namespace WPFGrowerApp.DataAccess.Models
         }
 
         // ======================================================================
+        // ADVANCE DEDUCTION FIELDS
+        // ======================================================================
+        
+        private decimal? _originalAmount;
+        private decimal? _deductionAmount;
+        private decimal? _netAmount;
+        private bool _skipPrint;
+
+        public decimal? OriginalAmount
+        {
+            get => _originalAmount;
+            set => SetProperty(ref _originalAmount, value);
+        }
+
+        public decimal? DeductionAmount
+        {
+            get => _deductionAmount;
+            set => SetProperty(ref _deductionAmount, value);
+        }
+
+        public decimal? NetAmount
+        {
+            get => _netAmount;
+            set => SetProperty(ref _netAmount, value);
+        }
+
+        public bool SkipPrint
+        {
+            get => _skipPrint;
+            set => SetProperty(ref _skipPrint, value);
+        }
+
+        // ======================================================================
         // CURRENCY & PAYEE
         // ======================================================================
         

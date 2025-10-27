@@ -107,6 +107,14 @@ namespace WPFGrowerApp.DataAccess.Interfaces
         Task<ReceiptDetailDto?> GetReceiptDetailAsync(int receiptId);
 
         /// <summary>
+        /// Get detailed receipt information for a grower across selected batches
+        /// </summary>
+        /// <param name="growerId">The grower ID</param>
+        /// <param name="batchIds">List of batch IDs to include</param>
+        /// <returns>List of receipt detail DTOs</returns>
+        Task<List<ReceiptDetailDto>> GetReceiptDetailsForGrowerAsync(int growerId, List<int> batchIds);
+
+        /// <summary>
         /// Get audit history for a receipt
         /// </summary>
         /// <param name="receiptId">The receipt ID</param>

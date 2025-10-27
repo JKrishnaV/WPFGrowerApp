@@ -18,6 +18,7 @@ namespace WPFGrowerApp.Models
         private string _growerName;
         private string _growerNumber;
         private decimal _amount;
+        private decimal? _netAmountFromCheque;
         private DateTime _chequeDate;
         private string _status;
         private ChequePaymentType _paymentType;
@@ -198,7 +199,7 @@ namespace WPFGrowerApp.Models
         public string SourceBatchesDisplay => GetSourceBatchesDisplay();
         public string DeductionDetailsDisplay => GetDeductionDetailsDisplay();
         public decimal TotalDeductions => AdvanceDeductions?.Sum(d => d.DeductionAmount) ?? 0;
-        public decimal NetAmount => Amount; // Amount is already net after deductions
+        public decimal NetAmount => _netAmountFromCheque ?? (Amount - TotalDeductions);
         public string NetAmountDisplay => NetAmount.ToString("C");
 
         public ChequeItem()
@@ -216,7 +217,8 @@ namespace WPFGrowerApp.Models
             GrowerId = cheque.GrowerId;
             GrowerName = cheque.GrowerName ?? "Unknown";
             GrowerNumber = cheque.GrowerNumber ?? "N/A";
-            Amount = cheque.ChequeAmount;
+            Amount = cheque.OriginalAmount ?? (cheque.ChequeAmount + (cheque.DeductionAmount ?? 0));
+            _netAmountFromCheque = cheque.NetAmount ?? cheque.ChequeAmount;
             ChequeDate = cheque.ChequeDate;
             Status = cheque.Status ?? "Unknown";
             IsConsolidated = cheque.IsConsolidated;

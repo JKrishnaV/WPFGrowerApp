@@ -13,6 +13,7 @@ using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
 using WPFGrowerApp.Models;
 using WPFGrowerApp.Services;
+using WPFGrowerApp.Views;
 using WPFGrowerApp.Infrastructure.Logging;
 
 namespace WPFGrowerApp.ViewModels
@@ -25,8 +26,8 @@ namespace WPFGrowerApp.ViewModels
         private readonly IPaymentDistributionService _paymentDistributionService;
         private readonly IPaymentBatchService _paymentBatchService;
         private readonly ICrossBatchPaymentService _crossBatchPaymentService;
-        private readonly IAdvanceDeductionService _advanceDeductionService;
-        private readonly IAdvanceChequeService _advanceChequeService;
+        private readonly IUnifiedAdvanceService _unifiedAdvanceService;
+        private readonly IReceiptService _receiptService;
         private readonly IDialogService _dialogService;
         private readonly IHelpContentProvider _helpContentProvider;
         private readonly string _connectionString;
@@ -37,6 +38,8 @@ namespace WPFGrowerApp.ViewModels
         private ObservableCollection<PaymentDistribution> _distributions;
         private ObservableCollection<PaymentDistributionItem> _distributionItems;
         private ObservableCollection<string> _paymentMethods;
+        private ObservableCollection<AdvanceDeductionItem> _advanceDeductions;
+        private ObservableCollection<GrowerAdvanceInfo> _growerAdvanceInfos;
 
         // Selected items
         private PaymentBatch _selectedBatch;
@@ -52,6 +55,13 @@ namespace WPFGrowerApp.ViewModels
         private bool _isHybridMode;
         private bool _enableConsolidation;
         private ChequePaymentType _selectedPaymentType;
+
+        // Advance deduction properties
+        private bool _hasAdvanceDeductions;
+        private bool _showAdvanceDeductions;
+        private decimal _totalDeductionAmount;
+        private decimal _totalRemainingPayment;
+        private bool _enableDeductionModification;
 
         // Statistics
         private int _totalBatches;
@@ -74,6 +84,17 @@ namespace WPFGrowerApp.ViewModels
         public ICommand GenerateChequesCommand { get; }
         public ICommand ShowHelpCommand { get; }
         public ICommand ExportCommand { get; }
+        public ICommand ExportToExcelCommand { get; }
+        public ICommand ExportToPdfCommand { get; }
+        
+        // Advance Deduction Commands
+        public ICommand ShowAdvanceDeductionsCommand { get; }
+        public ICommand ShowGrowerDeductionsCommand { get; }
+        public ICommand ShowGrowerPaymentDetailsCommand { get; }
+        public ICommand ModifyDeductionCommand { get; }
+        public ICommand RefreshAdvancesCommand { get; }
+        public ICommand ApplyDeductionsCommand { get; }
+        public ICommand ClearDeductionsCommand { get; }
         
         // Navigation Commands
         public ICommand NavigateToDashboardCommand { get; }
@@ -83,16 +104,16 @@ namespace WPFGrowerApp.ViewModels
             IPaymentDistributionService paymentDistributionService,
             IPaymentBatchService paymentBatchService,
             ICrossBatchPaymentService crossBatchPaymentService,
-            IAdvanceDeductionService advanceDeductionService,
-            IAdvanceChequeService advanceChequeService,
+            IUnifiedAdvanceService unifiedAdvanceService,
+            IReceiptService receiptService,
             IDialogService dialogService,
             IHelpContentProvider helpContentProvider)
         {
             _paymentDistributionService = paymentDistributionService;
             _paymentBatchService = paymentBatchService;
             _crossBatchPaymentService = crossBatchPaymentService;
-            _advanceDeductionService = advanceDeductionService;
-            _advanceChequeService = advanceChequeService;
+            _unifiedAdvanceService = unifiedAdvanceService;
+            _receiptService = receiptService;
             _dialogService = dialogService;
             _helpContentProvider = helpContentProvider;
             _connectionString = System.Configuration.ConfigurationManager.ConnectionStrings["DefaultConnection"].ConnectionString;
@@ -103,6 +124,8 @@ namespace WPFGrowerApp.ViewModels
             Distributions = new ObservableCollection<PaymentDistribution>();
             DistributionItems = new ObservableCollection<PaymentDistributionItem>();
             PaymentMethods = new ObservableCollection<string> { "Cheque", "Electronic", "Both" };
+            AdvanceDeductions = new ObservableCollection<AdvanceDeductionItem>();
+            GrowerAdvanceInfos = new ObservableCollection<GrowerAdvanceInfo>();
 
             // Initialize form properties
             SearchText = string.Empty;
@@ -130,6 +153,17 @@ namespace WPFGrowerApp.ViewModels
             GenerateChequesCommand = new RelayCommand(async p => await GenerateChequesAsync(), p => CanGenerateCheques());
             ShowHelpCommand = new RelayCommand(async p => await ShowHelpAsync());
             ExportCommand = new RelayCommand(async p => await ExportAsync(), p => CanExport());
+            ExportToExcelCommand = new RelayCommand(async p => await ExportAsync("Excel"), p => CanExport());
+            ExportToPdfCommand = new RelayCommand(async p => await ExportAsync("PDF"), p => CanExport());
+            
+            // Initialize advance deduction commands
+            ShowAdvanceDeductionsCommand = new RelayCommand(async p => await ShowAdvanceDeductionsAsync(), p => CanShowAdvanceDeductions());
+            ShowGrowerDeductionsCommand = new RelayCommand(async p => await ShowGrowerDeductionsAsync(p), p => CanShowGrowerDeductions(p));
+            ShowGrowerPaymentDetailsCommand = new RelayCommand(async p => await ShowGrowerPaymentDetailsAsync(p), p => CanShowGrowerPaymentDetails(p));
+            ModifyDeductionCommand = new RelayCommand(async p => await ModifyDeductionAsync(p), p => CanModifyDeduction(p));
+            RefreshAdvancesCommand = new RelayCommand(async p => await RefreshAdvancesAsync());
+            ApplyDeductionsCommand = new RelayCommand(async p => await ApplyDeductionsAsync(), p => CanApplyDeductions());
+            ClearDeductionsCommand = new RelayCommand(async p => await ClearDeductionsAsync());
             
             // Initialize navigation commands
             NavigateToDashboardCommand = new RelayCommand(p => NavigateToDashboard());
@@ -185,7 +219,28 @@ namespace WPFGrowerApp.ViewModels
         public ObservableCollection<GrowerPaymentSelection> GrowerSelections
         {
             get => _growerSelections;
-            set => SetProperty(ref _growerSelections, value);
+            set 
+            {
+                // Unsubscribe from old collection if it exists
+                if (_growerSelections != null)
+                {
+                    foreach (var grower in _growerSelections)
+                    {
+                        grower.PropertyChanged -= OnGrowerSelectionPropertyChanged;
+                    }
+                }
+                
+                SetProperty(ref _growerSelections, value);
+                
+                // Subscribe to new collection
+                if (_growerSelections != null)
+                {
+                    foreach (var grower in _growerSelections)
+                    {
+                        grower.PropertyChanged += OnGrowerSelectionPropertyChanged;
+                    }
+                }
+            }
         }
 
         public ObservableCollection<PaymentDistribution> Distributions
@@ -198,6 +253,48 @@ namespace WPFGrowerApp.ViewModels
         {
             get => _distributionItems;
             set => SetProperty(ref _distributionItems, value);
+        }
+
+        public ObservableCollection<AdvanceDeductionItem> AdvanceDeductions
+        {
+            get => _advanceDeductions;
+            set => SetProperty(ref _advanceDeductions, value);
+        }
+
+        public ObservableCollection<GrowerAdvanceInfo> GrowerAdvanceInfos
+        {
+            get => _growerAdvanceInfos;
+            set => SetProperty(ref _growerAdvanceInfos, value);
+        }
+
+        public bool HasAdvanceDeductions
+        {
+            get => _hasAdvanceDeductions;
+            set => SetProperty(ref _hasAdvanceDeductions, value);
+        }
+
+        public bool ShowAdvanceDeductions
+        {
+            get => _showAdvanceDeductions;
+            set => SetProperty(ref _showAdvanceDeductions, value);
+        }
+
+        public decimal TotalDeductionAmount
+        {
+            get => _totalDeductionAmount;
+            set => SetProperty(ref _totalDeductionAmount, value);
+        }
+
+        public decimal TotalRemainingPayment
+        {
+            get => _totalRemainingPayment;
+            set => SetProperty(ref _totalRemainingPayment, value);
+        }
+
+        public bool EnableDeductionModification
+        {
+            get => _enableDeductionModification;
+            set => SetProperty(ref _enableDeductionModification, value);
         }
 
         public ObservableCollection<string> PaymentMethods
@@ -278,6 +375,39 @@ namespace WPFGrowerApp.ViewModels
             set => SetProperty(ref _enableConsolidation, value);
         }
 
+        private bool _selectAllBatches = false;
+
+        public bool SelectAllBatches
+        {
+            get => _selectAllBatches;
+            set
+            {
+                if (SetProperty(ref _selectAllBatches, value))
+                {
+                    // Temporarily unsubscribe from property change events to prevent multiple calls
+                    foreach (var batch in AvailableBatches)
+                    {
+                        batch.PropertyChanged -= OnBatchPropertyChanged;
+                    }
+                    
+                    // Set all batch selections
+                    foreach (var batch in AvailableBatches)
+                    {
+                        batch.IsSelected = value;
+                    }
+                    
+                    // Re-subscribe to property change events
+                    foreach (var batch in AvailableBatches)
+                    {
+                        batch.PropertyChanged += OnBatchPropertyChanged;
+                    }
+                    
+                    // Manually trigger the update once all batches are set
+                    _ = UpdateSelectedBatchIdsAsync();
+                }
+            }
+        }
+
         private bool _selectAllGrowers = true; // Default all checked
 
         public bool SelectAllGrowers
@@ -335,10 +465,9 @@ namespace WPFGrowerApp.ViewModels
 
         // Computed properties
         public string TotalAmountDisplay => TotalAmount.ToString("C");
-        public string ConsolidationOpportunitiesDisplay => $"{ConsolidationOpportunities} opportunity{(ConsolidationOpportunities != 1 ? "ies" : "")}";
+        public string ConsolidationOpportunitiesDisplay => $"{ConsolidationOpportunities} {(ConsolidationOpportunities != 1 ? "opportunities" : "opportunity")}";
         public bool HasSelectedBatches => SelectedBatchIds.Any();
         public bool HasGrowerSelections => GrowerSelections.Any();
-        public string SelectedBatchesDisplay => SelectedBatchIds.Count > 0 ? string.Join(", ", SelectedBatchIds) : "None selected";
 
         #endregion
 
@@ -348,11 +477,16 @@ namespace WPFGrowerApp.ViewModels
         {
             try
             {
+                IsBusy = true;
                 await ApplyFiltersAsync();
             }
             catch (Exception ex)
             {
                 await _dialogService.ShowMessageBoxAsync($"Error searching: {ex.Message}", "Error");
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 
@@ -360,6 +494,8 @@ namespace WPFGrowerApp.ViewModels
         {
             try
             {
+                IsBusy = true;
+                
                 SearchText = string.Empty;
                 IsByGrower = true;
                 IsByBatch = false;
@@ -372,6 +508,10 @@ namespace WPFGrowerApp.ViewModels
             catch (Exception ex)
             {
                 await _dialogService.ShowMessageBoxAsync($"Error clearing filters: {ex.Message}", "Error");
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 
@@ -540,7 +680,7 @@ namespace WPFGrowerApp.ViewModels
                 }
 
                 // Get outstanding advances for detailed breakdown
-                var outstandingAdvances = await _advanceChequeService.GetOutstandingAdvancesAsync(SelectedGrowerSelection.GrowerId);
+                var outstandingAdvances = await _unifiedAdvanceService.GetOutstandingAdvancesAsync(SelectedGrowerSelection.GrowerId);
                 
                 // Create advance breakdowns
                 var advanceBreakdowns = outstandingAdvances.Select(adv => new AdvanceBreakdown
@@ -552,9 +692,11 @@ namespace WPFGrowerApp.ViewModels
                     Status = adv.Status
                 }).ToList();
 
-                // Calculate net total (gross amount - outstanding advances)
-                var totalOutstanding = outstandingAdvances.Sum(adv => adv.AdvanceAmount);
-                var netTotal = SelectedGrowerSelection.GrossTotalAmount - totalOutstanding;
+                // Use the new deduction logic from the grower selection
+                var grossAmount = SelectedGrowerSelection.ConsolidatedAmount;
+                var deductFromThisTransaction = SelectedGrowerSelection.DeductFromThisTransaction;
+                var netPaymentAmount = SelectedGrowerSelection.NetPaymentAmount;
+                var remainingDeductions = SelectedGrowerSelection.RemainingDeductions;
 
                 var message = $"Regular Payment Preview for {SelectedGrowerSelection.GrowerName}:\n\n";
                 
@@ -573,26 +715,29 @@ namespace WPFGrowerApp.ViewModels
                 }
                 else
                 {
-                    message += $"Gross Amount: {SelectedGrowerSelection.GrossTotalAmountDisplay}\n";
+                    message += $"Gross Amount: {grossAmount:C}\n";
                 }
                 
                 // Outstanding advances information
                 message += $"\nOutstanding Advances Count: {advanceBreakdowns.Count}\n";
                 foreach (var advance in advanceBreakdowns)
                 {
-                    message += $"Outstanding Advance ({advance.ChequeNumber}): {advance.AmountDisplay}\n";
+                    message += $"Outstanding Advance ({advance.ChequeNumber}): {advance.Amount:C}\n";
                 }
                 
-                // Net total with special handling for negative amounts
-                if (netTotal < 0)
+                // New deduction logic - show current transaction details
+                message += $"\nDeduction Details:\n";
+                message += $"Total Outstanding Advances: {SelectedGrowerSelection.OutstandingAdvances:C}\n";
+                message += $"Deduct From This Transaction: {deductFromThisTransaction:C}\n";
+                message += $"Remaining Deductions: {remainingDeductions:C}\n";
+                
+                // Net payment amount (what the grower will actually receive)
+                message += $"\nNet Payment Amount: {netPaymentAmount:C}";
+                
+                // Add informational note about remaining deductions
+                if (remainingDeductions > 0)
                 {
-                    message += $"\n⚠️ WARNING: Outstanding advances exceed gross amount!\n";
-                    message += $"Net Total: {netTotal:C} (NEGATIVE)\n";
-                    message += $"This grower owes: {Math.Abs(netTotal):C}";
-                }
-                else
-                {
-                    message += $"\nNet Total: {netTotal:C}";
+                    message += $"\n\nNote: ${remainingDeductions:C} in outstanding advances will be carried forward to future payments.";
                 }
 
                 await _dialogService.ShowMessageBoxAsync(message, "Regular Payment Preview");
@@ -685,7 +830,7 @@ namespace WPFGrowerApp.ViewModels
             }
         }
 
-        private async Task ExportAsync()
+        private async Task ExportAsync(string format = null)
         {
             try
             {
@@ -695,16 +840,21 @@ namespace WPFGrowerApp.ViewModels
                     return;
                 }
 
-                // Show export format selection dialog
-                var exportDialog = new Views.Dialogs.ExportFormatDialog();
-                exportDialog.Owner = System.Windows.Application.Current.MainWindow;
-                
-                if (exportDialog.ShowDialog() != true)
-                {
-                    return; // User cancelled
-                }
+                string selectedFormat = format;
 
-                string selectedFormat = exportDialog.SelectedFormat;
+                // If no format specified, show dialog
+                if (string.IsNullOrEmpty(selectedFormat))
+                {
+                    var exportDialog = new Views.Dialogs.ExportFormatDialog();
+                    exportDialog.Owner = System.Windows.Application.Current.MainWindow;
+                    
+                    if (exportDialog.ShowDialog() != true)
+                    {
+                        return; // User cancelled
+                    }
+
+                    selectedFormat = exportDialog.SelectedFormat;
+                }
 
                 // Get selected batches for export
                 var selectedBatches = AvailableBatches.Where(b => b.IsSelected).ToList();
@@ -864,8 +1014,8 @@ namespace WPFGrowerApp.ViewModels
                         Infrastructure.Logging.Logger.Info($"Found {payments.Count} payments for grower {grower.GrowerName}, total amount: {payments.Sum(p => p.Amount)}");
                         
                         // Get outstanding advances for this grower
-                        var outstandingAdvances = await _advanceChequeService.CalculateTotalOutstandingAdvancesAsync(grower.GrowerId);
-                        var hasOutstandingAdvances = await _advanceChequeService.HasOutstandingAdvancesAsync(grower.GrowerId);
+                        var outstandingAdvances = await _unifiedAdvanceService.CalculateTotalOutstandingAdvancesAsync(grower.GrowerId);
+                        var hasOutstandingAdvances = await _unifiedAdvanceService.HasOutstandingAdvancesAsync(grower.GrowerId);
                         
                         Infrastructure.Logging.Logger.Info($"Grower {grower.GrowerName} has outstanding advances: {outstandingAdvances:C} (HasAdvances: {hasOutstandingAdvances})");
                         
@@ -877,11 +1027,17 @@ namespace WPFGrowerApp.ViewModels
                         selection.SetRecommendedPaymentType();
                         selection.IsSelectedForPayment = true; // Default checked
                         
+                        // Subscribe to property changes
+                        selection.PropertyChanged += OnGrowerSelectionPropertyChanged;
+                        
                         GrowerSelections.Add(selection);
                         Infrastructure.Logging.Logger.Info($"Added grower selection: {selection.GrowerName} with amount {selection.RegularAmount:C}");
                     }
                     
                     Infrastructure.Logging.Logger.Info($"Total grower selections loaded: {GrowerSelections.Count}");
+                    
+                    // Load outstanding advances for selected growers
+                    await LoadOutstandingAdvancesAsync();
                     
                     // Update statistics after loading grower selections
                     await CalculateStatisticsAsync();
@@ -908,7 +1064,7 @@ namespace WPFGrowerApp.ViewModels
             {
                 var newTotalBatches = AvailableBatches.Count;
                 var newTotalGrowers = GrowerSelections.Count;
-                var newTotalAmount = GrowerSelections.Sum(g => g.RegularAmount);
+                var newTotalAmount = GrowerSelections.Sum(g => g.NetPaymentAmount); // Use NetPaymentAmount instead of RegularAmount
                 var newConsolidationOpportunities = GrowerSelections.Count(g => g.CanBeConsolidated);
                 
                 TotalBatches = newTotalBatches;
@@ -987,6 +1143,8 @@ namespace WPFGrowerApp.ViewModels
         {
             try
             {
+                IsBusy = true;
+                
                 var selectedIds = AvailableBatches
                     .Where(b => b.IsSelected)
                     .Select(b => b.PaymentBatchId)
@@ -996,6 +1154,12 @@ namespace WPFGrowerApp.ViewModels
                 
                 SelectedBatchIds = selectedIds;
 
+                // Update select all checkbox state
+                UpdateSelectAllBatchesState();
+
+                // Trigger property change notifications
+                OnPropertyChangedInternal(nameof(HasSelectedBatches));
+
                 // Reload grower selections when batch selection changes
                 await LoadGrowerSelectionsAsync();
             }
@@ -1003,6 +1167,10 @@ namespace WPFGrowerApp.ViewModels
             {
                 // Log the error but don't show dialog to prevent DialogHost conflicts
                 Infrastructure.Logging.Logger.Error($"Error updating batch selection: {ex.Message}", ex);
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 
@@ -1029,12 +1197,15 @@ namespace WPFGrowerApp.ViewModels
 
                     // For consolidation, create one distribution item per grower with consolidated amount
                     // but assign it to the first batch for database constraint compliance
+                    // Calculate actual cheque amount: if net amount is negative or zero, cheque amount is 0
+                    var actualChequeAmount = Math.Max(0, growerSelection.ActualNetAmount);
+                    
                     var distributionItem = new PaymentDistributionItem
                     {
                         GrowerId = growerSelection.GrowerId,
                         GrowerName = growerSelection.GrowerName,
                         GrowerNumber = growerSelection.GrowerNumber,
-                        Amount = growerSelection.NetConsolidatedAmount, // Use NET consolidated amount (after outstanding advance deduction)
+                        Amount = actualChequeAmount, // Use actual cheque amount (0 if net amount is negative)
                         PaymentMethod = SelectedPaymentMethod,
                         Status = "Draft",
                         CreatedAt = DateTime.Now,
@@ -1045,7 +1216,7 @@ namespace WPFGrowerApp.ViewModels
                     };
 
                     // Note: Outstanding advances are automatically deducted in NetConsolidatedAmount
-                    // The PaymentDistributionItem model uses the net amount (after advance deduction)
+                    // The PaymentDistributionItem model uses the actual cheque amount (0 if net amount is negative)
                     // Full audit trail is maintained through the ConsolidatedCheque system for cross-batch tracking
 
                     items.Add(distributionItem);
@@ -1357,30 +1528,9 @@ namespace WPFGrowerApp.ViewModels
                     return;
                 }
 
-                // Check for excessive advances
-                var excessiveAdvanceGrowers = selectedGrowers.Where(g => g.HasExcessiveAdvances).ToList();
-                if (excessiveAdvanceGrowers.Any())
-                {
-                    var growerNames = string.Join(", ", excessiveAdvanceGrowers.Select(g => g.GrowerName));
-                    var excessAmounts = string.Join(", ", excessiveAdvanceGrowers.Select(g => g.ExcessAdvanceAmount.ToString("C")));
-                    
-                    var proceedWithExcessiveAdvances = await _dialogService.ShowConfirmationAsync(
-                        $"⚠️ EXCESSIVE ADVANCES DETECTED!\n\n" +
-                        $"The following growers have outstanding advances that exceed their gross amounts:\n\n" +
-                        $"{growerNames}\n\n" +
-                        $"Excess amounts: {excessAmounts}\n\n" +
-                        $"This means these growers owe money instead of receiving payments.\n\n" +
-                        $"Do you want to proceed anyway? This will create negative payment records.",
-                        "Excessive Advances Warning");
-                    
-                    if (proceedWithExcessiveAdvances != true)
-                    {
-                        await _dialogService.ShowMessageBoxAsync(
-                            "Payment generation cancelled. Please resolve excessive advances before proceeding.",
-                            "Payment Generation Cancelled");
-                        return;
-                    }
-                }
+                // Note: No need to check for excessive advances - the system now allows
+                // users to control the exact deduction amount via the "Deduct from this transaction" column.
+                // Remaining advances will automatically carry forward to future payments.
 
                 // Create PaymentDistributionItems for selected growers only
                 var distributionItems = new List<PaymentDistributionItem>();
@@ -1404,13 +1554,14 @@ namespace WPFGrowerApp.ViewModels
                         GrowerId = growerSelection.GrowerId,
                         GrowerName = growerSelection.GrowerName,
                         GrowerNumber = growerSelection.GrowerNumber,
-                        Amount = growerSelection.NetConsolidatedAmount, // Always use consolidated amount
+                        Amount = growerSelection.ConsolidatedAmount, // Store the FULL gross amount - deduction will be applied in GenerateChequeAsync
                         PaymentBatchId = primaryReceipt.PaymentBatchId, // Use primary batch
                         ReceiptId = primaryReceipt.ReceiptId, // Use primary receipt
                         PaymentMethod = SelectedPaymentMethod, // Set the payment method from UI selection
                         Status = "Pending",
                         CreatedAt = DateTime.UtcNow,
-                        CreatedBy = App.CurrentUser?.Username ?? "SYSTEM"
+                        CreatedBy = App.CurrentUser?.Username ?? "SYSTEM",
+                        AdvanceDeductionAmount = growerSelection.DeductFromThisTransaction // Store the deduction amount for later application
                     };
                     
                     distributionItems.Add(distributionItem);
@@ -1435,7 +1586,7 @@ namespace WPFGrowerApp.ViewModels
                     Items = distributionItems
                 };
 
-                // Generate the payment distribution
+                // Generate the payment distribution (includes batch status updates in the same transaction)
                 var result = await _paymentDistributionService.GenerateCompletePaymentDistributionAsync(
                     distribution, 
                     App.CurrentUser?.Username ?? "SYSTEM",
@@ -1443,16 +1594,12 @@ namespace WPFGrowerApp.ViewModels
 
                 if (result != null)
                 {
-                    // Update batch processing status
-                    var processedGrowerIds = selectedGrowers.Select(g => g.GrowerId).ToList();
-                    await _paymentDistributionService.UpdateBatchProcessingStatusAsync(
-                        SelectedBatchIds, 
-                        processedGrowerIds, 
-                        App.CurrentUser?.Username ?? "SYSTEM");
-
+                    // Note: Batch status updates are already handled inside GenerateCompletePaymentDistributionAsync
+                    // in a single transaction to ensure atomicity of all operations
+                    
                     await _dialogService.ShowMessageBoxAsync(
                         $"Successfully generated payments for {selectedGrowers.Count} selected growers!\n\n" +
-                        $"Total Amount: {selectedGrowers.Sum(g => g.NetConsolidatedAmount):C}\n" +
+                        $"Total Amount: {selectedGrowers.Sum(g => Math.Max(0, g.ConsolidatedAmount - g.DeductFromThisTransaction)):C}\n" +
                         $"Batches Processed: {SelectedBatchIds.Count}\n\n" +
                         $"You can now go to Enhanced Cheque Preparation to print the cheques.",
                         "Selected Payments Generated");
@@ -1569,6 +1716,489 @@ namespace WPFGrowerApp.ViewModels
                 Logger.Error($"Error getting primary ReceiptId for grower {growerId}: {ex.Message}", ex);
                 return 0; // Fallback value
             }
+        }
+
+        #endregion
+
+        #region Property Change Handlers
+
+        /// <summary>
+        /// Handle property changes on grower selections
+        /// </summary>
+        private async void OnGrowerSelectionPropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(GrowerPaymentSelection.IsSelectedForPayment))
+            {
+                // Reload advance deductions when selection changes
+                await LoadOutstandingAdvancesAsync();
+            }
+            else if (e.PropertyName == nameof(GrowerPaymentSelection.DeductFromThisTransaction) ||
+                     e.PropertyName == nameof(GrowerPaymentSelection.NetPaymentAmount))
+            {
+                // Recalculate statistics when deduction amounts change
+                await CalculateStatisticsAsync();
+            }
+        }
+
+        #endregion
+
+        #region Advance Deduction Methods
+
+        /// <summary>
+        /// Load outstanding advances for selected growers
+        /// </summary>
+        private async Task LoadOutstandingAdvancesAsync()
+        {
+            try
+            {
+                if (!GrowerSelections.Any())
+                {
+                    AdvanceDeductions?.Clear();
+                    GrowerAdvanceInfos?.Clear();
+                    HasAdvanceDeductions = false;
+                    return;
+                }
+
+                var growerIds = GrowerSelections.Select(gs => gs.GrowerId).ToList();
+                var advanceInfos = new List<GrowerAdvanceInfo>();
+
+                foreach (var growerId in growerIds)
+                {
+                    var advances = await _unifiedAdvanceService.GetOutstandingAdvancesAsync(growerId);
+                    if (advances.Any())
+                    {
+                        var growerInfo = new GrowerAdvanceInfo
+                        {
+                            GrowerId = growerId,
+                            GrowerNumber = advances.First().GrowerNumber,
+                            GrowerName = advances.First().GrowerName,
+                            HasOutstandingAdvances = true,
+                            CanModifyDeductions = true
+                        };
+
+                        foreach (var advance in advances)
+                        {
+                            growerInfo.AddOutstandingAdvance(advance);
+                        }
+
+                        advanceInfos.Add(growerInfo);
+                    }
+                }
+
+                GrowerAdvanceInfos = new ObservableCollection<GrowerAdvanceInfo>(advanceInfos);
+                HasAdvanceDeductions = advanceInfos.Any();
+                ShowAdvanceDeductions = HasAdvanceDeductions;
+            }
+            catch (Exception ex)
+            {
+                await _dialogService.ShowMessageBoxAsync($"Error loading outstanding advances: {ex.Message}", "Error");
+            }
+        }
+
+        /// <summary>
+        /// Calculate suggested deductions for selected growers
+        /// </summary>
+        private async Task CalculateSuggestedDeductionsAsync()
+        {
+            try
+            {
+                Infrastructure.Logging.Logger.Info($"CalculateSuggestedDeductionsAsync: Starting with {GrowerAdvanceInfos?.Count ?? 0} grower advance infos");
+                
+                if (!GrowerAdvanceInfos.Any())
+                {
+                    Infrastructure.Logging.Logger.Info("CalculateSuggestedDeductionsAsync: No grower advance infos found");
+                    return;
+                }
+
+                var deductionItems = new List<AdvanceDeductionItem>();
+
+                foreach (var growerInfo in GrowerAdvanceInfos)
+                {
+                    Infrastructure.Logging.Logger.Info($"CalculateSuggestedDeductionsAsync: Processing grower {growerInfo.GrowerId} ({growerInfo.GrowerName})");
+                    
+                    var paymentAmount = GrowerSelections
+                        .Where(gs => gs.GrowerId == growerInfo.GrowerId)
+                        .Sum(gs => gs.TotalAmount);
+
+                    Infrastructure.Logging.Logger.Info($"CalculateSuggestedDeductionsAsync: Payment amount for grower {growerInfo.GrowerId}: {paymentAmount:C}");
+
+                    if (paymentAmount > 0)
+                    {
+                        Infrastructure.Logging.Logger.Info($"CalculateSuggestedDeductionsAsync: Calling CalculateSuggestedDeductionsAsync for grower {growerInfo.GrowerId}");
+                        var suggestions = await _unifiedAdvanceService.CalculateSuggestedDeductionsAsync(growerInfo.GrowerId, paymentAmount);
+                        Infrastructure.Logging.Logger.Info($"CalculateSuggestedDeductionsAsync: Got {suggestions?.Count ?? 0} suggestions for grower {growerInfo.GrowerId}");
+                        
+                        foreach (var suggestion in suggestions)
+                        {
+                            var advance = growerInfo.OutstandingAdvances.FirstOrDefault(a => a.AdvanceChequeId == suggestion.AdvanceChequeId);
+                            if (advance != null)
+                            {
+                                Infrastructure.Logging.Logger.Info($"CalculateSuggestedDeductionsAsync: Creating deduction item for advance {suggestion.AdvanceChequeId}, amount: {suggestion.DeductionAmount:C}");
+                                
+                                var deductionItem = new AdvanceDeductionItem
+                                {
+                                    AdvanceChequeId = suggestion.AdvanceChequeId,
+                                    AdvanceDate = advance.AdvanceDate.ToString("MMM dd, yyyy"),
+                                    OriginalAmount = advance.OriginalAdvanceAmount,
+                                    RemainingAmount = advance.CurrentAdvanceAmount,
+                                    SuggestedDeduction = suggestion.DeductionAmount,
+                                    ActualDeduction = suggestion.DeductionAmount,
+                                    CanModify = true,
+                                    Status = "Active",
+                                    Reason = "Auto-calculated"
+                                };
+
+                                deductionItems.Add(deductionItem);
+                            }
+                            else
+                            {
+                                Infrastructure.Logging.Logger.Warn($"CalculateSuggestedDeductionsAsync: No matching advance found for suggestion {suggestion.AdvanceChequeId}");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Infrastructure.Logging.Logger.Info($"CalculateSuggestedDeductionsAsync: Payment amount is 0 for grower {growerInfo.GrowerId}, skipping");
+                    }
+                }
+
+                Infrastructure.Logging.Logger.Info($"CalculateSuggestedDeductionsAsync: Created {deductionItems.Count} deduction items");
+                AdvanceDeductions = new ObservableCollection<AdvanceDeductionItem>(deductionItems);
+                UpdateDeductionTotals();
+            }
+            catch (Exception ex)
+            {
+                Infrastructure.Logging.Logger.Error($"CalculateSuggestedDeductionsAsync: Error calculating suggested deductions: {ex.Message}", ex);
+                await _dialogService.ShowMessageBoxAsync($"Error calculating suggested deductions: {ex.Message}", "Error");
+            }
+        }
+
+        /// <summary>
+        /// Update deduction totals and remaining payment amounts
+        /// </summary>
+        private void UpdateDeductionTotals()
+        {
+            TotalDeductionAmount = AdvanceDeductions?.Sum(d => d.ActualDeduction) ?? 0;
+            TotalRemainingPayment = GrowerSelections.Sum(gs => gs.TotalAmount) - TotalDeductionAmount;
+            
+            OnPropertyChanged(nameof(TotalDeductionAmount));
+            OnPropertyChanged(nameof(TotalRemainingPayment));
+        }
+
+        /// <summary>
+        /// Show advance deductions dialog
+        /// </summary>
+        private async Task ShowAdvanceDeductionsAsync()
+        {
+            try
+            {
+                if (!HasAdvanceDeductions)
+                {
+                    await _dialogService.ShowMessageBoxAsync("No outstanding advances found for selected growers.", "No Advances");
+                    return;
+                }
+
+                // Ensure we have the latest advance data before showing the dialog
+                await LoadOutstandingAdvancesAsync();
+                
+                if (!HasAdvanceDeductions)
+                {
+                    await _dialogService.ShowMessageBoxAsync("No outstanding advances found for selected growers.", "No Advances");
+                    return;
+                }
+
+                // Calculate suggested deductions if we don't have them yet
+                if (!AdvanceDeductions?.Any() == true)
+                {
+                    await CalculateSuggestedDeductionsAsync();
+                }
+
+                // Create and show advance deduction dialog
+                var dialog = new AdvanceDeductionDialog();
+                dialog.DataContext = this;
+                
+                var result = await _dialogService.ShowDialogAsync<AdvanceDeductionDialog>(dialog);
+                if (result == true)
+                {
+                    await CalculateSuggestedDeductionsAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                await _dialogService.ShowMessageBoxAsync($"Error showing advance deductions: {ex.Message}", "Error");
+            }
+        }
+
+        /// <summary>
+        /// Modify specific deduction amount
+        /// </summary>
+        private async Task ModifyDeductionAsync(object parameter)
+        {
+            try
+            {
+                if (parameter is AdvanceDeductionItem deductionItem)
+                {
+                    // Show modification dialog for specific deduction
+                    var dialog = new AdvanceDeductionDialog();
+                    dialog.DataContext = this;
+                    dialog.SelectedDeduction = deductionItem;
+                    
+                    var result = await _dialogService.ShowDialogAsync<AdvanceDeductionDialog>(dialog);
+                    if (result == true)
+                    {
+                        UpdateDeductionTotals();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                await _dialogService.ShowMessageBoxAsync($"Error modifying deduction: {ex.Message}", "Error");
+            }
+        }
+
+        /// <summary>
+        /// Refresh outstanding advances
+        /// </summary>
+        private async Task RefreshAdvancesAsync()
+        {
+            try
+            {
+                await LoadOutstandingAdvancesAsync();
+                if (HasAdvanceDeductions)
+                {
+                    await CalculateSuggestedDeductionsAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                await _dialogService.ShowMessageBoxAsync($"Error refreshing advances: {ex.Message}", "Error");
+            }
+        }
+
+        /// <summary>
+        /// Apply deductions to distribution items
+        /// </summary>
+        private async Task ApplyDeductionsAsync()
+        {
+            try
+            {
+                if (AdvanceDeductions?.Any() != true)
+                {
+                    await _dialogService.ShowMessageBoxAsync("No deductions to apply.", "No Deductions");
+                    return;
+                }
+
+                // Validate all deductions
+                var invalidDeductions = AdvanceDeductions.Where(d => !d.IsValidDeduction).ToList();
+                if (invalidDeductions.Any())
+                {
+                    await _dialogService.ShowMessageBoxAsync("Some deduction amounts are invalid. Please correct them before applying.", "Invalid Deductions");
+                    return;
+                }
+
+                // Apply deductions to distribution items
+                foreach (var deduction in AdvanceDeductions)
+                {
+                    var growerSelection = GrowerSelections.FirstOrDefault(gs => 
+                        gs.GrowerId == GrowerAdvanceInfos.FirstOrDefault(gai => 
+                            gai.OutstandingAdvances.Any(oa => oa.AdvanceChequeId == deduction.AdvanceChequeId))?.GrowerId);
+
+                    if (growerSelection != null)
+                    {
+                        // Update the grower selection with deduction amount
+                        growerSelection.AdvanceDeductionAmount = deduction.ActualDeduction;
+                        // Note: NetPaymentAmount is now computed automatically based on ConsolidatedAmount and DeductFromThisTransaction
+                    }
+                }
+
+                await _dialogService.ShowMessageBoxAsync("Deductions applied successfully.", "Success");
+            }
+            catch (Exception ex)
+            {
+                await _dialogService.ShowMessageBoxAsync($"Error applying deductions: {ex.Message}", "Error");
+            }
+        }
+
+        /// <summary>
+        /// Clear all deductions
+        /// </summary>
+        private async Task ClearDeductionsAsync()
+        {
+            try
+            {
+                AdvanceDeductions?.Clear();
+                TotalDeductionAmount = 0;
+                TotalRemainingPayment = GrowerSelections.Sum(gs => gs.TotalAmount);
+                
+                // Reset grower selections
+                foreach (var growerSelection in GrowerSelections)
+                {
+                    growerSelection.AdvanceDeductionAmount = 0;
+                    growerSelection.DeductFromThisTransaction = 0;
+                    // Note: NetPaymentAmount is now computed automatically
+                }
+
+                await _dialogService.ShowMessageBoxAsync("All deductions cleared.", "Success");
+            }
+            catch (Exception ex)
+            {
+                await _dialogService.ShowMessageBoxAsync($"Error clearing deductions: {ex.Message}", "Error");
+            }
+        }
+
+        /// <summary>
+        /// Check if advance deductions can be shown
+        /// </summary>
+        private bool CanShowAdvanceDeductions()
+        {
+            return HasAdvanceDeductions && GrowerSelections.Any();
+        }
+
+        /// <summary>
+        /// Check if deduction can be modified
+        /// </summary>
+        private bool CanModifyDeduction(object parameter)
+        {
+            return parameter is AdvanceDeductionItem deductionItem && deductionItem.CanModify;
+        }
+
+        /// <summary>
+        /// Check if deductions can be applied
+        /// </summary>
+        private bool CanApplyDeductions()
+        {
+            return AdvanceDeductions?.Any() == true && AdvanceDeductions.All(d => d.IsValidDeduction);
+        }
+
+        /// <summary>
+        /// Show deductions for a specific grower
+        /// </summary>
+        private async Task ShowGrowerDeductionsAsync(object parameter)
+        {
+            try
+            {
+                if (parameter is GrowerPaymentSelection growerSelection)
+                {
+                    if (!growerSelection.HasOutstandingAdvances)
+                    {
+                        await _dialogService.ShowMessageBoxAsync("This grower has no outstanding advances.", "No Advances");
+                        return;
+                    }
+
+                    // Get outstanding advances for this specific grower
+                    var outstandingAdvances = await _unifiedAdvanceService.GetOutstandingAdvancesAsync(growerSelection.GrowerId);
+                    
+                    if (!outstandingAdvances.Any())
+                    {
+                        await _dialogService.ShowMessageBoxAsync("No outstanding advances found for this grower.", "No Advances");
+                        return;
+                    }
+
+                    // Create and show grower-specific deduction dialog
+                    var dialog = new GrowerDeductionDialog();
+                    dialog.DataContext = new GrowerDeductionViewModel(growerSelection, outstandingAdvances.ToList());
+                    
+                    var result = await _dialogService.ShowDialogAsync<GrowerDeductionDialog>(dialog);
+                    if (result == true)
+                    {
+                        // Update the grower selection with new deduction amounts
+                        var viewModel = dialog.DataContext as GrowerDeductionViewModel;
+                        if (viewModel != null)
+                        {
+                            growerSelection.DeductFromThisTransaction = viewModel.DeductFromThisTransaction;
+                            growerSelection.RemainingDeductions = viewModel.RemainingDeductions;
+                            // Note: NetPaymentAmount is now computed automatically based on ConsolidatedAmount and DeductFromThisTransaction
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                await _dialogService.ShowMessageBoxAsync($"Error showing grower deductions: {ex.Message}", "Error");
+            }
+        }
+
+        /// <summary>
+        /// Show detailed payment information for a specific grower
+        /// </summary>
+        private async Task ShowGrowerPaymentDetailsAsync(object parameter)
+        {
+            try
+            {
+                if (parameter is GrowerPaymentSelection growerSelection)
+                {
+                    var viewModel = new GrowerPaymentDetailsViewModel(
+                        growerSelection,
+                        SelectedBatchIds,
+                        _crossBatchPaymentService,
+                        _unifiedAdvanceService,
+                        _paymentBatchService,
+                        _receiptService);
+
+                    var dialog = new Views.GrowerPaymentDetailsDialog
+                    {
+                        DataContext = viewModel,
+                        Owner = System.Windows.Application.Current.MainWindow
+                    };
+
+                    // Load data before showing dialog
+                    await viewModel.LoadDataAsync();
+
+                    dialog.ShowDialog();
+                }
+            }
+            catch (Exception ex)
+            {
+                await _dialogService.ShowMessageBoxAsync($"Error showing grower payment details: {ex.Message}", "Error");
+            }
+        }
+
+        /// <summary>
+        /// Check if grower deductions can be shown
+        /// </summary>
+        private bool CanShowGrowerDeductions(object parameter)
+        {
+            return parameter is GrowerPaymentSelection growerSelection && growerSelection.HasOutstandingAdvances && !IsBusy;
+        }
+
+        /// <summary>
+        /// Check if grower payment details can be shown
+        /// </summary>
+        private bool CanShowGrowerPaymentDetails(object parameter)
+        {
+            return parameter is GrowerPaymentSelection && !IsBusy;
+        }
+
+        /// <summary>
+        /// Update the SelectAllBatches checkbox state based on current batch selections
+        /// </summary>
+        private void UpdateSelectAllBatchesState()
+        {
+            if (!AvailableBatches.Any())
+            {
+                _selectAllBatches = false;
+                return;
+            }
+
+            var selectedCount = AvailableBatches.Count(b => b.IsSelected);
+            var totalCount = AvailableBatches.Count;
+
+            if (selectedCount == 0)
+            {
+                _selectAllBatches = false;
+            }
+            else if (selectedCount == totalCount)
+            {
+                _selectAllBatches = true;
+            }
+            else
+            {
+                // Some but not all selected - indeterminate state, keep current value
+                // In WPF, we'll treat this as unchecked to allow easy "select all" action
+                _selectAllBatches = false;
+            }
+
+            OnPropertyChangedInternal(nameof(SelectAllBatches));
         }
 
         #endregion

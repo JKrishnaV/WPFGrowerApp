@@ -129,9 +129,9 @@ namespace WPFGrowerApp.DataAccess.Services
                         throw new InvalidOperationException($"Payment batch {paymentBatchId} not found");
                     }
 
-                    // Filter out on-hold growers and zero amounts
+                    // Filter out on-hold growers but include zero amounts for advance deductions
                     var eligiblePayments = growerPayments
-                        .Where(gp => !gp.IsOnHold && gp.PaymentAmount > 0)
+                        .Where(gp => !gp.IsOnHold)
                         .ToList();
 
                     Logger.Info($"Generating {eligiblePayments.Count} cheques for batch {batch.BatchNumber}");
@@ -182,16 +182,25 @@ namespace WPFGrowerApp.DataAccess.Services
         {
             var createdBy = App.CurrentUser?.Username ?? "SYSTEM";
 
+            // Determine if this is a fully deducted payment
+            bool isFullyDeducted = payment.PaymentAmount <= 0;
+            string status = isFullyDeducted ? "FullyDeducted" : "Generated";
+            string memo = isFullyDeducted ? 
+                $"{payment.Memo} (Fully absorbed by advance deductions)" : 
+                payment.Memo;
+
             var sql = @"
                 INSERT INTO Cheques (
                     ChequeSeriesId, ChequeNumber, FiscalYear, GrowerId, PaymentBatchId,
                     ChequeDate, ChequeAmount, PayeeName, Memo,
+                    OriginalAmount, DeductionAmount, NetAmount, SkipPrint,
                     Status, CreatedAt, CreatedBy
                 )
                 OUTPUT INSERTED.*
                 VALUES (
                     @ChequeSeriesId, @ChequeNumber, @FiscalYear, @GrowerId, @PaymentBatchId,
                     @ChequeDate, @ChequeAmount, @PayeeName, @Memo,
+                    @OriginalAmount, @DeductionAmount, @NetAmount, @SkipPrint,
                     @Status, @CreatedAt, @CreatedBy
                 )";
 
@@ -205,14 +214,77 @@ namespace WPFGrowerApp.DataAccess.Services
                 ChequeDate = batch.BatchDate,
                 ChequeAmount = payment.PaymentAmount,
                 PayeeName = payment.GrowerName,
-                Memo = payment.Memo,
-                Status = "Generated",
+                Memo = memo,
+                OriginalAmount = payment.OriginalAmount ?? payment.PaymentAmount,
+                DeductionAmount = payment.DeductionAmount ?? 0,
+                NetAmount = payment.PaymentAmount,
+                SkipPrint = isFullyDeducted,
+                Status = status,
                 CreatedAt = DateTime.Now,
                 CreatedBy = createdBy
             });
 
             cheque.GrowerName = payment.GrowerName;
             return cheque;
+        }
+
+        /// <summary>
+        /// Link advance deductions to generated cheques
+        /// </summary>
+        public async Task LinkAdvanceDeductionsToChequesAsync(List<Cheque> cheques, List<AdvanceDeduction> deductions)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    using (var transaction = connection.BeginTransaction())
+                    {
+                        try
+                        {
+                            foreach (var cheque in cheques)
+                            {
+                                // Find deductions for this grower
+                                var growerDeductions = deductions.Where(d => d.GrowerId == cheque.GrowerId).ToList();
+                                
+                                if (growerDeductions.Any())
+                                {
+                                    // Update deduction records with ChequeId
+                                    var updateSql = @"
+                                        UPDATE AdvanceDeductions 
+                                        SET ChequeId = @ChequeId,
+                                            ModifiedAt = @ModifiedAt,
+                                            ModifiedBy = @ModifiedBy
+                                        WHERE DeductionId IN @DeductionIds";
+
+                                    var deductionIds = growerDeductions.Select(d => d.DeductionId).ToList();
+                                    
+                                    await connection.ExecuteAsync(updateSql, new
+                                    {
+                                        ChequeId = cheque.ChequeId,
+                                        DeductionIds = deductionIds,
+                                        ModifiedAt = DateTime.Now,
+                                        ModifiedBy = App.CurrentUser?.Username ?? "SYSTEM"
+                                    }, transaction);
+                                }
+                            }
+
+                            transaction.Commit();
+                            Logger.Info($"Successfully linked {deductions.Count} advance deductions to cheques");
+                        }
+                        catch
+                        {
+                            transaction.Rollback();
+                            throw;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error linking advance deductions to cheques: {ex.Message}", ex);
+                throw;
+            }
         }
 
         // ==============================================================

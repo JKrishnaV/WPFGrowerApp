@@ -1,8 +1,10 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using WPFGrowerApp.Helpers;
 using WPFGrowerApp.ViewModels;
+using WPFGrowerApp.Models;
 
 namespace WPFGrowerApp.Views
 {
@@ -39,6 +41,31 @@ namespace WPFGrowerApp.Views
                     }
                     e.Handled = true;
                     break;
+            }
+        }
+
+        private void SetToRemaining_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.DataContext is AdvanceDeductionItem deduction)
+            {
+                deduction.SetToRemaining();
+            }
+        }
+
+        private void ClearDeduction_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.DataContext is AdvanceDeductionItem deduction)
+            {
+                deduction.ClearDeduction();
+            }
+        }
+
+        private void ClosePopup(object sender, RoutedEventArgs e)
+        {
+            // Close the popup when a menu item is clicked
+            if (ExportMenuToggle != null)
+            {
+                ExportMenuToggle.IsChecked = false;
             }
         }
     }

@@ -638,7 +638,7 @@ namespace WPFGrowerApp.ViewModels
                     // Load the data before showing the dialog
                     await dialogViewModel.LoadInvoiceStyleDetailsAsync();
                     
-                    var dialogView = new InvoiceStyleChequeCalculationDialogView(dialogViewModel);
+                    var dialogView = new ChequeCalculationDialogView(dialogViewModel);
 
                     // Show the dialog
                     dialogView.Owner = Application.Current.MainWindow;

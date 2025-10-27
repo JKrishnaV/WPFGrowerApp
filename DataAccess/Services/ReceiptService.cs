@@ -1153,6 +1153,72 @@ namespace WPFGrowerApp.DataAccess.Services
         #region New Enhanced Methods
 
         /// <summary>
+        /// Get detailed receipt information for a grower across selected batches
+        /// </summary>
+        public async Task<List<ReceiptDetailDto>> GetReceiptDetailsForGrowerAsync(int growerId, List<int> batchIds)
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    
+                    // Get receipts through ReceiptPaymentAllocations table
+                    var sql = @"
+                        SELECT DISTINCT
+                            r.ReceiptId, r.ReceiptNumber, r.ReceiptDate, r.ReceiptTime,
+                            r.GrowerId, r.ProductId, r.ProcessId, r.ProcessTypeId, r.VarietyId, r.DepotId,
+                            r.GrossWeight, r.TareWeight, r.NetWeight, r.DockPercentage, r.DockWeight, r.FinalWeight,
+                            r.Grade, r.PriceClassId, r.IsVoided, r.VoidedReason, r.VoidedAt, r.VoidedBy,
+                            r.ImportBatchId, r.CreatedAt, r.CreatedBy, r.ModifiedAt, r.ModifiedBy,
+                            r.QualityCheckedAt, r.QualityCheckedBy, r.DeletedAt, r.DeletedBy,
+                            g.FullName as GrowerName, g.GrowerNumber, g.Address as GrowerAddress, 
+                            g.PhoneNumber as GrowerPhone, g.Email as GrowerEmail,
+                            p.ProductName as ProductName, p.Description as ProductDescription,
+                            pr.ProcessName, pr.Description as ProcessDescription,
+                            v.VarietyName,
+                            d.DepotName, d.Address as DepotAddress,
+                            pc.ClassName as PriceClassName,
+                            rpa.PricePerPound,
+                            pb.BatchNumber as BatchName,
+                            pt.TypeName as PaymentTypeName,
+                            pt.PaymentTypeId
+                        FROM Receipts r
+                        INNER JOIN ReceiptPaymentAllocations rpa ON r.ReceiptId = rpa.ReceiptId
+                        LEFT JOIN Growers g ON r.GrowerId = g.GrowerId
+                        LEFT JOIN Products p ON r.ProductId = p.ProductId
+                        LEFT JOIN Processes pr ON r.ProcessId = pr.ProcessId
+                        LEFT JOIN Varieties v ON r.VarietyId = v.VarietyId
+                        LEFT JOIN Depots d ON r.DepotId = d.DepotId
+                        LEFT JOIN PriceClasses pc ON r.PriceClassId = pc.PriceClassId
+                        LEFT JOIN PaymentBatches pb ON rpa.PaymentBatchId = pb.PaymentBatchId
+                        LEFT JOIN PaymentTypes pt ON pb.PaymentTypeId = pt.PaymentTypeId
+                        WHERE r.GrowerId = @GrowerId 
+                          AND rpa.PaymentBatchId IN @BatchIds
+                          AND r.DeletedAt IS NULL
+                          AND r.IsVoided = 0
+                        ORDER BY r.ReceiptDate DESC, r.ReceiptNumber DESC";
+                    
+                    var results = (await connection.QueryAsync<ReceiptDetailDto>(sql, new { GrowerId = growerId, BatchIds = batchIds })).ToList();
+                    
+                    // Calculate amounts for each receipt using PricePerPound from allocation
+                    foreach (var result in results)
+                    {
+                        result.TotalAmountPaid = result.FinalWeight * result.PricePerPound;
+                    }
+                    
+                    return results;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error in GetReceiptDetailsForGrowerAsync: {ex.Message}");
+                Logger.Error($"Error getting receipt details for grower {growerId}: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Get detailed receipt information with joined data
         /// </summary>
         public async Task<ReceiptDetailDto?> GetReceiptDetailAsync(int receiptId)

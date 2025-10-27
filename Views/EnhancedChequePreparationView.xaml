@@ -86,17 +86,16 @@
                 </TextBox>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,0,0,0">
-                    <ComboBox SelectedValue="{Binding StatusFilter}"
-                              SelectedValuePath="Content"
-                              materialDesign:HintAssist.Hint="Status"
-                              Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                              Width="120" Margin="0,0,10,0">
-                        <ComboBoxItem Content="All"/>
-                        <ComboBoxItem Content="Generated"/>
-                        <ComboBoxItem Content="Printed"/>
-                        <ComboBoxItem Content="Delivered"/>
-                        <ComboBoxItem Content="Voided"/>
-                    </ComboBox>
+                    <DatePicker SelectedDate="{Binding StartDate, UpdateSourceTrigger=PropertyChanged}"
+                                materialDesign:HintAssist.Hint="Start Date"
+                                Style="{StaticResource MaterialDesignOutlinedDatePicker}"
+                                Width="140" Margin="0,0,10,0"/>
+                    
+                    <DatePicker SelectedDate="{Binding EndDate, UpdateSourceTrigger=PropertyChanged}"
+                                materialDesign:HintAssist.Hint="End Date"
+                                Style="{StaticResource MaterialDesignOutlinedDatePicker}"
+                                Width="140" Margin="0,0,10,0"/>
+                    
                     
                     <ComboBox SelectedValue="{Binding SelectedTypeFilter}"
                               SelectedValuePath="Tag"
@@ -362,7 +361,7 @@
                                                 CanUserSort="True"/>
                             
                             <!-- Amount -->
-                            <DataGridTextColumn Header="Amount" 
+                            <DataGridTextColumn Header="Gross Amount" 
                                                 Binding="{Binding AmountDisplay}" 
                                                 Width="100"
                                                 CanUserSort="True"/>
