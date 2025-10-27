@@ -8,6 +8,8 @@ using Microsoft.Extensions.DependencyInjection;
 using WPFGrowerApp.Commands;
 using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace WPFGrowerApp.ViewModels
 {
@@ -28,6 +30,7 @@ namespace WPFGrowerApp.ViewModels
         private int _activeBatches;
         private int _chequesReady;
         private int _electronicPayments;
+        private ObservableCollection<RecentActivityItem> _recentActivities;
 
         public PaymentManagementHubViewModel(
             IPaymentService paymentService,
@@ -64,6 +67,7 @@ namespace WPFGrowerApp.ViewModels
             // Initialize properties
             StatusMessage = "Ready";
             IsLoading = false;
+            RecentActivities = new ObservableCollection<RecentActivityItem>();
 
             // Load initial data
             _ = LoadDataAsync();
@@ -127,6 +131,16 @@ namespace WPFGrowerApp.ViewModels
             set
             {
                 _electronicPayments = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public ObservableCollection<RecentActivityItem> RecentActivities
+        {
+            get => _recentActivities;
+            set
+            {
+                _recentActivities = value;
                 OnPropertyChanged();
             }
         }
@@ -361,6 +375,9 @@ namespace WPFGrowerApp.ViewModels
                 ChequesReady = 12;
                 ElectronicPayments = 3;
 
+                // Load recent activities
+                LoadRecentActivities();
+
                 StatusMessage = "Payment statistics loaded successfully";
             }
             catch (Exception ex)
@@ -418,5 +435,70 @@ namespace WPFGrowerApp.ViewModels
 
         #endregion
 
+        #region Recent Activities
+
+        private void LoadRecentActivities()
+        {
+            RecentActivities.Clear();
+            
+            // Mock recent activities - replace with actual data from services
+            RecentActivities.Add(new RecentActivityItem
+            {
+                IconKind = "CheckCircle",
+                IconColor = "#4CAF50",
+                Description = "Payment batch #2024-001 completed successfully",
+                Timestamp = "2 minutes ago",
+                Status = "Completed"
+            });
+            
+            RecentActivities.Add(new RecentActivityItem
+            {
+                IconKind = "ClockOutline",
+                IconColor = "#FF6B35",
+                Description = "Cheque preparation started for 25 growers",
+                Timestamp = "15 minutes ago",
+                Status = "In Progress"
+            });
+            
+            RecentActivities.Add(new RecentActivityItem
+            {
+                IconKind = "Bank",
+                IconColor = "#1976D2",
+                Description = "Electronic payment file generated",
+                Timestamp = "1 hour ago",
+                Status = "Ready"
+            });
+            
+            RecentActivities.Add(new RecentActivityItem
+            {
+                IconKind = "AlertCircle",
+                IconColor = "#F44336",
+                Description = "Payment validation failed for 3 growers",
+                Timestamp = "2 hours ago",
+                Status = "Error"
+            });
+            
+            RecentActivities.Add(new RecentActivityItem
+            {
+                IconKind = "PackageVariant",
+                IconColor = "#FFC107",
+                Description = "New payment batch created",
+                Timestamp = "3 hours ago",
+                Status = "Created"
+            });
+        }
+
+        #endregion
+
+    }
+
+    // Recent Activity Item Model
+    public class RecentActivityItem
+    {
+        public string IconKind { get; set; } = string.Empty;
+        public string IconColor { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Timestamp { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
     }
 }

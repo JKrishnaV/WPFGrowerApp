@@ -10,7 +10,7 @@
              xmlns:converters="clr-namespace:WPFGrowerApp.Converters"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:PaymentManagementHubViewModel, IsDesignTimeCreatable=False}"
-             d:DesignHeight="800" d:DesignWidth="1200"
+             d:DesignHeight="900" d:DesignWidth="1400"
              Background="{DynamicResource MaterialDesignPaper}"
              Focusable="True"
              x:Name="paymentManagementHubView">
@@ -23,6 +23,152 @@
             
             <converters:BoolToVisibilityConverter x:Key="BoolToVisConverter"/>
             <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+            
+            <!-- Enhanced Color Palette -->
+            <SolidColorBrush x:Key="PrimaryBlue" Color="#1976D2"/>
+            <SolidColorBrush x:Key="PrimaryBlueLight" Color="#E3F2FD"/>
+            <SolidColorBrush x:Key="SecondaryGreen" Color="#4CAF50"/>
+            <SolidColorBrush x:Key="AccentOrange" Color="#FF6B35"/>
+            <SolidColorBrush x:Key="WarningYellow" Color="#FFC107"/>
+            <SolidColorBrush x:Key="ErrorRed" Color="#F44336"/>
+            <SolidColorBrush x:Key="BackgroundGray" Color="#FAFAFA"/>
+            
+            <!-- Enhanced Styles -->
+            <Style x:Key="EnhancedBreadcrumbStyle" TargetType="materialDesign:ColorZone">
+                <Setter Property="Mode" Value="PrimaryLight"/>
+                <Setter Property="Background" Value="{StaticResource PrimaryBlueLight}"/>
+                <Setter Property="Padding" Value="20,15"/>
+                <Setter Property="Margin" Value="0,0,0,20"/>
+                <Setter Property="CornerRadius" Value="8"/>
+            </Style>
+            
+            <Style x:Key="QuickActionsBarStyle" TargetType="materialDesign:Card">
+                <Setter Property="Background" Value="{StaticResource BackgroundGray}"/>
+                <Setter Property="Margin" Value="0,0,0,20"/>
+                <Setter Property="Padding" Value="20,15"/>
+                <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp1"/>
+            </Style>
+            
+            <Style x:Key="EnhancedStatsCardStyle" TargetType="materialDesign:Card">
+                <Setter Property="Margin" Value="0,0,0,25"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp3"/>
+            </Style>
+            
+            <Style x:Key="EnhancedActionCardStyle" TargetType="materialDesign:Card">
+                <Setter Property="Margin" Value="8"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp2"/>
+                <Setter Property="MinHeight" Value="140"/>
+                <Setter Property="MaxHeight" Value="180"/>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp4"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+            
+            <Style x:Key="EnhancedActionButtonStyle" TargetType="Button">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}" 
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="12"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource PrimaryBlueLight}"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource PrimaryBlue}"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            
+            <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="22"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Foreground" Value="{StaticResource PrimaryBlue}"/>
+                <Setter Property="Margin" Value="0,0,0,20"/>
+            </Style>
+            
+            <Style x:Key="RecentActivityItemStyle" TargetType="Grid">
+                <Setter Property="Margin" Value="0,8"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="{StaticResource PrimaryBlueLight}"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+            
+            <!-- Responsive Grid Style -->
+            <Style x:Key="ResponsiveUniformGridStyle" TargetType="UniformGrid">
+                <Setter Property="Columns" Value="4"/>
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ScrollViewer}, Path=ActualWidth}" Value="0">
+                        <Setter Property="Columns" Value="1"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ScrollViewer}, Path=ActualWidth}" Value="800">
+                        <Setter Property="Columns" Value="2"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ScrollViewer}, Path=ActualWidth}" Value="1200">
+                        <Setter Property="Columns" Value="3"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ScrollViewer}, Path=ActualWidth}" Value="1600">
+                        <Setter Property="Columns" Value="4"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+            
+            <!-- Animation Styles -->
+            <Style x:Key="AnimatedCardStyle" TargetType="materialDesign:Card" BasedOn="{StaticResource EnhancedActionCardStyle}">
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Trigger.EnterActions>
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                   To="1.05" Duration="0:0:0.2"/>
+                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                   To="1.05" Duration="0:0:0.2"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </Trigger.EnterActions>
+                        <Trigger.ExitActions>
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)"
+                                                   To="1.0" Duration="0:0:0.2"/>
+                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)"
+                                                   To="1.0" Duration="0:0:0.2"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </Trigger.ExitActions>
+                    </Trigger>
+                </Style.Triggers>
+                <Setter Property="RenderTransform">
+                    <Setter.Value>
+                        <TransformGroup>
+                            <ScaleTransform ScaleX="1" ScaleY="1"/>
+                        </TransformGroup>
+                    </Setter.Value>
+                </Setter>
+            </Style>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -31,45 +177,75 @@
         <KeyBinding Key="F5" Command="{Binding RefreshCommand}"/>
     </UserControl.InputBindings>
 
-    <Grid Margin="10">
+    <Grid Margin="15">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>  <!-- Breadcrumb -->
-            <RowDefinition Height="Auto"/>  <!-- Title -->
-            <RowDefinition Height="Auto"/>  <!-- Quick Stats -->
-            <RowDefinition Height="*"/>     <!-- Main Content -->
+            <RowDefinition Height="Auto"/>  <!-- Enhanced Breadcrumb -->
+            <RowDefinition Height="Auto"/>  <!-- Quick Actions Bar -->
+            <RowDefinition Height="Auto"/>  <!-- Enhanced Stats Dashboard -->
+            <RowDefinition Height="*"/>     <!-- Tabbed Main Content -->
             <RowDefinition Height="Auto"/>  <!-- Status Bar -->
         </Grid.RowDefinitions>
 
-        <!-- Breadcrumb Navigation -->
-        <materialDesign:ColorZone Grid.Row="0" Style="{StaticResource BreadcrumbNavigationStyle}">
+        <!-- Enhanced Breadcrumb Navigation -->
+        <materialDesign:ColorZone Grid.Row="0" Style="{StaticResource EnhancedBreadcrumbStyle}">
             <StackPanel Orientation="Horizontal">
                 <Button Style="{StaticResource MaterialDesignFlatButton}"
-                        Padding="5,0"
+                        Padding="8,4"
                         Command="{Binding NavigateToDashboardCommand}">
                     <StackPanel Orientation="Horizontal">
-                        <materialDesign:PackIcon Kind="Home" Width="16" Height="16" 
-                                               VerticalAlignment="Center" Margin="0,0,5,0"/>
-                        <TextBlock Text="Dashboard" FontSize="12"/>
+                        <materialDesign:PackIcon Kind="Home" Width="20" Height="20" 
+                                               VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="Dashboard" FontSize="14" FontWeight="SemiBold"/>
                     </StackPanel>
                 </Button>
-                <materialDesign:PackIcon Kind="ChevronRight" Width="16" Height="16" 
-                                       VerticalAlignment="Center" Margin="5,0"/>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <materialDesign:PackIcon Kind="CashMultiple" Width="16" Height="16" 
-                                           VerticalAlignment="Center" Margin="0,0,5,0"/>
-                    <TextBlock Text="Payment Management Hub" FontSize="12" FontWeight="SemiBold"/>
-                </StackPanel>
+                
+                <materialDesign:PackIcon Kind="ChevronRight" Width="20" Height="20" 
+                                       VerticalAlignment="Center" Margin="15,0" Opacity="0.6"/>
+                
+                <Border Background="{StaticResource PrimaryBlue}" 
+                        CornerRadius="20" Padding="15,8" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="CashMultiple" Width="20" Height="20" 
+                                               VerticalAlignment="Center" Margin="0,0,8,0" 
+                                               Foreground="White"/>
+                        <TextBlock Text="Payment Management Hub" FontSize="14" FontWeight="SemiBold" 
+                                   Foreground="White"/>
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </materialDesign:ColorZone>
 
-        <!-- Title -->
-        <TextBlock Grid.Row="1" 
-                   Text="Payment Management Hub" 
-                   Style="{StaticResource StandardizedViewTitleStyle}"/>
+        <!-- Quick Actions Bar -->
+        <materialDesign:Card Grid.Row="1" Style="{StaticResource QuickActionsBarStyle}">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Quick Actions:" FontWeight="SemiBold" FontSize="16"
+                           VerticalAlignment="Center" Margin="0,0,20,0"/>
+                
+                <Button Content="Run Payment Batch" 
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Background="{StaticResource SecondaryGreen}" 
+                        Foreground="White" Margin="8,0"
+                        Command="{Binding NavigateToPaymentRunCommand}"/>
+                
+                <Button Content="View All Batches" 
+                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        Margin="8,0" Command="{Binding NavigateToBatchesCommand}"/>
+                
+                <Button Content="Generate Reports" 
+                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        Margin="8,0" Command="{Binding NavigateToStatusDashboardCommand}"/>
+                
+                <Button Style="{StaticResource MaterialDesignIconButton}"
+                        Margin="8,0" Command="{Binding RefreshCommand}"
+                        ToolTip="Refresh Data">
+                    <materialDesign:PackIcon Kind="Refresh" Width="20" Height="20"/>
+                </Button>
+            </StackPanel>
+        </materialDesign:Card>
 
-        <!-- Quick Stats Dashboard -->
-        <materialDesign:Card Grid.Row="2" Margin="0,0,0,20" Style="{StaticResource StatisticsCardStyle}">
-            <Grid Margin="20">
+        <!-- Enhanced Statistics Dashboard -->
+        <materialDesign:Card Grid.Row="2" Style="{StaticResource EnhancedStatsCardStyle}">
+            <Grid Margin="25">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
@@ -79,484 +255,666 @@
 
                 <!-- Pending Payments -->
                 <Border Grid.Column="0" 
-                        Background="{DynamicResource PrimaryHueLightBrush}"
-                        CornerRadius="8" 
-                        Padding="15" 
-                        Margin="5">
-                    <StackPanel>
-                        <materialDesign:PackIcon Kind="ClockOutline" 
-                                               Width="24" Height="24" 
-                                               Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"
-                                               HorizontalAlignment="Center"/>
-                        <TextBlock Text="{Binding PendingPayments, StringFormat='{}{0:N0}'}" 
-                                   FontSize="24" FontWeight="Bold"
-                                   Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"
-                                   HorizontalAlignment="Center" Margin="0,5,0,0"/>
-                        <TextBlock Text="Pending Payments" 
-                                   FontSize="12" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"
-                                   HorizontalAlignment="Center"/>
-                    </StackPanel>
+                        Background="{StaticResource AccentOrange}"
+                        CornerRadius="12" 
+                        Padding="20" 
+                        Margin="8">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Icon and Title -->
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+                            <materialDesign:PackIcon Kind="ClockOutline" 
+                                                   Width="28" Height="28" 
+                                                   Foreground="White"
+                                                   VerticalAlignment="Center"/>
+                            <TextBlock Text="Pending" FontSize="16" FontWeight="SemiBold" 
+                                       Foreground="White" Margin="12,0,0,0" 
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                        
+                        <!-- Main Number -->
+                        <TextBlock Grid.Row="1" Text="{Binding PendingPayments, StringFormat='{}{0:N0}'}" 
+                                   FontSize="36" FontWeight="Bold"
+                                   Foreground="White" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                        
+                        <!-- Subtitle -->
+                        <TextBlock Grid.Row="2" Text="Payments Awaiting Processing" 
+                                   FontSize="13" FontWeight="SemiBold"
+                                   Foreground="White" HorizontalAlignment="Center" Opacity="0.9"/>
+                    </Grid>
                 </Border>
 
                 <!-- Active Batches -->
                 <Border Grid.Column="1" 
-                        Background="{DynamicResource SecondaryHueLightBrush}"
-                        CornerRadius="8" 
-                        Padding="15" 
-                        Margin="5">
-                    <StackPanel>
-                        <materialDesign:PackIcon Kind="PackageVariant" 
-                                               Width="24" Height="24" 
-                                               Foreground="{DynamicResource SecondaryHueLightForegroundBrush}"
-                                               HorizontalAlignment="Center"/>
-                        <TextBlock Text="{Binding ActiveBatches, StringFormat='{}{0:N0}'}" 
-                                   FontSize="24" FontWeight="Bold"
-                                   Foreground="{DynamicResource SecondaryHueLightForegroundBrush}"
-                                   HorizontalAlignment="Center" Margin="0,5,0,0"/>
-                        <TextBlock Text="Active Batches" 
-                                   FontSize="12" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource SecondaryHueLightForegroundBrush}"
-                                   HorizontalAlignment="Center"/>
-                    </StackPanel>
+                        Background="{StaticResource PrimaryBlue}"
+                        CornerRadius="12" 
+                        Padding="20" 
+                        Margin="8">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Icon and Title -->
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+                            <materialDesign:PackIcon Kind="PackageVariant" 
+                                                   Width="28" Height="28" 
+                                                   Foreground="White"
+                                                   VerticalAlignment="Center"/>
+                            <TextBlock Text="Active" FontSize="16" FontWeight="SemiBold" 
+                                       Foreground="White" Margin="12,0,0,0" 
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                        
+                        <!-- Main Number -->
+                        <TextBlock Grid.Row="1" Text="{Binding ActiveBatches, StringFormat='{}{0:N0}'}" 
+                                   FontSize="36" FontWeight="Bold"
+                                   Foreground="White" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                        
+                        <!-- Subtitle -->
+                        <TextBlock Grid.Row="2" Text="Payment Batches in Progress" 
+                                   FontSize="13" FontWeight="SemiBold"
+                                   Foreground="White" HorizontalAlignment="Center" Opacity="0.9"/>
+                    </Grid>
                 </Border>
 
                 <!-- Cheques Ready -->
                 <Border Grid.Column="2" 
-                        Background="{DynamicResource AccentHueLightBrush}"
-                        CornerRadius="8" 
-                        Padding="15" 
-                        Margin="5">
-                    <StackPanel>
-                        <materialDesign:PackIcon Kind="CheckbookArrowRight" 
-                                               Width="24" Height="24" 
-                                               Foreground="{DynamicResource AccentHueLightForegroundBrush}"
-                                               HorizontalAlignment="Center"/>
-                        <TextBlock Text="{Binding ChequesReady, StringFormat='{}{0:N0}'}" 
-                                   FontSize="24" FontWeight="Bold"
-                                   Foreground="{DynamicResource AccentHueLightForegroundBrush}"
-                                   HorizontalAlignment="Center" Margin="0,5,0,0"/>
-                        <TextBlock Text="Cheques Ready" 
-                                   FontSize="12" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource AccentHueLightForegroundBrush}"
-                                   HorizontalAlignment="Center"/>
-                    </StackPanel>
+                        Background="{StaticResource SecondaryGreen}"
+                        CornerRadius="12" 
+                        Padding="20" 
+                        Margin="8">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Icon and Title -->
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+                            <materialDesign:PackIcon Kind="CheckbookArrowRight" 
+                                                   Width="28" Height="28" 
+                                                   Foreground="White"
+                                                   VerticalAlignment="Center"/>
+                            <TextBlock Text="Ready" FontSize="16" FontWeight="SemiBold" 
+                                       Foreground="White" Margin="12,0,0,0" 
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                        
+                        <!-- Main Number -->
+                        <TextBlock Grid.Row="1" Text="{Binding ChequesReady, StringFormat='{}{0:N0}'}" 
+                                   FontSize="36" FontWeight="Bold"
+                                   Foreground="White" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                        
+                        <!-- Subtitle -->
+                        <TextBlock Grid.Row="2" Text="Cheques Ready for Delivery" 
+                                   FontSize="13" FontWeight="SemiBold"
+                                   Foreground="White" HorizontalAlignment="Center" Opacity="0.9"/>
+                    </Grid>
                 </Border>
 
                 <!-- Electronic Payments -->
                 <Border Grid.Column="3" 
-                        Background="{DynamicResource MaterialDesignChipBackground}"
-                        CornerRadius="8" 
-                        Padding="15" 
-                        Margin="5">
-                    <StackPanel>
-                        <materialDesign:PackIcon Kind="Bank" 
-                                               Width="24" Height="24" 
-                                               Foreground="{DynamicResource MaterialDesignChipForeground}"
-                                               HorizontalAlignment="Center"/>
-                        <TextBlock Text="{Binding ElectronicPayments, StringFormat='{}{0:N0}'}" 
-                                   FontSize="24" FontWeight="Bold"
-                                   Foreground="{DynamicResource MaterialDesignChipForeground}"
-                                   HorizontalAlignment="Center" Margin="0,5,0,0"/>
-                        <TextBlock Text="Electronic Payments" 
-                                   FontSize="12" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource MaterialDesignChipForeground}"
-                                   HorizontalAlignment="Center"/>
-                    </StackPanel>
+                        Background="{StaticResource WarningYellow}"
+                        CornerRadius="12" 
+                        Padding="20" 
+                        Margin="8">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Icon and Title -->
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+                            <materialDesign:PackIcon Kind="Bank" 
+                                                   Width="28" Height="28" 
+                                                   Foreground="White"
+                                                   VerticalAlignment="Center"/>
+                            <TextBlock Text="Electronic" FontSize="16" FontWeight="SemiBold" 
+                                       Foreground="White" Margin="12,0,0,0" 
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                        
+                        <!-- Main Number -->
+                        <TextBlock Grid.Row="1" Text="{Binding ElectronicPayments, StringFormat='{}{0:N0}'}" 
+                                   FontSize="36" FontWeight="Bold"
+                                   Foreground="White" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                        
+                        <!-- Subtitle -->
+                        <TextBlock Grid.Row="2" Text="Electronic Payment Batches" 
+                                   FontSize="13" FontWeight="SemiBold"
+                                   Foreground="White" HorizontalAlignment="Center" Opacity="0.9"/>
+                    </Grid>
                 </Border>
             </Grid>
         </materialDesign:Card>
 
-        <!-- Main Content -->
-        <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
-            <StackPanel>
-                <!-- Payment Processing Section -->
-                <materialDesign:Card Margin="0,0,0,20" Style="{StaticResource MainContentAreaStyle}">
-                    <Grid Margin="20">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <!-- Section Header -->
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
-                            <materialDesign:PackIcon Kind="CashMultiple" Width="28" Height="28" 
-                                                   Foreground="{DynamicResource PrimaryHueMidBrush}"
-                                                   VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <TextBlock Text="Payment Processing" 
-                                       FontSize="20" FontWeight="SemiBold"
-                                       VerticalAlignment="Center"/>
+        <!-- Tabbed Main Content -->
+        <TabControl Grid.Row="3" Style="{StaticResource MaterialDesignTabControl}">
+            <!-- Payment Processing Tab -->
+            <TabItem Header="Payment Processing">
+                <TabItem.HeaderTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="CashMultiple" Width="20" Height="20" 
+                                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="Payment Processing" FontWeight="SemiBold"/>
                         </StackPanel>
-
-                        <!-- Action Cards -->
-                        <UniformGrid Grid.Row="1" Columns="4" Margin="0,0,0,10">
-                            <!-- Run Payments -->
-                            <materialDesign:Card Margin="5" Style="{StaticResource ActionCardStyle}">
-                                <Button Command="{Binding NavigateToPaymentRunCommand}"
-                                        Style="{StaticResource ActionCardButtonStyle}">
-                                    <StackPanel>
-                                        <materialDesign:PackIcon Kind="RocketLaunch" Width="32" Height="32" 
-                                                               Foreground="{DynamicResource PrimaryHueMidBrush}"
-                                                               HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                                        <TextBlock Text="Run Advance Payments" 
-                                                   FontWeight="SemiBold" FontSize="14"
-                                                   HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                                        <TextBlock Text="Process pending payments to growers" 
-                                                   FontSize="11" TextWrapping="Wrap"
-                                                   HorizontalAlignment="Center" Opacity="0.8"/>
-                                    </StackPanel>
-                                </Button>
-                            </materialDesign:Card>
-
-                            <!-- Payment Groups -->
-                            <materialDesign:Card Margin="5" Style="{StaticResource ActionCardStyle}">
-                                <Button Command="{Binding NavigateToPaymentGroupsCommand}"
-                                        Style="{StaticResource ActionCardButtonStyle}">
-                                    <StackPanel>
-                                        <materialDesign:PackIcon Kind="AccountGroup" Width="32" Height="32" 
-                                                               Foreground="{DynamicResource PrimaryHueMidBrush}"
-                                                               HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                                        <TextBlock Text="Payment Groups" 
-                                                   FontWeight="SemiBold" FontSize="14"
-                                                   HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                                        <TextBlock Text="Configure payment groups &amp; settings" 
-                                                   FontSize="11" TextWrapping="Wrap"
-                                                   HorizontalAlignment="Center" Opacity="0.8"/>
-                                    </StackPanel>
-                                </Button>
-                            </materialDesign:Card>
-
-                            <!-- Distribution -->
-                            <materialDesign:Card Margin="5" Style="{StaticResource ActionCardStyle}">
-                                <Button Command="{Binding NavigateToDistributionCommand}"
-                                        Style="{StaticResource ActionCardButtonStyle}">
-                                    <StackPanel>
-                                        <materialDesign:PackIcon Kind="ShareVariant" Width="32" Height="32" 
-                                                               Foreground="{DynamicResource PrimaryHueMidBrush}"
-                                                               HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                                        <TextBlock Text="Distribution" 
-                                                   FontWeight="SemiBold" FontSize="14"
-                                                   HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                                        <TextBlock Text="Distribute payments to growers" 
-                                                   FontSize="11" TextWrapping="Wrap"
-                                                   HorizontalAlignment="Center" Opacity="0.8"/>
-                                    </StackPanel>
-                                </Button>
-                            </materialDesign:Card>
-
-                            <!-- Batch Management -->
-                            <materialDesign:Card Margin="5" Style="{StaticResource ActionCardStyle}">
-                                <Button Command="{Binding NavigateToBatchesCommand}"
-                                        Style="{StaticResource ActionCardButtonStyle}">
-                                    <StackPanel>
-                                        <materialDesign:PackIcon Kind="PackageVariant" Width="32" Height="32" 
-                                                               Foreground="{DynamicResource PrimaryHueMidBrush}"
-                                                               HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                                        <TextBlock Text="Batch Management" 
-                                                   FontWeight="SemiBold" FontSize="14"
-                                                   HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                                        <TextBlock Text="Track &amp; manage payment batches" 
-                                                   FontSize="11" TextWrapping="Wrap"
-                                                   HorizontalAlignment="Center" Opacity="0.8"/>
-                                    </StackPanel>
-                                </Button>
-                            </materialDesign:Card>
-                        </UniformGrid>
-                    </Grid>
-                </materialDesign:Card>
-
-                <!-- Cheque Operations Section -->
-                <materialDesign:Card Margin="0,0,0,20" Style="{StaticResource MainContentAreaStyle}">
-                    <Grid Margin="20">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <!-- Section Header -->
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
-                            <materialDesign:PackIcon Kind="CheckbookArrowRight" Width="28" Height="28" 
-                                                   Foreground="{DynamicResource SecondaryHueMidBrush}"
-                                                   VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <TextBlock Text="Cheque Operations" 
-                                       FontSize="20" FontWeight="SemiBold"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-
-                        <!-- Action Cards -->
-                        <UniformGrid Grid.Row="1" Columns="3" Margin="0,0,0,10">
-                            <!-- Prepare Cheques -->
-                            <materialDesign:Card Margin="5" Style="{StaticResource ActionCardStyle}">
-                                <Button Command="{Binding NavigateToChequePreparationCommand}"
-                                        Style="{StaticResource ActionCardButtonStyle}">
-                                    <StackPanel>
-                                        <materialDesign:PackIcon Kind="CheckbookArrowRight" Width="32" Height="32" 
-                                                               Foreground="{DynamicResource SecondaryHueMidBrush}"
-                                                               HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                                        <TextBlock Text="Prepare Cheques" 
-                                                   FontWeight="SemiBold" FontSize="14"
-                                                   HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                                        <TextBlock Text="Generate and print cheques" 
-                                                   FontSize="11" TextWrapping="Wrap"
-                                                   HorizontalAlignment="Center" Opacity="0.8"/>
-                                    </StackPanel>
-                                </Button>
-                            </materialDesign:Card>
-
-                            <!-- Review Cheques -->
-                            <materialDesign:Card Margin="5" Style="{StaticResource ActionCardStyle}">
-                                <Button Command="{Binding NavigateToChequeReviewCommand}"
-                                        Style="{StaticResource ActionCardButtonStyle}">
-                                    <StackPanel>
-                                        <materialDesign:PackIcon Kind="ClipboardCheckOutline" Width="32" Height="32" 
-                                                               Foreground="{DynamicResource SecondaryHueMidBrush}"
-                                                               HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                                        <TextBlock Text="Review Cheques" 
-                                                   FontWeight="SemiBold" FontSize="14"
-                                                   HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                                        <TextBlock Text="Review and approve cheques" 
-                                                   FontSize="11" TextWrapping="Wrap"
-                                                   HorizontalAlignment="Center" Opacity="0.8"/>
-                                    </StackPanel>
-                                </Button>
-                            </materialDesign:Card>
-
-                            <!-- Deliver Cheques -->
-                            <materialDesign:Card Margin="5" Style="{StaticResource ActionCardStyle}">
-                                <Button Command="{Binding NavigateToChequeDeliveryCommand}"
-                                        Style="{StaticResource ActionCardButtonStyle}">
-                                    <StackPanel>
-                                        <materialDesign:PackIcon Kind="TruckDeliveryOutline" Width="32" Height="32" 
-                                                               Foreground="{DynamicResource SecondaryHueMidBrush}"
-                                                               HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                                        <TextBlock Text="Deliver Cheques" 
-                                                   FontWeight="SemiBold" FontSize="14"
-                                                   HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                                        <TextBlock Text="Record delivery of cheques" 
-                                                   FontSize="11" TextWrapping="Wrap"
-                                                   HorizontalAlignment="Center" Opacity="0.8"/>
-                                    </StackPanel>
-                                </Button>
-                            </materialDesign:Card>
-                        </UniformGrid>
-                    </Grid>
-                </materialDesign:Card>
-
-                <!-- Enhanced Payment Features Section -->
-                <materialDesign:Card Margin="0,0,0,20" Style="{StaticResource MainContentAreaStyle}">
-                    <Grid Margin="20">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <!-- Section Header -->
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
-                            <materialDesign:PackIcon Kind="Rocket" Width="28" Height="28" 
-                                                   Foreground="{DynamicResource PrimaryHueMidBrush}"
-                                                   VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <TextBlock Text="Enhanced Payment Features" 
-                                       FontSize="20" FontWeight="SemiBold"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-
-                        <!-- Action Cards -->
-                        <UniformGrid Grid.Row="1" Columns="3" Margin="0,0,0,10">
-                            <!-- Advance Cheques -->
-                            <materialDesign:Card Margin="5" Style="{StaticResource ActionCardStyle}">
-                                <Button Command="{Binding NavigateToAdvanceChequesCommand}"
-                                        Style="{StaticResource ActionCardButtonStyle}">
-                                    <StackPanel>
-                                        <materialDesign:PackIcon Kind="CurrencyUsd" Width="32" Height="32" 
-                                                               Foreground="{DynamicResource PrimaryHueMidBrush}"
-                                                               HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                                        <TextBlock Text="Advance Cheques" 
-                                                   FontWeight="SemiBold" FontSize="14"
-                                                   HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                                        <TextBlock Text="Create and manage advance payments to growers" 
-                                                   FontSize="11" TextWrapping="Wrap"
-                                                   HorizontalAlignment="Center" Opacity="0.8"/>
-                                    </StackPanel>
-                                </Button>
-                            </materialDesign:Card>
-
-                            <!-- Enhanced Payment Distribution -->
-                            <materialDesign:Card Margin="5" Style="{StaticResource ActionCardStyle}">
-                                <Button Command="{Binding NavigateToEnhancedPaymentDistributionCommand}"
-                                        Style="{StaticResource ActionCardButtonStyle}">
-                                    <StackPanel>
-                                        <materialDesign:PackIcon Kind="Share" Width="32" Height="32" 
-                                                               Foreground="{DynamicResource AccentHueMidBrush}"
-                                                               HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                                        <TextBlock Text="Enhanced Payment Distribution" 
-                                                   FontWeight="SemiBold" FontSize="14"
-                                                   HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                                        <TextBlock Text="Select payment methods and consolidate across batches" 
-                                                   FontSize="11" TextWrapping="Wrap"
-                                                   HorizontalAlignment="Center" Opacity="0.8"/>
-                                    </StackPanel>
-                                </Button>
-                            </materialDesign:Card>
-
-                            <!-- Enhanced Cheque Preparation -->
-                            <materialDesign:Card Margin="5" Style="{StaticResource ActionCardStyle}">
-                                <Button Command="{Binding NavigateToEnhancedChequePreparationCommand}"
-                                        Style="{StaticResource ActionCardButtonStyle}">
-                                    <StackPanel>
-                                        <materialDesign:PackIcon Kind="FileDocument" Width="32" Height="32" 
-                                                               Foreground="{DynamicResource SecondaryHueMidBrush}"
-                                                               HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                                        <TextBlock Text="Enhanced Cheque Preparation" 
-                                                   FontWeight="SemiBold" FontSize="14"
-                                                   HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                                        <TextBlock Text="Prepare and manage all types of cheques" 
-                                                   FontSize="11" TextWrapping="Wrap"
-                                                   HorizontalAlignment="Center" Opacity="0.8"/>
-                                    </StackPanel>
-                                </Button>
-                            </materialDesign:Card>
-                        </UniformGrid>
-                    </Grid>
-                </materialDesign:Card>
-
-                <!-- Electronic Payments Section -->
-                <materialDesign:Card Margin="0,0,0,20" Style="{StaticResource MainContentAreaStyle}">
-                    <Grid Margin="20">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <!-- Section Header -->
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
-                            <materialDesign:PackIcon Kind="Bank" Width="28" Height="28" 
-                                                   Foreground="{DynamicResource AccentHueMidBrush}"
-                                                   VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <TextBlock Text="Electronic Payments" 
-                                       FontSize="20" FontWeight="SemiBold"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-
-                        <!-- Action Card -->
-                        <materialDesign:Card Grid.Row="1" Margin="5" Style="{StaticResource ActionCardStyle}">
-                            <Button Command="{Binding NavigateToElectronicPaymentsCommand}"
-                                    Style="{StaticResource ActionCardButtonStyle}">
-                                <StackPanel>
-                                    <materialDesign:PackIcon Kind="Bank" Width="32" Height="32" 
-                                                           Foreground="{DynamicResource AccentHueMidBrush}"
-                                                           HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                                    <TextBlock Text="Process Electronic Payments" 
-                                               FontWeight="SemiBold" FontSize="14"
-                                               HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                                    <TextBlock Text="Generate NACHA files for electronic payment processing" 
-                                               FontSize="11" TextWrapping="Wrap"
-                                               HorizontalAlignment="Center" Opacity="0.8"/>
-                                </StackPanel>
+                    </DataTemplate>
+                </TabItem.HeaderTemplate>
+                
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+                    <UniformGrid Columns="4" Margin="0,0,0,20">
+                        <UniformGrid.Style>
+                            <Style TargetType="UniformGrid">
+                                <Style.Triggers>
+                                    <Trigger Property="ActualWidth" Value="0">
+                                        <Setter Property="Columns" Value="1"/>
+                                    </Trigger>
+                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=ActualWidth}" Value="800">
+                                        <Setter Property="Columns" Value="2"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=ActualWidth}" Value="1200">
+                                        <Setter Property="Columns" Value="3"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=ActualWidth}" Value="1600">
+                                        <Setter Property="Columns" Value="4"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </UniformGrid.Style>
+                        <!-- Run Advance Payments -->
+                        <materialDesign:Card Style="{StaticResource AnimatedCardStyle}">
+                            <Button Command="{Binding NavigateToPaymentRunCommand}"
+                                    Style="{StaticResource EnhancedActionButtonStyle}">
+                                <Grid Margin="20">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="60"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <!-- Icon with background circle -->
+                                    <Border Grid.Row="0" Width="60" Height="60" 
+                                            Background="{StaticResource AccentOrange}" CornerRadius="30" 
+                                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <materialDesign:PackIcon Kind="RocketLaunch" 
+                                                                 Width="32" Height="32" 
+                                                                 Foreground="White"
+                                                                 HorizontalAlignment="Center"
+                                                                 VerticalAlignment="Center"/>
+                                    </Border>
+                                    
+                                    <!-- Title -->
+                                    <TextBlock Grid.Row="1" Text="Run Advance Payments" 
+                                               FontWeight="SemiBold" FontSize="16" 
+                                               HorizontalAlignment="Center" Margin="0,15,0,8"/>
+                                    
+                                    <!-- Description -->
+                                    <TextBlock Grid.Row="2" Text="Process pending payments to growers" 
+                                               FontSize="13" Opacity="0.8" TextWrapping="Wrap" 
+                                               HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                                    
+                                    <!-- Status indicator -->
+                                    <Border Grid.Row="3" Background="{StaticResource SecondaryGreen}" 
+                                            CornerRadius="12" Padding="12,6" HorizontalAlignment="Center"
+                                            Margin="0,8,0,0">
+                                        <Border.Effect>
+                                            <DropShadowEffect Color="Black" Direction="270" ShadowDepth="2" 
+                                                            Opacity="0.3" BlurRadius="4"/>
+                                        </Border.Effect>
+                                        <TextBlock Text="Ready" FontSize="13" FontWeight="Bold" 
+                                                   Foreground="White"/>
+                                    </Border>
+                                </Grid>
                             </Button>
                         </materialDesign:Card>
-                    </Grid>
-                </materialDesign:Card>
 
-                <!-- Final Payments Section -->
-                <materialDesign:Card Margin="0,0,0,20" Style="{StaticResource MainContentAreaStyle}">
-                    <Grid Margin="20">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <!-- Section Header -->
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
-                            <materialDesign:PackIcon Kind="Flag" Width="28" Height="28" 
-                                                   Foreground="{DynamicResource MaterialDesignChipBackground}"
-                                                   VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <TextBlock Text="Final Payments" 
-                                       FontSize="20" FontWeight="SemiBold"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-
-                        <!-- Action Card -->
-                        <materialDesign:Card Grid.Row="1" Margin="5" Style="{StaticResource ActionCardStyle}">
-                            <Button Command="{Binding NavigateToFinalPaymentsCommand}"
-                                    Style="{StaticResource ActionCardButtonStyle}">
-                                <StackPanel>
-                                    <materialDesign:PackIcon Kind="Flag" Width="32" Height="32" 
-                                                           Foreground="{DynamicResource MaterialDesignChipBackground}"
-                                                           HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                                    <TextBlock Text="Year-End Final Payments" 
-                                               FontWeight="SemiBold" FontSize="14"
-                                               HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                                    <TextBlock Text="Calculate and process year-end final payments after all advances" 
-                                               FontSize="11" TextWrapping="Wrap"
-                                               HorizontalAlignment="Center" Opacity="0.8"/>
-                                </StackPanel>
+                        <!-- Payment Groups -->
+                        <materialDesign:Card Style="{StaticResource AnimatedCardStyle}">
+                            <Button Command="{Binding NavigateToPaymentGroupsCommand}"
+                                    Style="{StaticResource EnhancedActionButtonStyle}">
+                                <Grid Margin="20">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="60"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <!-- Icon with background circle -->
+                                    <Border Grid.Row="0" Width="60" Height="60" 
+                                            Background="{StaticResource PrimaryBlue}" CornerRadius="30" 
+                                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <materialDesign:PackIcon Kind="AccountGroup" 
+                                                                 Width="32" Height="32" 
+                                                                 Foreground="White"
+                                                                 HorizontalAlignment="Center"
+                                                                 VerticalAlignment="Center"/>
+                                    </Border>
+                                    
+                                    <!-- Title -->
+                                    <TextBlock Grid.Row="1" Text="Payment Groups" 
+                                               FontWeight="SemiBold" FontSize="16" 
+                                               HorizontalAlignment="Center" Margin="0,15,0,8"/>
+                                    
+                                    <!-- Description -->
+                                    <TextBlock Grid.Row="2" Text="Configure payment groups &amp; settings" 
+                                               FontSize="13" Opacity="0.8" TextWrapping="Wrap" 
+                                               HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                                    
+                                    <!-- Status indicator -->
+                                    <Border Grid.Row="3" Background="{StaticResource SecondaryGreen}" 
+                                            CornerRadius="12" Padding="12,6" HorizontalAlignment="Center"
+                                            Margin="0,8,0,0">
+                                        <Border.Effect>
+                                            <DropShadowEffect Color="Black" Direction="270" ShadowDepth="2" 
+                                                            Opacity="0.3" BlurRadius="4"/>
+                                        </Border.Effect>
+                                        <TextBlock Text="Ready" FontSize="13" FontWeight="Bold" 
+                                                   Foreground="White"/>
+                                    </Border>
+                                </Grid>
                             </Button>
                         </materialDesign:Card>
-                    </Grid>
-                </materialDesign:Card>
 
-                <!-- Status &amp; Reports Section -->
-                <materialDesign:Card Margin="0,0,0,20" Style="{StaticResource MainContentAreaStyle}">
-                    <Grid Margin="20">
+                        <!-- Distribution -->
+                        <materialDesign:Card Style="{StaticResource AnimatedCardStyle}">
+                            <Button Command="{Binding NavigateToEnhancedPaymentDistributionCommand}"
+                                    Style="{StaticResource EnhancedActionButtonStyle}">
+                                <Grid Margin="20">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="60"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <!-- Icon with background circle -->
+                                    <Border Grid.Row="0" Width="60" Height="60" 
+                                            Background="{StaticResource SecondaryGreen}" CornerRadius="30" 
+                                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <materialDesign:PackIcon Kind="ShareVariant" 
+                                                                 Width="32" Height="32" 
+                                                                 Foreground="White"
+                                                                 HorizontalAlignment="Center"
+                                                                 VerticalAlignment="Center"/>
+                                    </Border>
+                                    
+                                    <!-- Title -->
+                                    <TextBlock Grid.Row="1" Text="Distribution" 
+                                               FontWeight="SemiBold" FontSize="16" 
+                                               HorizontalAlignment="Center" Margin="0,15,0,8"/>
+                                    
+                                    <!-- Description -->
+                                    <TextBlock Grid.Row="2" Text="Distribute payments to growers" 
+                                               FontSize="13" Opacity="0.8" TextWrapping="Wrap" 
+                                               HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                                    
+                                    <!-- Status indicator -->
+                                    <Border Grid.Row="3" Background="{StaticResource SecondaryGreen}" 
+                                            CornerRadius="12" Padding="12,6" HorizontalAlignment="Center"
+                                            Margin="0,8,0,0">
+                                        <Border.Effect>
+                                            <DropShadowEffect Color="Black" Direction="270" ShadowDepth="2" 
+                                                            Opacity="0.3" BlurRadius="4"/>
+                                        </Border.Effect>
+                                        <TextBlock Text="Ready" FontSize="13" FontWeight="Bold" 
+                                                   Foreground="White"/>
+                                    </Border>
+                                </Grid>
+                            </Button>
+                        </materialDesign:Card>
+
+                        <!-- Batch Management -->
+                        <materialDesign:Card Style="{StaticResource AnimatedCardStyle}">
+                            <Button Command="{Binding NavigateToBatchesCommand}"
+                                    Style="{StaticResource EnhancedActionButtonStyle}">
+                                <Grid Margin="20">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="60"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <!-- Icon with background circle -->
+                                    <Border Grid.Row="0" Width="60" Height="60" 
+                                            Background="{StaticResource WarningYellow}" CornerRadius="30" 
+                                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <materialDesign:PackIcon Kind="PackageVariant" 
+                                                                 Width="32" Height="32" 
+                                                                 Foreground="White"
+                                                                 HorizontalAlignment="Center"
+                                                                 VerticalAlignment="Center"/>
+                                    </Border>
+                                    
+                                    <!-- Title -->
+                                    <TextBlock Grid.Row="1" Text="Batch Management" 
+                                               FontWeight="SemiBold" FontSize="16" 
+                                               HorizontalAlignment="Center" Margin="0,15,0,8"/>
+                                    
+                                    <!-- Description -->
+                                    <TextBlock Grid.Row="2" Text="Track &amp; manage payment batches" 
+                                               FontSize="13" Opacity="0.8" TextWrapping="Wrap" 
+                                               HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                                    
+                                    <!-- Status indicator -->
+                                    <Border Grid.Row="3" Background="{StaticResource SecondaryGreen}" 
+                                            CornerRadius="12" Padding="12,6" HorizontalAlignment="Center"
+                                            Margin="0,8,0,0">
+                                        <Border.Effect>
+                                            <DropShadowEffect Color="Black" Direction="270" ShadowDepth="2" 
+                                                            Opacity="0.3" BlurRadius="4"/>
+                                        </Border.Effect>
+                                        <TextBlock Text="Ready" FontSize="13" FontWeight="Bold" 
+                                                   Foreground="White"/>
+                                    </Border>
+                                </Grid>
+                            </Button>
+                        </materialDesign:Card>
+                    </UniformGrid>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- Cheque Operations Tab -->
+            <TabItem Header="Cheque Operations">
+                <TabItem.HeaderTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="CheckbookArrowRight" Width="20" Height="20" 
+                                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="Cheque Operations" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </TabItem.HeaderTemplate>
+                
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+                    <UniformGrid Columns="3" Margin="0,0,0,20">
+                        <UniformGrid.Style>
+                            <Style TargetType="UniformGrid">
+                                <Style.Triggers>
+                                    <Trigger Property="ActualWidth" Value="0">
+                                        <Setter Property="Columns" Value="1"/>
+                                    </Trigger>
+                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=ActualWidth}" Value="600">
+                                        <Setter Property="Columns" Value="2"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=ActualWidth}" Value="900">
+                                        <Setter Property="Columns" Value="3"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </UniformGrid.Style>
+                        <!-- Prepare Cheques -->
+                        <materialDesign:Card Style="{StaticResource AnimatedCardStyle}">
+                            <Button Command="{Binding NavigateToEnhancedChequePreparationCommand}"
+                                    Style="{StaticResource EnhancedActionButtonStyle}">
+                                <Grid Margin="20">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="60"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <!-- Icon with background circle -->
+                                    <Border Grid.Row="0" Width="60" Height="60" 
+                                            Background="{StaticResource SecondaryGreen}" CornerRadius="30" 
+                                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <materialDesign:PackIcon Kind="CheckbookArrowRight" 
+                                                                 Width="32" Height="32" 
+                                                                 Foreground="White"
+                                                                 HorizontalAlignment="Center"
+                                                                 VerticalAlignment="Center"/>
+                                    </Border>
+                                    
+                                    <!-- Title -->
+                                    <TextBlock Grid.Row="1" Text="Prepare Cheques" 
+                                               FontWeight="SemiBold" FontSize="16" 
+                                               HorizontalAlignment="Center" Margin="0,15,0,8"/>
+                                    
+                                    <!-- Description -->
+                                    <TextBlock Grid.Row="2" Text="Generate and print cheques" 
+                                               FontSize="13" Opacity="0.8" TextWrapping="Wrap" 
+                                               HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                                    
+                                    <!-- Status indicator -->
+                                    <Border Grid.Row="3" Background="{StaticResource SecondaryGreen}" 
+                                            CornerRadius="12" Padding="12,6" HorizontalAlignment="Center"
+                                            Margin="0,8,0,0">
+                                        <Border.Effect>
+                                            <DropShadowEffect Color="Black" Direction="270" ShadowDepth="2" 
+                                                            Opacity="0.3" BlurRadius="4"/>
+                                        </Border.Effect>
+                                        <TextBlock Text="Ready" FontSize="13" FontWeight="Bold" 
+                                                   Foreground="White"/>
+                                    </Border>
+                                </Grid>
+                            </Button>
+                        </materialDesign:Card>
+
+                        <!-- Review Cheques -->
+                        <materialDesign:Card Style="{StaticResource AnimatedCardStyle}">
+                            <Button Command="{Binding NavigateToChequeReviewCommand}"
+                                    Style="{StaticResource EnhancedActionButtonStyle}">
+                                <Grid Margin="20">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="60"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <!-- Icon with background circle -->
+                                    <Border Grid.Row="0" Width="60" Height="60" 
+                                            Background="{StaticResource PrimaryBlue}" CornerRadius="30" 
+                                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <materialDesign:PackIcon Kind="ClipboardCheckOutline" 
+                                                                 Width="32" Height="32" 
+                                                                 Foreground="White"
+                                                                 HorizontalAlignment="Center"
+                                                                 VerticalAlignment="Center"/>
+                                    </Border>
+                                    
+                                    <!-- Title -->
+                                    <TextBlock Grid.Row="1" Text="Review Cheques" 
+                                               FontWeight="SemiBold" FontSize="16" 
+                                               HorizontalAlignment="Center" Margin="0,15,0,8"/>
+                                    
+                                    <!-- Description -->
+                                    <TextBlock Grid.Row="2" Text="Review and approve cheques" 
+                                               FontSize="13" Opacity="0.8" TextWrapping="Wrap" 
+                                               HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                                    
+                                    <!-- Status indicator -->
+                                    <Border Grid.Row="3" Background="{StaticResource SecondaryGreen}" 
+                                            CornerRadius="12" Padding="12,6" HorizontalAlignment="Center"
+                                            Margin="0,8,0,0">
+                                        <Border.Effect>
+                                            <DropShadowEffect Color="Black" Direction="270" ShadowDepth="2" 
+                                                            Opacity="0.3" BlurRadius="4"/>
+                                        </Border.Effect>
+                                        <TextBlock Text="Ready" FontSize="13" FontWeight="Bold" 
+                                                   Foreground="White"/>
+                                    </Border>
+                                </Grid>
+                            </Button>
+                        </materialDesign:Card>
+
+                        <!-- Deliver Cheques -->
+                        <materialDesign:Card Style="{StaticResource AnimatedCardStyle}">
+                            <Button Command="{Binding NavigateToChequeDeliveryCommand}"
+                                    Style="{StaticResource EnhancedActionButtonStyle}">
+                                <Grid Margin="20">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="60"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <!-- Icon with background circle -->
+                                    <Border Grid.Row="0" Width="60" Height="60" 
+                                            Background="{StaticResource AccentOrange}" CornerRadius="30" 
+                                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <materialDesign:PackIcon Kind="TruckDeliveryOutline" 
+                                                                 Width="32" Height="32" 
+                                                                 Foreground="White"
+                                                                 HorizontalAlignment="Center"
+                                                                 VerticalAlignment="Center"/>
+                                    </Border>
+                                    
+                                    <!-- Title -->
+                                    <TextBlock Grid.Row="1" Text="Deliver Cheques" 
+                                               FontWeight="SemiBold" FontSize="16" 
+                                               HorizontalAlignment="Center" Margin="0,15,0,8"/>
+                                    
+                                    <!-- Description -->
+                                    <TextBlock Grid.Row="2" Text="Record delivery of cheques" 
+                                               FontSize="13" Opacity="0.8" TextWrapping="Wrap" 
+                                               HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                                    
+                                    <!-- Status indicator -->
+                                    <Border Grid.Row="3" Background="{StaticResource SecondaryGreen}" 
+                                            CornerRadius="12" Padding="12,6" HorizontalAlignment="Center"
+                                            Margin="0,8,0,0">
+                                        <Border.Effect>
+                                            <DropShadowEffect Color="Black" Direction="270" ShadowDepth="2" 
+                                                            Opacity="0.3" BlurRadius="4"/>
+                                        </Border.Effect>
+                                        <TextBlock Text="Ready" FontSize="13" FontWeight="Bold" 
+                                                   Foreground="White"/>
+                                    </Border>
+                                </Grid>
+                            </Button>
+                        </materialDesign:Card>
+                    </UniformGrid>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- Reports & Status Tab -->
+            <TabItem Header="Reports &amp; Status">
+                <TabItem.HeaderTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="ChartLine" Width="20" Height="20" 
+                                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="Reports &amp; Status" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </TabItem.HeaderTemplate>
+                
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+                    <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
+                        
+                        <!-- Status Dashboard -->
+                        <materialDesign:Card Grid.Row="0" Margin="0,0,0,20" Style="{StaticResource AnimatedCardStyle}">
+                            <Button Command="{Binding NavigateToStatusDashboardCommand}"
+                                    Style="{StaticResource EnhancedActionButtonStyle}">
+                                <Grid Margin="20">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="60"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <!-- Icon with background circle -->
+                                    <Border Grid.Row="0" Width="60" Height="60" 
+                                            Background="{StaticResource PrimaryBlue}" CornerRadius="30" 
+                                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <materialDesign:PackIcon Kind="ViewDashboard" 
+                                                                 Width="32" Height="32" 
+                                                                 Foreground="White"
+                                                                 HorizontalAlignment="Center"
+                                                                 VerticalAlignment="Center"/>
+                                    </Border>
+                                    
+                                    <!-- Title -->
+                                    <TextBlock Grid.Row="1" Text="Payment Status Dashboard" 
+                                               FontWeight="SemiBold" FontSize="16" 
+                                               HorizontalAlignment="Center" Margin="0,15,0,8"/>
+                                    
+                                    <!-- Description -->
+                                    <TextBlock Grid.Row="2" Text="Monitor payment status and delivery tracking" 
+                                               FontSize="13" Opacity="0.8" TextWrapping="Wrap" 
+                                               HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                                    
+                                    <!-- Status indicator -->
+                                    <Border Grid.Row="3" Background="{StaticResource SecondaryGreen}" 
+                                            CornerRadius="12" Padding="12,6" HorizontalAlignment="Center"
+                                            Margin="0,8,0,0">
+                                        <Border.Effect>
+                                            <DropShadowEffect Color="Black" Direction="270" ShadowDepth="2" 
+                                                            Opacity="0.3" BlurRadius="4"/>
+                                        </Border.Effect>
+                                        <TextBlock Text="Active" FontSize="13" FontWeight="Bold" 
+                                                   Foreground="White"/>
+                                    </Border>
+                                </Grid>
+                            </Button>
+                        </materialDesign:Card>
 
-                        <!-- Section Header -->
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
-                            <materialDesign:PackIcon Kind="ChartLine" Width="28" Height="28" 
-                                                   Foreground="{DynamicResource MaterialDesignDivider}"
-                                                   VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <TextBlock Text="Status &amp; Reports" 
-                                       FontSize="20" FontWeight="SemiBold"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-
-                        <!-- Action Cards -->
-                        <UniformGrid Grid.Row="1" Columns="2" Margin="0,0,0,10">
-                            <!-- Payment Status Dashboard -->
-                            <materialDesign:Card Margin="5" Style="{StaticResource ActionCardStyle}">
-                                <Button Command="{Binding NavigateToStatusDashboardCommand}"
-                                        Style="{StaticResource ActionCardButtonStyle}">
-                                    <StackPanel>
-                                        <materialDesign:PackIcon Kind="ViewDashboard" Width="32" Height="32" 
-                                                               Foreground="{DynamicResource MaterialDesignDivider}"
-                                                               HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                                        <TextBlock Text="Payment Status Dashboard" 
-                                                   FontWeight="SemiBold" FontSize="14"
-                                                   HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                                        <TextBlock Text="Monitor payment status and delivery tracking" 
-                                                   FontSize="11" TextWrapping="Wrap"
-                                                   HorizontalAlignment="Center" Opacity="0.8"/>
-                                    </StackPanel>
-                                </Button>
-                            </materialDesign:Card>
-
-                            <!-- Payment Reconciliation -->
-                            <materialDesign:Card Margin="5" Style="{StaticResource ActionCardStyle}">
-                                <Button Command="{Binding NavigateToReconciliationCommand}"
-                                        Style="{StaticResource ActionCardButtonStyle}">
-                                    <StackPanel>
-                                        <materialDesign:PackIcon Kind="Calculator" Width="32" Height="32" 
-                                                               Foreground="{DynamicResource MaterialDesignDivider}"
-                                                               HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                                        <TextBlock Text="Payment Reconciliation" 
-                                                   FontWeight="SemiBold" FontSize="14"
-                                                   HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                                        <TextBlock Text="Reconcile and generate reports" 
-                                                   FontSize="11" TextWrapping="Wrap"
-                                                   HorizontalAlignment="Center" Opacity="0.8"/>
-                                    </StackPanel>
-                                </Button>
-                            </materialDesign:Card>
-                        </UniformGrid>
+                        <!-- Recent Activity Section -->
+                        <materialDesign:Card Grid.Row="1" Style="{StaticResource AnimatedCardStyle}">
+                            <Grid Margin="20">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                
+                                <TextBlock Grid.Row="0" Text="Recent Activity" 
+                                           Style="{StaticResource SectionHeaderStyle}"/>
+                                
+                                <ListView Grid.Row="1" ItemsSource="{Binding RecentActivities}">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Style="{StaticResource RecentActivityItemStyle}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                
+                                                <materialDesign:PackIcon Kind="{Binding IconKind}" 
+                                                                         Width="20" Height="20" 
+                                                                         Foreground="{Binding IconColor}"/>
+                                                
+                                                <StackPanel Grid.Column="1" Margin="10,0">
+                                                    <TextBlock Text="{Binding Description}" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{Binding Timestamp}" FontSize="12" Opacity="0.7"/>
+                                                </StackPanel>
+                                                
+                                                <TextBlock Grid.Column="2" Text="{Binding Status}" 
+                                                           FontSize="12" Opacity="0.7"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                            </Grid>
+                        </materialDesign:Card>
                     </Grid>
-                </materialDesign:Card>
-            </StackPanel>
-        </ScrollViewer>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
 
-        <!-- Status Bar -->
+        <!-- Enhanced Status Bar -->
         <materialDesign:ColorZone Grid.Row="4" Style="{StaticResource StatusFooterBarStyle}">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -566,31 +924,52 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
-                    <TextBlock Text="Status: " FontWeight="SemiBold"/>
-                    <TextBlock Text="{Binding StatusMessage}"/>
+                    <materialDesign:PackIcon Kind="Information" Width="16" Height="16" 
+                                           VerticalAlignment="Center" Margin="0,0,8,0" 
+                                           Foreground="{StaticResource PrimaryBlue}"/>
+                    <TextBlock Text="Status: " FontWeight="SemiBold" FontSize="13"/>
+                    <TextBlock Text="{Binding StatusMessage}" FontSize="13" 
+                               Foreground="{StaticResource PrimaryBlue}"/>
                 </StackPanel>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
                     <materialDesign:PackIcon Kind="HelpCircle" Width="16" Height="16" 
-                                           VerticalAlignment="Center" Margin="0,0,5,0"/>
-                    <TextBlock Text="Press F1 for help | F5 to refresh" FontSize="11" Opacity="0.7"/>
+                                           VerticalAlignment="Center" Margin="0,0,8,0" 
+                                           Foreground="{StaticResource PrimaryBlue}"/>
+                    <TextBlock Text="Press F1 for help | F5 to refresh" FontSize="11" Opacity="0.8"/>
                 </StackPanel>
             </Grid>
         </materialDesign:ColorZone>
 
-        <!-- Loading Indicator -->
+        <!-- Enhanced Loading Indicator -->
         <materialDesign:Card Grid.Row="0" 
                             Grid.RowSpan="5"
-                            Style="{StaticResource LoadingIndicatorStyle}"
+                            Background="{StaticResource PrimaryBlueLight}"
+                            Opacity="0.95"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
                             Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisConverter}}">
-            <StackPanel Orientation="Horizontal">
-                <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}"
-                            Value="0"
-                            IsIndeterminate="True"/>
-                <TextBlock Text="Loading payment management hub..."
-                          VerticalAlignment="Center"
-                          Margin="10,0,0,0"/>
-            </StackPanel>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center">
+                    <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}"
+                                Width="40" Height="40"
+                                Value="0"
+                                IsIndeterminate="True"
+                                Foreground="{StaticResource PrimaryBlue}"/>
+                    <TextBlock Text="Loading payment management hub..."
+                              VerticalAlignment="Center"
+                              Margin="20,0,0,0"
+                              FontSize="16"
+                              FontWeight="SemiBold"
+                              Foreground="{StaticResource PrimaryBlue}"/>
+                </StackPanel>
+            </Grid>
         </materialDesign:Card>
     </Grid>
 </UserControl>
