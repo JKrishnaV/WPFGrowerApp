@@ -273,7 +273,7 @@ namespace WPFGrowerApp.ViewModels
             }
             catch (Exception ex)
             {
-                Logger.Error("Error loading users", ex);
+                Logger.Error($"Failed to load users. CurrentUser: {App.CurrentUser?.Username}", ex);
                 ErrorMessage = "Failed to load users. Please try again.";
                 await _dialogService.ShowMessageBoxAsync("Failed to load users. Please try again.", "Error");
             }
@@ -317,7 +317,7 @@ namespace WPFGrowerApp.ViewModels
                         StatusMessage = $"User '{newUser.Username}' created successfully";
                         await _dialogService.ShowMessageBoxAsync($"User '{newUser.Username}' created successfully.", "Success");
                         
-                        Logger.Info($"User Management: Created user '{newUser.Username}' by {App.CurrentUser?.Username}");
+                        Logger.LogBusinessOperation("User Created", "User", newUser.UserId, App.CurrentUser?.Username, $"Username: {newUser.Username}, Role: {newUser.RoleId}");
                     }
                     else
                     {

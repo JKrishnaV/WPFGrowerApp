@@ -682,13 +682,17 @@ namespace WPFGrowerApp.ViewModels
 
         private async Task StartPaymentRunAsync()
         {
-            IsRunning = true;
-            RunLog.Clear();
-            LastRunErrors.Clear();
-            LastRunBatch = null;
-            StatusMessage = "Creating payment draft...";
-            Report($"Creating Advance {AdvanceNumber} payment draft...");
-            Report($"Parameters: PaymentDate={PaymentDate:d}, CutoffDate={CutoffDate:d}, CropYear={CropYear}");
+            using (var operation = Logger.BeginTimedOperation("PaymentRunExecution"))
+            {
+                Logger.Debug($"Starting payment run. AdvanceNumber: {AdvanceNumber}, PaymentDate: {PaymentDate:d}, CutoffDate: {CutoffDate:d}, CropYear: {CropYear}");
+                
+                IsRunning = true;
+                RunLog.Clear();
+                LastRunErrors.Clear();
+                LastRunBatch = null;
+                StatusMessage = "Creating payment draft...";
+                Report($"Creating Advance {AdvanceNumber} payment draft...");
+                Report($"Parameters: PaymentDate={PaymentDate:d}, CutoffDate={CutoffDate:d}, CropYear={CropYear}");
 
             // Prepare lists of IDs from selected items
             var selectedProductIds = ProductFilterItems.Where(p => p.IsSelected).Select(p => p.Item.ProductId).ToList();
@@ -805,12 +809,13 @@ namespace WPFGrowerApp.ViewModels
             {
                 StatusMessage = "Payment run failed with a critical error.";
                 Report($"CRITICAL ERROR: {ex.Message}");
-                Logger.Error($"Critical error during payment run execution", ex);
+                Logger.Error($"Critical error during payment run execution. AdvanceNumber: {AdvanceNumber}, PaymentDate: {PaymentDate:d}, CurrentUser: {App.CurrentUser?.Username}", ex);
                 await _dialogService.ShowMessageBoxAsync($"A critical error occurred: {ex.Message}", "Payment Run Failed"); // Use async
-            }
-            finally
-            {
-                IsRunning = false;
+                }
+                finally
+                {
+                    IsRunning = false;
+                }
             }
         }
 
