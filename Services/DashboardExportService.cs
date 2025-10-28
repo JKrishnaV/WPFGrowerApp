@@ -12,6 +12,7 @@ using Syncfusion.XlsIO;
 using Syncfusion.DocIO;
 using Syncfusion.DocIO.DLS;
 using WPFGrowerApp.DataAccess.Models;
+using WPFGrowerApp.ViewModels;
 using System.Drawing;
 
 namespace WPFGrowerApp.Services
@@ -354,7 +355,7 @@ namespace WPFGrowerApp.Services
                     writer.WriteLine("Date,Grower,Amount,Type,Status");
                     foreach (var payment in recentPayments)
                     {
-                        writer.WriteLine($"{payment.PaymentDate:yyyy-MM-dd},{payment.GrowerId},{payment.Amount:C},{payment.PaymentType},{payment.Status}");
+                        writer.WriteLine($"{payment.PaymentDate:yyyy-MM-dd},{payment.GrowerId},{payment.Amount:C},{payment.PaymentTypeId},{payment.Status}");
                     }
                 }
 
@@ -540,7 +541,7 @@ namespace WPFGrowerApp.Services
                 row.Cells[0].Value = payment.PaymentDate.ToString("MMM dd, yyyy");
                 row.Cells[1].Value = payment.GrowerId.ToString();
                 row.Cells[2].Value = payment.Amount.ToString("C");
-                row.Cells[3].Value = payment.PaymentType;
+                row.Cells[3].Value = payment.PaymentTypeId.ToString();
                 row.Cells[4].Value = payment.Status;
             }
 
@@ -779,7 +780,7 @@ namespace WPFGrowerApp.Services
                 sheet.Range[$"B{row}"].Text = payment.GrowerId.ToString();
                 sheet.Range[$"C{row}"].Number = (double)payment.Amount;
                 sheet.Range[$"C{row}"].NumberFormat = "$#,##0.00";
-                sheet.Range[$"D{row}"].Text = payment.PaymentType;
+                sheet.Range[$"D{row}"].Text = payment.PaymentTypeId.ToString();
                 sheet.Range[$"E{row}"].Text = payment.Status;
                 row++;
             }
@@ -895,7 +896,7 @@ namespace WPFGrowerApp.Services
                 activityTable[row, 0].AddParagraph().AppendText(payment.PaymentDate.ToString("MMM dd, yyyy"));
                 activityTable[row, 1].AddParagraph().AppendText(payment.GrowerId.ToString());
                 activityTable[row, 2].AddParagraph().AppendText(payment.Amount.ToString("C"));
-                activityTable[row, 3].AddParagraph().AppendText(payment.PaymentType);
+                activityTable[row, 3].AddParagraph().AppendText(payment.PaymentTypeId.ToString());
                 activityTable[row, 4].AddParagraph().AppendText(payment.Status);
                 row++;
             }

@@ -7,6 +7,8 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Diagnostics;
 using WPFGrowerApp.Infrastructure.Logging;
+using WPFGrowerApp.Commands;
+using System.Windows.Input;
 
 namespace WPFGrowerApp.ViewModels
 {
@@ -27,12 +29,17 @@ namespace WPFGrowerApp.ViewModels
         private int _pendingPayments;
         private bool _isLoading;
 
+        public ICommand NavigateToDashboardAnalyticsCommand { get; }
+
         public DashboardViewModel()
         {
             _growerService = new GrowerService();
             _receiptService = new ReceiptService(new PaymentTypeService());
             _productService = new ProductService();
             _importBatchService = new ImportBatchService();
+            
+            // Initialize navigation command
+            NavigateToDashboardAnalyticsCommand = new RelayCommand(async (parameter) => await NavigateToDashboardAnalyticsAsync());
             
             IsLoading = true;
             _ = LoadDashboardDataAsync();
@@ -210,6 +217,29 @@ namespace WPFGrowerApp.ViewModels
             finally
             {
                 IsLoading = false;
+            }
+        }
+
+        private async Task NavigateToDashboardAnalyticsAsync()
+        {
+            try
+            {
+                // Get the MainViewModel instance that's bound to the UI
+                var mainWindow = System.Windows.Application.Current.MainWindow;
+                if (mainWindow?.DataContext is MainViewModel mainViewModel)
+                {
+                    // Navigate using the SAME instance that's bound to the UI
+                    await mainViewModel.NavigateToAsync<DashboardAnalyticsViewModel>("Dashboard Analytics");
+                }
+                else
+                {
+                    // Handle error case
+                    Logger.Error("Could not access MainViewModel from MainWindow DataContext");
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Logger.Error("Error navigating to Dashboard Analytics", ex);
             }
         }
     }

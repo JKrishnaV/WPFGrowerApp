@@ -300,9 +300,9 @@
                         </Button>
                     </materialDesign:Card>
 
-                    <!-- Reports Card -->
+                    <!-- Dashboard Analytics Card -->
                     <materialDesign:Card Grid.Row="0" Grid.Column="2" Style="{StaticResource EnhancedActionCardStyle}">
-                        <Button Command="{Binding DataContext.NavigateToReportsCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
+                        <Button Command="{Binding NavigateToDashboardAnalyticsCommand}"
                                 Style="{StaticResource EnhancedActionButtonStyle}">
                             <Grid Margin="20">
                                 <Grid.RowDefinitions>
@@ -316,7 +316,7 @@
                                 <Border Grid.Row="0" Width="60" Height="60" 
                                         Background="{StaticResource WarningYellow}" CornerRadius="30" 
                                         HorizontalAlignment="Center" VerticalAlignment="Center">
-                                    <materialDesign:PackIcon Kind="ChartLine" 
+                                    <materialDesign:PackIcon Kind="ChartBox" 
                                                              Width="32" Height="32" 
                                                              Foreground="White"
                                                              HorizontalAlignment="Center"
@@ -324,12 +324,12 @@
                                 </Border>
                                 
                                 <!-- Title -->
-                                <TextBlock Grid.Row="1" Text="Reports" 
+                                <TextBlock Grid.Row="1" Text="Dashboard Analytics" 
                                            FontWeight="SemiBold" FontSize="16" 
                                            HorizontalAlignment="Center" Margin="0,15,0,8"/>
                                 
                                 <!-- Stats -->
-                                <TextBlock Grid.Row="2" Text="Analytics" 
+                                <TextBlock Grid.Row="2" Text="Advanced" 
                                            FontSize="20" FontWeight="Bold"
                                            Foreground="{StaticResource WarningYellow}" 
                                            HorizontalAlignment="Center" Margin="0,0,0,8"/>
@@ -342,7 +342,7 @@
                                         <DropShadowEffect Color="Black" Direction="270" ShadowDepth="2" 
                                                         Opacity="0.3" BlurRadius="4"/>
                                     </Border.Effect>
-                                    <TextBlock Text="View &amp; Export" 
+                                    <TextBlock Text="Charts &amp; Insights" 
                                                FontSize="13" FontWeight="Bold" 
                                                Foreground="White"/>
                                 </Border>

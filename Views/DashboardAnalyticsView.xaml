@@ -77,6 +77,26 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        
+        <!-- Button Template with CornerRadius -->
+        <ControlTemplate x:Key="ButtonTemplate" TargetType="Button">
+            <Border Background="{TemplateBinding Background}" 
+                    CornerRadius="4" 
+                    Padding="{TemplateBinding Padding}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}">
+                <ContentPresenter HorizontalAlignment="Center" 
+                                VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{Binding Background, RelativeSource={RelativeSource TemplatedParent}}"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="{Binding Background, RelativeSource={RelativeSource TemplatedParent}}"/>
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
     </UserControl.Resources>
 
     <Grid Background="{StaticResource BackgroundBrush}">
@@ -113,8 +133,8 @@
                             Padding="15,8"
                             Margin="5"
                             BorderThickness="0"
-                            CornerRadius="4"
-                            Cursor="Hand"/>
+                            Cursor="Hand"
+                            Template="{StaticResource ButtonTemplate}"/>
                     <Button Content="Export Dashboard" 
                             Command="{Binding ExportDashboardCommand}"
                             Background="{StaticResource SecondaryBrush}"
@@ -122,8 +142,8 @@
                             Padding="15,8"
                             Margin="5"
                             BorderThickness="0"
-                            CornerRadius="4"
-                            Cursor="Hand"/>
+                            Cursor="Hand"
+                            Template="{StaticResource ButtonTemplate}"/>
                 </StackPanel>
             </Grid>
         </Border>

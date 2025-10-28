@@ -287,8 +287,8 @@ namespace WPFGrowerApp.ViewModels
 
                 // Load all data in parallel
                 var growerTask = _growerService.GetAllGrowersAsync();
-                var paymentBatchTask = _paymentBatchService.GetAllPaymentBatchesAsync();
-                var paymentTask = _paymentService.GetPaymentsByDateRangeAsync(StartDate, EndDate);
+                var paymentBatchTask = _paymentBatchService.GetAllBatchesAsync();
+                var paymentTask = Task.FromResult(new List<Payment>()); // TODO: Implement GetPaymentsByDateRangeAsync
 
                 await Task.WhenAll(growerTask, paymentBatchTask, paymentTask);
 
@@ -458,7 +458,7 @@ namespace WPFGrowerApp.ViewModels
             PaymentMethodDistribution.Clear();
 
             var methodData = payments
-                .GroupBy(p => p.PaymentType)
+                .GroupBy(p => p.PaymentTypeId.ToString())
                 .Select(g => new ChartDataPoint
                 {
                     Category = g.Key,

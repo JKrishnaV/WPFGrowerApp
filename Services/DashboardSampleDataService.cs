@@ -47,10 +47,9 @@ namespace WPFGrowerApp.Services
                 GrowerId = growers[random.Next(growers.Count)].GrowerId,
                 Amount = (decimal)(random.NextDouble() * 50000 + 1000), // $1,000 to $51,000
                 PaymentDate = DateTime.Now.AddDays(-random.Next(365)), // Last year
-                PaymentType = paymentTypes[random.Next(paymentTypes.Length)],
+                PaymentTypeId = random.Next(1, 5), // Payment type IDs 1-4
                 Status = statuses[random.Next(statuses.Length)],
-                BatchId = random.Next(1, 21), // 20 batches
-                Description = $"Payment for batch {random.Next(1, 21)}"
+                PaymentBatchId = random.Next(1, 21) // 20 batches
             }).ToList();
         }
 
@@ -61,14 +60,14 @@ namespace WPFGrowerApp.Services
 
             return Enumerable.Range(1, count).Select(i => new PaymentBatch
             {
-                BatchId = i,
+                PaymentBatchId = i,
                 BatchNumber = $"BATCH-{i:D4}",
                 Status = statuses[random.Next(statuses.Length)],
-                CreatedDate = DateTime.Now.AddDays(-random.Next(30)),
-                ProcessedDate = random.NextDouble() > 0.2 ? DateTime.Now.AddDays(-random.Next(30)) : (DateTime?)null,
+                CreatedAt = DateTime.Now.AddDays(-random.Next(30)),
+                ProcessedAt = random.NextDouble() > 0.2 ? DateTime.Now.AddDays(-random.Next(30)) : (DateTime?)null,
                 TotalAmount = (decimal)(random.NextDouble() * 100000 + 10000), // $10,000 to $110,000
-                PaymentCount = random.Next(10, 100),
-                Description = $"Payment batch {i}"
+                TotalGrowers = random.Next(10, 100),
+                Notes = $"Payment batch {i}"
             }).ToList();
         }
     }
