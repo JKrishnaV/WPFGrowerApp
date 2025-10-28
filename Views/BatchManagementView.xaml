@@ -11,7 +11,7 @@
              mc:Ignorable="d" 
              d:DataContext="{d:DesignInstance Type={x:Type vm:BatchManagementViewModel}}"
              d:DesignHeight="800" d:DesignWidth="1200"
-             Background="{DynamicResource MaterialDesignPaper}"
+             Background="{DynamicResource ThemeMainBackground}"
              x:Name="batchManagementView"
              Focusable="True">
 

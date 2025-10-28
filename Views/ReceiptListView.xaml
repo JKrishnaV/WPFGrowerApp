@@ -9,7 +9,7 @@
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type={x:Type vm:ReceiptListViewModel}}"
              d:DesignHeight="800" d:DesignWidth="1200"
-             Background="{DynamicResource MaterialDesignPaper}"
+             Background="{DynamicResource ThemeMainBackground}"
              Focusable="True">
 
     <UserControl.Resources>
@@ -183,62 +183,65 @@
         </materialDesign:Card>
 
         <!-- Receipt Statistics -->
-        <materialDesign:Card Grid.Row="3" Margin="0,0,0,10" Background="{DynamicResource PrimaryHueLightBrush}">
+        <materialDesign:Card Grid.Row="3" Margin="0,0,0,10" 
+                             Background="{DynamicResource ThemeStatisticsCard}"
+                             BorderBrush="{DynamicResource ThemeStatisticsCardBorder}"
+                             BorderThickness="1">
             <Grid Margin="15">
                 <StackPanel Orientation="Horizontal">
                     <materialDesign:PackIcon Kind="Receipt" 
                                            Width="20" Height="20" 
                                            VerticalAlignment="Center" 
                                            Margin="0,0,8,0"
-                                           Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"/>
+                                           Foreground="{DynamicResource ThemeAccentColor}"/>
                     <TextBlock Text="{Binding TotalReceipts, StringFormat='{}{0:N0} Receipts'}" 
                               FontWeight="SemiBold"
                               VerticalAlignment="Center"
-                              Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"
+                              Foreground="{DynamicResource ThemeTextPrimary}"
                               Margin="0,0,20,0"/>
                     
                     <materialDesign:PackIcon Kind="Scale" 
                                            Width="20" Height="20" 
                                            VerticalAlignment="Center" 
                                            Margin="0,0,8,0"
-                                           Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"/>
+                                           Foreground="{DynamicResource ThemeAccentColor}"/>
                     <TextBlock Text="{Binding TotalGrossWeight, StringFormat='{}{0:N2} lbs Gross'}" 
                               FontWeight="SemiBold"
                               VerticalAlignment="Center"
-                              Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"
+                              Foreground="{DynamicResource ThemeTextPrimary}"
                               Margin="0,0,20,0"/>
                     
                     <materialDesign:PackIcon Kind="Weight" 
                                            Width="20" Height="20" 
                                            VerticalAlignment="Center" 
                                            Margin="0,0,8,0"
-                                           Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"/>
+                                           Foreground="{DynamicResource ThemeAccentColor}"/>
                     <TextBlock Text="{Binding TotalNetWeight, StringFormat='{}{0:N2} lbs Net'}" 
                               FontWeight="SemiBold"
                               VerticalAlignment="Center"
-                              Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"
+                              Foreground="{DynamicResource ThemeTextPrimary}"
                               Margin="0,0,20,0"/>
                     
                     <materialDesign:PackIcon Kind="CheckCircle" 
                                            Width="20" Height="20" 
                                            VerticalAlignment="Center" 
                                            Margin="0,0,8,0"
-                                           Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"/>
+                                           Foreground="{DynamicResource ThemeAccentColor}"/>
                     <TextBlock Text="{Binding TotalFinalWeight, StringFormat='{}{0:N2} lbs Final'}" 
                               FontWeight="SemiBold"
                               VerticalAlignment="Center"
-                              Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"
+                              Foreground="{DynamicResource ThemeTextPrimary}"
                               Margin="0,0,20,0"/>
                     
                     <materialDesign:PackIcon Kind="Percent" 
                                            Width="20" Height="20" 
                                            VerticalAlignment="Center" 
                                            Margin="0,0,8,0"
-                                           Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"/>
+                                           Foreground="{DynamicResource ThemeAccentColor}"/>
                     <TextBlock Text="{Binding AverageDockPercentage, StringFormat='{}{0:N2}% Avg Dock'}" 
                               FontWeight="SemiBold"
                               VerticalAlignment="Center"
-                              Foreground="{DynamicResource PrimaryHueLightForegroundBrush}"/>
+                              Foreground="{DynamicResource ThemeTextPrimary}"/>
                 </StackPanel>
             </Grid>
         </materialDesign:Card>
@@ -297,7 +300,7 @@
             <!-- Performance Optimizations: Virtualization, Memory, and Rendering -->
             <DataGrid ItemsSource="{Binding Receipts}"
                      SelectedItem="{Binding SelectedReceipt}"
-                     Style="{StaticResource StandardizedDataGridStyle}"
+                     Style="{StaticResource EnhancedDataGridStyle}"
                      materialDesign:DataGridAssist.CellPadding="13 8 8 8"
                      materialDesign:DataGridAssist.ColumnHeaderPadding="13 10 8 10"
                      MinHeight="200"
@@ -402,11 +405,26 @@
                 <DataGridTemplateColumn Header="Status" Width="100" IsReadOnly="True">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <Border Background="#4CAF50" 
-                                    CornerRadius="12" 
+                            <Border CornerRadius="12" 
                                     Padding="8,4" 
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="{DynamicResource ThemeStatusSuccess}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding StatusDisplay}" Value="Voided">
+                                                <Setter Property="Background" Value="{DynamicResource ThemeStatusError}"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding StatusDisplay}" Value="Pending">
+                                                <Setter Property="Background" Value="{DynamicResource ThemeStatusWarning}"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding StatusDisplay}" Value="Processing">
+                                                <Setter Property="Background" Value="{DynamicResource ThemeStatusInfo}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
                                 <TextBlock Text="{Binding StatusDisplay, TargetNullValue='', FallbackValue=''}" 
                                            Foreground="White" 
                                            FontWeight="SemiBold" 
@@ -458,7 +476,7 @@
                                        Width="30" Height="30"
                                        ToolTip="Void Receipt"
                                        IsEnabled="{Binding CanVoid}"
-                                       Foreground="Orange">
+                                       Foreground="{DynamicResource ThemeStatusWarning}">
                                     <materialDesign:PackIcon Kind="Cancel" Width="16" Height="16"/>
                                 </Button>
                                 
@@ -468,7 +486,7 @@
                                        Width="30" Height="30"
                                        ToolTip="Delete Receipt"
                                        IsEnabled="{Binding CanDelete}"
-                                       Foreground="IndianRed">
+                                       Foreground="{DynamicResource ThemeButtonDanger}">
                                     <materialDesign:PackIcon Kind="Delete" Width="16" Height="16"/>
                                 </Button>
                             </StackPanel>

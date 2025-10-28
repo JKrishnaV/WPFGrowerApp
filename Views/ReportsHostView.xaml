@@ -9,7 +9,7 @@
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:ReportsHostViewModel, IsDesignTimeCreatable=False}"
              d:DesignHeight="600" d:DesignWidth="800"
-             Background="{DynamicResource MaterialDesignPaper}">
+             Background="{DynamicResource ThemeMainBackground}">
 
     <Grid>
         <Grid.ColumnDefinitions>

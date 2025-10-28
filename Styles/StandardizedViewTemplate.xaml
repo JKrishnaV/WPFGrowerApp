@@ -259,15 +259,77 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="{DynamicResource MaterialDesignDivider}"/>
+                            <Setter Property="Background" Value="{DynamicResource ThemeCardHoverBackground}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter Property="Background" Value="{DynamicResource PrimaryHueLightBrush}"/>
+                            <Setter Property="Background" Value="{DynamicResource ThemeAccentColor}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <!-- Enhanced DataGrid Style for Dark Mode -->
+    <Style x:Key="EnhancedDataGridStyle" TargetType="DataGrid" BasedOn="{StaticResource StandardizedDataGridStyle}">
+        <Setter Property="Background" Value="{DynamicResource ThemeCardBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimary}"/>
+        <Setter Property="GridLinesBrush" Value="{DynamicResource ThemeCardBorder}"/>
+        <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource ThemeCardBorder}"/>
+        <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource ThemeCardBorder}"/>
+        <Setter Property="RowBackground" Value="{DynamicResource ThemeCardBackground}"/>
+        <Setter Property="AlternatingRowBackground" Value="{DynamicResource ThemeDataGridAlternatingRow}"/>
+        <Setter Property="HeaderStyle">
+            <Setter.Value>
+                <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource MaterialDesignDataGridColumnHeader}">
+                    <Setter Property="Background" Value="{DynamicResource ThemeDataGridHeader}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimary}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource ThemeCardBorder}"/>
+                    <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                </Style>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="RowStyle">
+            <Setter.Value>
+                <Style TargetType="DataGridRow" BasedOn="{StaticResource MaterialDesignDataGridRow}">
+                    <Setter Property="Background" Value="{DynamicResource ThemeCardBackground}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimary}"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource ThemeDataGridRowHover}"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource ThemeAccentColor}"/>
+                            <Setter Property="Foreground" Value="White"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Enhanced TabControl Style for Dark Mode -->
+    <Style x:Key="EnhancedTabControlStyle" TargetType="TabControl">
+        <Setter Property="Background" Value="{DynamicResource ThemeTabBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource ThemeCardBorder}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+
+    <!-- Enhanced TabItem Style for Dark Mode -->
+    <Style x:Key="EnhancedTabItemStyle" TargetType="TabItem" BasedOn="{StaticResource MaterialDesignTabItem}">
+        <Setter Property="Background" Value="{DynamicResource ThemeTabBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource ThemeCardBorder}"/>
+        <Style.Triggers>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{DynamicResource ThemeTabSelected}"/>
+                <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimary}"/>
+            </Trigger>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource ThemeTabHover}"/>
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
 </ResourceDictionary>

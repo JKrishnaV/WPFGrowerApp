@@ -36,7 +36,7 @@
               Panel.ZIndex="1000">
             <Border HorizontalAlignment="Center" 
                     VerticalAlignment="Center"
-                    Background="{DynamicResource MaterialDesignPaper}"
+                    Background="{DynamicResource ThemeCardBackground}"
                     CornerRadius="8"
                     Padding="24">
                 <StackPanel>
@@ -295,9 +295,9 @@
                                    StaysOpen="False"
                                    AllowsTransparency="True">
                                 <materialDesign:Card Padding="0">
-                                    <Border BorderBrush="{DynamicResource MaterialDesignDivider}"
+                                    <Border BorderBrush="{DynamicResource ThemeCardBorder}"
                                             BorderThickness="1"
-                                            Background="{DynamicResource MaterialDesignPaper}">
+                                            Background="{DynamicResource ThemeCardBackground}">
                                         <StackPanel>
                                             <Button Command="{Binding ExportToExcelCommand}"
                                                     Style="{DynamicResource MaterialDesignFlatButton}"
