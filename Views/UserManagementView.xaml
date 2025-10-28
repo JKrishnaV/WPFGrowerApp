@@ -10,7 +10,7 @@
              mc:Ignorable="d" 
              d:DataContext="{d:DesignInstance Type={x:Type vm:UserManagementViewModel}}"
              d:DesignHeight="600" d:DesignWidth="800"
-             Background="{DynamicResource MaterialDesignPaper}"
+             Background="{DynamicResource ThemeMainBackground}"
              x:Name="userManagementView"
              Focusable="True">
     
