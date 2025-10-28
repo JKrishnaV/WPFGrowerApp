@@ -274,12 +274,11 @@
     <Style x:Key="EnhancedDataGridStyle" TargetType="DataGrid" BasedOn="{StaticResource StandardizedDataGridStyle}">
         <Setter Property="Background" Value="{DynamicResource ThemeCardBackground}"/>
         <Setter Property="Foreground" Value="{DynamicResource ThemeTextPrimary}"/>
-        <Setter Property="GridLinesBrush" Value="{DynamicResource ThemeCardBorder}"/>
         <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource ThemeCardBorder}"/>
         <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource ThemeCardBorder}"/>
         <Setter Property="RowBackground" Value="{DynamicResource ThemeCardBackground}"/>
         <Setter Property="AlternatingRowBackground" Value="{DynamicResource ThemeDataGridAlternatingRow}"/>
-        <Setter Property="HeaderStyle">
+        <Setter Property="ColumnHeaderStyle">
             <Setter.Value>
                 <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource MaterialDesignDataGridColumnHeader}">
                     <Setter Property="Background" Value="{DynamicResource ThemeDataGridHeader}"/>
