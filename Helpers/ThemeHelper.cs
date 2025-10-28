@@ -60,6 +60,22 @@ namespace WPFGrowerApp.Helpers
                     UpdateResource(resources, appResources, "ThemeMainBackground", "DarkMainBackground");
                     UpdateResource(resources, appResources, "ThemeInputBackground", "DarkInputBackground");
                     UpdateResource(resources, appResources, "ThemeInputBorder", "DarkInputBorder");
+                    
+                    // Apply enhanced dark theme resources
+                    UpdateResource(resources, appResources, "ThemeStatusSuccess", "DarkStatusSuccess");
+                    UpdateResource(resources, appResources, "ThemeStatusWarning", "DarkStatusWarning");
+                    UpdateResource(resources, appResources, "ThemeStatusError", "DarkStatusError");
+                    UpdateResource(resources, appResources, "ThemeStatusInfo", "DarkStatusInfo");
+                    UpdateResource(resources, appResources, "ThemeButtonDanger", "DarkButtonDanger");
+                    UpdateResource(resources, appResources, "ThemeButtonDangerHover", "DarkButtonDangerHover");
+                    UpdateResource(resources, appResources, "ThemeDataGridHeader", "DarkDataGridHeader");
+                    UpdateResource(resources, appResources, "ThemeDataGridRowHover", "DarkDataGridRowHover");
+                    UpdateResource(resources, appResources, "ThemeDataGridAlternatingRow", "DarkDataGridAlternatingRow");
+                    UpdateResource(resources, appResources, "ThemeStatisticsCard", "DarkStatisticsCard");
+                    UpdateResource(resources, appResources, "ThemeStatisticsCardBorder", "DarkStatisticsCardBorder");
+                    UpdateResource(resources, appResources, "ThemeTabBackground", "DarkTabBackground");
+                    UpdateResource(resources, appResources, "ThemeTabSelected", "DarkTabSelected");
+                    UpdateResource(resources, appResources, "ThemeTabHover", "DarkTabHover");
 
                     // Update background if control has it set
                     if (userControl.Background != null || appResources.Contains("DarkMainBackground"))
@@ -81,6 +97,22 @@ namespace WPFGrowerApp.Helpers
                     UpdateResource(resources, appResources, "ThemeMainBackground", "LightMainBackground");
                     UpdateResource(resources, appResources, "ThemeInputBackground", "LightInputBackground");
                     UpdateResource(resources, appResources, "ThemeInputBorder", "LightInputBorder");
+                    
+                    // Apply enhanced light theme resources
+                    UpdateResource(resources, appResources, "ThemeStatusSuccess", "LightStatusSuccess");
+                    UpdateResource(resources, appResources, "ThemeStatusWarning", "LightStatusWarning");
+                    UpdateResource(resources, appResources, "ThemeStatusError", "LightStatusError");
+                    UpdateResource(resources, appResources, "ThemeStatusInfo", "LightStatusInfo");
+                    UpdateResource(resources, appResources, "ThemeButtonDanger", "LightButtonDanger");
+                    UpdateResource(resources, appResources, "ThemeButtonDangerHover", "LightButtonDangerHover");
+                    UpdateResource(resources, appResources, "ThemeDataGridHeader", "LightDataGridHeader");
+                    UpdateResource(resources, appResources, "ThemeDataGridRowHover", "LightDataGridRowHover");
+                    UpdateResource(resources, appResources, "ThemeDataGridAlternatingRow", "LightDataGridAlternatingRow");
+                    UpdateResource(resources, appResources, "ThemeStatisticsCard", "LightStatisticsCard");
+                    UpdateResource(resources, appResources, "ThemeStatisticsCardBorder", "LightStatisticsCardBorder");
+                    UpdateResource(resources, appResources, "ThemeTabBackground", "LightTabBackground");
+                    UpdateResource(resources, appResources, "ThemeTabSelected", "LightTabSelected");
+                    UpdateResource(resources, appResources, "ThemeTabHover", "LightTabHover");
 
                     // Update background if control has it set
                     if (userControl.Background != null || appResources.Contains("LightMainBackground"))

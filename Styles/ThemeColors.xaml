@@ -14,6 +14,22 @@
     <SolidColorBrush x:Key="DarkInputBackground" Color="#252526"/>
     <SolidColorBrush x:Key="DarkInputBorder" Color="#3F3F46"/>
     
+    <!-- Enhanced Dark Theme Colors for Better Contrast -->
+    <SolidColorBrush x:Key="DarkStatusSuccess" Color="#4CAF50"/>
+    <SolidColorBrush x:Key="DarkStatusWarning" Color="#FF9800"/>
+    <SolidColorBrush x:Key="DarkStatusError" Color="#F44336"/>
+    <SolidColorBrush x:Key="DarkStatusInfo" Color="#2196F3"/>
+    <SolidColorBrush x:Key="DarkButtonDanger" Color="#D32F2F"/>
+    <SolidColorBrush x:Key="DarkButtonDangerHover" Color="#F44336"/>
+    <SolidColorBrush x:Key="DarkDataGridHeader" Color="#2D2D30"/>
+    <SolidColorBrush x:Key="DarkDataGridRowHover" Color="#3E3E42"/>
+    <SolidColorBrush x:Key="DarkDataGridAlternatingRow" Color="#252526"/>
+    <SolidColorBrush x:Key="DarkStatisticsCard" Color="#2D2D30"/>
+    <SolidColorBrush x:Key="DarkStatisticsCardBorder" Color="#3F3F46"/>
+    <SolidColorBrush x:Key="DarkTabBackground" Color="#2D2D30"/>
+    <SolidColorBrush x:Key="DarkTabSelected" Color="#3E3E42"/>
+    <SolidColorBrush x:Key="DarkTabHover" Color="#3A3A3A"/>
+    
     <!-- Light Theme Colors -->
     <SolidColorBrush x:Key="LightCardBackground" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="LightCardBorder" Color="#CCCCCC"/>
@@ -26,6 +42,22 @@
     <SolidColorBrush x:Key="LightMainBackground" Color="#FAFAFA"/>
     <SolidColorBrush x:Key="LightInputBackground" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="LightInputBorder" Color="#CCCCCC"/>
+    
+    <!-- Enhanced Light Theme Colors -->
+    <SolidColorBrush x:Key="LightStatusSuccess" Color="#4CAF50"/>
+    <SolidColorBrush x:Key="LightStatusWarning" Color="#FF9800"/>
+    <SolidColorBrush x:Key="LightStatusError" Color="#F44336"/>
+    <SolidColorBrush x:Key="LightStatusInfo" Color="#2196F3"/>
+    <SolidColorBrush x:Key="LightButtonDanger" Color="#D32F2F"/>
+    <SolidColorBrush x:Key="LightButtonDangerHover" Color="#F44336"/>
+    <SolidColorBrush x:Key="LightDataGridHeader" Color="#F5F5F5"/>
+    <SolidColorBrush x:Key="LightDataGridRowHover" Color="#E3F2FD"/>
+    <SolidColorBrush x:Key="LightDataGridAlternatingRow" Color="#FAFAFA"/>
+    <SolidColorBrush x:Key="LightStatisticsCard" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="LightStatisticsCardBorder" Color="#E0E0E0"/>
+    <SolidColorBrush x:Key="LightTabBackground" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="LightTabSelected" Color="#E3F2FD"/>
+    <SolidColorBrush x:Key="LightTabHover" Color="#F5F5F5"/>
     
     <!-- Dynamic Theme Resources (will be updated at runtime) -->
     <!-- These are the resources that views should bind to -->
@@ -40,6 +72,22 @@
     <SolidColorBrush x:Key="ThemeMainBackground" Color="#FAFAFA"/>
     <SolidColorBrush x:Key="ThemeInputBackground" Color="#FFFFFF"/>
     <SolidColorBrush x:Key="ThemeInputBorder" Color="#CCCCCC"/>
+    
+    <!-- Enhanced Dynamic Theme Resources -->
+    <SolidColorBrush x:Key="ThemeStatusSuccess" Color="#4CAF50"/>
+    <SolidColorBrush x:Key="ThemeStatusWarning" Color="#FF9800"/>
+    <SolidColorBrush x:Key="ThemeStatusError" Color="#F44336"/>
+    <SolidColorBrush x:Key="ThemeStatusInfo" Color="#2196F3"/>
+    <SolidColorBrush x:Key="ThemeButtonDanger" Color="#D32F2F"/>
+    <SolidColorBrush x:Key="ThemeButtonDangerHover" Color="#F44336"/>
+    <SolidColorBrush x:Key="ThemeDataGridHeader" Color="#F5F5F5"/>
+    <SolidColorBrush x:Key="ThemeDataGridRowHover" Color="#E3F2FD"/>
+    <SolidColorBrush x:Key="ThemeDataGridAlternatingRow" Color="#FAFAFA"/>
+    <SolidColorBrush x:Key="ThemeStatisticsCard" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="ThemeStatisticsCardBorder" Color="#E0E0E0"/>
+    <SolidColorBrush x:Key="ThemeTabBackground" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="ThemeTabSelected" Color="#E3F2FD"/>
+    <SolidColorBrush x:Key="ThemeTabHover" Color="#F5F5F5"/>
     
 </ResourceDictionary>
 

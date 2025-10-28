@@ -26,7 +26,7 @@
              mc:Ignorable="d" 
              d:DataContext="{d:DesignInstance Type={x:Type vm:ReceiptDetailViewModel}}"
              d:DesignHeight="800" d:DesignWidth="1200"
-             Background="{DynamicResource MaterialDesignPaper}"
+             Background="{DynamicResource ThemeMainBackground}"
              Focusable="True">
 
     <!-- Keyboard Shortcuts -->
@@ -135,13 +135,13 @@
                 <Border Grid.Column="1" CornerRadius="12" Padding="12,4" VerticalAlignment="Center" Margin="0,0,15,0">
                     <Border.Style>
                         <Style TargetType="Border">
-                            <Setter Property="Background" Value="#4CAF50"/>
+                            <Setter Property="Background" Value="{DynamicResource ThemeStatusSuccess}"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding StatusDisplay}" Value="Voided">
-                                    <Setter Property="Background" Value="#F44336"/>
+                                    <Setter Property="Background" Value="{DynamicResource ThemeStatusError}"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding QualityStatusDisplay}" Value="Pending">
-                                    <Setter Property="Background" Value="#FFC107"/>
+                                    <Setter Property="Background" Value="{DynamicResource ThemeStatusWarning}"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -217,7 +217,7 @@
                             Visibility="{Binding IsEditMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <materialDesign:PackIcon Kind="Check" 
                                                Width="20" Height="20"
-                                               Foreground="#4CAF50"/>
+                                               Foreground="{DynamicResource ThemeStatusSuccess}"/>
                     </Button>
 
                     <!-- Cancel Button (Edit Mode) -->
@@ -230,7 +230,7 @@
                             Visibility="{Binding IsEditMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <materialDesign:PackIcon Kind="Close" 
                                                Width="20" Height="20"
-                                               Foreground="#F44336"/>
+                                               Foreground="{DynamicResource ThemeStatusError}"/>
                     </Button>
                 </StackPanel>
 
@@ -245,7 +245,7 @@
                         IsEnabled="{Binding CanDelete}">
                     <materialDesign:PackIcon Kind="Delete" 
                                            Width="20" Height="20"
-                                           Foreground="#F44336"/>
+                                           Foreground="{DynamicResource ThemeButtonDanger}"/>
                 </Button>
 
                 <StackPanel Grid.Column="5" Orientation="Horizontal" VerticalAlignment="Center">
@@ -282,54 +282,78 @@
             </Grid.ColumnDefinitions>
 
             <!-- Net Weight Card -->
-            <materialDesign:Card Grid.Column="0" Margin="0,0,5,0" materialDesign:ElevationAssist.Elevation="Dp4">
+            <materialDesign:Card Grid.Column="0" Margin="0,0,5,0" 
+                                 materialDesign:ElevationAssist.Elevation="Dp4"
+                                 Background="{DynamicResource ThemeStatisticsCard}"
+                                 BorderBrush="{DynamicResource ThemeStatisticsCardBorder}"
+                                 BorderThickness="1">
                 <Grid Margin="15">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Text="Net Weight" FontSize="12" Opacity="0.7"/>
+                    <TextBlock Grid.Row="0" Text="Net Weight" FontSize="12" 
+                               Foreground="{DynamicResource ThemeTextSecondary}"/>
                     <TextBlock Grid.Row="1" Text="{Binding NetWeight, StringFormat='{}{0:N2} lbs'}" 
-                               FontSize="24" FontWeight="Bold" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                               FontSize="24" FontWeight="Bold" 
+                               Foreground="{DynamicResource ThemeAccentColor}"/>
                 </Grid>
             </materialDesign:Card>
 
             <!-- Final Weight Card -->
-            <materialDesign:Card Grid.Column="1" Margin="5,0,5,0" materialDesign:ElevationAssist.Elevation="Dp4">
+            <materialDesign:Card Grid.Column="1" Margin="5,0,5,0" 
+                                 materialDesign:ElevationAssist.Elevation="Dp4"
+                                 Background="{DynamicResource ThemeStatisticsCard}"
+                                 BorderBrush="{DynamicResource ThemeStatisticsCardBorder}"
+                                 BorderThickness="1">
                 <Grid Margin="15">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Text="Final Weight" FontSize="12" Opacity="0.7"/>
+                    <TextBlock Grid.Row="0" Text="Final Weight" FontSize="12" 
+                               Foreground="{DynamicResource ThemeTextSecondary}"/>
                     <TextBlock Grid.Row="1" Text="{Binding FinalWeight, StringFormat='{}{0:N2} lbs'}" 
-                               FontSize="24" FontWeight="Bold" Foreground="{DynamicResource SecondaryHueMidBrush}"/>
+                               FontSize="24" FontWeight="Bold" 
+                               Foreground="{DynamicResource ThemeAccentColor}"/>
                 </Grid>
             </materialDesign:Card>
 
             <!-- Grade Card -->
-            <materialDesign:Card Grid.Column="2" Margin="5,0,5,0" materialDesign:ElevationAssist.Elevation="Dp4">
+            <materialDesign:Card Grid.Column="2" Margin="5,0,5,0" 
+                                 materialDesign:ElevationAssist.Elevation="Dp4"
+                                 Background="{DynamicResource ThemeStatisticsCard}"
+                                 BorderBrush="{DynamicResource ThemeStatisticsCardBorder}"
+                                 BorderThickness="1">
                 <Grid Margin="15">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Text="Grade" FontSize="12" Opacity="0.7"/>
+                    <TextBlock Grid.Row="0" Text="Grade" FontSize="12" 
+                               Foreground="{DynamicResource ThemeTextSecondary}"/>
                     <TextBlock Grid.Row="1" Text="{Binding Grade}" 
-                               FontSize="24" FontWeight="Bold"/>
+                               FontSize="24" FontWeight="Bold"
+                               Foreground="{DynamicResource ThemeTextPrimary}"/>
                 </Grid>
             </materialDesign:Card>
 
             <!-- Payment Status Card -->
-            <materialDesign:Card Grid.Column="3" Margin="5,0,0,0" materialDesign:ElevationAssist.Elevation="Dp4">
+            <materialDesign:Card Grid.Column="3" Margin="5,0,0,0" 
+                                 materialDesign:ElevationAssist.Elevation="Dp4"
+                                 Background="{DynamicResource ThemeStatisticsCard}"
+                                 BorderBrush="{DynamicResource ThemeStatisticsCardBorder}"
+                                 BorderThickness="1">
                 <Grid Margin="15">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Text="Payment Status" FontSize="12" Opacity="0.7"/>
+                    <TextBlock Grid.Row="0" Text="Payment Status" FontSize="12" 
+                               Foreground="{DynamicResource ThemeTextSecondary}"/>
                     <TextBlock Grid.Row="1" Text="{Binding PaymentStatusDisplay}" 
-                               FontSize="20" FontWeight="Bold" Foreground="{DynamicResource MaterialDesignBody}"/>
+                               FontSize="20" FontWeight="Bold" 
+                               Foreground="{DynamicResource ThemeTextPrimary}"/>
                 </Grid>
             </materialDesign:Card>
         </Grid>
@@ -337,9 +361,10 @@
         <!-- TabControl with organized tabs -->
         <materialDesign:Card Grid.Row="3" Style="{StaticResource MainContentAreaStyle}">
             <TabControl SelectedIndex="{Binding SelectedTabIndex}"
-                        materialDesign:ColorZoneAssist.Mode="PrimaryMid">
+                        materialDesign:ColorZoneAssist.Mode="PrimaryMid"
+                        Style="{StaticResource EnhancedTabControlStyle}">
                 <!-- Tab 1: Receipt Details -->
-                <TabItem>
+                <TabItem Style="{StaticResource EnhancedTabItemStyle}">
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal">
                             <materialDesign:PackIcon Kind="FileDocument" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,5,0"/>
@@ -436,7 +461,7 @@
                 </TabItem>
 
                 <!-- Tab 2: Grower & Product -->
-                <TabItem>
+                <TabItem Style="{StaticResource EnhancedTabItemStyle}">
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal">
                             <materialDesign:PackIcon Kind="AccountGroup" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,5,0"/>
@@ -599,7 +624,7 @@
                 </TabItem>
 
                 <!-- Tab 3: Weights & Measurements -->
-                <TabItem>
+                <TabItem Style="{StaticResource EnhancedTabItemStyle}">
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal">
                             <materialDesign:PackIcon Kind="Scale" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,5,0"/>
@@ -687,7 +712,7 @@
                 </TabItem>
 
                 <!-- Tab 4: Quality Control -->
-                <TabItem>
+                <TabItem Style="{StaticResource EnhancedTabItemStyle}">
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal">
                             <materialDesign:PackIcon Kind="CheckCircle" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,5,0"/>
@@ -789,7 +814,7 @@
                 </TabItem>
 
                 <!-- Tab 5: Payment Allocations -->
-                <TabItem>
+                <TabItem Style="{StaticResource EnhancedTabItemStyle}">
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal">
                             <materialDesign:PackIcon Kind="CashMultiple" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,5,0"/>
@@ -817,9 +842,10 @@
                         <!-- Payment Allocations DataGrid -->
                         <DataGrid Grid.Row="1"
                                   ItemsSource="{Binding PaymentAllocations}"
-                                     AutoGenerateColumns="False"
+                                  Style="{StaticResource EnhancedDataGridStyle}"
+                                  AutoGenerateColumns="False"
                                   IsReadOnly="True"
-                                     CanUserAddRows="False"
+                                  CanUserAddRows="False"
                                   SelectionMode="Single"
                                   VirtualizingPanel.IsVirtualizing="True"
                                   VirtualizingPanel.VirtualizationMode="Recycling"
@@ -856,7 +882,7 @@
                 </TabItem>
 
                 <!-- Tab 6: Audit History -->
-                <TabItem>
+                <TabItem Style="{StaticResource EnhancedTabItemStyle}">
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal">
                             <materialDesign:PackIcon Kind="History" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,5,0"/>
@@ -885,9 +911,10 @@
                         <!-- Audit History DataGrid -->
                         <DataGrid Grid.Row="1"
                                   ItemsSource="{Binding AuditHistory}"
-                                     AutoGenerateColumns="False"
+                                  Style="{StaticResource EnhancedDataGridStyle}"
+                                  AutoGenerateColumns="False"
                                   IsReadOnly="True"
-                                     CanUserAddRows="False"
+                                  CanUserAddRows="False"
                                   SelectionMode="Single"
                                   VirtualizingPanel.IsVirtualizing="True"
                                   VirtualizingPanel.VirtualizationMode="Recycling"

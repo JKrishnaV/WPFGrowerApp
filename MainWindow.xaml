@@ -14,7 +14,7 @@
        WindowStyle="None" 
        ResizeMode="CanResizeWithGrip"
        AllowsTransparency="False"
-       Background="{DynamicResource MaterialDesignPaper}"> 
+       Background="{DynamicResource ThemeMainBackground}"> 
    
    <Window.Resources>
        <ResourceDictionary>
