@@ -28,12 +28,20 @@
         <views:ReportsHostView />
     </DataTemplate>
 
+    <DataTemplate DataType="{x:Type viewmodels:ReportsCardsViewModel}">
+        <views:ReportsCardsView />
+    </DataTemplate>
+
     <DataTemplate DataType="{x:Type viewmodels:GrowerReportViewModel}">
         <views:GrowerReportView />
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type viewmodels:ReportsViewModel}"> <!-- This is now the 'Test Reports' view -->
         <viewsReports:ReportsView /> <!-- Reverted to views: prefix as reports: namespace is not defined -->
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type viewmodels:PaymentSummaryReportViewModel}">
+        <viewsReports:PaymentSummaryReportView />
     </DataTemplate>
     
     <DataTemplate DataType="{x:Type viewmodels:ImportViewModel}">

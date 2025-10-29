@@ -46,6 +46,8 @@
                 <ComboBoxItem>Pie Chart - Price Level Distribution</ComboBoxItem>
                 <ComboBoxItem>Pie Chart - Pay Group Distribution</ComboBoxItem>
                 <ComboBoxItem>Grower Detail Report</ComboBoxItem>
+                <ComboBoxItem>Payment Summary Report</ComboBoxItem>
+                <ComboBoxItem>Payment Summary Test &amp; Validation</ComboBoxItem>
             </ComboBox>
         </StackPanel>
         
@@ -58,6 +60,14 @@
             <!-- Grower Detail Report View -->
             <local:GrowerDetailReportView x:Name="DetailReportView" 
                                          Visibility="Collapsed"/>
+            
+            <!-- Payment Summary Report View -->
+            <local:PaymentSummaryReportView x:Name="PaymentSummaryView" 
+                                           Visibility="Collapsed"/>
+            
+            <!-- Payment Summary Test View -->
+            <local:PaymentSummaryReportTestView x:Name="PaymentSummaryTestView" 
+                                               Visibility="Collapsed"/>
         </Grid>
     </Grid>
 </UserControl>

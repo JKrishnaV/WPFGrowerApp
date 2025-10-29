@@ -12,44 +12,9 @@
              Background="{DynamicResource ThemeMainBackground}">
 
     <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto" MinWidth="200"/> <!-- Navigation Panel -->
-            <ColumnDefinition Width="*"/> <!-- Content Area -->
-        </Grid.ColumnDefinitions>
-
-        <!-- Navigation Panel -->
-        <Border Grid.Column="0" Background="{DynamicResource MaterialDesignDrawerBackground}" CornerRadius="0 5 5 0" Margin="0,0,5,0">
-            <StackPanel Margin="5">
-                <TextBlock Text="Reports Menu" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="10,10,10,20" HorizontalAlignment="Center"/>
-
-                <Button Style="{StaticResource MaterialDesignFlatButton}"
-                        Command="{Binding NavigateToGrowerReportCommand}"
-                        HorizontalContentAlignment="Left" Margin="5">
-                    <StackPanel Orientation="Horizontal">
-                        <materialDesign:PackIcon Kind="AccountGroup" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="Grower Report"/>
-                    </StackPanel>
-                </Button>
-
-                <Button Style="{StaticResource MaterialDesignFlatButton}"
-                        Command="{Binding NavigateToTestReportsCommand}"
-                        HorizontalContentAlignment="Left" Margin="5">
-                    <StackPanel Orientation="Horizontal">
-                        <materialDesign:PackIcon Kind="FileChart" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="Test Reports"/>
-                    </StackPanel>
-                </Button>
-
-                <!-- Add more report navigation buttons here as needed -->
-
-            </StackPanel>
-        </Border>
-
-        <!-- Content Area -->
-        <ContentControl Grid.Column="1"
-                        Content="{Binding CurrentReportViewModel}"
-                        Margin="10"/>
-        <!-- The DataTemplate mapping in App.xaml or ViewMappings.xaml will determine which View is displayed here -->
-
+        <!-- Content Area - Full Width -->
+        <Grid x:Name="ReportContentGrid" Margin="10">
+            <!-- This will be populated dynamically by code-behind -->
+        </Grid>
     </Grid>
 </UserControl>

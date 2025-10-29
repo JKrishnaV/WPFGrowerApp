@@ -44,7 +44,7 @@ namespace WPFGrowerApp.DataAccess.Models
         
         private byte _grade;
         private int _priceClassIdModern;
-        private int _priceAreaIdModern;
+        private int _priceAdvanceIdModern;
         
         private bool _isVoided;
     private string? _voidedReasonModern;
@@ -85,7 +85,7 @@ namespace WPFGrowerApp.DataAccess.Models
 
     public byte Grade { get => _grade; set => SetProperty(ref _grade, value); }
         public int PriceClassId { get => _priceClassIdModern; set => SetProperty(ref _priceClassIdModern, value); }
-        public int PriceAreaId { get => _priceAreaIdModern; set => SetProperty(ref _priceAreaIdModern, value); }
+        public int PriceAdvanceId { get => _priceAdvanceIdModern; set => SetProperty(ref _priceAdvanceIdModern, value); }
 
     public bool IsVoided { get => _isVoided; set => SetProperty(ref _isVoided, value); }
         public string? VoidedReason { get => _voidedReasonModern; set => SetProperty(ref _voidedReasonModern, value); }

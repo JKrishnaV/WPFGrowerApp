@@ -84,7 +84,7 @@ namespace WPFGrowerApp
             services.AddTransient<IDuplicateDetectionService, DuplicateDetectionService>();
 
             // Register Other Services
-            services.AddTransient<ReportExportService>();
+            services.AddTransient<WPFGrowerApp.DataAccess.Services.ReportExportService>();
             services.AddTransient<ChequePdfGenerator>(); // Added for PDF generation
             services.AddTransient<EnhancedChequePdfGenerator>(); // Added for enhanced PDF generation
             services.AddTransient<NachaFileGenerator>(); // Added for NACHA file generation
@@ -114,7 +114,9 @@ namespace WPFGrowerApp
             services.AddTransient<SettingsViewModel>(); 
             services.AddTransient<SettingsHostViewModel>(); 
             services.AddTransient<ReportsHostViewModel>(); // Added Reports Host VM
+            services.AddTransient<ReportsCardsViewModel>(); // Added Reports Cards VM
             services.AddTransient<GrowerReportViewModel>(); // Added Grower Report VM
+            services.AddTransient<PaymentSummaryReportViewModel>(); // Added Payment Summary Report VM
             services.AddTransient<ProductViewModel>(); 
             services.AddTransient<ProcessViewModel>(); 
             services.AddTransient<DepotViewModel>(); // Added Depot VM

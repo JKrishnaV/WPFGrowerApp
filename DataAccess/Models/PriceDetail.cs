@@ -20,7 +20,7 @@ namespace WPFGrowerApp.DataAccess.Models
         public int PriceGradeId { get; set; }
         
         [Required]
-        public int PriceAreaId { get; set; }
+        public int PriceAdvanceId { get; set; }
         
         public int? ProcessTypeId { get; set; }
         
@@ -42,10 +42,10 @@ namespace WPFGrowerApp.DataAccess.Models
         public string GradeName { get; set; }
         
         [NotMapped]
-        public string AreaCode { get; set; }
+        public string AdvanceCode { get; set; }
         
         [NotMapped]
-        public string AreaName { get; set; }
+        public string AdvanceName { get; set; }
         
         [NotMapped]
         public string ProcessTypeName { get; set; }

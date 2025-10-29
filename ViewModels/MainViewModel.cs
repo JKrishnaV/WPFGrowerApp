@@ -51,6 +51,9 @@ namespace WPFGrowerApp.ViewModels
             // Subscribe to PaymentManagementHub navigation events
             PaymentManagementHubViewModel.NavigationRequested += OnPaymentHubNavigationRequested;
             
+            // Subscribe to ReportsHostViewModel navigation events
+            ReportsHostViewModel.NavigationRequested += OnReportsHostNavigationRequested;
+            
             // Subscribe to NavigationHelper events
             NavigationHelper.NavigationRequested += OnNavigationHelperRequested;
             
@@ -328,6 +331,29 @@ namespace WPFGrowerApp.ViewModels
 
         // Event handler for PaymentManagementHub navigation requests
         private async void OnPaymentHubNavigationRequested(Type viewModelType, string viewName)
+        {
+            try
+            {
+                // Use reflection to call NavigateToAsync with the correct generic type
+                var method = typeof(MainViewModel).GetMethod(nameof(NavigateToAsync));
+                var genericMethod = method?.MakeGenericMethod(viewModelType);
+                if (genericMethod != null)
+                {
+                    var task = (Task)genericMethod.Invoke(this, new object[] { viewName, null });
+                    if (task != null)
+                    {
+                        await task;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the error or handle it appropriately
+                Logger.Error($"Error navigating to {viewName}: {ex.Message}", ex);
+            }
+        }
+
+        private async void OnReportsHostNavigationRequested(Type viewModelType, string viewName)
         {
             try
             {

@@ -331,4 +331,24 @@
         </Style.Triggers>
     </Style>
 
+    <!-- KPI Card Style -->
+    <Style x:Key="KPICardStyle" TargetType="materialDesign:Card">
+        <Setter Property="Margin" Value="0,0,10,15"/>
+        <Setter Property="Padding" Value="15"/>
+        <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp2"/>
+    </Style>
+
+    <!-- Filter Panel Style -->
+    <Style x:Key="FilterPanelStyle" TargetType="materialDesign:Card">
+        <Setter Property="Margin" Value="0,0,0,15"/>
+        <Setter Property="Padding" Value="15"/>
+        <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp2"/>
+    </Style>
+
+    <!-- Loading Overlay Style -->
+    <Style x:Key="LoadingOverlayStyle" TargetType="Grid">
+        <Setter Property="Background" Value="#80000000"/>
+        <Setter Property="Visibility" Value="Collapsed"/>
+    </Style>
+
 </ResourceDictionary>

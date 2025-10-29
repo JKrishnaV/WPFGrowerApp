@@ -65,7 +65,9 @@
               <!-- NEW: Input Dialog Converters -->
               <converters:BooleanToTextWrappingConverter x:Key="BooleanToTextWrappingConverter"/>
               <converters:BooleanToScrollBarVisibilityConverter x:Key="BooleanToScrollBarVisibilityConverter"/>
-              <converters:BooleanToHeightConverter x:Key="BooleanToHeightConverter"/>
+              <converters:BoolToBrushConverter x:Key="BoolToBrushConverter"/>
+             <converters:ZeroToVisibilityConverter x:Key="ZeroToVisibilityConverter"/>
+             <converters:BooleanToHeightConverter x:Key="BooleanToHeightConverter"/>
          </ResourceDictionary>
      </Application.Resources>
  </Application>

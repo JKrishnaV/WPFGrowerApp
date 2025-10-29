@@ -12,7 +12,7 @@ namespace WPFGrowerApp.DataAccess.Services
 {
     /// <summary>
     /// Modern pricing service that works with the normalized pricing matrix structure:
-    /// PriceSchedules (header) -> PriceDetails (matrix) -> PriceClasses, PriceGrades, PriceAreas, ProcessTypes
+    /// PriceSchedules (header) -> PriceDetails (matrix) -> PriceClasses, PriceGrades, PriceAdvances, ProcessTypes
     /// </summary>
     public class PriceService : BaseDatabaseService, IPriceService
     {
@@ -21,9 +21,9 @@ namespace WPFGrowerApp.DataAccess.Services
         /// <summary>
         /// Maps legacy column naming convention to modern dimension lookups
         /// Example: "CL2G3A1" = Canadian (C) Level 2 (L2) Grade 3 (G3) Advance 1 (A1)
-        /// Returns: (ClassCode: "CL2", GradeNumber: 3, AreaCode: "A1")
+        /// Returns: (ClassCode: "CL2", GradeNumber: 3, AdvanceCode: "A1")
         /// </summary>
-        private (string ClassCode, int GradeNumber, string AreaCode) ParseLegacyColumnName(
+        private (string ClassCode, int GradeNumber, string AdvanceCode) ParseLegacyColumnName(
             char currency, int priceLevel, decimal grade, int advanceNumber)
         {
             // Build class code (e.g., "CL1", "CL2", "CL3", "UL1", "UL2", "UL3")
@@ -38,30 +38,30 @@ namespace WPFGrowerApp.DataAccess.Services
                 gradeNumber = 1;
             }
             
-            // Area code (A1, A2, A3, or FN)
-            string areaCode;
+            // Advance code (A1, A2, A3, or FN)
+            string advanceCode;
             if (advanceNumber >= 1 && advanceNumber <= 3)
             {
-                areaCode = $"A{advanceNumber}";
+                advanceCode = $"A{advanceNumber}";
             }
             else if (advanceNumber == 0)
             {
-                areaCode = "FN"; // Final payment
+                advanceCode = "FN"; // Final payment
             }
             else
             {
                 Logger.Warn($"Invalid advance number {advanceNumber}, defaulting to A1");
-                areaCode = "A1";
+                advanceCode = "A1";
             }
             
-            return (classCode, gradeNumber, areaCode);
+            return (classCode, gradeNumber, advanceCode);
         }
 
         /// <summary>
         /// Gets dimension IDs from codes/numbers
         /// </summary>
-        private async Task<(int? ClassId, int? GradeId, int? AreaId)> GetDimensionIdsAsync(
-            string classCode, int gradeNumber, string areaCode)
+        private async Task<(int? ClassId, int? GradeId, int? AdvanceId)> GetDimensionIdsAsync(
+            string classCode, int gradeNumber, string advanceCode)
         {
             using (var connection = new SqlConnection(_connectionString))
             {
@@ -71,18 +71,18 @@ namespace WPFGrowerApp.DataAccess.Services
                     SELECT 
                         pc.PriceClassId AS ClassId,
                         pg.PriceGradeId AS GradeId,
-                        pa.PriceAreaId AS AreaId
+                        pa.PriceAdvanceId AS AdvanceId
                     FROM 
                         (SELECT 1 AS Dummy) d
                     LEFT JOIN PriceClasses pc ON pc.ClassCode = @ClassCode
                     LEFT JOIN PriceGrades pg ON pg.GradeNumber = @GradeNumber
-                    LEFT JOIN PriceAreas pa ON pa.AreaCode = @AreaCode";
+                    LEFT JOIN PriceAdvances pa ON pa.AdvanceCode = @AdvanceCode";
                 
                 var result = await connection.QuerySingleOrDefaultAsync<dynamic>(
                     sql, 
-                    new { ClassCode = classCode, GradeNumber = gradeNumber, AreaCode = areaCode });
+                    new { ClassCode = classCode, GradeNumber = gradeNumber, AdvanceCode = advanceCode });
                 
-                return (result?.ClassId, result?.GradeId, result?.AreaId);
+                return (result?.ClassId, result?.GradeId, result?.AdvanceId);
             }
         }
 
@@ -108,12 +108,12 @@ namespace WPFGrowerApp.DataAccess.Services
             try
             {
                 // Parse legacy naming to dimension codes
-                var (classCode, gradeNumber, areaCode) = ParseLegacyColumnName(
+                var (classCode, gradeNumber, advanceCode) = ParseLegacyColumnName(
                     growerCurrency, growerPriceLevel, grade, advanceNumber);
                 
                 Logger.Info($"GetAdvancePriceAsync: Product={productId}, Process={processId}, " +
                            $"Date={receiptDate:d}, Advance={advanceNumber}, " +
-                           $"Dimensions: Class={classCode}, Grade={gradeNumber}, Area={areaCode}");
+                            $"Dimensions: Class={classCode}, Grade={gradeNumber}, Advance={advanceCode}");
 
                 using (var connection = new SqlConnection(_connectionString))
                 {
@@ -126,14 +126,14 @@ namespace WPFGrowerApp.DataAccess.Services
                         WHERE PriceScheduleId = @PriceSchudleId
                           AND PriceClassId = @PriceClassId
                           AND PriceGradeId = @PriceGradeId
-                          AND PriceAreaId = @PriceAreaId";
+                          AND PriceAdvanceId = @PriceAdvanceId";
 
                     var price = await connection.ExecuteScalarAsync<decimal?>(sql, new
                     {
                         PriceSchudleId = priceScheduleId,
                         PriceClassId = growerPriceLevel,
                         PriceGradeId = grade,
-                        PriceAreaId = advanceNumber
+                        PriceAdvanceId = advanceNumber
                     });
 
                     //// Query the modern pricing matrix
@@ -145,14 +145,14 @@ namespace WPFGrowerApp.DataAccess.Services
                     //    INNER JOIN PriceDetails pd ON ps.PriceScheduleId = pd.PriceScheduleId
                     //    INNER JOIN PriceClasses pc ON pd.PriceClassId = pc.PriceClassId
                     //    INNER JOIN PriceGrades pg ON pd.PriceGradeId = pg.PriceGradeId
-                    //    INNER JOIN PriceAreas pa ON pd.PriceAreaId = pa.PriceAreaId
+                    //    INNER JOIN PriceAdvances pa ON pd.PriceAdvanceId = pa.PriceAdvanceId
                     //    WHERE p.ProductCode = @ProductId
                     //      AND pr.ProcessCode = @ProcessId
                     //      AND ps.EffectiveFrom <= @ReceiptDate
                     //      AND (ps.EffectiveTo IS NULL OR ps.EffectiveTo >= @ReceiptDate)
                     //      AND pc.ClassCode = @ClassCode
                     //      AND pg.GradeNumber = @GradeNumber
-                    //      AND pa.AreaCode = @AreaCode
+                    //      AND pa.AdvanceCode = @AdvanceCode
                     //      AND pd.ProcessTypeId IS NULL  -- Generic pricing (fallback)
                     //    ORDER BY ps.EffectiveFrom DESC";
 
@@ -163,7 +163,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     //    ReceiptDate = receiptDate,
                     //    ClassCode = classCode,
                     //    GradeNumber = gradeNumber,
-                    //    AreaCode = areaCode
+                    //    AdvanceCode = advanceCode
                     //});
 
                     if (price.HasValue)
@@ -473,11 +473,11 @@ namespace WPFGrowerApp.DataAccess.Services
                         pd.PricePerPound,
                         RTRIM(pc.ClassCode) AS ClassCode,
                         pg.GradeNumber,
-                        RTRIM(pa.AreaCode) AS AreaCode
+                        RTRIM(pa.AdvanceCode) AS AdvanceCode
                     FROM PriceDetails pd
                     INNER JOIN PriceClasses pc ON pd.PriceClassId = pc.PriceClassId
                     INNER JOIN PriceGrades pg ON pd.PriceGradeId = pg.PriceGradeId
-                    INNER JOIN PriceAreas pa ON pd.PriceAreaId = pa.PriceAreaId
+                    INNER JOIN PriceAdvances pa ON pd.PriceAdvanceId = pa.PriceAdvanceId
                     WHERE pd.PriceScheduleId IN @ScheduleIds
                       AND pd.ProcessTypeId IS NULL
                       AND pc.ClassCode = 'CL1'
@@ -495,11 +495,11 @@ namespace WPFGrowerApp.DataAccess.Services
                     {
                         string classCode = detail.ClassCode;
                         int gradeNum = detail.GradeNumber;
-                        string areaCode = detail.AreaCode;
+                        string advanceCode = detail.AdvanceCode;
                         decimal priceValue = detail.PricePerPound;
                         
                         // Build the property name (e.g., "CL1G1A1")
-                        string propertyName = $"{classCode}G{gradeNum}{areaCode}";
+                        string propertyName = $"{classCode}G{gradeNum}{advanceCode}";
                         
                         // Set the property value using reflection
                         var property = typeof(Price).GetProperty(propertyName);
@@ -583,11 +583,11 @@ namespace WPFGrowerApp.DataAccess.Services
                         pd.PricePerPound,
                         RTRIM(pc.ClassCode) AS ClassCode,
                         pg.GradeNumber,
-                        RTRIM(pa.AreaCode) AS AreaCode
+                        RTRIM(pa.AdvanceCode) AS AdvanceCode
                     FROM PriceDetails pd
                     INNER JOIN PriceClasses pc ON pd.PriceClassId = pc.PriceClassId
                     INNER JOIN PriceGrades pg ON pd.PriceGradeId = pg.PriceGradeId
-                    INNER JOIN PriceAreas pa ON pd.PriceAreaId = pa.PriceAreaId
+                    INNER JOIN PriceAdvances pa ON pd.PriceAdvanceId = pa.PriceAdvanceId
                     WHERE pd.PriceScheduleId = @Id
                       AND pd.ProcessTypeId IS NULL";  // Only generic prices for now
                 
@@ -601,13 +601,13 @@ namespace WPFGrowerApp.DataAccess.Services
                 {
                     string classCode = detail.ClassCode;
                     int gradeNum = detail.GradeNumber;
-                    string areaCode = detail.AreaCode;
+                    string advanceCode = detail.AdvanceCode;
                     decimal priceValue = detail.PricePerPound;
                     
                     // Build the property name (e.g., "CL1G2A3")
-                    string propertyName = $"{classCode}G{gradeNum}{areaCode}";
+                    string propertyName = $"{classCode}G{gradeNum}{advanceCode}";
                     
-                    Logger.Info($"Attempting to map: ClassCode='{classCode}', GradeNum={gradeNum}, AreaCode='{areaCode}' -> Property='{propertyName}', Value={priceValue}");
+                    Logger.Info($"Attempting to map: ClassCode='{classCode}', GradeNum={gradeNum}, AdvanceCode='{advanceCode}' -> Property='{propertyName}', Value={priceValue}");
                     
                     // Set the property value using reflection
                     var property = typeof(Price).GetProperty(propertyName);
@@ -831,21 +831,21 @@ namespace WPFGrowerApp.DataAccess.Services
                 SELECT 
                     pc.ClassCode, pc.PriceClassId,
                     pg.GradeNumber, pg.PriceGradeId,
-                    pa.AreaCode, pa.PriceAreaId
-                FROM PriceClasses pc, PriceGrades pg, PriceAreas pa
+                    pa.AdvanceCode, pa.PriceAdvanceId
+                FROM PriceClasses pc, PriceGrades pg, PriceAdvances pa
                 WHERE pc.IsActive = 1 AND pg.IsActive = 1 AND pa.IsActive = 1";
             
             var dimensions = await connection.QueryAsync<dynamic>(dimensionsSql, transaction: transaction);
             var dimensionDict = dimensions.ToDictionary(
-                d => $"{d.ClassCode}G{d.GradeNumber}{d.AreaCode}",
-                d => new { ClassId = (int)d.PriceClassId, GradeId = (int)d.PriceGradeId, AreaId = (int)d.PriceAreaId }
+                d => $"{d.ClassCode}G{d.GradeNumber}{d.AdvanceCode}",
+                d => new { ClassId = (int)d.PriceClassId, GradeId = (int)d.PriceGradeId, AdvanceId = (int)d.PriceAdvanceId }
             );
             
             // Use reflection to iterate through all 72 price properties
             var priceType = typeof(Price);
             var detailInsertSql = @"
-                INSERT INTO PriceDetails (PriceScheduleId, PriceClassId, PriceGradeId, PriceAreaId, ProcessTypeId, PricePerPound)
-                VALUES (@ScheduleId, @ClassId, @GradeId, @AreaId, NULL, @PricePerPound)";
+                INSERT INTO PriceDetails (PriceScheduleId, PriceClassId, PriceGradeId, PriceAdvanceId, ProcessTypeId, PricePerPound)
+                VALUES (@ScheduleId, @ClassId, @GradeId, @AdvanceId, NULL, @PricePerPound)";
             
             int insertedCount = 0;
             foreach (var property in priceType.GetProperties())
@@ -871,7 +871,7 @@ namespace WPFGrowerApp.DataAccess.Services
                             ScheduleId = scheduleId,
                             ClassId = dims.ClassId,
                             GradeId = dims.GradeId,
-                            AreaId = dims.AreaId,
+                            AdvanceId = dims.AdvanceId,
                             PricePerPound = value
                         }, transaction);
                         

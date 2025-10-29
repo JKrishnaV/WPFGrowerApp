@@ -1,0 +1,120 @@
+<UserControl x:Class="WPFGrowerApp.Views.Reports.ReportFiltersPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:converters="clr-namespace:WPFGrowerApp.Converters"
+             mc:Ignorable="d" 
+             d:DesignHeight="300" d:DesignWidth="800">
+    
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/WPFGrowerApp;component/Styles/StandardizedViewTemplate.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            
+            <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+            <converters:BoolToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    
+    <materialDesign:Card Style="{StaticResource FilterPanelStyle}">
+        <Expander Header="Advanced Filters" IsExpanded="False">
+            <Grid Margin="0,15,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Payment Amount Filters -->
+                <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,15">
+                    <TextBlock Text="Payment Amount Range" Style="{StaticResource MaterialDesignBody2TextBlock}" Margin="0,0,0,5"/>
+                            <TextBox Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     Margin="0,0,0,5"
+                                     materialDesign:HintAssist.Hint="Minimum Amount"/>
+                            <TextBox Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                     materialDesign:HintAssist.Hint="Maximum Amount"/>
+                </StackPanel>
+                
+                <!-- Product Filters -->
+                <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,0,10,15">
+                    <TextBlock Text="Product Filters" Style="{StaticResource MaterialDesignBody2TextBlock}" Margin="0,0,0,5"/>
+                            <ComboBox Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                      Margin="0,0,0,5"
+                                      materialDesign:HintAssist.Hint="Select Products"/>
+                            <ComboBox Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                      materialDesign:HintAssist.Hint="Select Processes"/>
+                </StackPanel>
+                
+                <!-- Grade Filters -->
+                <StackPanel Grid.Row="0" Grid.Column="2" Margin="10,0,0,15">
+                    <TextBlock Text="Grade Filters" Style="{StaticResource MaterialDesignBody2TextBlock}" Margin="0,0,0,5"/>
+                            <ComboBox Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                      Margin="0,0,0,5"
+                                      materialDesign:HintAssist.Hint="Select Grades"/>
+                    <CheckBox Content="Include All Grades" 
+                              Style="{StaticResource MaterialDesignCheckBox}"/>
+                </StackPanel>
+                
+                <!-- Payment Status Filters -->
+                <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,15">
+                    <TextBlock Text="Payment Status" Style="{StaticResource MaterialDesignBody2TextBlock}" Margin="0,0,0,5"/>
+                    <CheckBox Content="Complete" Style="{StaticResource MaterialDesignCheckBox}" Margin="0,0,0,2"/>
+                    <CheckBox Content="Partial" Style="{StaticResource MaterialDesignCheckBox}" Margin="0,0,0,2"/>
+                    <CheckBox Content="Pending" Style="{StaticResource MaterialDesignCheckBox}" Margin="0,0,0,2"/>
+                    <CheckBox Content="Overdue" Style="{StaticResource MaterialDesignCheckBox}"/>
+                </StackPanel>
+                
+                <!-- Payment Method Filters -->
+                <StackPanel Grid.Row="1" Grid.Column="1" Margin="10,0,10,15">
+                    <TextBlock Text="Payment Methods" Style="{StaticResource MaterialDesignBody2TextBlock}" Margin="0,0,0,5"/>
+                    <CheckBox Content="Cheque" Style="{StaticResource MaterialDesignCheckBox}" Margin="0,0,0,2"/>
+                    <CheckBox Content="EFT" Style="{StaticResource MaterialDesignCheckBox}" Margin="0,0,0,2"/>
+                    <CheckBox Content="Wire Transfer" Style="{StaticResource MaterialDesignCheckBox}" Margin="0,0,0,2"/>
+                    <CheckBox Content="Cash" Style="{StaticResource MaterialDesignCheckBox}"/>
+                </StackPanel>
+                
+                <!-- Sorting Options -->
+                <StackPanel Grid.Row="1" Grid.Column="2" Margin="10,0,0,15">
+                    <TextBlock Text="Sort Options" Style="{StaticResource MaterialDesignBody2TextBlock}" Margin="0,0,0,5"/>
+                            <ComboBox Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                      Margin="0,0,0,5"
+                                      materialDesign:HintAssist.Hint="Sort By"/>
+                    <CheckBox Content="Ascending Order" 
+                              Style="{StaticResource MaterialDesignCheckBox}"/>
+                </StackPanel>
+                
+                <!-- Action Buttons -->
+                <StackPanel Grid.Row="2" Grid.ColumnSpan="3" 
+                            Orientation="Horizontal" 
+                            HorizontalAlignment="Right" 
+                            Margin="0,10,0,0">
+                    <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                            Margin="0,0,10,0">
+                        <Button.Content>
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Filter" Width="16" Height="16" Margin="0,0,5,0"/>
+                                <TextBlock Text="Apply Filters"/>
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                    <Button Style="{StaticResource MaterialDesignOutlinedButton}">
+                        <Button.Content>
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="FilterRemove" Width="16" Height="16" Margin="0,0,5,0"/>
+                                <TextBlock Text="Reset"/>
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Expander>
+    </materialDesign:Card>
+</UserControl>

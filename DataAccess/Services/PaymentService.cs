@@ -67,12 +67,12 @@ namespace WPFGrowerApp.DataAccess.Services
                     // Check for errors in receipt calculation
                     if (!string.IsNullOrEmpty(receiptDetail.ErrorMessage))
                     {
-                        validationResult.Errors.Add(new ValidationIssue
+                        validationResult.Errors.Add(new WPFGrowerApp.Models.ValidationIssue
                         {
                             ReceiptNumber = receiptDetail.ReceiptNumber.ToString(),
                             GrowerNumber = growerPayment.GrowerNumber,
                             GrowerName = growerPayment.GrowerName,
-                            IssueType = DetermineIssueType(receiptDetail.ErrorMessage),
+                            IssueType = ValidationIssueType.CalculationError,
                             Message = receiptDetail.ErrorMessage,
                             Details = $"Product: {receiptDetail.Product}, Process: {receiptDetail.Process}"
                         });
@@ -82,7 +82,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     // Check for missing price schedule
                     if (receiptDetail.PriceRecordId <= 0 && string.IsNullOrEmpty(receiptDetail.ErrorMessage))
                     {
-                        validationResult.Errors.Add(new ValidationIssue
+                        validationResult.Errors.Add(new WPFGrowerApp.Models.ValidationIssue
                         {
                             ReceiptNumber = receiptDetail.ReceiptNumber.ToString(),
                             GrowerNumber = growerPayment.GrowerNumber,
@@ -97,7 +97,7 @@ namespace WPFGrowerApp.DataAccess.Services
                     // Check for zero or negative calculated amount (will be filtered out during processing)
                     if (receiptDetail.CalculatedAdvanceAmount <= 0 && string.IsNullOrEmpty(receiptDetail.ErrorMessage))
                     {
-                        validationResult.Warnings.Add(new ValidationIssue
+                        validationResult.Warnings.Add(new WPFGrowerApp.Models.ValidationIssue
                         {
                             ReceiptNumber = receiptDetail.ReceiptNumber.ToString(),
                             GrowerNumber = growerPayment.GrowerNumber,

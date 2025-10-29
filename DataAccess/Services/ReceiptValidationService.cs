@@ -5,7 +5,6 @@ using WPFGrowerApp.DataAccess.Interfaces;
 using WPFGrowerApp.DataAccess.Models;
 using WPFGrowerApp.Infrastructure.Logging;
 using WPFGrowerApp.Models;
-using ValidationResult = WPFGrowerApp.Models.ValidationResult;
 
 namespace WPFGrowerApp.DataAccess.Services
 {
@@ -34,9 +33,9 @@ namespace WPFGrowerApp.DataAccess.Services
             _receiptService = receiptService ?? throw new ArgumentNullException(nameof(receiptService));
         }
 
-        public async Task<ValidationResult> ValidateReceiptDataAsync(Receipt receipt)
+        public async Task<WPFGrowerApp.Models.ValidationResult> ValidateReceiptDataAsync(Receipt receipt)
         {
-            var result = new ValidationResult();
+            var result = new WPFGrowerApp.Models.ValidationResult();
 
             try
             {
@@ -50,25 +49,49 @@ namespace WPFGrowerApp.DataAccess.Services
 
                 // Validate weights
                 var weightResult = ValidateWeights(receipt.GrossWeight, receipt.TareWeight, receipt.DockPercentage);
-                result.Errors.AddRange(weightResult.Errors);
-                result.Warnings.AddRange(weightResult.Warnings);
+                foreach (var error in weightResult.Errors)
+                {
+                    result.AddError(error.FieldName, error.Message);
+                }
+                foreach (var warning in weightResult.Warnings)
+                {
+                    result.AddWarning(warning.FieldName, warning.Message);
+                }
 
                 // Validate grade
                 var gradeResult = ValidateGradeRange(receipt.Grade);
-                result.Errors.AddRange(gradeResult.Errors);
-                result.Warnings.AddRange(gradeResult.Warnings);
+                foreach (var error in gradeResult.Errors)
+                {
+                    result.AddError(error.FieldName, error.Message);
+                }
+                foreach (var warning in gradeResult.Warnings)
+                {
+                    result.AddWarning(warning.FieldName, warning.Message);
+                }
 
                 // Validate date/time consistency
                 var dateTimeResult = ValidateDateTimeConsistency(receipt.ReceiptDate, receipt.ReceiptTime);
-                result.Errors.AddRange(dateTimeResult.Errors);
-                result.Warnings.AddRange(dateTimeResult.Warnings);
+                foreach (var error in dateTimeResult.Errors)
+                {
+                    result.AddError(error.FieldName, error.Message);
+                }
+                foreach (var warning in dateTimeResult.Warnings)
+                {
+                    result.AddWarning(warning.FieldName, warning.Message);
+                }
 
                 // Validate receipt number format
                 if (!string.IsNullOrEmpty(receipt.ReceiptNumber))
                 {
                     var receiptNumberResult = ValidateReceiptNumberFormat(receipt.ReceiptNumber);
-                    result.Errors.AddRange(receiptNumberResult.Errors);
-                    result.Warnings.AddRange(receiptNumberResult.Warnings);
+                    foreach (var error in receiptNumberResult.Errors)
+                    {
+                        result.AddError(error.FieldName, error.Message);
+                    }
+                    foreach (var warning in receiptNumberResult.Warnings)
+                    {
+                        result.AddWarning(warning.FieldName, warning.Message);
+                    }
                 }
 
                 // Validate references
@@ -76,15 +99,27 @@ namespace WPFGrowerApp.DataAccess.Services
 
                 // Validate business rules
                 var businessResult = await ValidateBusinessRulesAsync(receipt);
-                result.Errors.AddRange(businessResult.Errors);
-                result.Warnings.AddRange(businessResult.Warnings);
+                foreach (var error in businessResult.Errors)
+                {
+                    result.AddError(error.FieldName, error.Message);
+                }
+                foreach (var warning in businessResult.Warnings)
+                {
+                    result.AddWarning(warning.FieldName, warning.Message);
+                }
 
                 // Check for duplicates
                 if (!string.IsNullOrEmpty(receipt.ReceiptNumber))
                 {
                     var duplicateResult = await ValidateDuplicateReceiptAsync(receipt.ReceiptNumber, receipt.ReceiptDate, receipt.ReceiptId);
-                    result.Errors.AddRange(duplicateResult.Errors);
-                    result.Warnings.AddRange(duplicateResult.Warnings);
+                    foreach (var error in duplicateResult.Errors)
+                    {
+                        result.AddError(error.FieldName, error.Message);
+                    }
+                    foreach (var warning in duplicateResult.Warnings)
+                    {
+                        result.AddWarning(warning.FieldName, warning.Message);
+                    }
                 }
 
                 result.IsValid = result.Errors.Count == 0;
@@ -100,9 +135,9 @@ namespace WPFGrowerApp.DataAccess.Services
             return result;
         }
 
-        public ValidationResult ValidateWeights(decimal grossWeight, decimal tareWeight, decimal dockPercentage)
+        public WPFGrowerApp.Models.ValidationResult ValidateWeights(decimal grossWeight, decimal tareWeight, decimal dockPercentage)
         {
-            var result = new ValidationResult();
+            var result = new WPFGrowerApp.Models.ValidationResult();
 
             // Validate gross weight
             if (grossWeight <= 0)
@@ -143,9 +178,9 @@ namespace WPFGrowerApp.DataAccess.Services
             return result;
         }
 
-        public ValidationResult ValidateGradeRange(int grade)
+        public WPFGrowerApp.Models.ValidationResult ValidateGradeRange(int grade)
         {
-            var result = new ValidationResult();
+            var result = new WPFGrowerApp.Models.ValidationResult();
 
             if (grade < 1 || grade > 3)
             {
@@ -155,9 +190,9 @@ namespace WPFGrowerApp.DataAccess.Services
             return result;
         }
 
-        public ValidationResult ValidateDateTimeConsistency(DateTime date, TimeSpan time)
+        public WPFGrowerApp.Models.ValidationResult ValidateDateTimeConsistency(DateTime date, TimeSpan time)
         {
-            var result = new ValidationResult();
+            var result = new WPFGrowerApp.Models.ValidationResult();
 
             // Check if date is in the future
             if (date > DateTime.Today)
@@ -180,9 +215,9 @@ namespace WPFGrowerApp.DataAccess.Services
             return result;
         }
 
-        public async Task<ValidationResult> ValidateDuplicateReceiptAsync(string receiptNumber, DateTime date, int? excludeReceiptId = null)
+        public async Task<WPFGrowerApp.Models.ValidationResult> ValidateDuplicateReceiptAsync(string receiptNumber, DateTime date, int? excludeReceiptId = null)
         {
-            var result = new ValidationResult();
+            var result = new WPFGrowerApp.Models.ValidationResult();
 
             try
             {
@@ -206,9 +241,9 @@ namespace WPFGrowerApp.DataAccess.Services
             return result;
         }
 
-        public async Task<ValidationResult> ValidateGrowerActiveAsync(int growerId)
+        public async Task<WPFGrowerApp.Models.ValidationResult> ValidateGrowerActiveAsync(int growerId)
         {
-            var result = new ValidationResult();
+            var result = new WPFGrowerApp.Models.ValidationResult();
 
             try
             {
@@ -231,9 +266,9 @@ namespace WPFGrowerApp.DataAccess.Services
             return result;
         }
 
-        public async Task<ValidationResult> ValidateProductActiveAsync(int productId)
+        public async Task<WPFGrowerApp.Models.ValidationResult> ValidateProductActiveAsync(int productId)
         {
-            var result = new ValidationResult();
+            var result = new WPFGrowerApp.Models.ValidationResult();
 
             try
             {
@@ -256,9 +291,9 @@ namespace WPFGrowerApp.DataAccess.Services
             return result;
         }
 
-        public async Task<ValidationResult> ValidateProcessActiveAsync(int processId)
+        public async Task<WPFGrowerApp.Models.ValidationResult> ValidateProcessActiveAsync(int processId)
         {
-            var result = new ValidationResult();
+            var result = new WPFGrowerApp.Models.ValidationResult();
 
             try
             {
@@ -281,9 +316,9 @@ namespace WPFGrowerApp.DataAccess.Services
             return result;
         }
 
-        public async Task<ValidationResult> ValidateDepotActiveAsync(int depotId)
+        public async Task<WPFGrowerApp.Models.ValidationResult> ValidateDepotActiveAsync(int depotId)
         {
-            var result = new ValidationResult();
+            var result = new WPFGrowerApp.Models.ValidationResult();
 
             try
             {
@@ -306,9 +341,9 @@ namespace WPFGrowerApp.DataAccess.Services
             return result;
         }
 
-        public async Task<ValidationResult> ValidatePriceClassActiveAsync(int priceClassId)
+        public async Task<WPFGrowerApp.Models.ValidationResult> ValidatePriceClassActiveAsync(int priceClassId)
         {
-            var result = new ValidationResult();
+            var result = new WPFGrowerApp.Models.ValidationResult();
 
             try
             {
@@ -328,9 +363,9 @@ namespace WPFGrowerApp.DataAccess.Services
             return result;
         }
 
-        public ValidationResult ValidateReceiptNumberFormat(string receiptNumber)
+        public WPFGrowerApp.Models.ValidationResult ValidateReceiptNumberFormat(string receiptNumber)
         {
-            var result = new ValidationResult();
+            var result = new WPFGrowerApp.Models.ValidationResult();
 
             if (string.IsNullOrWhiteSpace(receiptNumber))
             {
@@ -352,9 +387,9 @@ namespace WPFGrowerApp.DataAccess.Services
             return result;
         }
 
-        public async Task<ValidationResult> ValidateBusinessRulesAsync(Receipt receipt)
+        public async Task<WPFGrowerApp.Models.ValidationResult> ValidateBusinessRulesAsync(Receipt receipt)
         {
-            var result = new ValidationResult();
+            var result = new WPFGrowerApp.Models.ValidationResult();
 
             try
             {
@@ -395,7 +430,7 @@ namespace WPFGrowerApp.DataAccess.Services
 
         #region Private Helper Methods
 
-        private void ValidateRequiredFields(Receipt receipt, ValidationResult result)
+        private void ValidateRequiredFields(Receipt receipt, WPFGrowerApp.Models.ValidationResult result)
         {
             if (string.IsNullOrWhiteSpace(receipt.ReceiptNumber))
                 result.AddError("ReceiptNumber", "Receipt number is required");
@@ -416,14 +451,20 @@ namespace WPFGrowerApp.DataAccess.Services
                 result.AddError("PriceClassId", "Price class is required");
         }
 
-        private void ValidateFieldFormats(Receipt receipt, ValidationResult result)
+        private void ValidateFieldFormats(Receipt receipt, WPFGrowerApp.Models.ValidationResult result)
         {
             // Validate receipt number format
             if (!string.IsNullOrEmpty(receipt.ReceiptNumber))
             {
                 var receiptNumberResult = ValidateReceiptNumberFormat(receipt.ReceiptNumber);
-                result.Errors.AddRange(receiptNumberResult.Errors);
-                result.Warnings.AddRange(receiptNumberResult.Warnings);
+                foreach (var error in receiptNumberResult.Errors)
+                {
+                    result.AddError(error.FieldName, error.Message);
+                }
+                foreach (var warning in receiptNumberResult.Warnings)
+                {
+                    result.AddWarning(warning.FieldName, warning.Message);
+                }
             }
 
             // Validate void reason if voided
@@ -433,32 +474,62 @@ namespace WPFGrowerApp.DataAccess.Services
             }
         }
 
-        private async Task ValidateReferencesAsync(Receipt receipt, ValidationResult result)
+        private async Task ValidateReferencesAsync(Receipt receipt, WPFGrowerApp.Models.ValidationResult result)
         {
             // Validate grower
             var growerResult = await ValidateGrowerActiveAsync(receipt.GrowerId);
-            result.Errors.AddRange(growerResult.Errors);
-            result.Warnings.AddRange(growerResult.Warnings);
+            foreach (var error in growerResult.Errors)
+            {
+                result.AddError(error.FieldName, error.Message);
+            }
+            foreach (var warning in growerResult.Warnings)
+            {
+                result.AddWarning(warning.FieldName, warning.Message);
+            }
 
             // Validate product
             var productResult = await ValidateProductActiveAsync(receipt.ProductId);
-            result.Errors.AddRange(productResult.Errors);
-            result.Warnings.AddRange(productResult.Warnings);
+            foreach (var error in productResult.Errors)
+            {
+                result.AddError(error.FieldName, error.Message);
+            }
+            foreach (var warning in productResult.Warnings)
+            {
+                result.AddWarning(warning.FieldName, warning.Message);
+            }
 
             // Validate process
             var processResult = await ValidateProcessActiveAsync(receipt.ProcessId);
-            result.Errors.AddRange(processResult.Errors);
-            result.Warnings.AddRange(processResult.Warnings);
+            foreach (var error in processResult.Errors)
+            {
+                result.AddError(error.FieldName, error.Message);
+            }
+            foreach (var warning in processResult.Warnings)
+            {
+                result.AddWarning(warning.FieldName, warning.Message);
+            }
 
             // Validate depot
             var depotResult = await ValidateDepotActiveAsync(receipt.DepotId);
-            result.Errors.AddRange(depotResult.Errors);
-            result.Warnings.AddRange(depotResult.Warnings);
+            foreach (var error in depotResult.Errors)
+            {
+                result.AddError(error.FieldName, error.Message);
+            }
+            foreach (var warning in depotResult.Warnings)
+            {
+                result.AddWarning(warning.FieldName, warning.Message);
+            }
 
             // Validate price class
             var priceClassResult = await ValidatePriceClassActiveAsync(receipt.PriceClassId);
-            result.Errors.AddRange(priceClassResult.Errors);
-            result.Warnings.AddRange(priceClassResult.Warnings);
+            foreach (var error in priceClassResult.Errors)
+            {
+                result.AddError(error.FieldName, error.Message);
+            }
+            foreach (var warning in priceClassResult.Warnings)
+            {
+                result.AddWarning(warning.FieldName, warning.Message);
+            }
         }
 
         #endregion

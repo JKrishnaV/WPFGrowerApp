@@ -1,0 +1,661 @@
+<UserControl x:Class="WPFGrowerApp.Views.Reports.PaymentSummaryReportView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:WPFGrowerApp.Views.Reports"
+             xmlns:vm="clr-namespace:WPFGrowerApp.ViewModels"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:converters="clr-namespace:WPFGrowerApp.Converters"
+             mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance Type=vm:PaymentSummaryReportViewModel, IsDesignTimeCreatable=False}"
+             d:DesignHeight="800" d:DesignWidth="1200"
+             Background="{DynamicResource MaterialDesignPaper}"
+             Focusable="True"
+             x:Name="paymentSummaryReportView">
+    
+    <UserControl.InputBindings>
+        <KeyBinding Key="F5" Command="{Binding RefreshDataCommand}"/>
+        <KeyBinding Key="E" Modifiers="Ctrl" Command="{Binding ExportReportCommand}"/>
+        <KeyBinding Key="G" Modifiers="Ctrl" Command="{Binding GenerateReportCommand}"/>
+    </UserControl.InputBindings>
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/WPFGrowerApp;component/Styles/StandardizedViewTemplate.xaml"/>
+                <ResourceDictionary Source="/WPFGrowerApp;component/Styles/Colors.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            
+            <!-- Enhanced Color Palette -->
+            <SolidColorBrush x:Key="PrimaryBlue" Color="#1976D2"/>
+            <SolidColorBrush x:Key="PrimaryBlueLight" Color="#E3F2FD"/>
+            
+            <!-- Enhanced Breadcrumb Style -->
+            <Style x:Key="EnhancedBreadcrumbStyle" TargetType="materialDesign:ColorZone">
+                <Setter Property="Mode" Value="PrimaryLight"/>
+                <Setter Property="Background" Value="{StaticResource PrimaryBlueLight}"/>
+                <Setter Property="Padding" Value="20,15"/>
+                <Setter Property="Margin" Value="0,0,0,20"/>
+            </Style>
+            
+            <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+            <converters:BoolToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+            <converters:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
+            
+            <!-- Loading Overlay Style -->
+            <Style x:Key="LoadingOverlayStyle" TargetType="Grid">
+                <Setter Property="Background" Value="#80000000"/>
+                <Setter Property="Visibility" Value="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+            </Style>
+            
+            <!-- KPI Card Style -->
+            <Style x:Key="KPICardStyle" TargetType="materialDesign:Card">
+                <Setter Property="Margin" Value="5"/>
+                <Setter Property="Padding" Value="15"/>
+                <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp2"/>
+                <Setter Property="MinWidth" Value="200"/>
+            </Style>
+            
+            <!-- Filter Panel Style -->
+            <Style x:Key="FilterPanelStyle" TargetType="materialDesign:Card">
+                <Setter Property="Margin" Value="0,0,0,15"/>
+                <Setter Property="Padding" Value="15"/>
+                <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp2"/>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>  <!-- Breadcrumb -->
+            <RowDefinition Height="Auto"/>  <!-- Title -->
+            <RowDefinition Height="Auto"/>  <!-- Filter Panel -->
+            <RowDefinition Height="Auto"/>  <!-- Toolbar -->
+            <RowDefinition Height="*"/>     <!-- Main Content -->
+            <RowDefinition Height="Auto"/>  <!-- Status Bar -->
+        </Grid.RowDefinitions>
+        
+        <!-- Breadcrumb Navigation -->
+        <materialDesign:ColorZone Grid.Row="0" Style="{StaticResource EnhancedBreadcrumbStyle}">
+            <StackPanel Orientation="Horizontal">
+                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                        Padding="8,4"
+                        Command="{Binding NavigateToDashboardCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="Home" Width="20" Height="20" 
+                                               VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="Dashboard" FontSize="14" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Button>
+                
+                <materialDesign:PackIcon Kind="ChevronRight" Width="20" Height="20" 
+                                       VerticalAlignment="Center" Margin="15,0" Opacity="0.6"/>
+                
+                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                        Padding="8,4"
+                        Command="{Binding NavigateToReportsCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="ChartLine" Width="20" Height="20" 
+                                               VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="Reports" FontSize="14" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Button>
+                
+                <materialDesign:PackIcon Kind="ChevronRight" Width="20" Height="20" 
+                                       VerticalAlignment="Center" Margin="15,0" Opacity="0.6"/>
+                
+                <Border Background="{StaticResource PrimaryBlue}" 
+                        CornerRadius="20" Padding="15,8" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <materialDesign:PackIcon Kind="CashMultiple" Width="20" Height="20" 
+                                               VerticalAlignment="Center" Margin="0,0,8,0" 
+                                               Foreground="White"/>
+                        <TextBlock Text="Payment Summary Report" FontSize="14" FontWeight="SemiBold" 
+                                   Foreground="White"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </materialDesign:ColorZone>
+        
+        <!-- View Title -->
+        <TextBlock Grid.Row="1" 
+                   Text="Payment Summary Report" 
+                   Style="{StaticResource StandardizedViewTitleStyle}"/>
+        
+        <!-- Filter Panel -->
+        <materialDesign:Card Grid.Row="2" Style="{StaticResource FilterPanelStyle}">
+            <Expander Header="Filters &amp; Options" IsExpanded="True">
+                <Grid Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Date Range Selection -->
+                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
+                        <TextBlock Text="Date Range" Style="{StaticResource MaterialDesignBody2TextBlock}" Margin="0,0,0,5"/>
+                        <ComboBox ItemsSource="{Binding AvailableDateRangePresets}"
+                                  SelectedItem="{Binding SelectedDateRangePreset}"
+                                  Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                  Margin="0,0,0,5"/>
+                        <DatePicker SelectedDate="{Binding PeriodStart}" 
+                                    Style="{StaticResource MaterialDesignOutlinedDatePicker}"
+                                    Margin="0,0,0,5"/>
+                        <DatePicker SelectedDate="{Binding PeriodEnd}" 
+                                    Style="{StaticResource MaterialDesignOutlinedDatePicker}"/>
+                    </StackPanel>
+                    
+                    <!-- Grower Filters -->
+                    <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,0,10,10">
+                        <TextBlock Text="Grower Filters" Style="{StaticResource MaterialDesignBody2TextBlock}" Margin="0,0,0,5"/>
+                        <ComboBox ItemsSource="{Binding AvailableProvinces}"
+                                  Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                  Margin="0,0,0,5"
+                                  materialDesign:HintAssist.Hint="Select Province"/>
+                        <ComboBox ItemsSource="{Binding AvailableCities}"
+                                  Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                  Margin="0,0,0,5"
+                                  materialDesign:HintAssist.Hint="Select City"/>
+                        <CheckBox Content="Include Inactive Growers" 
+                                  IsChecked="{Binding IncludeInactiveGrowers}"
+                                  Style="{StaticResource MaterialDesignCheckBox}"/>
+                    </StackPanel>
+                    
+                    <!-- Status Filters -->
+                    <StackPanel Grid.Row="0" Grid.Column="2" Margin="10,0,10,10">
+                        <TextBlock Text="Status Filters" Style="{StaticResource MaterialDesignBody2TextBlock}" Margin="0,0,0,5"/>
+                        <CheckBox Content="Include On Hold Growers" 
+                                  IsChecked="{Binding IncludeOnHoldGrowers}"
+                                  Style="{StaticResource MaterialDesignCheckBox}"
+                                  Margin="0,0,0,5"/>
+                        <CheckBox Content="Include Zero Balance Growers" 
+                                  IsChecked="{Binding IncludeZeroBalanceGrowers}"
+                                  Style="{StaticResource MaterialDesignCheckBox}"
+                                  Margin="0,0,0,5"/>
+                    </StackPanel>
+                    
+                    <!-- Display Options -->
+                    <StackPanel Grid.Row="0" Grid.Column="3" Margin="10,0,0,10">
+                        <TextBlock Text="Display Options" Style="{StaticResource MaterialDesignBody2TextBlock}" Margin="0,0,0,5"/>
+                        <CheckBox Content="Show Contact Info" 
+                                  IsChecked="{Binding ShowContactInfo}"
+                                  Style="{StaticResource MaterialDesignCheckBox}"
+                                  Margin="0,0,0,5"/>
+                        <CheckBox Content="Show Product Details" 
+                                  IsChecked="{Binding ShowProductDetails}"
+                                  Style="{StaticResource MaterialDesignCheckBox}"
+                                  Margin="0,0,0,5"/>
+                        <CheckBox Content="Show Charts" 
+                                  IsChecked="{Binding ShowCharts}"
+                                  Style="{StaticResource MaterialDesignCheckBox}"/>
+                    </StackPanel>
+                    
+                    <!-- Action Buttons -->
+                    <StackPanel Grid.Row="1" Grid.ColumnSpan="4" 
+                                Orientation="Horizontal" 
+                                HorizontalAlignment="Right" 
+                                Margin="0,10,0,0">
+                        <Button Command="{Binding GenerateReportCommand}"
+                                Style="{StaticResource MaterialDesignRaisedButton}"
+                                Margin="0,0,10,0">
+                            <Button.Content>
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="Refresh" Width="16" Height="16" Margin="0,0,5,0"/>
+                                    <TextBlock Text="Generate Report"/>
+                                </StackPanel>
+                            </Button.Content>
+                        </Button>
+                        <Button Command="{Binding ClearFiltersCommand}"
+                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                Margin="0,0,10,0">
+                            <Button.Content>
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="FilterRemove" Width="16" Height="16" Margin="0,0,5,0"/>
+                                    <TextBlock Text="Clear Filters"/>
+                                </StackPanel>
+                            </Button.Content>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Expander>
+        </materialDesign:Card>
+        
+        <!-- Toolbar -->
+        <materialDesign:Card Grid.Row="3" Style="{StaticResource FilterPanelStyle}">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Export Format:" 
+                               Style="{StaticResource MaterialDesignBody2TextBlock}" 
+                               VerticalAlignment="Center" 
+                               Margin="0,0,10,0"/>
+                    <ComboBox ItemsSource="{Binding AvailableExportFormats}"
+                              SelectedItem="{Binding SelectedExportFormat}"
+                              Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                              Width="120"
+                              Margin="0,0,20,0"/>
+                    <Button Command="{Binding ExportReportCommand}"
+                            Style="{StaticResource MaterialDesignRaisedButton}"
+                            IsEnabled="{Binding IsExporting, Converter={StaticResource InverseBooleanConverter}}">
+                        <Button.Content>
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Download" Width="16" Height="16" Margin="0,0,5,0"/>
+                                <TextBlock Text="Export"/>
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                </StackPanel>
+                
+                <StackPanel Orientation="Horizontal">
+                    <ProgressBar Value="{Binding ExportProgress}" 
+                                 Width="200" 
+                                 Height="20"
+                                 Visibility="{Binding IsExporting, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                 Margin="0,0,10,0"/>
+                    <Button Command="{Binding RefreshDataCommand}"
+                            Style="{StaticResource MaterialDesignOutlinedButton}">
+                        <Button.Content>
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Refresh" Width="16" Height="16" Margin="0,0,5,0"/>
+                                <TextBlock Text="Refresh"/>
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                </StackPanel>
+            </StackPanel>
+        </materialDesign:Card>
+        
+        <!-- Main Content Area -->
+        <materialDesign:Card Grid.Row="4" Style="{StaticResource MainContentAreaStyle}">
+            <TabControl Style="{StaticResource MaterialDesignTabControl}">
+                
+                <!-- Summary Tab -->
+                <TabItem Header="Summary">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                        <Grid Margin="20">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            
+                            <!-- KPI Cards -->
+                            <Grid Grid.Row="0" Margin="0,0,0,20">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <materialDesign:Card Grid.Column="0" Style="{StaticResource KPICardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="Total Growers" Style="{StaticResource MaterialDesignBody2TextBlock}" Opacity="0.7"/>
+                                        <TextBlock Text="{Binding CurrentReport.TotalGrowers}" 
+                                                   Style="{StaticResource MaterialDesignHeadline4TextBlock}" 
+                                                   Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                    </StackPanel>
+                                </materialDesign:Card>
+                                
+                                <materialDesign:Card Grid.Column="1" Style="{StaticResource KPICardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="Total Receipts Value" Style="{StaticResource MaterialDesignBody2TextBlock}" Opacity="0.7"/>
+                                        <TextBlock Text="{Binding CurrentReport.TotalReceiptsValueDisplay}" 
+                                                   Style="{StaticResource MaterialDesignHeadline4TextBlock}" 
+                                                   Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                    </StackPanel>
+                                </materialDesign:Card>
+                                
+                                <materialDesign:Card Grid.Column="2" Style="{StaticResource KPICardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="Total Payments Made" Style="{StaticResource MaterialDesignBody2TextBlock}" Opacity="0.7"/>
+                                        <TextBlock Text="{Binding CurrentReport.TotalPaymentsMadeDisplay}" 
+                                                   Style="{StaticResource MaterialDesignHeadline4TextBlock}" 
+                                                   Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                    </StackPanel>
+                                </materialDesign:Card>
+                                
+                                <materialDesign:Card Grid.Column="3" Style="{StaticResource KPICardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="Outstanding Balance" Style="{StaticResource MaterialDesignBody2TextBlock}" Opacity="0.7"/>
+                                        <TextBlock Text="{Binding CurrentReport.OutstandingBalanceDisplay}" 
+                                                   Style="{StaticResource MaterialDesignHeadline4TextBlock}" 
+                                                   Foreground="{DynamicResource SecondaryHueMidBrush}"/>
+                                    </StackPanel>
+                                </materialDesign:Card>
+                                
+                                <materialDesign:Card Grid.Column="4" Style="{StaticResource KPICardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="Payment Completion" Style="{StaticResource MaterialDesignBody2TextBlock}" Opacity="0.7"/>
+                                        <TextBlock Text="{Binding CurrentReport.PaymentCompletionPercentage, StringFormat={}{0:F1}%}" 
+                                                   Style="{StaticResource MaterialDesignHeadline4TextBlock}" 
+                                                   Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                    </StackPanel>
+                                </materialDesign:Card>
+                            </Grid>
+                            
+                            <!-- Payment Breakdown -->
+                            <Grid Grid.Row="1" Margin="0,0,0,20">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <materialDesign:Card Grid.Column="0" Style="{StaticResource KPICardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="Advance 1" Style="{StaticResource MaterialDesignBody2TextBlock}" Opacity="0.7"/>
+                                        <TextBlock Text="{Binding CurrentReport.Advance1TotalDisplay}" 
+                                                   Style="{StaticResource MaterialDesignHeadline5TextBlock}"/>
+                                    </StackPanel>
+                                </materialDesign:Card>
+                                
+                                <materialDesign:Card Grid.Column="1" Style="{StaticResource KPICardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="Advance 2" Style="{StaticResource MaterialDesignBody2TextBlock}" Opacity="0.7"/>
+                                        <TextBlock Text="{Binding CurrentReport.Advance2TotalDisplay}" 
+                                                   Style="{StaticResource MaterialDesignHeadline5TextBlock}"/>
+                                    </StackPanel>
+                                </materialDesign:Card>
+                                
+                                <materialDesign:Card Grid.Column="2" Style="{StaticResource KPICardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="Advance 3" Style="{StaticResource MaterialDesignBody2TextBlock}" Opacity="0.7"/>
+                                        <TextBlock Text="{Binding CurrentReport.Advance3TotalDisplay}" 
+                                                   Style="{StaticResource MaterialDesignHeadline5TextBlock}"/>
+                                    </StackPanel>
+                                </materialDesign:Card>
+                                
+                                <materialDesign:Card Grid.Column="3" Style="{StaticResource KPICardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="Final Payment" Style="{StaticResource MaterialDesignBody2TextBlock}" Opacity="0.7"/>
+                                        <TextBlock Text="{Binding CurrentReport.FinalPaymentTotalDisplay}" 
+                                                   Style="{StaticResource MaterialDesignHeadline5TextBlock}"/>
+                                    </StackPanel>
+                                </materialDesign:Card>
+                            </Grid>
+                            
+                            <!-- Advance Cheques & Deductions Statistics -->
+                            <Grid Grid.Row="2" Margin="0,0,0,20">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <materialDesign:Card Grid.Column="0" Style="{StaticResource KPICardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="Advance Cheques" Style="{StaticResource MaterialDesignBody2TextBlock}" Opacity="0.7"/>
+                                        <TextBlock Text="{Binding CurrentReport.TotalAdvanceCheques}" 
+                                                   Style="{StaticResource MaterialDesignHeadline5TextBlock}"/>
+                                        <TextBlock Text="{Binding CurrentReport.TotalAdvanceChequesAmountDisplay}" 
+                                                   Style="{StaticResource MaterialDesignBody2TextBlock}" 
+                                                   Opacity="0.8" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </materialDesign:Card>
+                                
+                                <materialDesign:Card Grid.Column="1" Style="{StaticResource KPICardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="Outstanding Amount" Style="{StaticResource MaterialDesignBody2TextBlock}" Opacity="0.7"/>
+                                        <TextBlock Text="{Binding CurrentReport.TotalAdvanceChequesOutstandingDisplay}" 
+                                                   Style="{StaticResource MaterialDesignHeadline5TextBlock}"/>
+                                        <TextBlock Text="{Binding CurrentReport.NetAdvanceChequesOutstandingDisplay}" 
+                                                   Style="{StaticResource MaterialDesignBody2TextBlock}" 
+                                                   Opacity="0.8" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </materialDesign:Card>
+                                
+                                <materialDesign:Card Grid.Column="2" Style="{StaticResource KPICardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="Advance Deductions" Style="{StaticResource MaterialDesignBody2TextBlock}" Opacity="0.7"/>
+                                        <TextBlock Text="{Binding CurrentReport.TotalAdvanceDeductions}" 
+                                                   Style="{StaticResource MaterialDesignHeadline5TextBlock}"/>
+                                        <TextBlock Text="{Binding CurrentReport.TotalAdvanceDeductionsAmountDisplay}" 
+                                                   Style="{StaticResource MaterialDesignBody2TextBlock}" 
+                                                   Opacity="0.8" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </materialDesign:Card>
+                                
+                                <materialDesign:Card Grid.Column="3" Style="{StaticResource KPICardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="Active Cheques" Style="{StaticResource MaterialDesignBody2TextBlock}" Opacity="0.7"/>
+                                        <TextBlock Text="{Binding CurrentReport.ActiveAdvanceCheques}" 
+                                                   Style="{StaticResource MaterialDesignHeadline5TextBlock}"/>
+                                        <TextBlock Text="Not fully deducted" 
+                                                   Style="{StaticResource MaterialDesignBody2TextBlock}" 
+                                                   Opacity="0.8" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </materialDesign:Card>
+                                
+                                <materialDesign:Card Grid.Column="4" Style="{StaticResource KPICardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="Recovery Rate" Style="{StaticResource MaterialDesignBody2TextBlock}" Opacity="0.7"/>
+                                        <TextBlock Text="{Binding CurrentReport.AdvanceChequesRecoveryPercentageDisplay}" 
+                                                   Style="{StaticResource MaterialDesignHeadline5TextBlock}"/>
+                                        <TextBlock Text="Amount recovered" 
+                                                   Style="{StaticResource MaterialDesignBody2TextBlock}" 
+                                                   Opacity="0.8" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </materialDesign:Card>
+                            </Grid>
+                            
+                            <!-- Charts Section -->
+                            <Grid Grid.Row="3" Visibility="{Binding ShowCharts, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <!-- Payment Distribution Chart -->
+                                <local:PaymentDistributionChart Grid.Column="0" 
+                                                               Margin="0,0,10,0" 
+                                                               DataContext="{Binding PaymentDistribution}"/>
+                                
+                                <!-- Top Performers Chart -->
+                                <local:GrowerPerformanceChart Grid.Column="1" 
+                                                             Margin="10,0,0,0" 
+                                                             DataContext="{Binding TopPerformers}"/>
+                            </Grid>
+                        </Grid>
+                    </ScrollViewer>
+                </TabItem>
+                
+                <!-- Grower Details Tab -->
+                <TabItem Header="Grower Details">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Column Visibility Controls -->
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="10" HorizontalAlignment="Right">
+                            <Button Content="Toggle Contact Info" 
+                                    Command="{Binding ToggleColumnVisibilityCommand}"
+                                    CommandParameter="contact"
+                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                    Margin="0,0,5,0"/>
+                            <Button Content="Toggle Product Details" 
+                                    Command="{Binding ToggleColumnVisibilityCommand}"
+                                    CommandParameter="product"
+                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                    Margin="0,0,5,0"/>
+                            <Button Content="Toggle Audit Info" 
+                                    Command="{Binding ToggleColumnVisibilityCommand}"
+                                    CommandParameter="audit"
+                                    Style="{StaticResource MaterialDesignOutlinedButton}"/>
+                        </StackPanel>
+                        
+                        <!-- Data Grid -->
+                        <DataGrid Grid.Row="1" 
+                                  ItemsSource="{Binding GrowerDetails}"
+                                  Style="{StaticResource MaterialDesignDataGrid}"
+                                  AutoGenerateColumns="False"
+                                  CanUserAddRows="False"
+                                  CanUserDeleteRows="False"
+                                  CanUserReorderColumns="True"
+                                  CanUserResizeColumns="True"
+                                  CanUserSortColumns="True"
+                                  GridLinesVisibility="Horizontal"
+                                  HeadersVisibility="Column"
+                                  SelectionMode="Single"
+                                  Margin="10">
+                            
+                            <DataGrid.Columns>
+                                <!-- Grower Information -->
+                                <DataGridTextColumn Header="Grower #" 
+                                                    Binding="{Binding GrowerNumber}" 
+                                                    Width="80" 
+                                                    IsReadOnly="True"/>
+                                <DataGridTextColumn Header="Name" 
+                                                    Binding="{Binding FullName}" 
+                                                    Width="200" 
+                                                    IsReadOnly="True"/>
+                                <DataGridTextColumn Header="City" 
+                                                    Binding="{Binding City}" 
+                                                    Width="120" 
+                                                    IsReadOnly="True"
+                                                    Visibility="{Binding ShowContactInfo, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                <DataGridTextColumn Header="Province" 
+                                                    Binding="{Binding Province}" 
+                                                    Width="80" 
+                                                    IsReadOnly="True"
+                                                    Visibility="{Binding ShowContactInfo, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                
+                                <!-- Financial Information -->
+                                <DataGridTextColumn Header="Total Receipts" 
+                                                    Binding="{Binding TotalReceiptsValueDisplay}" 
+                                                    Width="120" 
+                                                    IsReadOnly="True"/>
+                                <DataGridTextColumn Header="Total Payments" 
+                                                    Binding="{Binding TotalPaymentsMadeDisplay}" 
+                                                    Width="120" 
+                                                    IsReadOnly="True"/>
+                                <DataGridTextColumn Header="Outstanding" 
+                                                    Binding="{Binding OutstandingBalanceDisplay}" 
+                                                    Width="120" 
+                                                    IsReadOnly="True"/>
+                                <DataGridTextColumn Header="Advance 1" 
+                                                    Binding="{Binding Advance1PaidDisplay}" 
+                                                    Width="100" 
+                                                    IsReadOnly="True"/>
+                                <DataGridTextColumn Header="Advance 2" 
+                                                    Binding="{Binding Advance2PaidDisplay}" 
+                                                    Width="100" 
+                                                    IsReadOnly="True"/>
+                                <DataGridTextColumn Header="Advance 3" 
+                                                    Binding="{Binding Advance3PaidDisplay}" 
+                                                    Width="100" 
+                                                    IsReadOnly="True"/>
+                                <DataGridTextColumn Header="Final Payment" 
+                                                    Binding="{Binding FinalPaymentPaidDisplay}" 
+                                                    Width="100" 
+                                                    IsReadOnly="True"/>
+                                <DataGridTextColumn Header="Deductions" 
+                                                    Binding="{Binding TotalDeductionsDisplay}" 
+                                                    Width="100" 
+                                                    IsReadOnly="True"/>
+                                
+                                <!-- Status Information -->
+                                <DataGridTextColumn Header="Status" 
+                                                    Binding="{Binding PaymentStatus}" 
+                                                    Width="100" 
+                                                    IsReadOnly="True"/>
+                                <DataGridTextColumn Header="Receipts" 
+                                                    Binding="{Binding TotalReceipts}" 
+                                                    Width="80" 
+                                                    IsReadOnly="True"/>
+                                <DataGridTextColumn Header="Weight (lbs)" 
+                                                    Binding="{Binding TotalWeightDisplay}" 
+                                                    Width="100" 
+                                                    IsReadOnly="True"/>
+                                
+                                <!-- Additional Details -->
+                                <DataGridTextColumn Header="Last Payment" 
+                                                    Binding="{Binding LastPaymentDateDisplay}" 
+                                                    Width="120" 
+                                                    IsReadOnly="True"
+                                                    Visibility="{Binding ShowAuditInfo, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                <DataGridTextColumn Header="Last Receipt" 
+                                                    Binding="{Binding LastReceiptDateDisplay}" 
+                                                    Width="120" 
+                                                    IsReadOnly="True"
+                                                    Visibility="{Binding ShowAuditInfo, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </TabItem>
+                
+                <!-- Charts Tab -->
+                <TabItem Header="Charts" Visibility="{Binding ShowCharts, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                        <Grid Margin="20">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <!-- Payment Distribution Chart -->
+                            <local:PaymentDistributionChart Grid.Row="0" Margin="0,0,0,20" 
+                                                           DataContext="{Binding PaymentDistribution}"/>
+                            
+                            <!-- Monthly Trends Chart -->
+                            <local:MonthlyTrendChart Grid.Row="1" 
+                                                    DataContext="{Binding MonthlyTrends}"/>
+                        </Grid>
+                    </ScrollViewer>
+                </TabItem>
+            </TabControl>
+        </materialDesign:Card>
+        
+        <!-- Status Bar -->
+        <materialDesign:ColorZone Grid.Row="5" Style="{StaticResource StatusFooterBarStyle}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock Grid.Column="0" 
+                           Text="{Binding StatusMessage}" 
+                           Style="{StaticResource MaterialDesignBody2TextBlock}" 
+                           VerticalAlignment="Center"/>
+                
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <TextBlock Text="F5: Refresh | Ctrl+E: Export | Ctrl+G: Generate" 
+                               Style="{StaticResource MaterialDesignCaptionTextBlock}" 
+                               Opacity="0.7" 
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </materialDesign:ColorZone>
+        
+        <!-- Loading Overlay -->
+        <Grid Grid.RowSpan="6" Style="{StaticResource LoadingOverlayStyle}">
+            <materialDesign:Card HorizontalAlignment="Center" VerticalAlignment="Center" 
+                                Padding="30" materialDesign:ElevationAssist.Elevation="Dp8">
+                <StackPanel>
+                    <ProgressBar IsIndeterminate="True" 
+                                 Width="200" 
+                                 Height="4" 
+                                 Margin="0,0,0,15"/>
+                    <TextBlock Text="Generating Report..." 
+                               Style="{StaticResource MaterialDesignBody1TextBlock}" 
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </materialDesign:Card>
+        </Grid>
+    </Grid>
+</UserControl>
