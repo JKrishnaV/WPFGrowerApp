@@ -97,6 +97,7 @@ namespace WPFGrowerApp
             // Register ViewModels
             services.AddTransient<MainViewModel>();
             services.AddTransient<DashboardViewModel>();
+            services.AddTransient<DashboardAnalyticsViewModel>();
             // New Grower Management ViewModels
             services.AddTransient<GrowerManagementHostViewModel>();
             services.AddTransient<GrowerListViewModel>();
